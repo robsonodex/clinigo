@@ -155,3 +155,4 @@ export type UpdateAppointmentInput = z.infer<typeof updateAppointmentSchema>
 export type CancelAppointmentInput = z.infer<typeof cancelAppointmentSchema>
 export type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>
 export type ListAppointmentsQuery = z.infer<typeof listAppointmentsQuerySchema>
+

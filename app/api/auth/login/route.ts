@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { email, password } = loginSchema.parse(body)
 
-        const supabase = await createClient()
+        const supabase = await createClient() as any
 
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
@@ -63,3 +63,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

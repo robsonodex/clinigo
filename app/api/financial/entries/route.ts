@@ -223,3 +223,4 @@ async function generateRecurringEntries(
         await supabase.from('financial_entries').insert(entries)
     }
 }
+

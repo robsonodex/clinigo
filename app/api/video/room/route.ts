@@ -86,11 +86,29 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
         }
 
+        // 🔥 CRITICAL: Get clinic plan to enforce cost protection
+        const { data: clinic, error: clinicError } = await supabase
+            .from('clinics')
+            .select('plan_type')
+            .eq('id', (appointment as any).clinic_id)
+            .single()
+
+        if (clinicError || !clinic) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+        }
+
+        // 🔥 COST PROTECTION: Force Google Meet for BASIC plan
+        let finalProvider = provider
+        if (clinic.plan_type === 'BASIC' && provider === 'DAILY') {
+            finalProvider = 'GOOGLE_MEET'
+            console.warn(`[COST PROTECTION] Blocked DAILY for BASIC plan. Clinic: ${(appointment as any).clinic_id}`)
+        }
+
         // Generate room URL based on provider
         let roomUrl = ''
         let roomId = ''
 
-        switch (provider) {
+        switch (finalProvider) {
             case 'GOOGLE_MEET':
                 // In production, use Google Calendar API to create meet link
                 roomId = `clinigo-${appointment_id.substring(0, 8)}`
@@ -103,9 +121,19 @@ export async function POST(request: NextRequest) {
                 break
 
             case 'DAILY':
-                // In production, use Daily.co API
-                roomId = `clinigo-${appointment_id.substring(0, 8)}`
-                roomUrl = `https://clinigo.daily.co/${roomId}`
+                // Usar Daily.co API
+                const { createDailyRoom } = await import('@/lib/services/daily')
+
+                const dailyRoom = await createDailyRoom({
+                    appointment_id: appointment_id,
+                    doctor_name: appointment.doctor?.users?.full_name || 'Médico',
+                    patient_name: appointment.patient?.full_name || 'Paciente',
+                    clinic_name: appointment.clinic?.name || 'CliniGo',
+                    duration_minutes: 30,
+                })
+
+                roomUrl = dailyRoom.url
+                roomId = dailyRoom.name // Daily.co room name is its ID
                 break
 
             default:
@@ -219,3 +247,4 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 }
+

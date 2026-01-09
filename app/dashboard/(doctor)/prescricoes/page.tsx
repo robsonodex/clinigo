@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
     Clipboard,
     Plus,
@@ -21,6 +23,7 @@ import {
     CheckCircle2,
     Send,
     Eye,
+    Loader2,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import {
@@ -52,46 +55,16 @@ export default function PrescricoesPage() {
     const [showNewDialog, setShowNewDialog] = useState(false)
     const [search, setSearch] = useState('')
 
-    // Mock prescriptions data
-    const prescriptions: Prescription[] = [
-        {
-            id: '1',
-            patient_name: 'Maria Silva',
-            patient_email: 'maria@email.com',
-            date: '2024-01-03',
-            medications: [
-                {
-                    name: 'Dipirona 500mg',
-                    dosage: '1 comprimido',
-                    frequency: '6/6 horas',
-                    duration: '5 dias',
-                },
-                {
-                    name: 'Amoxicilina 500mg',
-                    dosage: '1 cápsula',
-                    frequency: '8/8 horas',
-                    duration: '7 dias',
-                },
-            ],
-            notes: 'Tomar após as refeições. Retorno em 7 dias.',
-            is_sent: true,
+    // Carrega prescrições reais do banco de dados
+    const { data: prescriptions = [], isLoading } = useQuery<Prescription[]>({
+        queryKey: ['prescriptions'],
+        queryFn: async () => {
+            const res = await fetch('/api/prescriptions')
+            if (!res.ok) throw new Error('Failed to fetch')
+            const json = await res.json()
+            return json.data || []
         },
-        {
-            id: '2',
-            patient_name: 'João Souza',
-            patient_email: 'joao@email.com',
-            date: '2024-01-02',
-            medications: [
-                {
-                    name: 'Losartana 50mg',
-                    dosage: '1 comprimido',
-                    frequency: '1x ao dia',
-                    duration: 'Uso contínuo',
-                },
-            ],
-            is_sent: false,
-        },
-    ]
+    })
 
     const filteredPrescriptions = prescriptions.filter((p) =>
         p.patient_name.toLowerCase().includes(search.toLowerCase())
@@ -340,3 +313,4 @@ export default function PrescricoesPage() {
         </div>
     )
 }
+

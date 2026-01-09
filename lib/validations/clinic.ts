@@ -3,7 +3,7 @@
  */
 import { z } from 'zod'
 
-const PLAN_TYPES = ['FREE', 'BASIC', 'PRO', 'ENTERPRISE'] as const
+const PLAN_TYPES = ['BASIC', 'PRO', 'ENTERPRISE'] as const
 
 /**
  * Address schema
@@ -53,7 +53,7 @@ export const createClinicSchema = z.object({
     address: addressSchema.optional(),
     plan_type: z
         .enum(PLAN_TYPES)
-        .default('FREE'),
+        .default('BASIC'),
     // Initial admin user
     admin_email: z
         .string()
@@ -156,6 +156,7 @@ export const listClinicsQuerySchema = z.object({
 })
 
 // Type exports
-export type CreateClinicInput = z.infer<typeof createClinicSchema>
+export type CreateClinicData = z.infer<typeof createClinicSchema>
 export type UpdateClinicInput = z.infer<typeof updateClinicSchema>
 export type ListClinicsQuery = z.infer<typeof listClinicsQuerySchema>
+

@@ -220,3 +220,4 @@ export async function sendCancellationNoticeEmail(data: CancellationEmailData) {
     CancellationEmail({ appointment } as any)
   )
 }
+

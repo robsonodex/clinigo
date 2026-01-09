@@ -199,3 +199,4 @@ export type UpdateDoctorInput = z.infer<typeof updateDoctorSchema>
 export type ScheduleEntry = z.infer<typeof scheduleEntrySchema>
 export type UpdateSchedulesInput = z.infer<typeof updateSchedulesSchema>
 export type ListDoctorsQuery = z.infer<typeof listDoctorsQuerySchema>
+

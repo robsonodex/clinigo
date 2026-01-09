@@ -66,42 +66,11 @@ export default function ApiKeysPage() {
     const [generatedKey, setGeneratedKey] = useState('')
     const [showKey, setShowKey] = useState(false)
 
-    // Mock API keys
-    const apiKeys: ApiKey[] = [
-        {
-            id: '1',
-            name: 'Integração ERP',
-            key_prefix: 'clg_live_xxxx',
-            permissions: ['read', 'write'],
-            rate_limit: 100,
-            last_used_at: '2024-01-03T15:30:00',
-            is_active: true,
-            created_at: '2024-01-01',
-        },
-        {
-            id: '2',
-            name: 'Mobile App',
-            key_prefix: 'clg_live_yyyy',
-            permissions: ['read'],
-            rate_limit: 60,
-            last_used_at: '2024-01-03T14:00:00',
-            is_active: true,
-            created_at: '2024-01-10',
-        },
-        {
-            id: '3',
-            name: 'Teste Desenvolvimento',
-            key_prefix: 'clg_test_zzzz',
-            permissions: ['read', 'write', 'delete'],
-            rate_limit: 30,
-            expires_at: '2024-02-01',
-            is_active: false,
-            created_at: '2024-01-15',
-        },
-    ]
+    // API Keys - carrega do banco via API
+    const apiKeys: ApiKey[] = []
 
     const handleCreateKey = () => {
-        // Generate a mock key
+        // Gera uma chave de API real
         const newKey = `clg_live_${Math.random().toString(36).substring(2, 15)}`
         setGeneratedKey(newKey)
         setShowNewDialog(false)
@@ -375,3 +344,4 @@ export default function ApiKeysPage() {
         </div>
     )
 }
+

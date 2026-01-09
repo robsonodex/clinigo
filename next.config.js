@@ -3,44 +3,17 @@ const nextConfig = {
     // Enable React strict mode for better development experience
     reactStrictMode: true,
 
-    // TEMPORARY: Ignore TypeScript errors during build
-    // The database.types.ts file needs to be regenerated from Supabase
-    // Run: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > lib/supabase/database.types.ts
+    // Enable standalone output for Docker optimization
+    output: 'standalone',
+
+    // TypeScript errors are ignored during builds (temporary)
     typescript: {
         ignoreBuildErrors: true,
-    },
-
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
-
-    // Experimental features for Next.js 15
-    experimental: {
-        // Enable server actions
-        serverActions: {
-            bodySizeLimit: '2mb',
-        },
     },
 
     // External packages that should not be bundled
     // These packages use Node.js APIs and need to run in Node.js runtime
     serverExternalPackages: ['nodemailer', '@react-email/components', '@react-email/render'],
-
-    // Webpack configuration for Node.js modules
-    webpack: (config, { isServer }) => {
-        if (!isServer) {
-            // Client-side: don't try to require these modules
-            config.resolve.fallback = {
-                ...config.resolve.fallback,
-                fs: false,
-                net: false,
-                tls: false,
-                dns: false,
-                child_process: false,
-            }
-        }
-        return config
-    },
 
     // Headers for security
     async headers() {
@@ -59,3 +32,5 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
+
+

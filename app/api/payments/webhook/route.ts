@@ -286,3 +286,4 @@ async function handlePaymentConfirmed(
         console.error('Failed to handle payment confirmation:', error)
     }
 }
+

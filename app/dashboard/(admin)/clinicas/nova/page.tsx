@@ -41,7 +41,7 @@ export default function NewClinicPage() {
             cnpj: '',
             email: '',
             phone: '',
-            plan_type: 'FREE',
+            plan_type: 'BASIC',
             address: {},
             admin_name: '',
             admin_email: '',
@@ -175,9 +175,8 @@ export default function NewClinicPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="FREE">Free (Grátis)</SelectItem>
-                                                <SelectItem value="BASIC">Basic</SelectItem>
-                                                <SelectItem value="PRO">Pro</SelectItem>
+                                                <SelectItem value="BASIC">Básico</SelectItem>
+                                                <SelectItem value="PRO">Profissional</SelectItem>
                                                 <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -260,3 +259,4 @@ export default function NewClinicPage() {
         </div>
     )
 }
+

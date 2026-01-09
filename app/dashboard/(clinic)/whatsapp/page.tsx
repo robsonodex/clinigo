@@ -1,490 +1,440 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { useUser } from '@/hooks/use-user'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
-import { useToast } from '@/components/ui/use-toast'
-import { api } from '@/lib/api-client'
+import { toast } from 'sonner'
 import {
     MessageCircle,
-    Send,
-    Copy,
-    ExternalLink,
-    CheckCircle2,
-    Clock,
     Settings,
-    Smartphone,
-    Bell,
-    FileText,
-    Calendar,
-    User,
-    RefreshCcw,
+    CheckCircle2,
+    XCircle,
+    Loader2,
+    Lock,
+    Zap,
+    Server,
+    Shield,
+    ExternalLink,
 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
 
-// Appointment type for this component
-interface AppointmentWithPatient {
-    id: string
-    appointment_date: string
-    appointment_time: string
-    status: string
-    video_link?: string
-    patient: {
-        id: string
-        full_name: string
-        phone: string
-        email: string
-    }
-    doctor: {
-        id: string
-        specialty: string
-        user: {
-            full_name: string
-        }
-    }
+interface ClinicWhatsAppConfig {
+    whatsapp_provider: string
+    whatsapp_api_key: string
+    whatsapp_instance_id: string
+    whatsapp_business_id: string
+    whatsapp_enabled: boolean
+    plan_type: string
 }
 
-// Templates de mensagens
-const messageTemplates = [
-    {
-        id: 'confirmation',
-        name: 'Confirmação de Consulta',
-        icon: CheckCircle2,
-        template: `Olá {nome}! 👋
-
-Sua consulta foi confirmada:
-📅 Data: {data}
-⏰ Horário: {hora}
-👨‍⚕️ Dr(a): {medico}
-
-Link da videochamada: {link}
-
-Caso precise cancelar, avise com antecedência.`,
-    },
-    {
-        id: 'reminder',
-        name: 'Lembrete',
-        icon: Bell,
-        template: `Olá {nome}! 📢
-
-Lembrete: sua consulta é amanhã!
-📅 Data: {data}
-⏰ Horário: {hora}
-👨‍⚕️ Dr(a): {medico}
-
-Link: {link}
-
-Até lá! 🙂`,
-    },
-    {
-        id: 'link',
-        name: 'Apenas Link',
-        icon: ExternalLink,
-        template: `Olá {nome}!
-
-Aqui está o link da sua consulta:
-🔗 {link}
-
-Clique para entrar na videochamada. Boa consulta!`,
-    },
-    {
-        id: 'prescription',
-        name: 'Receita/Documento',
-        icon: FileText,
-        template: `Olá {nome}!
-
-Segue seu documento médico para download:
-📄 {documento}
-
-Dr(a) {medico}`,
-    },
+const PROVIDERS = [
+    { value: 'NONE', label: 'Desativado', icon: XCircle, color: 'text-gray-500' },
+    { value: 'ZAPI', label: 'Z-API', icon: Zap, color: 'text-green-600', recommended: true },
+    { value: 'EVOLUTION', label: 'Evolution API', icon: Server, color: 'text-blue-600' },
+    { value: 'OFFICIAL', label: 'WhatsApp Oficial (Meta)', icon: Shield, color: 'text-emerald-600' },
 ]
 
-export default function WhatsAppPage() {
-    const { toast } = useToast()
-    const queryClient = useQueryClient()
-    const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithPatient | null>(null)
-    const [selectedTemplate, setSelectedTemplate] = useState(messageTemplates[0])
-    const [customMessage, setCustomMessage] = useState('')
-    const [clinicWhatsApp, setClinicWhatsApp] = useState('')
+export default function WhatsAppConfigPage() {
+    const { user, isLoading: userLoading } = useUser()
+    const [config, setConfig] = useState<ClinicWhatsAppConfig | null>(null)
+    const [provider, setProvider] = useState('NONE')
+    const [apiKey, setApiKey] = useState('')
+    const [instanceId, setInstanceId] = useState('')
+    const [businessId, setBusinessId] = useState('')
+    const [enabled, setEnabled] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [testing, setTesting] = useState(false)
+    const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connected' | 'error'>('idle')
 
-    // Buscar próximas consultas confirmadas
-    const { data: appointments, isLoading } = useQuery({
-        queryKey: ['whatsapp-appointments'],
-        queryFn: async () => {
-            const today = new Date().toISOString().split('T')[0]
-            return api.get<AppointmentWithPatient[]>('/appointments', {
-                date_from: today,
-                status: 'CONFIRMED',
-                page_size: '20',
+    const supabase = createClient()
+
+    // Carregar configuração atual - SEMPRE DO BANCO, SEM CACHE
+    useEffect(() => {
+        if (!user?.clinic_id) return
+
+        const loadConfig = async () => {
+            console.log('🔍 Carregando config para clinic_id:', user.clinic_id)
+
+            // Query direto do banco, sem cache
+            const { data, error } = await supabase
+                .from('clinics')
+                .select('whatsapp_provider, whatsapp_api_key, whatsapp_instance_id, whatsapp_business_id, whatsapp_enabled, plan_type')
+                .eq('id', user.clinic_id)
+                .single()
+
+            console.log('📊 Dados recebidos do Supabase:', data)
+            console.log('❌ Erro (se houver):', error)
+
+            if (data) {
+                console.log('✅ Plan Type detectado:', data.plan_type)
+                setConfig(data as ClinicWhatsAppConfig)
+                setProvider(data.whatsapp_provider || 'NONE')
+                setApiKey(data.whatsapp_api_key || '')
+                setInstanceId(data.whatsapp_instance_id || '')
+                setBusinessId(data.whatsapp_business_id || '')
+                setEnabled(data.whatsapp_enabled || false)
+            }
+            setLoading(false)
+        }
+
+        loadConfig()
+    }, [user?.clinic_id])
+
+    // Salvar configurações
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!user?.clinic_id) return
+
+        setSaving(true)
+        try {
+            const { error } = await supabase
+                .from('clinics')
+                .update({
+                    whatsapp_provider: provider,
+                    whatsapp_api_key: apiKey,
+                    whatsapp_instance_id: instanceId,
+                    whatsapp_business_id: businessId,
+                    whatsapp_enabled: enabled && provider !== 'NONE',
+                })
+                .eq('id', user.clinic_id)
+
+            if (error) throw error
+
+            toast.success('Configurações salvas com sucesso!')
+        } catch (error: any) {
+            toast.error('Erro ao salvar: ' + error.message)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // Testar conexão
+    const testConnection = async () => {
+        if (provider === 'NONE' || !apiKey || !instanceId) {
+            toast.error('Preencha as credenciais primeiro')
+            return
+        }
+
+        setTesting(true)
+        setConnectionStatus('idle')
+
+        try {
+            const res = await fetch('/api/whatsapp/test-connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider,
+                    api_key: apiKey,
+                    instance_id: instanceId,
+                }),
             })
-        },
-    })
 
-    // Gerar mensagem personalizada
-    const generateMessage = (appointment: AppointmentWithPatient, template: typeof messageTemplates[0]) => {
-        return template.template
-            .replace('{nome}', appointment.patient.full_name.split(' ')[0])
-            .replace('{data}', formatDate(appointment.appointment_date))
-            .replace('{hora}', appointment.appointment_time.substring(0, 5))
-            .replace('{medico}', appointment.doctor.user.full_name)
-            .replace('{link}', appointment.video_link || 'Link será disponibilizado em breve')
+            const data = await res.json()
+
+            if (data.connected) {
+                setConnectionStatus('connected')
+                toast.success('Conexão estabelecida com sucesso!')
+            } else {
+                setConnectionStatus('error')
+                toast.error(data.error || 'Falha na conexão. Verifique as credenciais.')
+            }
+        } catch (err) {
+            setConnectionStatus('error')
+            toast.error('Erro técnico ao testar conexão.')
+        } finally {
+            setTesting(false)
+        }
     }
 
-    // Abrir WhatsApp Web com mensagem
-    const openWhatsApp = (phone: string, message: string) => {
-        const cleanPhone = phone.replace(/\D/g, '')
-        const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
-        const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
-        window.open(url, '_blank')
-
-        toast({
-            title: 'WhatsApp aberto',
-            description: 'Uma nova aba foi aberta com a mensagem.',
-        })
+    if (userLoading || loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+        )
     }
 
-    // Copiar mensagem
-    const copyMessage = (message: string) => {
-        navigator.clipboard.writeText(message)
-        toast({
-            title: 'Copiado!',
-            description: 'Mensagem copiada para a área de transferência.',
-        })
+    // Bloqueio para plano não suportado (exceto SUPER_ADMIN que tem acesso total)
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+    const hasWhatsAppAccess = isSuperAdmin || (config && ['PRO', 'ENTERPRISE'].includes(config.plan_type?.toUpperCase() || ''))
+
+    if (!hasWhatsAppAccess) {
+        return (
+            <div className="p-6">
+                <Card className="max-w-2xl mx-auto">
+                    <CardContent className="pt-6 text-center space-y-4">
+                        <Lock className="w-16 h-16 mx-auto text-muted-foreground" />
+                        <h2 className="text-xl font-semibold">Recurso Exclusivo</h2>
+                        <p className="text-muted-foreground">
+                            A integração com WhatsApp próprio está disponível apenas para os planos <strong>PRO</strong> e <strong>ENTERPRISE</strong>.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Plano atual: <strong>{config?.plan_type || 'Não identificado'}</strong>
+                        </p>
+                        <Button onClick={() => window.location.href = '/dashboard/planos'}>
+                            Ver Planos
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <MessageCircle className="w-7 h-7 text-green-600" />
-                        WhatsApp
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Envie mensagens para pacientes via WhatsApp Web
-                    </p>
-                </div>
+        <div className="p-6 space-y-6 max-w-4xl mx-auto">
+            <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <MessageCircle className="w-6 h-6 text-green-600" />
+                    Configuração de WhatsApp
+                </h1>
+                <p className="text-muted-foreground">
+                    Configure seu próprio provedor de WhatsApp para enviar mensagens diretamente.
+                </p>
             </div>
 
-            <Tabs defaultValue="quick" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="quick">
-                        <Send className="w-4 h-4 mr-2" />
-                        Envio Rápido
-                    </TabsTrigger>
-                    <TabsTrigger value="templates">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Templates
-                    </TabsTrigger>
-                    <TabsTrigger value="settings">
-                        <Settings className="w-4 h-4 mr-2" />
-                        Configurações
-                    </TabsTrigger>
-                </TabsList>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Settings className="w-5 h-5" />
+                        Configurações do Provedor
+                    </CardTitle>
+                    <CardDescription>
+                        Escolha seu provedor e configure as credenciais para remover a dependência da plataforma.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSave} className="space-y-6">
+                        {/* Provider Selection */}
+                        <div className="space-y-2">
+                            <Label>Provedor de WhatsApp</Label>
+                            <Select value={provider} onValueChange={setProvider}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o provedor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PROVIDERS.map((p) => (
+                                        <SelectItem key={p.value} value={p.value}>
+                                            {p.label} {p.recommended ? '⭐ (Recomendado)' : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                {/* Envio Rápido */}
-                <TabsContent value="quick" className="space-y-4">
-                    <div className="grid gap-6 lg:grid-cols-2">
-                        {/* Lista de Consultas */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Calendar className="w-5 h-5" />
-                                    Consultas Confirmadas
-                                </CardTitle>
-                                <CardDescription>
-                                    Selecione uma consulta para enviar mensagem
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {isLoading ? (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        Carregando...
-                                    </div>
-                                ) : appointments && appointments.length > 0 ? (
-                                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                                        {appointments.map((apt) => (
-                                            <div
-                                                key={apt.id}
-                                                onClick={() => setSelectedAppointment(apt)}
-                                                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedAppointment?.id === apt.id
-                                                        ? 'border-green-500 bg-green-50'
-                                                        : 'hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">{apt.patient.full_name}</p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {apt.patient.phone}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-medium">
-                                                            {formatDate(apt.appointment_date)}
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {apt.appointment_time.substring(0, 5)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <Badge variant="success">Confirmada</Badge>
-                                                    {apt.video_link && (
-                                                        <Badge variant="secondary">Link gerado</Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                        <p>Nenhuma consulta confirmada</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Painel de Mensagem */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <MessageCircle className="w-5 h-5 text-green-600" />
-                                    Mensagem
-                                </CardTitle>
-                                <CardDescription>
-                                    {selectedAppointment
-                                        ? `Para: ${selectedAppointment.patient.full_name}`
-                                        : 'Selecione uma consulta'}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {selectedAppointment ? (
-                                    <>
-                                        {/* Template selector */}
-                                        <div className="space-y-2">
-                                            <Label>Tipo de mensagem</Label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {messageTemplates.map((template) => (
-                                                    <Button
-                                                        key={template.id}
-                                                        variant={selectedTemplate.id === template.id ? 'default' : 'outline'}
-                                                        size="sm"
-                                                        className="justify-start"
-                                                        onClick={() => setSelectedTemplate(template)}
-                                                    >
-                                                        <template.icon className="w-4 h-4 mr-2" />
-                                                        {template.name}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Preview */}
-                                        <div className="space-y-2">
-                                            <Label>Prévia da mensagem</Label>
-                                            <div className="bg-gray-100 rounded-lg p-4 whitespace-pre-wrap text-sm">
-                                                {generateMessage(selectedAppointment, selectedTemplate)}
-                                            </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex gap-2">
-                                            <Button
-                                                className="flex-1 bg-green-600 hover:bg-green-700"
-                                                onClick={() =>
-                                                    openWhatsApp(
-                                                        selectedAppointment.patient.phone,
-                                                        generateMessage(selectedAppointment, selectedTemplate)
-                                                    )
-                                                }
-                                            >
-                                                <MessageCircle className="w-4 h-4 mr-2" />
-                                                Abrir WhatsApp
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    copyMessage(
-                                                        generateMessage(selectedAppointment, selectedTemplate)
-                                                    )
-                                                }
-                                            >
-                                                <Copy className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="text-center py-12 text-muted-foreground">
-                                        <Smartphone className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                        <p>Selecione uma consulta ao lado</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Envio Manual */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Envio Manual</CardTitle>
-                            <CardDescription>
-                                Envie uma mensagem personalizada para qualquer número
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-4 md:grid-cols-2">
+                        {provider !== 'NONE' && (
+                            <>
+                                {/* API Key */}
                                 <div className="space-y-2">
-                                    <Label>Telefone (com DDD)</Label>
+                                    <Label htmlFor="api_key">
+                                        {provider === 'OFFICIAL' ? 'Access Token' : 'API Key / Token'}
+                                    </Label>
                                     <Input
-                                        placeholder="11999999999"
-                                        value={clinicWhatsApp}
-                                        onChange={(e) => setClinicWhatsApp(e.target.value)}
+                                        id="api_key"
+                                        type="password"
+                                        value={apiKey}
+                                        onChange={(e) => setApiKey(e.target.value)}
+                                        placeholder="Sua chave de API"
                                     />
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Mensagem</Label>
-                                <Textarea
-                                    placeholder="Digite sua mensagem..."
-                                    value={customMessage}
-                                    onChange={(e) => setCustomMessage(e.target.value)}
-                                    rows={4}
-                                />
-                            </div>
-                            <Button
-                                className="bg-green-600 hover:bg-green-700"
-                                disabled={!clinicWhatsApp || !customMessage}
-                                onClick={() => openWhatsApp(clinicWhatsApp, customMessage)}
-                            >
-                                <MessageCircle className="w-4 h-4 mr-2" />
-                                Enviar via WhatsApp
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
 
-                {/* Templates */}
-                <TabsContent value="templates" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Templates de Mensagem</CardTitle>
-                            <CardDescription>
-                                Templates disponíveis para envio rápido
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {messageTemplates.map((template) => (
-                                    <Card key={template.id}>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-base flex items-center gap-2">
-                                                <template.icon className="w-5 h-5 text-green-600" />
-                                                {template.name}
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <pre className="text-sm whitespace-pre-wrap text-muted-foreground bg-gray-50 p-3 rounded-lg">
-                                                {template.template}
-                                            </pre>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                                <h4 className="font-medium text-blue-900 mb-2">Variáveis disponíveis:</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                    <code className="bg-white px-2 py-1 rounded">{'{nome}'}</code>
-                                    <code className="bg-white px-2 py-1 rounded">{'{data}'}</code>
-                                    <code className="bg-white px-2 py-1 rounded">{'{hora}'}</code>
-                                    <code className="bg-white px-2 py-1 rounded">{'{medico}'}</code>
-                                    <code className="bg-white px-2 py-1 rounded">{'{link}'}</code>
-                                    <code className="bg-white px-2 py-1 rounded">{'{documento}'}</code>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                {/* Configurações */}
-                <TabsContent value="settings" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Configurações de WhatsApp</CardTitle>
-                            <CardDescription>
-                                Configure as notificações automáticas
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <Label>Mostrar botão de WhatsApp na confirmação</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Exibe botão para compartilhar no WhatsApp após pagamento
-                                    </p>
-                                </div>
-                                <Switch defaultChecked />
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <Label>Incluir link de vídeo na mensagem</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Adiciona automaticamente o link do Google Meet
-                                    </p>
-                                </div>
-                                <Switch defaultChecked />
-                            </div>
-
-                            <div className="border-t pt-4">
-                                <h4 className="font-medium mb-4">WhatsApp da Clínica</h4>
+                                {/* Instance ID */}
                                 <div className="space-y-2">
-                                    <Label>Número para suporte</Label>
-                                    <Input placeholder="11999999999" />
-                                    <p className="text-sm text-muted-foreground">
-                                        Pacientes poderão entrar em contato por este número
-                                    </p>
+                                    <Label htmlFor="instance_id">
+                                        {provider === 'OFFICIAL' ? 'Phone Number ID' : 'Instance ID'}
+                                    </Label>
+                                    <Input
+                                        id="instance_id"
+                                        value={instanceId}
+                                        onChange={(e) => setInstanceId(e.target.value)}
+                                        placeholder={provider === 'OFFICIAL' ? 'Ex: 123456789012345' : 'Ex: instance-abc123'}
+                                    />
                                 </div>
-                            </div>
 
-                            <Button>Salvar Configurações</Button>
-                        </CardContent>
-                    </Card>
+                                {/* Business ID (only for Official) */}
+                                {provider === 'OFFICIAL' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="business_id">WhatsApp Business Account ID</Label>
+                                        <Input
+                                            id="business_id"
+                                            value={businessId}
+                                            onChange={(e) => setBusinessId(e.target.value)}
+                                            placeholder="Ex: 123456789012345"
+                                        />
+                                    </div>
+                                )}
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Badge variant="secondary">PRO</Badge>
-                                WhatsApp Business API
-                            </CardTitle>
-                            <CardDescription>
-                                Integração oficial para envio automático em massa
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Com o plano Profissional, você pode integrar a API oficial do WhatsApp Business
-                                    para enviar mensagens automáticas de confirmação, lembretes e muito mais.
-                                </p>
-                                <Button variant="outline">
-                                    Ver Planos
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+                                {/* Enable Toggle */}
+                                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                                    <div>
+                                        <p className="font-medium">Ativar Integração</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Habilitar envio de mensagens por este provedor
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={enabled}
+                                        onCheckedChange={setEnabled}
+                                    />
+                                </div>
+
+                                {/* Connection Status */}
+                                {connectionStatus !== 'idle' && (
+                                    <div
+                                        className={`flex items-center gap-2 p-3 rounded-lg ${connectionStatus === 'connected'
+                                            ? 'bg-green-50 text-green-700'
+                                            : 'bg-red-50 text-red-700'
+                                            }`}
+                                    >
+                                        {connectionStatus === 'connected' ? (
+                                            <>
+                                                <CheckCircle2 className="w-5 h-5" />
+                                                Conexão estabelecida com sucesso
+                                            </>
+                                        ) : (
+                                            <>
+                                                <XCircle className="w-5 h-5" />
+                                                Falha na conexão - verifique as credenciais
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={testConnection}
+                                        disabled={testing || !apiKey || !instanceId}
+                                    >
+                                        {testing ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Testando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Zap className="w-4 h-4 mr-2" />
+                                                Testar Conexão
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        className="flex-1"
+                                        disabled={saving}
+                                    >
+                                        {saving ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Salvando...
+                                            </>
+                                        ) : (
+                                            'Salvar Configurações'
+                                        )}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </form>
+                </CardContent>
+            </Card>
+
+            {/* Provider Comparison */}
+            <div className="grid gap-4 md:grid-cols-3">
+                <ProviderInfoCard
+                    title="Z-API"
+                    icon={Zap}
+                    color="text-green-600"
+                    profile="Clínicas Médias"
+                    benefit="Facilidade de configuração e estabilidade"
+                    link="https://z-api.io"
+                />
+                <ProviderInfoCard
+                    title="Evolution API"
+                    icon={Server}
+                    color="text-blue-600"
+                    profile="Tech / Enterprise"
+                    benefit="Sem custo por mensagem (Docker)"
+                    link="https://github.com/EvolutionAPI/evolution-api"
+                />
+                <ProviderInfoCard
+                    title="WhatsApp Oficial"
+                    icon={Shield}
+                    color="text-emerald-600"
+                    profile="Grandes Clínicas"
+                    benefit="Estabilidade total, sem risco de banimento"
+                    link="https://developers.facebook.com/docs/whatsapp"
+                />
+            </div>
         </div>
     )
 }
+
+function ProviderInfoCard({
+    title,
+    icon: Icon,
+    color,
+    profile,
+    benefit,
+    link,
+}: {
+    title: string
+    icon: React.ComponentType<{ className?: string }>
+    color: string
+    profile: string
+    benefit: string
+    link: string
+}) {
+    return (
+        <Card className="bg-slate-50">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                    <Icon className={`w-5 h-5 ${color}`} />
+                    {title}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+                <p>
+                    <strong>Perfil:</strong> {profile}
+                </p>
+                <p>
+                    <strong>Vantagem:</strong> {benefit}
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <p className="text-blue-900 font-semibold mb-1">💰 Taxas e Custos</p>
+                    <p className="text-xs text-blue-800">
+                        • Taxa de implantação: <strong>R$ 150,00</strong><br />
+                        • Custos da API: <strong>Pagos pelo contratante</strong>
+                    </p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                    <p className="text-amber-900 font-semibold mb-1">📞 Suporte para Configuração</p>
+                    <p className="text-xs text-amber-800">
+                        Entre em contato para configuração e instalação.
+                    </p>
+                </div>
+
+                <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                    Documentação <ExternalLink className="w-3 h-3" />
+                </a>
+            </CardContent>
+        </Card>
+    )
+}
+

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
-        const supabase = await createClient()
+        const supabase = await createClient() as any
 
         const { data: appointment, error } = await supabase
             .from('appointments')
@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         const body = await request.json()
         const validatedData = updateAppointmentSchema.parse(body)
 
-        const supabase = await createClient()
+        const supabase = await createClient() as any
 
         // Get appointment
         const { data: appointment, error: fetchError } = await supabase

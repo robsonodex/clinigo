@@ -31,8 +31,8 @@ export async function DELETE(
         }
 
         // Deactivate session
-        const { error } = await supabase
-            .from('user_sessions')
+        const { error } = await (supabase
+            .from('user_sessions') as any)
             .update({ is_active: false })
             .eq('id', sessionId)
 
@@ -48,7 +48,7 @@ export async function DELETE(
             .eq('id', user.id)
             .single()
 
-        await supabase.from('session_audit').insert({
+        await (supabase.from('session_audit') as any).insert({
             user_id: user.id,
             clinic_id: (userData as any)?.clinic_id,
             event_type: 'SESSION_REVOKED',

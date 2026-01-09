@@ -1,6 +1,6 @@
 'use client'
 
-import { use } from 'react'
+import { use, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -33,7 +33,7 @@ interface PageProps {
     params: Promise<{ clinic_slug: string; doctor_id: string }>
 }
 
-export default function ConfirmBookingPage({ params }: PageProps) {
+function ConfirmBookingContent({ params }: PageProps) {
     const { clinic_slug, doctor_id } = use(params)
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -346,5 +346,13 @@ export default function ConfirmBookingPage({ params }: PageProps) {
                 </div>
             </main>
         </div>
+    )
+}
+
+export default function ConfirmBookingPage({ params }: PageProps) {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <ConfirmBookingContent params={params} />
+        </Suspense>
     )
 }

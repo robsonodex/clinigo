@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +38,7 @@ import {
     Edit,
     Trash2,
     Plus,
+    Loader2,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -57,68 +59,18 @@ export default function AuditoriaPage() {
     const [search, setSearch] = useState('')
     const [actionFilter, setActionFilter] = useState('all')
 
-    // Mock audit logs
-    const auditLogs: AuditLog[] = [
-        {
-            id: '1',
-            user_name: 'Admin Master',
-            user_email: 'admin@clinigo.com',
-            action: 'LOGIN',
-            entity_type: 'auth',
-            ip_address: '189.40.xx.xx',
-            user_agent: 'Chrome 120',
-            created_at: '2024-01-03T15:30:00',
-            severity: 'low',
+    // Carrega logs de auditoria do banco via API
+    const { data: auditLogs = [], isLoading } = useQuery<AuditLog[]>({
+        queryKey: ['audit-logs', actionFilter],
+        queryFn: async () => {
+            const params = new URLSearchParams()
+            if (actionFilter !== 'all') params.set('action', actionFilter)
+            const res = await fetch(`/api/audit-logs?${params}`)
+            if (!res.ok) throw new Error('Failed to fetch')
+            const json = await res.json()
+            return json.data || []
         },
-        {
-            id: '2',
-            user_name: 'Dr. João Santos',
-            user_email: 'joao@clinica.com',
-            action: 'VIEW_MEDICAL_RECORD',
-            entity_type: 'medical_record',
-            entity_id: 'rec_123',
-            ip_address: '201.55.xx.xx',
-            user_agent: 'Chrome 120',
-            created_at: '2024-01-03T14:45:00',
-            severity: 'medium',
-        },
-        {
-            id: '3',
-            user_name: 'Admin Clínica',
-            user_email: 'admin@clinica.com',
-            action: 'UPDATE_CLINIC_SETTINGS',
-            entity_type: 'clinic',
-            entity_id: 'cli_456',
-            ip_address: '177.88.xx.xx',
-            user_agent: 'Firefox 121',
-            created_at: '2024-01-03T14:20:00',
-            severity: 'high',
-        },
-        {
-            id: '4',
-            user_name: 'Super Admin',
-            user_email: 'super@clinigo.com',
-            action: 'DELETE_PATIENT_DATA',
-            entity_type: 'patient',
-            entity_id: 'pat_789',
-            ip_address: '189.40.xx.xx',
-            user_agent: 'Chrome 120',
-            created_at: '2024-01-03T12:00:00',
-            severity: 'critical',
-        },
-        {
-            id: '5',
-            user_name: 'Dr. Ana Costa',
-            user_email: 'ana@clinica.com',
-            action: 'CREATE_APPOINTMENT',
-            entity_type: 'appointment',
-            entity_id: 'apt_001',
-            ip_address: '200.12.xx.xx',
-            user_agent: 'Safari 17',
-            created_at: '2024-01-03T10:30:00',
-            severity: 'low',
-        },
-    ]
+    })
 
     const getActionIcon = (action: string) => {
         if (action.includes('LOGIN')) return <LogIn className="w-4 h-4" />
@@ -318,3 +270,4 @@ export default function AuditoriaPage() {
         </div>
     )
 }
+

@@ -93,3 +93,4 @@ export async function GET(request: Request) {
         sent_1h: 0 // appointments1h?.length || 0
     })
 }
+

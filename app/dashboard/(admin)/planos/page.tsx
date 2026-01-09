@@ -22,7 +22,7 @@ export default function PlansPage() {
                     const plan = PLANS[planKey]
                     return (
                         <Card key={plan.id} className="flex flex-col relative overflow-hidden">
-                            {plan.id === 'PRO' && (
+                            {plan.id === 'PROFESSIONAL' && (
                                 <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-bl-lg font-bold">
                                     Mais Popular
                                 </div>
@@ -53,7 +53,7 @@ export default function PlansPage() {
                                             </li>
                                             <li className="flex items-center">
                                                 <Check className="h-3 w-3 mr-2 text-green-500" />
-                                                {plan.limits.storage_gb} GB Armazenamento
+                                                {plan.limits.max_storage_gb} GB Armazenamento
                                             </li>
                                         </ul>
                                     </div>
@@ -63,7 +63,7 @@ export default function PlansPage() {
                                             {plan.features.map((feature, i) => (
                                                 <li key={i} className="flex items-center">
                                                     <Check className="h-3 w-3 mr-2 text-primary" />
-                                                    {feature}
+                                                    {typeof feature === 'string' ? feature : feature.name}
                                                 </li>
                                             ))}
                                         </ul>
@@ -83,3 +83,4 @@ export default function PlansPage() {
         </div>
     )
 }
+

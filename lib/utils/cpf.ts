@@ -86,3 +86,4 @@ export function maskCPF(cpf: string): string {
 export function cpfRefinement(cpf: string): boolean {
     return isValidCPF(cpf)
 }
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,54 +37,30 @@ interface TissGuia {
 export default function TissPage() {
     const [search, setSearch] = useState('')
     const [tab, setTab] = useState('all')
+    const [isLoading, setIsLoading] = useState(true)
+    const [guias, setGuias] = useState<TissGuia[]>([])
 
-    // Mock TISS guides data
-    const guias: TissGuia[] = [
-        {
-            id: '1',
-            numero: 'TISS-2024-0001',
-            tipo: 'consulta',
-            paciente: 'Maria Silva',
-            procedimento: 'Teleconsulta - Clínica Geral',
-            operadora: 'Unimed',
-            valor: 180,
-            status: 'aprovada',
-            data_criacao: '2024-01-03',
-        },
-        {
-            id: '2',
-            numero: 'TISS-2024-0002',
-            tipo: 'consulta',
-            paciente: 'João Souza',
-            procedimento: 'Teleconsulta - Cardiologia',
-            operadora: 'Bradesco Saúde',
-            valor: 250,
-            status: 'pendente',
-            data_criacao: '2024-01-03',
-        },
-        {
-            id: '3',
-            numero: 'TISS-2024-0003',
-            tipo: 'sadt',
-            paciente: 'Ana Costa',
-            procedimento: 'Eletrocardiograma',
-            operadora: 'Amil',
-            valor: 120,
-            status: 'enviada',
-            data_criacao: '2024-01-02',
-        },
-        {
-            id: '4',
-            numero: 'TISS-2024-0004',
-            tipo: 'consulta',
-            paciente: 'Carlos Lima',
-            procedimento: 'Teleconsulta - Dermatologia',
-            operadora: 'SulAmérica',
-            valor: 200,
-            status: 'paga',
-            data_criacao: '2024-01-01',
-        },
-    ]
+    // Fetch TISS guides from API
+    useEffect(() => {
+        const fetchGuias = async () => {
+            setIsLoading(true)
+            try {
+                const response = await fetch('/api/tiss/guias')
+                if (response.ok) {
+                    const data = await response.json()
+                    setGuias(data.guias || [])
+                } else {
+                    setGuias([])
+                }
+            } catch (error) {
+                console.error('Error fetching TISS guias:', error)
+                setGuias([])
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchGuias()
+    }, [])
 
     const getStatusBadge = (status: TissGuia['status']) => {
         switch (status) {
@@ -209,7 +185,70 @@ export default function TissPage() {
                     <TabsTrigger value="pendente">Pendentes</TabsTrigger>
                     <TabsTrigger value="enviada">Enviadas</TabsTrigger>
                     <TabsTrigger value="aprovada">Aprovadas</TabsTrigger>
+                    <TabsTrigger value="import" className="gap-2">
+                        <Upload className="w-4 h-4" />
+                        Importar
+                    </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="import">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Importar Guias TISS</CardTitle>
+                            <CardDescription>
+                                Importe lotes de guias a partir de arquivos XML ou Excel/CSV
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-12 space-y-4">
+                                <div className="p-4 bg-muted rounded-full">
+                                    <Upload className="w-8 h-8 text-muted-foreground" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <h3 className="font-medium">Arraste arquivos aqui ou clique para selecionar</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Suporta arquivos .xml, .xlsx, .csv
+                                    </p>
+                                </div>
+                                <Input
+                                    type="file"
+                                    className="max-w-xs mt-4"
+                                    accept=".xml,.xlsx,.csv"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+
+                                        const formData = new FormData()
+                                        formData.append('file', file)
+
+                                        try {
+                                            toast.default('Importando arquivo...') // Need to add toast import or generic alert
+                                            const res = await fetch('/api/tiss/import', {
+                                                method: 'POST',
+                                                body: formData
+                                            })
+
+                                            const data = await res.json()
+                                            if (res.ok) {
+                                                alert(`Sucesso! ${data.message}`)
+                                                setTab('all')
+                                                // Refresh logic would go here
+                                            } else {
+                                                alert(`Erro: ${data.error}`)
+                                            }
+                                        } catch (err) {
+                                            console.error(err)
+                                            alert('Erro ao importar')
+                                        }
+                                    }}
+                                />
+                                <div className="text-xs text-muted-foreground mt-4 max-w-sm text-center">
+                                    <p>Certifique-se que o arquivo segue o padrão TISS 4.0 ou o modelo de importação do CliniGo.</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
 
                 <TabsContent value={tab} className="space-y-4">
                     {filteredGuias
@@ -299,3 +338,4 @@ export default function TissPage() {
         </div>
     )
 }
+

@@ -32,31 +32,21 @@ import {
 export default function RelatoriosGlobaisPage() {
     const [period, setPeriod] = useState('30d')
 
-    // Mock data
+    // Mock data cleared
     const metrics = {
-        mrr: 42500,
-        mrrChange: 12.5,
-        totalClinics: 48,
-        clinicsChange: 3,
-        totalAppointments: 4560,
-        appointmentsChange: 8.2,
-        avgTicket: 180,
-        ticketChange: -2.1,
+        mrr: 0,
+        mrrChange: 0,
+        totalClinics: 0,
+        clinicsChange: 0,
+        totalAppointments: 0,
+        appointmentsChange: 0,
+        avgTicket: 0,
+        ticketChange: 0,
     }
 
-    const topClinics = [
-        { name: 'Clínica São Paulo Premium', revenue: 12500, appointments: 156, plan: 'ENTERPRISE' },
-        { name: 'Centro Médico Paulista', revenue: 8900, appointments: 120, plan: 'PROFISSIONAL' },
-        { name: 'MedCare Online', revenue: 6700, appointments: 98, plan: 'PROFISSIONAL' },
-        { name: 'Saúde Digital', revenue: 4500, appointments: 72, plan: 'BASICO' },
-        { name: 'Clínica Virtual SP', revenue: 3200, appointments: 54, plan: 'BASICO' },
-    ]
+    const topClinics: any[] = []
 
-    const planDistribution = [
-        { plan: 'Básico', count: 28, percentage: 58 },
-        { plan: 'Profissional', count: 15, percentage: 31 },
-        { plan: 'Enterprise', count: 5, percentage: 11 },
-    ]
+    const planDistribution: any[] = []
 
     return (
         <div className="space-y-6">
@@ -223,6 +213,11 @@ export default function RelatoriosGlobaisPage() {
                                             </div>
                                         </div>
                                     ))}
+                                    {topClinics.length === 0 && (
+                                        <div className="text-center text-muted-foreground py-8">
+                                            Nenhum dado disponível
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -246,22 +241,26 @@ export default function RelatoriosGlobaisPage() {
                                             <div className="w-full bg-muted rounded-full h-3">
                                                 <div
                                                     className={`h-3 rounded-full ${item.plan === 'Básico'
-                                                            ? 'bg-blue-500'
-                                                            : item.plan === 'Profissional'
-                                                                ? 'bg-purple-500'
-                                                                : 'bg-emerald-500'
+                                                        ? 'bg-blue-500'
+                                                        : item.plan === 'Profissional'
+                                                            ? 'bg-purple-500'
+                                                            : 'bg-emerald-500'
                                                         }`}
                                                     style={{ width: `${item.percentage}%` }}
                                                 />
                                             </div>
                                         </div>
                                     ))}
+                                    {planDistribution.length === 0 && (
+                                        <div className="text-center text-muted-foreground py-8">
+                                            Nenhum dado disponível
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg">
                                     <p className="text-sm">
-                                        <strong>Oportunidade:</strong> 28 clínicas no plano Básico podem ser
-                                        convertidas para Profissional com campanhas de upgrade.
+                                        <strong>Oportunidade:</strong> Nenhuma oportunidade detectada.
                                     </p>
                                 </div>
                             </CardContent>
@@ -277,7 +276,7 @@ export default function RelatoriosGlobaisPage() {
                                         <Users className="w-5 h-5 text-blue-600" />
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold">186</div>
+                                        <div className="text-2xl font-bold">0</div>
                                         <p className="text-xs text-muted-foreground">Médicos ativos</p>
                                     </div>
                                 </div>
@@ -290,7 +289,7 @@ export default function RelatoriosGlobaisPage() {
                                         <Activity className="w-5 h-5 text-green-600" />
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold">99.8%</div>
+                                        <div className="text-2xl font-bold">100%</div>
                                         <p className="text-xs text-muted-foreground">Uptime</p>
                                     </div>
                                 </div>
@@ -303,7 +302,7 @@ export default function RelatoriosGlobaisPage() {
                                         <PieChart className="w-5 h-5 text-purple-600" />
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold">4.8</div>
+                                        <div className="text-2xl font-bold">0</div>
                                         <p className="text-xs text-muted-foreground">NPS médio</p>
                                     </div>
                                 </div>
@@ -316,7 +315,7 @@ export default function RelatoriosGlobaisPage() {
                                         <Calendar className="w-5 h-5 text-amber-600" />
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold">2.3%</div>
+                                        <div className="text-2xl font-bold">0%</div>
                                         <p className="text-xs text-muted-foreground">Churn mensal</p>
                                     </div>
                                 </div>

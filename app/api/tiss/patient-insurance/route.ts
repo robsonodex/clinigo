@@ -18,6 +18,32 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'patient_id é obrigatório' }, { status: 400 })
         }
 
+        // 🔥 FEATURE GATE: TISS is PRO+ exclusive
+        const { data: userData } = await supabase
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        const clinicId = (userData as any)?.clinic_id
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        }
+
+        const { data: clinic } = await supabase
+            .from('clinics')
+            .select('plan_type')
+            .eq('id', clinicId)
+            .single()
+
+        if ((clinic as any)?.plan_type === 'BASIC') {
+            return NextResponse.json({
+                error: 'Integração TISS disponível apenas nos planos Profissional e Enterprise',
+                current_plan: 'BASIC',
+                upgrade_to: 'PRO'
+            }, { status: 403 })
+        }
+
         const { data: insurances, error } = await supabase
             .from('patient_insurance')
             .select(`
@@ -70,6 +96,32 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 error: 'Campos obrigatórios: patient_id, operator_id, card_number'
             }, { status: 400 })
+        }
+
+        // 🔥 FEATURE GATE: TISS is PRO+ exclusive
+        const { data: userData } = await supabase
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        const clinicId = (userData as any)?.clinic_id
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        }
+
+        const { data: clinic } = await supabase
+            .from('clinics')
+            .select('plan_type')
+            .eq('id', clinicId)
+            .single()
+
+        if ((clinic as any)?.plan_type === 'BASIC') {
+            return NextResponse.json({
+                error: 'Integração TISS disponível apenas nos planos Profissional e Enterprise',
+                current_plan: 'BASIC',
+                upgrade_to: 'PRO'
+            }, { status: 403 })
         }
 
         // Check for duplicate
@@ -194,3 +246,4 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 }
+

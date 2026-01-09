@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Create profile in users table
-        const { data: profile, error: profileError } = await supabase
-            .from('users')
+        const { data: profile, error: profileError } = await (supabase
+            .from('users') as any)
             .insert({
                 id: authData.user.id,
                 email,
@@ -83,3 +83,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

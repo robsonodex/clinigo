@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
             .eq('user_id', user.id)
             .single()
 
-        if (!mfaSettings?.totp_enabled) {
+        const settings = mfaSettings as any || {}
+
+        if (!settings.totp_enabled) {
             return NextResponse.json({ error: 'MFA não está habilitado' }, { status: 400 })
         }
 
@@ -48,19 +50,19 @@ export async function POST(request: NextRequest) {
             // Verify backup code
             const codeHash = crypto.createHash('sha256').update(code.toUpperCase()).digest('hex')
 
-            const unusedCodes = mfaSettings.backup_codes.filter((c: any) => c.used_at === null)
+            const unusedCodes = settings.backup_codes.filter((c: any) => c.used_at === null)
             const matchingCode = unusedCodes.find((c: any) => c.code_hash === codeHash)
 
             if (matchingCode) {
                 // Mark code as used
-                const updatedCodes = mfaSettings.backup_codes.map((c: any) =>
+                const updatedCodes = settings.backup_codes.map((c: any) =>
                     c.code_hash === codeHash
                         ? { ...c, used_at: new Date().toISOString() }
                         : c
                 )
 
-                await supabase
-                    .from('user_mfa_settings')
+                await (supabase
+                    .from('user_mfa_settings') as any)
                     .update({ backup_codes: updatedCodes })
                     .eq('user_id', user.id)
 
@@ -70,20 +72,20 @@ export async function POST(request: NextRequest) {
             // Verify TOTP code
             const totp = new OTPAuth.TOTP({
                 issuer: 'CliniGo',
-                label: userData.email,
+                label: (userData as any).email,
                 algorithm: 'SHA1',
                 digits: 6,
                 period: 30,
-                secret: OTPAuth.Secret.fromBase32(mfaSettings.totp_secret),
+                secret: OTPAuth.Secret.fromBase32(settings.totp_secret),
             })
 
             isValid = totp.validate({ token: code, window: 1 }) !== null
         }
 
         // Log the attempt
-        await supabase.from('session_audit').insert({
+        await (supabase.from('session_audit') as any).insert({
             user_id: user.id,
-            clinic_id: userData.clinic_id,
+            clinic_id: (userData as any).clinic_id,
             event_type: isValid ? 'MFA_SUCCESS' : 'MFA_FAILED',
             event_details: { is_backup_code },
             ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
@@ -97,8 +99,8 @@ export async function POST(request: NextRequest) {
         // Update session as MFA verified
         const sessionId = request.headers.get('x-session-id')
         if (sessionId) {
-            await supabase
-                .from('user_sessions')
+            await (supabase
+                .from('user_sessions') as any)
                 .update({
                     mfa_verified: true,
                     mfa_verified_at: new Date().toISOString(),
@@ -115,3 +117,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 }
+

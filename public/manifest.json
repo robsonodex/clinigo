@@ -1,0 +1,43 @@
+{
+    "name": "CliniGo",
+    "short_name": "CliniGo",
+    "description": "Sistema de Gestão de Clínicas e Teleconsultas - CliniGo SaaS",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#16a34a",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ],
+    "categories": [
+        "medical",
+        "health",
+        "business"
+    ],
+    "lang": "pt-BR",
+    "dir": "ltr"
+}

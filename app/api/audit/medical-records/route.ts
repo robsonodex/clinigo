@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         const dateFrom = searchParams.get('dateFrom')
         const dateTo = searchParams.get('dateTo')
 
-        const supabase = await createClient()
+        const supabase = await createClient() as any
 
         // Get user's clinic
         const { data: user } = await supabase
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
             throw new ForbiddenError('Dados incompletos')
         }
 
-        const supabase = await createClient()
+        const supabase = await createClient() as any
 
         // Get user details
         const { data: user } = await supabase
@@ -157,3 +157,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

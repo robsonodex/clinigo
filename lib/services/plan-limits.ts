@@ -6,23 +6,17 @@ import { createClient } from '@/lib/supabase/server'
 
 // Plan limit configurations - Updated January 2026
 const PLAN_LIMITS = {
-    FREE: {
-        max_doctors: 1,
-        max_appointments_month: 20,
-        price: 0,
-        features: ['basic_booking'],
-    },
-    STARTER: {
-        max_doctors: 1,
-        max_appointments_month: 50,
-        price: 99,
-        features: ['basic_booking', 'email_notifications', 'whatsapp_share'],
-    },
     BASIC: {
         max_doctors: 3,
         max_appointments_month: 150,
         price: 147,
         features: ['basic_booking', 'email_notifications', 'whatsapp_share', 'mercadopago'],
+    },
+    STARTER: {
+        max_doctors: 1,
+        max_appointments_month: 50,
+        price: 99,
+        features: ['basic_booking', 'email_notifications'],
     },
     PRO: {
         max_doctors: 5,
@@ -89,7 +83,7 @@ export async function getClinicPlan(clinicId: string) {
         throw new Error(`Clinic not found: ${clinicId}`)
     }
 
-    const planType = (clinic.plan_type as PlanType) || 'FREE'
+    const planType = (clinic.plan_type as PlanType) || 'BASIC'
     const limits = PLAN_LIMITS[planType]
 
     return {
@@ -257,3 +251,4 @@ export async function checkPlanLimit(
         throw error
     }
 }
+

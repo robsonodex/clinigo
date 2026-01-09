@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useRole } from '@/lib/hooks/use-auth'
+import { usePlan } from '@/lib/hooks/use-plan'
 import {
     LayoutDashboard,
     Calendar,
@@ -40,6 +41,7 @@ import {
     Activity,
 } from 'lucide-react'
 import { useState } from 'react'
+import type { PlanType } from '@/lib/constants/plans'
 
 interface NavItem {
     title: string
@@ -47,6 +49,7 @@ interface NavItem {
     icon: React.ComponentType<{ className?: string }>
     roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR')[]
     badge?: string
+    minPlan?: 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE'
     children?: NavItem[]
 }
 
@@ -91,6 +94,20 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
             },
             {
+                title: 'Triagem AiA',
+                href: '/dashboard/triagem',
+                icon: HeartPulse,
+                roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
+            },
+            {
+                title: 'Recepção',
+                href: '/dashboard/recepcao',
+                icon: Clipboard,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
                 title: 'Horários',
                 href: '/dashboard/horarios',
                 icon: Clock,
@@ -124,6 +141,7 @@ const navigationSections: NavSection[] = [
                 icon: FileText,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Prescrições',
@@ -131,6 +149,7 @@ const navigationSections: NavSection[] = [
                 icon: Clipboard,
                 roles: ['DOCTOR'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Documentos',
@@ -138,6 +157,7 @@ const navigationSections: NavSection[] = [
                 icon: FileArchive,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
         ],
     },
@@ -156,6 +176,7 @@ const navigationSections: NavSection[] = [
                 icon: DollarSign,
                 roles: ['CLINIC_ADMIN'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Faturamento TISS',
@@ -163,6 +184,7 @@ const navigationSections: NavSection[] = [
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
         ],
     },
@@ -174,6 +196,8 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/whatsapp',
                 icon: MessageCircle,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Notificações',
@@ -187,6 +211,7 @@ const navigationSections: NavSection[] = [
                 icon: Megaphone,
                 roles: ['CLINIC_ADMIN'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
         ],
     },
@@ -199,6 +224,7 @@ const navigationSections: NavSection[] = [
                 icon: Package,
                 roles: ['CLINIC_ADMIN'],
                 badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Relatórios',
@@ -235,6 +261,7 @@ const navigationSections: NavSection[] = [
                 icon: Globe,
                 roles: ['CLINIC_ADMIN'],
                 badge: 'ENT',
+                minPlan: 'ENTERPRISE',
             },
         ],
     },
@@ -300,9 +327,36 @@ const navigationSections: NavSection[] = [
     },
 ]
 
-function NavItemComponent({ item, isActive }: { item: NavItem; isActive: boolean }) {
+// Helper to check if plan meets requirement
+function planMeetsMinimum(currentPlan: PlanType, requiredPlan: PlanType): boolean {
+    const planOrder: Record<PlanType, number> = {
+        'STARTER': 0,
+        'BASIC': 1,
+        'PROFESSIONAL': 2,
+        'ENTERPRISE': 3,
+        'NETWORK': 4,
+    }
+    return (planOrder[currentPlan] || 0) >= (planOrder[requiredPlan] || 0)
+}
+
+import { VisualLock } from '@/components/sidebar/visual-lock'
+
+function NavItemComponent({
+    item,
+    isActive,
+    currentPlan,
+    isMobile = false
+}: {
+    item: NavItem
+    isActive: boolean
+    currentPlan: PlanType
+    isMobile?: boolean
+}) {
     const [isOpen, setIsOpen] = useState(false)
     const hasChildren = item.children && item.children.length > 0
+
+    // Touch-friendly minimum height (44px = min-h-11)
+    const touchClass = isMobile ? 'min-h-[44px]' : ''
 
     if (hasChildren) {
         return (
@@ -311,9 +365,10 @@ function NavItemComponent({ item, isActive }: { item: NavItem; isActive: boolean
                     onClick={() => setIsOpen(!isOpen)}
                     className={cn(
                         'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        touchClass,
                         isActive
                             ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
                     )}
                 >
                     <div className="flex items-center gap-3">
@@ -339,17 +394,24 @@ function NavItemComponent({ item, isActive }: { item: NavItem; isActive: boolean
                 {isOpen && (
                     <div className="ml-4 pl-4 border-l mt-1 space-y-1">
                         {item.children?.map((child) => (
-                            <Link
+                            <VisualLock
                                 key={child.href}
-                                href={child.href}
-                                className={cn(
-                                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                                    'text-muted-foreground hover:bg-muted hover:text-foreground'
-                                )}
+                                requiredPlan={child.minPlan || 'BASIC'}
+                                currentPlan={currentPlan}
+                                featureName={child.title}
                             >
-                                <child.icon className="w-4 h-4" />
-                                {child.title}
-                            </Link>
+                                <Link
+                                    href={child.href}
+                                    className={cn(
+                                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                                        touchClass,
+                                        'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                                    )}
+                                >
+                                    <child.icon className="w-4 h-4" />
+                                    {child.title}
+                                </Link>
+                            </VisualLock>
                         ))}
                     </div>
                 )}
@@ -358,34 +420,46 @@ function NavItemComponent({ item, isActive }: { item: NavItem; isActive: boolean
     }
 
     return (
-        <Link
-            href={item.href}
-            className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            )}
+        <VisualLock
+            requiredPlan={item.minPlan || 'BASIC'}
+            currentPlan={currentPlan}
+            featureName={item.title}
         >
-            <item.icon className="w-5 h-5" />
-            <span className="flex-1">{item.title}</span>
-            {item.badge && (
-                <span className={cn(
-                    "px-1.5 py-0.5 text-[10px] font-bold rounded",
-                    item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
-                        item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
-                            "bg-gray-100 text-gray-700"
-                )}>
-                    {item.badge}
-                </span>
-            )}
-        </Link>
+            <Link
+                href={item.href}
+                className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    touchClass,
+                    isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                )}
+            >
+                <item.icon className="w-5 h-5" />
+                <span className="flex-1">{item.title}</span>
+                {item.badge && (
+                    <span className={cn(
+                        "px-1.5 py-0.5 text-[10px] font-bold rounded",
+                        item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
+                            item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
+                                "bg-gray-100 text-gray-700"
+                    )}>
+                        {item.badge}
+                    </span>
+                )}
+            </Link>
+        </VisualLock>
     )
 }
 
-export function Sidebar() {
+
+export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
     const { role } = useRole()
+    const { planType, isLoading } = usePlan()
+
+    // Default to BASIC if loading
+    const currentPlan: PlanType = planType || 'BASIC'
 
     // Filter sections based on role
     const filteredSections = navigationSections
@@ -398,9 +472,14 @@ export function Sidebar() {
         .filter(section => section.items.length > 0)
 
     return (
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r">
+        <aside className={cn(
+            "flex flex-col bg-white border-r h-full",
+            isMobile
+                ? "w-full"
+                : "hidden lg:flex lg:w-64 lg:fixed lg:inset-y-0"
+        )}>
             {/* Logo */}
-            <div className="flex items-center h-16 px-6 border-b">
+            <div className="flex items-center h-16 px-6 border-b shrink-0">
                 <Link href="/dashboard" className="flex items-center gap-2 font-bold text-primary">
                     <Stethoscope className="w-6 h-6" />
                     <span>CliniGo</span>
@@ -418,7 +497,13 @@ export function Sidebar() {
                             {section.items.map((item) => {
                                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
                                 return (
-                                    <NavItemComponent key={item.href} item={item} isActive={isActive} />
+                                    <NavItemComponent
+                                        key={item.href}
+                                        item={item}
+                                        isActive={isActive}
+                                        currentPlan={currentPlan}
+                                        isMobile={isMobile}
+                                    />
                                 )
                             })}
                         </div>
@@ -427,7 +512,7 @@ export function Sidebar() {
             </nav>
 
             {/* Role indicator */}
-            <div className="px-4 py-3 border-t text-xs text-muted-foreground">
+            <div className="px-4 py-3 border-t text-xs text-muted-foreground shrink-0">
                 {role === 'SUPER_ADMIN' && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full">
                         <Shield className="w-3 h-3" /> Super Admin
@@ -447,3 +532,4 @@ export function Sidebar() {
         </aside>
     )
 }
+

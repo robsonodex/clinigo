@@ -196,3 +196,4 @@ export function handleApiError(error: unknown): NextResponse {
         { status: 500 }
     )
 }
+

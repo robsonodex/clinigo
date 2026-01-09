@@ -136,3 +136,4 @@ export function generateApiKey(): { key: string; prefix: string; hash: string } 
 
     return { key, prefix, hash }
 }
+

@@ -34,21 +34,21 @@ export async function GET(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user?.clinic_id) {
+        if (!(user as any)?.clinic_id) {
             throw new BadRequestError('Clínica não encontrada')
         }
 
         // Check if clinic has API access feature
-        const hasApiAccess = await canUseFeature(user.clinic_id, 'api_access')
+        const hasApiAccess = await canUseFeature((user as any).clinic_id, 'api_access')
         if (!hasApiAccess) {
             throw new ForbiddenError('Acesso à API disponível apenas no plano Enterprise')
         }
 
         // List API keys (never return the actual key hash)
-        const { data: keys, error } = await supabase
-            .from('api_keys')
+        const { data: keys, error } = await (supabase
+            .from('api_keys') as any)
             .select('id, key_name, key_prefix, permissions, rate_limit_per_minute, last_used_at, expires_at, is_active, created_at')
-            .eq('clinic_id', user.clinic_id)
+            .eq('clinic_id', (user as any).clinic_id)
             .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user?.clinic_id) {
+        if (!(user as any)?.clinic_id) {
             throw new BadRequestError('Clínica não encontrada')
         }
 
         // Check if clinic has API access feature
-        const hasApiAccess = await canUseFeature(user.clinic_id, 'api_access')
+        const hasApiAccess = await canUseFeature((user as any).clinic_id, 'api_access')
         if (!hasApiAccess) {
             throw new ForbiddenError('Acesso à API disponível apenas no plano Enterprise')
         }
@@ -112,10 +112,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Insert API key (using service role to bypass RLS for creation)
-        const { data: newKey, error } = await serviceClient
-            .from('api_keys')
+        const { data: newKey, error } = await (serviceClient
+            .from('api_keys') as any)
             .insert({
-                clinic_id: user.clinic_id,
+                clinic_id: (user as any).clinic_id,
                 key_name,
                 key_hash: keyHash,
                 key_prefix: keyPrefix,
@@ -170,16 +170,16 @@ export async function DELETE(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user?.clinic_id) {
+        if (!(user as any)?.clinic_id) {
             throw new BadRequestError('Clínica não encontrada')
         }
 
         // Deactivate the key (soft delete)
-        const { error } = await supabase
-            .from('api_keys')
+        const { error } = await (supabase
+            .from('api_keys') as any)
             .update({ is_active: false })
             .eq('id', keyId)
-            .eq('clinic_id', user.clinic_id)
+            .eq('clinic_id', (user as any).clinic_id)
 
         if (error) throw error
 
@@ -188,3 +188,4 @@ export async function DELETE(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

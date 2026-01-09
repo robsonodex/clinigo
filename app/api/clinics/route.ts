@@ -73,15 +73,54 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const userRole = request.headers.get('x-user-role')
+        const userId = request.headers.get('x-user-id')
+
+        // Debug logging
+        console.log('[POST /api/clinics] ========== DEBUG ==========')
+        console.log('[POST /api/clinics] User Role from header:', userRole)
+        console.log('[POST /api/clinics] User ID from header:', userId)
+        console.log('[POST /api/clinics] All headers:', Object.fromEntries(request.headers.entries()))
+        console.log('[POST /api/clinics] ============================')
 
         if (userRole !== 'SUPER_ADMIN') {
+            console.log('[POST /api/clinics] REJECTING - userRole is not SUPER_ADMIN:', userRole)
             throw new ForbiddenError('Apenas super administradores podem criar clínicas')
         }
+
 
         const body = await request.json()
         const validatedData = createClinicSchema.parse(body)
 
         const supabase = createServiceRoleClient()
+
+        // Error message for duplicate email
+        const EMAIL_ALREADY_EXISTS_ERROR = 'Este e-mail já está vinculado a uma clínica cadastrada. Por favor, use outro e-mail ou recupere sua senha.'
+
+        // 0. Check for existing admin email (if admin credentials provided)
+        if (validatedData.admin_email) {
+            // Check in users table
+            const { data: existingUser } = await (supabase as any)
+                .from('users')
+                .select('id, email')
+                .ilike('email', validatedData.admin_email)
+                .maybeSingle()
+
+            if (existingUser) {
+                return handleApiError(new ConflictError(EMAIL_ALREADY_EXISTS_ERROR))
+            }
+
+            // Check in clinics table (as contact email)
+            const { data: existingClinicEmail } = await (supabase as any)
+                .from('clinics')
+                .select('id, name')
+                .ilike('email', validatedData.admin_email)
+                .eq('is_active', true)
+                .maybeSingle()
+
+            if (existingClinicEmail) {
+                return handleApiError(new ConflictError(EMAIL_ALREADY_EXISTS_ERROR))
+            }
+        }
 
         // 1. Check for active clinic with same slug
         const { data: existingSlug } = await supabase
@@ -110,6 +149,7 @@ export async function POST(request: NextRequest) {
                 return handleApiError(new ConflictError(`O CNPJ "${validatedData.cnpj}" já está em uso pela clínica: ${existingCnpj.name}`))
             }
         }
+
 
         // 3. Create clinic
         const { data: clinic, error: clinicError } = await (supabase
@@ -173,3 +213,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

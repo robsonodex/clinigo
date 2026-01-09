@@ -1,5 +1,36 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { SupabaseClient } from '@supabase/supabase-js'
+import { Database } from '@/types/database.types'
+
+// Interfaces for database query results
+interface AppointmentRecord {
+    id: string
+    status: string
+    appointment_date?: string
+    created_at?: string
+    payments?: PaymentRecord[]
+    doctor_id?: string
+    doctors?: { specialty: string } | null
+}
+
+interface PaymentRecord {
+    amount: number
+    status: string
+    paid_at?: string
+}
+
+interface DoctorRecord {
+    id: string
+    specialty: string
+    users?: { full_name: string } | null
+    appointments?: AppointmentRecord[]
+}
+
+interface PatientRecord {
+    id: string
+    created_at: string
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -26,9 +57,11 @@ export async function GET(request: NextRequest) {
         const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0]
         const doctorId = searchParams.get('doctor_id')
 
-        const clinicId = (userData as any).clinic_id
+        // Type safe user data extraction
+        const userRole = (userData as { role?: string }).role
+        const clinicId = (userData as { clinic_id?: string }).clinic_id
 
-        if (!clinicId && (userData as any).role !== 'SUPER_ADMIN') {
+        if (!clinicId && userRole !== 'SUPER_ADMIN') {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
@@ -63,9 +96,10 @@ export async function GET(request: NextRequest) {
     }
 }
 
-async function getKPIs(supabase: any, clinicId: string, startDate: string, endDate: string) {
+async function getKPIs(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
     // Call the database function
-    const { data, error } = await supabase.rpc('get_clinic_kpis', {
+    // TODO: Fix strict RPC typing inference
+    const { data, error } = await (supabase as any).rpc('get_clinic_kpis', {
         p_clinic_id: clinicId,
         p_start_date: startDate,
         p_end_date: endDate,
@@ -80,7 +114,7 @@ async function getKPIs(supabase: any, clinicId: string, startDate: string, endDa
     return NextResponse.json({ kpis: data?.[0] || {} })
 }
 
-async function getKPIsManual(supabase: any, clinicId: string, startDate: string, endDate: string) {
+async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: string, startDate: string, endDate: string) {
     // Get appointment stats
     const { data: appointments } = await supabase
         .from('appointments')
@@ -90,9 +124,9 @@ async function getKPIsManual(supabase: any, clinicId: string, startDate: string,
         .lte('appointment_date', endDate)
 
     const total = appointments?.length || 0
-    const completed = appointments?.filter((a: any) => a.status === 'COMPLETED').length || 0
-    const cancelled = appointments?.filter((a: any) => a.status === 'CANCELLED').length || 0
-    const noShow = appointments?.filter((a: any) => a.status === 'NO_SHOW').length || 0
+    const completed = appointments?.filter((a: AppointmentRecord) => a.status === 'COMPLETED').length || 0
+    const cancelled = appointments?.filter((a: AppointmentRecord) => a.status === 'CANCELLED').length || 0
+    const noShow = appointments?.filter((a: AppointmentRecord) => a.status === 'NO_SHOW').length || 0
 
     // Get revenue
     const { data: payments } = await supabase
@@ -103,7 +137,7 @@ async function getKPIsManual(supabase: any, clinicId: string, startDate: string,
         .gte('paid_at', startDate)
         .lte('paid_at', endDate)
 
-    const totalRevenue = payments?.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0) || 0
+    const totalRevenue = payments?.reduce((sum: number, p: { amount: any }) => sum + parseFloat(p.amount), 0) || 0
 
     // Get patient counts
     const { count: newPatients } = await supabase
@@ -142,8 +176,9 @@ async function getKPIsManual(supabase: any, clinicId: string, startDate: string,
     })
 }
 
-async function getRevenueByDoctor(supabase: any, clinicId: string, startDate: string, endDate: string) {
-    const { data, error } = await supabase.rpc('get_revenue_by_doctor', {
+async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    // TODO: Fix strict RPC typing inference
+    const { data: revenueData, error } = await (supabase as any).rpc('get_revenue_by_doctor', {
         p_clinic_id: clinicId,
         p_start_date: startDate,
         p_end_date: endDate,
@@ -166,22 +201,22 @@ async function getRevenueByDoctor(supabase: any, clinicId: string, startDate: st
       `)
             .eq('clinic_id', clinicId)
 
-        const result = (doctors || []).map((d: any) => {
-            const appointments = d.appointments?.filter((a: any) =>
-                a.appointment_date >= startDate && a.appointment_date <= endDate
+        const result = (doctors as unknown as DoctorRecord[] || []).map((d) => {
+            const appointments = d.appointments?.filter((a) =>
+                a.appointment_date && a.appointment_date >= startDate && a.appointment_date <= endDate
             ) || []
 
             const revenue = appointments
-                .flatMap((a: any) => a.payments || [])
-                .filter((p: any) => p.status === 'PAID')
-                .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0)
+                .flatMap((a) => a.payments || [])
+                .filter((p) => p.status === 'PAID')
+                .reduce((sum: number, p) => sum + parseFloat(p.amount as unknown as string), 0)
 
             return {
                 doctor_id: d.id,
                 doctor_name: d.users?.full_name || 'N/A',
                 specialty: d.specialty,
                 total_appointments: appointments.length,
-                completed_appointments: appointments.filter((a: any) => a.status === 'COMPLETED').length,
+                completed_appointments: appointments.filter((a) => a.status === 'COMPLETED').length,
                 total_revenue: revenue,
                 average_ticket: appointments.length > 0 ? revenue / appointments.length : 0,
             }
@@ -190,11 +225,12 @@ async function getRevenueByDoctor(supabase: any, clinicId: string, startDate: st
         return NextResponse.json({ data: result })
     }
 
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: revenueData })
 }
 
-async function getAppointmentsByDay(supabase: any, clinicId: string, startDate: string, endDate: string) {
-    const { data, error } = await supabase.rpc('get_appointments_by_day', {
+async function getAppointmentsByDay(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    // TODO: Fix strict RPC typing inference
+    const { data: dailyData, error } = await (supabase as any).rpc('get_appointments_by_day', {
         p_clinic_id: clinicId,
         p_start_date: startDate,
         p_end_date: endDate,
@@ -223,13 +259,14 @@ async function getAppointmentsByDay(supabase: any, clinicId: string, startDate: 
             if (a.status === 'NO_SHOW') grouped[date].no_show++
         }
 
-        return NextResponse.json({ data: Object.values(grouped).sort((a: any, b: any) => a.day.localeCompare(b.day)) })
+        const sortedData = Object.values(grouped).sort((a, b) => a.day.localeCompare(b.day))
+        return NextResponse.json({ data: sortedData })
     }
 
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: dailyData })
 }
 
-async function getAppointmentsByStatus(supabase: any, clinicId: string, startDate: string, endDate: string) {
+async function getAppointmentsByStatus(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
     const { data: appointments } = await supabase
         .from('appointments')
         .select('status')
@@ -251,7 +288,7 @@ async function getAppointmentsByStatus(supabase: any, clinicId: string, startDat
     return NextResponse.json({ data: result })
 }
 
-async function getPatientsGrowth(supabase: any, clinicId: string, startDate: string, endDate: string) {
+async function getPatientsGrowth(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
     const { data: patients } = await supabase
         .from('patients')
         .select('created_at')
@@ -274,7 +311,7 @@ async function getPatientsGrowth(supabase: any, clinicId: string, startDate: str
     return NextResponse.json({ data: result })
 }
 
-async function getRevenueByMonth(supabase: any, clinicId: string, startDate: string, endDate: string) {
+async function getRevenueByMonth(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
     const { data: payments } = await supabase
         .from('payments')
         .select('amount, paid_at')
@@ -297,7 +334,7 @@ async function getRevenueByMonth(supabase: any, clinicId: string, startDate: str
     return NextResponse.json({ data: result })
 }
 
-async function getTopSpecialties(supabase: any, clinicId: string, startDate: string, endDate: string) {
+async function getTopSpecialties(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
     const { data: appointments } = await supabase
         .from('appointments')
         .select('doctor_id, status, doctors(specialty)')
@@ -306,8 +343,8 @@ async function getTopSpecialties(supabase: any, clinicId: string, startDate: str
         .lte('appointment_date', endDate)
 
     const grouped: Record<string, { count: number; completed: number }> = {}
-    for (const a of appointments || []) {
-        const specialty = (a.doctors as any)?.specialty || 'Outros'
+    for (const a of appointments as unknown as AppointmentRecord[] || []) {
+        const specialty = a.doctors?.specialty || 'Outros'
         if (!grouped[specialty]) {
             grouped[specialty] = { count: 0, completed: 0 }
         }
@@ -333,3 +370,4 @@ function getStatusLabel(status: string): string {
     }
     return labels[status] || status
 }
+

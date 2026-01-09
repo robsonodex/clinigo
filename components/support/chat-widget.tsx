@@ -36,8 +36,13 @@ export function ChatWidget({ user }: ChatWidgetProps) {
     const [unreadCount, setUnreadCount] = useState(0)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
+    // Early return if user data is not available
+    if (!user || !user.clinic) {
+        return null
+    }
+
     // Verificar se tem acesso ao chat (PRO ou ENTERPRISE)
-    const hasAccess = ['PRO', 'PROFISSIONAL', 'ENTERPRISE'].includes(user.clinic.plan_type)
+    const hasAccess = ['PRO', 'PROFISSIONAL', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(user.clinic?.plan_type || '')
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -74,7 +79,7 @@ export function ChatWidget({ user }: ChatWidgetProps) {
             id: messages.length + 1,
             conversation_id: 1,
             sender_type: 'CLINIC',
-            sender_name: user.name,
+            sender_name: user?.name || 'Você',
             message: newMessage,
             created_at: new Date().toISOString(),
             read: false,
@@ -170,12 +175,12 @@ export function ChatWidget({ user }: ChatWidgetProps) {
                     <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-4 py-2 flex items-center justify-between border-b">
                         <div className="flex items-center gap-2 text-sm">
                             <Building className="w-4 h-4 text-purple-600" />
-                            <span className="font-medium text-gray-700">{user.clinic.name}</span>
+                            <span className="font-medium text-gray-700">{user?.clinic?.name || 'Clínica'}</span>
                         </div>
                         <span
                             className={`text-xs font-bold px-3 py-1 rounded-full ${user.clinic.plan_type === 'ENTERPRISE'
-                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                    : 'bg-purple-600 text-white'
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                : 'bg-purple-600 text-white'
                                 }`}
                         >
                             {user.clinic.plan_type === 'ENTERPRISE' ? '⭐ Enterprise' : 'Pro'}
@@ -204,8 +209,8 @@ export function ChatWidget({ user }: ChatWidgetProps) {
                                         )}
                                         <div
                                             className={`rounded-2xl p-3 ${isSupport
-                                                    ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'
-                                                    : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-tr-sm'
+                                                ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'
+                                                : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-tr-sm'
                                                 }`}
                                         >
                                             <p className="text-sm leading-relaxed">{msg.message}</p>
@@ -267,8 +272,8 @@ export function ChatWidget({ user }: ChatWidgetProps) {
                                 onClick={sendMessage}
                                 disabled={!newMessage.trim()}
                                 className={`p-3 rounded-full transition ${newMessage.trim()
-                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
                                 <Send className="w-5 h-5" />

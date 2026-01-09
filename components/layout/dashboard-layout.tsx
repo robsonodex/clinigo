@@ -18,10 +18,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Desktop Sidebar */}
             <Sidebar />
 
-            {/* Mobile Sidebar */}
+            {/* Mobile Sidebar - Sheet Drawer */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetContent side="left" className="p-0 w-64">
-                    <Sidebar />
+                <SheetContent side="left" className="p-0 w-72">
+                    <Sidebar isMobile />
                 </SheetContent>
             </Sheet>
 
@@ -36,3 +36,4 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
     )
 }
+

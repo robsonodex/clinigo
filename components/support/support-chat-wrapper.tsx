@@ -48,7 +48,7 @@ export function SupportChatWrapper() {
                     clinic: {
                         id: clinic?.id || '',
                         name: clinic?.name || 'Clínica',
-                        plan_type: clinic?.plan_type || 'FREE',
+                        plan_type: clinic?.plan_type || 'BASIC',
                     },
                 })
             }

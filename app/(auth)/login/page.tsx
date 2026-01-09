@@ -135,10 +135,10 @@ export default function LoginPage() {
                         <div className="mt-4 text-center text-sm">
                             <span className="text-muted-foreground">Não tem uma conta? </span>
                             <Link
-                                href="/sign-up"
+                                href="/cadastro"
                                 className="text-primary hover:underline font-medium"
                             >
-                                Cadastre-se
+                                Cadastre sua clínica
                             </Link>
                         </div>
                     </CardContent>
@@ -158,3 +158,4 @@ export default function LoginPage() {
         </div>
     )
 }
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,40 +42,30 @@ interface MedicalRecord {
 export default function ProntuariosPage() {
     const { toast } = useToast()
     const [search, setSearch] = useState('')
+    const [isLoading, setIsLoading] = useState(true)
+    const [records, setRecords] = useState<MedicalRecord[]>([])
 
-    // Mock data for demonstration
-    const records: MedicalRecord[] = [
-        {
-            id: '1',
-            patient_name: 'Maria Silva',
-            doctor_name: 'Dr. João Santos',
-            specialty: 'Clínica Geral',
-            date: '2024-01-03',
-            chief_complaint: 'Dor de cabeça persistente há 3 dias',
-            is_signed: true,
-            created_at: '2024-01-03T15:30:00',
-        },
-        {
-            id: '2',
-            patient_name: 'Carlos Oliveira',
-            doctor_name: 'Dra. Ana Costa',
-            specialty: 'Cardiologia',
-            date: '2024-01-02',
-            chief_complaint: 'Check-up cardiológico de rotina',
-            is_signed: true,
-            created_at: '2024-01-02T10:00:00',
-        },
-        {
-            id: '3',
-            patient_name: 'Fernanda Lima',
-            doctor_name: 'Dr. João Santos',
-            specialty: 'Clínica Geral',
-            date: '2024-01-02',
-            chief_complaint: 'Acompanhamento pós-tratamento',
-            is_signed: false,
-            created_at: '2024-01-02T14:00:00',
-        },
-    ]
+    // Fetch medical records from API
+    useEffect(() => {
+        const fetchRecords = async () => {
+            setIsLoading(true)
+            try {
+                const response = await fetch('/api/medical-records')
+                if (response.ok) {
+                    const data = await response.json()
+                    setRecords(data.records || [])
+                } else {
+                    setRecords([])
+                }
+            } catch (error) {
+                console.error('Error fetching medical records:', error)
+                setRecords([])
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchRecords()
+    }, [])
 
     const filteredRecords = records.filter(
         (r) =>
@@ -153,7 +143,7 @@ export default function ProntuariosPage() {
                                 <Pill className="w-5 h-5 text-blue-600" />
                             </div>
                             <div>
-                                <div className="text-2xl font-bold">45</div>
+                                <div className="text-2xl font-bold">-</div>
                                 <p className="text-xs text-muted-foreground">Prescrições</p>
                             </div>
                         </div>
@@ -166,7 +156,7 @@ export default function ProntuariosPage() {
                                 <ClipboardList className="w-5 h-5 text-purple-600" />
                             </div>
                             <div>
-                                <div className="text-2xl font-bold">12</div>
+                                <div className="text-2xl font-bold">-</div>
                                 <p className="text-xs text-muted-foreground">Atestados</p>
                             </div>
                         </div>
@@ -365,3 +355,4 @@ export default function ProntuariosPage() {
         </div>
     )
 }
+

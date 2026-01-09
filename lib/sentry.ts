@@ -10,3 +10,4 @@ Sentry.init({
 export function captureError(error: unknown) {
     Sentry.captureException(error);
 }
+

@@ -43,31 +43,36 @@ export async function GET(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user?.clinic_id && userRole !== 'SUPER_ADMIN') {
+        if (!user || (!(user as any).clinic_id && userRole !== 'SUPER_ADMIN')) {
             throw new BadRequestError('Clínica não encontrada')
         }
 
+        const clinicId = (user as any).clinic_id
+
+
         // Check feature access
-        if (user?.clinic_id) {
-            const hasCustomSMTP = await canUseFeature(user.clinic_id, 'custom_smtp')
+        if (clinicId) {
+            const hasCustomSMTP = await canUseFeature(clinicId, 'custom_smtp')
             if (!hasCustomSMTP) {
                 throw new ForbiddenError('SMTP personalizado disponível apenas nos planos Profissional e Enterprise')
             }
         }
 
+        if (!clinicId) throw new BadRequestError('Clínica indefinida')
+
         // Get SMTP config (never return password)
         const { data: clinic, error } = await supabase
             .from('clinics')
             .select('smtp_enabled, smtp_host, smtp_port, smtp_user, smtp_from_email, smtp_from_name')
-            .eq('id', user!.clinic_id)
+            .eq('id', clinicId)
             .single()
 
-        if (error) throw error
+        if (error || !clinic) throw error || new BadRequestError('Clínica não encontrada')
 
         return successResponse({
             config: {
-                ...clinic,
-                smtp_password_set: !!clinic.smtp_host, // Indicate if password is configured
+                ...(clinic as any),
+                smtp_password_set: !!(clinic as any).smtp_host, // Indicate if password is configured
             }
         })
     } catch (error) {
@@ -100,12 +105,14 @@ export async function PATCH(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user?.clinic_id) {
+        if (!user || !(user as any).clinic_id) {
             throw new BadRequestError('Clínica não encontrada')
         }
 
+        const clinicId = (user as any).clinic_id
+
         // Check feature access
-        const hasCustomSMTP = await canUseFeature(user.clinic_id, 'custom_smtp')
+        const hasCustomSMTP = await canUseFeature(clinicId, 'custom_smtp')
         if (!hasCustomSMTP) {
             throw new ForbiddenError('SMTP personalizado disponível apenas nos planos Profissional e Enterprise')
         }
@@ -126,10 +133,10 @@ export async function PATCH(request: NextRequest) {
         }
 
         // Update clinic SMTP settings
-        const { error } = await serviceClient
-            .from('clinics')
+        const { error } = await (serviceClient
+            .from('clinics') as any)
             .update(updateData)
-            .eq('id', user.clinic_id)
+            .eq('id', clinicId)
 
         if (error) throw error
 
@@ -175,3 +182,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

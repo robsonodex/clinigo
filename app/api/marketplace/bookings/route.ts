@@ -235,3 +235,4 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 }
+

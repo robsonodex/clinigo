@@ -34,6 +34,7 @@ import {
     CheckCircle2,
 } from 'lucide-react'
 import Link from 'next/link'
+import { OnboardingChecklist } from '@/components/onboarding'
 
 const statusColors: Record<string, string> = {
     PENDING_PAYMENT: 'warning',
@@ -117,6 +118,11 @@ export default function DashboardPage() {
                 </Badge>
             </div>
 
+            {/* Onboarding Checklist - Only for Clinic Admins */}
+            {isClinicAdmin && (
+                <OnboardingChecklist />
+            )}
+
             {/* Stats Cards - Clinic Admin & Doctor */}
             {(isClinicAdmin || isDoctor) && (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -194,8 +200,8 @@ export default function DashboardPage() {
                             <Building2 className="h-4 w-4 text-indigo-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-indigo-900">12</div>
-                            <p className="text-xs text-indigo-700">+3 este mês</p>
+                            <div className="text-2xl font-bold text-indigo-900">-</div>
+                            <p className="text-xs text-indigo-700">Ver em Clínicas</p>
                         </CardContent>
                     </Card>
 
@@ -205,8 +211,8 @@ export default function DashboardPage() {
                             <Users className="h-4 w-4 text-emerald-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-emerald-900">48</div>
-                            <p className="text-xs text-emerald-700">Ativos na plataforma</p>
+                            <div className="text-2xl font-bold text-emerald-900">-</div>
+                            <p className="text-xs text-emerald-700">Ver em Relatórios</p>
                         </CardContent>
                     </Card>
 
@@ -218,8 +224,8 @@ export default function DashboardPage() {
                             <Video className="h-4 w-4 text-rose-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-rose-900">156</div>
-                            <p className="text-xs text-rose-700">Em todas as clínicas</p>
+                            <div className="text-2xl font-bold text-rose-900">-</div>
+                            <p className="text-xs text-rose-700">Ver em Relatórios</p>
                         </CardContent>
                     </Card>
 
@@ -229,8 +235,8 @@ export default function DashboardPage() {
                             <DollarSign className="h-4 w-4 text-cyan-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-cyan-900">R$ 42.5k</div>
-                            <p className="text-xs text-cyan-700">+12% vs mês anterior</p>
+                            <div className="text-2xl font-bold text-cyan-900">-</div>
+                            <p className="text-xs text-cyan-700">Ver em Relatórios</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -268,23 +274,23 @@ export default function DashboardPage() {
                                         <div className="flex items-center gap-4">
                                             <div className="text-center min-w-[70px] p-2 bg-primary/10 rounded-lg">
                                                 <p className="text-lg font-bold text-primary">
-                                                    {appointment.appointment_time.substring(0, 5)}
+                                                    {appointment.appointment_time?.substring(0, 5) || '--:--'}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {formatDate(appointment.appointment_date)}
+                                                    {appointment.appointment_date ? formatDate(appointment.appointment_date) : '--/--'}
                                                 </p>
                                             </div>
                                             <div>
                                                 <p className="font-medium">
-                                                    {appointment.patient.full_name}
+                                                    {appointment.patient?.full_name || 'Paciente'}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {!isDoctor && `Dr. ${appointment.doctor.user.full_name} • `}
-                                                    {appointment.doctor.specialty}
+                                                    {!isDoctor && appointment.doctor?.user?.full_name && `Dr. ${appointment.doctor.user.full_name} • `}
+                                                    {appointment.doctor?.specialty || 'Especialidade'}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                                     <Phone className="w-3 h-3" />
-                                                    {appointment.patient.phone}
+                                                    {appointment.patient?.phone || 'Sem telefone'}
                                                 </p>
                                             </div>
                                         </div>
@@ -292,23 +298,25 @@ export default function DashboardPage() {
                                             <Badge
                                                 variant={statusColors[appointment.status] as 'success' | 'warning' | 'destructive'}
                                             >
-                                                {statusLabels[appointment.status]}
+                                                {statusLabels[appointment.status] || appointment.status}
                                             </Badge>
 
-                                            {/* WhatsApp Button */}
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                                                onClick={() => openWhatsApp(
-                                                    appointment.patient.phone,
-                                                    appointment.patient.full_name,
-                                                    appointment.video_link
-                                                )}
-                                            >
-                                                <MessageCircle className="w-4 h-4 mr-1" />
-                                                WhatsApp
-                                            </Button>
+                                            {/* WhatsApp Button - only show if has phone */}
+                                            {appointment.patient?.phone && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                                    onClick={() => openWhatsApp(
+                                                        appointment.patient?.phone || '',
+                                                        appointment.patient?.full_name || 'Paciente',
+                                                        appointment.video_link
+                                                    )}
+                                                >
+                                                    <MessageCircle className="w-4 h-4 mr-1" />
+                                                    WhatsApp
+                                                </Button>
+                                            )}
 
                                             {appointment.video_link && (
                                                 <Link href={`/dashboard/consultas/${appointment.id}`}>
@@ -578,3 +586,4 @@ export default function DashboardPage() {
         </div>
     )
 }
+

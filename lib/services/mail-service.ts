@@ -71,3 +71,4 @@ export async function sendMail(options: EmailOptions) {
         return { success: false, error: error.message }
     }
 }
+

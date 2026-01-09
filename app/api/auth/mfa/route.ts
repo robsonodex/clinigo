@@ -73,17 +73,19 @@ export async function GET(request: NextRequest) {
             .eq('user_id', user.id)
             .single()
 
-        const backupCodesRemaining = mfaSettings?.backup_codes_generated_at
+        const settings = mfaSettings as any || {}
+
+        const backupCodesRemaining = settings.backup_codes_generated_at
             ? await getBackupCodesRemaining(supabase, user.id)
             : 0
 
         return NextResponse.json({
-            mfa_enabled: mfaSettings?.totp_enabled || false,
-            mfa_verified_at: mfaSettings?.totp_verified_at,
-            backup_codes_generated_at: mfaSettings?.backup_codes_generated_at,
+            mfa_enabled: settings.totp_enabled || false,
+            mfa_verified_at: settings.totp_verified_at,
+            backup_codes_generated_at: settings.backup_codes_generated_at,
             backup_codes_remaining: backupCodesRemaining,
-            recovery_email: mfaSettings?.recovery_email,
-            recovery_email_verified: mfaSettings?.recovery_email_verified || false,
+            recovery_email: settings.recovery_email,
+            recovery_email_verified: settings.recovery_email_verified || false,
         })
     } catch (error) {
         console.error('MFA status error:', error)
@@ -116,10 +118,10 @@ export async function POST(request: NextRequest) {
 
         switch (action) {
             case 'setup':
-                return await handleSetup(supabase, user.id, userData.email)
+                return await handleSetup(supabase, user.id, (userData as any).email)
 
             case 'verify':
-                return await handleVerify(supabase, user.id, userData.email, code)
+                return await handleVerify(supabase, user.id, (userData as any).email, code)
 
             case 'generate_backup_codes':
                 return await handleGenerateBackupCodes(supabase, user.id)
@@ -156,7 +158,7 @@ export async function DELETE(request: NextRequest) {
             .eq('user_id', user.id)
             .single()
 
-        if (!mfaSettings?.totp_secret) {
+        if (!(mfaSettings as any)?.totp_secret) {
             return NextResponse.json({ error: 'MFA não está habilitado' }, { status: 400 })
         }
 
@@ -166,7 +168,7 @@ export async function DELETE(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        const totp = createTOTP(mfaSettings.totp_secret, userData?.email || '')
+        const totp = createTOTP((mfaSettings as any).totp_secret, (userData as any)?.email || '')
 
         if (totp.validate({ token: code, window: 1 }) === null) {
             // Log failed attempt
@@ -175,8 +177,8 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Disable MFA
-        await supabase
-            .from('user_mfa_settings')
+        await (supabase
+            .from('user_mfa_settings') as any)
             .update({
                 totp_enabled: false,
                 totp_secret: null,
@@ -335,3 +337,4 @@ async function logSessionEvent(
         user_agent: request.headers.get('user-agent'),
     })
 }
+

@@ -260,3 +260,4 @@ export async function login(data: LoginData) {
 export async function logout() {
     return api.post('/auth/logout')
 }
+

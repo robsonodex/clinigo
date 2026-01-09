@@ -32,63 +32,38 @@ export default function HealthPage() {
     const { toast } = useToast()
     const [isChecking, setIsChecking] = useState(false)
     const [lastRefresh, setLastRefresh] = useState(new Date())
+    const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([])
 
-    // Mock health checks
-    const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([
-        {
-            service: 'Supabase Database',
-            status: 'healthy',
-            latency: 45,
-            lastCheck: new Date().toISOString(),
-            details: 'PostgreSQL 15 - 100% uptime',
-        },
-        {
-            service: 'Supabase Auth',
-            status: 'healthy',
-            latency: 32,
-            lastCheck: new Date().toISOString(),
-            details: 'JWT tokens working correctly',
-        },
-        {
-            service: 'Mercado Pago API',
-            status: 'healthy',
-            latency: 120,
-            lastCheck: new Date().toISOString(),
-            details: 'Payment processing available',
-        },
-        {
-            service: 'Google Calendar API',
-            status: 'healthy',
-            latency: 85,
-            lastCheck: new Date().toISOString(),
-            details: 'Calendar integration active',
-        },
-        {
-            service: 'Email Service (Resend)',
-            status: 'healthy',
-            latency: 150,
-            lastCheck: new Date().toISOString(),
-            details: 'Email delivery working',
-        },
-        {
-            service: 'Redis Cache',
-            status: 'healthy',
-            latency: 5,
-            lastCheck: new Date().toISOString(),
-            details: 'Cache hit rate: 94%',
-        },
-    ])
+    // Carrega health checks na montagem e quando atualiza
+    const fetchHealthChecks = async () => {
+        setIsChecking(true)
+        try {
+            const res = await fetch('/api/health')
+            const json = await res.json()
+            setHealthChecks(json.data || [])
+            setLastRefresh(new Date())
+            toast({
+                title: 'Health check concluído',
+                description: `${json.summary?.healthy || 0} de ${json.summary?.total || 0} serviços operacionais.`,
+            })
+        } catch (error) {
+            toast({
+                title: 'Erro no health check',
+                description: 'Não foi possível verificar os serviços.',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsChecking(false)
+        }
+    }
+
+    // Carrega na montagem
+    useEffect(() => {
+        fetchHealthChecks()
+    }, [])
 
     const runHealthCheck = async () => {
-        setIsChecking(true)
-        // Simulate health check
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-        setLastRefresh(new Date())
-        setIsChecking(false)
-        toast({
-            title: 'Health check concluído',
-            description: 'Todos os serviços estão funcionando.',
-        })
+        await fetchHealthChecks()
     }
 
     const getStatusIcon = (status: HealthCheck['status']) => {
@@ -160,10 +135,10 @@ export default function HealthPage() {
                         <div className="flex items-center gap-4">
                             <div
                                 className={`p-3 rounded-full ${downCount > 0
-                                        ? 'bg-red-100'
-                                        : degradedCount > 0
-                                            ? 'bg-amber-100'
-                                            : 'bg-green-100'
+                                    ? 'bg-red-100'
+                                    : degradedCount > 0
+                                        ? 'bg-amber-100'
+                                        : 'bg-green-100'
                                     }`}
                             >
                                 {downCount > 0 ? (
@@ -177,10 +152,10 @@ export default function HealthPage() {
                             <div>
                                 <h2
                                     className={`text-xl font-bold ${downCount > 0
-                                            ? 'text-red-900'
-                                            : degradedCount > 0
-                                                ? 'text-amber-900'
-                                                : 'text-green-900'
+                                        ? 'text-red-900'
+                                        : degradedCount > 0
+                                            ? 'text-amber-900'
+                                            : 'text-green-900'
                                         }`}
                                 >
                                     {downCount > 0
@@ -330,3 +305,4 @@ export default function HealthPage() {
         </div>
     )
 }
+

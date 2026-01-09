@@ -22,6 +22,21 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
+        // 🔥 FEATURE GATE: CRM is PRO+ exclusive
+        const { data: clinic } = await supabase
+            .from('clinics')
+            .select('plan_type')
+            .eq('id', clinicId)
+            .single()
+
+        if (clinic?.plan_type === 'BASIC') {
+            return NextResponse.json({
+                error: 'CRM disponível apenas nos planos Profissional e Enterprise',
+                current_plan: 'BASIC',
+                upgrade_to: 'PRO'
+            }, { status: 403 })
+        }
+
         const searchParams = request.nextUrl.searchParams
         const status = searchParams.get('status')
 
@@ -68,6 +83,21 @@ export async function POST(request: NextRequest) {
         const clinicId = (userData as any)?.clinic_id
         if (!clinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        }
+
+        // 🔥 FEATURE GATE: CRM is PRO+ exclusive
+        const { data: clinic } = await supabase
+            .from('clinics')
+            .select('plan_type')
+            .eq('id', clinicId)
+            .single()
+
+        if (clinic?.plan_type === 'BASIC') {
+            return NextResponse.json({
+                error: 'CRM disponível apenas nos planos Profissional e Enterprise',
+                current_plan: 'BASIC',
+                upgrade_to: 'PRO'
+            }, { status: 403 })
         }
 
         const body = await request.json()
@@ -137,3 +167,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 }
+

@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const { data: sessions, error } = await supabase
-            .from('user_sessions')
+        const { data: sessions, error } = await (supabase
+            .from('user_sessions') as any)
             .select('*')
             .eq('user_id', user.id)
             .eq('is_active', true)
@@ -54,8 +54,8 @@ export async function DELETE(request: NextRequest) {
         const currentSessionHash = currentSessionToken ? hashToken(currentSessionToken) : null
 
         // Deactivate all sessions except current
-        let query = supabase
-            .from('user_sessions')
+        let query = (supabase
+            .from('user_sessions') as any)
             .update({ is_active: false })
             .eq('user_id', user.id)
             .eq('is_active', true)
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        await supabase.from('session_audit').insert({
+        await (supabase.from('session_audit') as any).insert({
             user_id: user.id,
             clinic_id: (userData as any)?.clinic_id,
             event_type: 'ALL_SESSIONS_REVOKED',
@@ -105,3 +105,4 @@ function hashToken(token: string): string {
     }
     return hash.toString(16)
 }
+

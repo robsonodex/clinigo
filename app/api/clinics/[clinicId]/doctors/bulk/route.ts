@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 .eq('id', userId)
                 .single()
 
-            if (user?.clinic_id !== clinicId) {
+            if ((user as any)?.clinic_id !== clinicId) {
                 throw new ForbiddenError('Acesso negado')
             }
         }
@@ -50,8 +50,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         const { error } = await (supabase
-            .from('doctors')
-            .update({ is_accepting_appointments } as any) as any)
+            .from('doctors') as any)
+            .update({ is_accepting_appointments })
             .in('id', ids)
             .eq('clinic_id', clinicId)
 
@@ -80,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
                 .eq('id', userId)
                 .single()
 
-            if (user?.clinic_id !== clinicId) {
+            if ((user as any)?.clinic_id !== clinicId) {
                 throw new ForbiddenError('Acesso negado')
             }
         }
@@ -103,8 +103,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         // Deactivate doctors
         const { error: doctorError } = await (supabase
-            .from('doctors')
-            .update({ is_accepting_appointments: false } as any) as any)
+            .from('doctors') as any)
+            .update({ is_accepting_appointments: false })
             .in('id', ids)
             .eq('clinic_id', clinicId)
 
@@ -113,8 +113,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         // Deactivate users
         if (userIds.length > 0) {
             const { error: userError } = await (adminClient
-                .from('users')
-                .update({ is_active: false } as any) as any)
+                .from('users') as any)
+                .update({ is_active: false })
                 .in('id', userIds)
 
             if (userError) throw userError

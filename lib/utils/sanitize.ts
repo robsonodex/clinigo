@@ -167,3 +167,4 @@ export function safeError(message: string, error?: Error, data?: object): void {
         data: sanitizedData,
     })
 }
+

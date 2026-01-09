@@ -44,3 +44,4 @@ export async function updateSession(request: NextRequest) {
 
     return { supabase, user, response: supabaseResponse }
 }
+

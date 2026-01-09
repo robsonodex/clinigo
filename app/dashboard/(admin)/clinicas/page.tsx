@@ -43,7 +43,7 @@ interface Clinic {
     name: string
     slug: string
     email: string
-    plan_type: 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE'
+    plan_type: 'BASIC' | 'PRO' | 'ENTERPRISE'
     is_active: boolean
     created_at: string
 }
@@ -150,8 +150,6 @@ export default function ClinicsPage() {
 
     const getPlanBadgeVariant = (plan: string) => {
         switch (plan) {
-            case 'FREE':
-                return 'secondary'
             case 'BASIC':
                 return 'outline'
             case 'PRO':
@@ -254,9 +252,8 @@ export default function ClinicsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os Planos</SelectItem>
-                                <SelectItem value="FREE">Free</SelectItem>
-                                <SelectItem value="BASIC">Basic</SelectItem>
-                                <SelectItem value="PRO">Pro</SelectItem>
+                                <SelectItem value="BASIC">Básico</SelectItem>
+                                <SelectItem value="PRO">Profissional</SelectItem>
                                 <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
                             </SelectContent>
                         </Select>
@@ -499,3 +496,4 @@ export default function ClinicsPage() {
         </div>
     )
 }
+

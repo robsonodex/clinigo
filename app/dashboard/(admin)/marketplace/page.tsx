@@ -36,63 +36,8 @@ interface MarketplaceApp {
     installed: boolean
 }
 
-const apps: MarketplaceApp[] = [
-    {
-        id: '1',
-        name: 'WhatsApp Business API',
-        description: 'Integração oficial para envio automático de mensagens',
-        category: 'Comunicação',
-        price: 99,
-        rating: 4.8,
-        installs: 1250,
-        icon: Zap,
-        installed: false,
-    },
-    {
-        id: '2',
-        name: 'Telemedicina Avançada',
-        description: 'Recursos extras de videochamada com IA',
-        category: 'Consultas',
-        price: 149,
-        rating: 4.6,
-        installs: 890,
-        icon: Video,
-        installed: true,
-    },
-    {
-        id: '3',
-        name: 'Agenda Google Sync',
-        description: 'Sincronização bidirecional com Google Calendar',
-        category: 'Produtividade',
-        price: 0,
-        rating: 4.9,
-        installs: 2100,
-        icon: Calendar,
-        installed: true,
-    },
-    {
-        id: '4',
-        name: 'Gateway de Pagamento Extra',
-        description: 'Adicione Stripe, PagSeguro e outros gateways',
-        category: 'Pagamentos',
-        price: 79,
-        rating: 4.5,
-        installs: 650,
-        icon: CreditCard,
-        installed: false,
-    },
-    {
-        id: '5',
-        name: 'Prontuário com IA',
-        description: 'Transcrição automática e sugestões de diagnóstico',
-        category: 'Prontuário',
-        price: 199,
-        rating: 4.7,
-        installs: 420,
-        icon: Globe,
-        installed: false,
-    },
-]
+// Apps do marketplace - será carregado do banco de dados
+const apps: MarketplaceApp[] = []
 
 export default function MarketplacePage() {
     const { toast } = useToast()
@@ -174,7 +119,6 @@ export default function MarketplacePage() {
                 <TabsList>
                     <TabsTrigger value="all">Todas</TabsTrigger>
                     <TabsTrigger value="installed">Instaladas</TabsTrigger>
-                    <TabsTrigger value="free">Gratuitas</TabsTrigger>
                     <TabsTrigger value="paid">Pagas</TabsTrigger>
                 </TabsList>
 
@@ -217,7 +161,7 @@ export default function MarketplacePage() {
                                     <div className="flex items-center justify-between mt-4 pt-4 border-t">
                                         <span className="font-semibold">
                                             {app.price === 0 ? (
-                                                <span className="text-green-600">Grátis</span>
+                                                <span className="text-green-600">Incluso</span>
                                             ) : (
                                                 `R$ ${app.price}/mês`
                                             )}
@@ -271,27 +215,7 @@ export default function MarketplacePage() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="free" className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {apps.filter((a) => a.price === 0).map((app) => (
-                            <Card key={app.id}>
-                                <CardContent className="pt-6">
-                                    <div className="flex items-start gap-3">
-                                        <div className="p-3 bg-primary/10 rounded-lg">
-                                            <app.icon className="w-6 h-6 text-primary" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-semibold">{app.name}</h3>
-                                            <Badge variant="success" className="text-xs mt-1">
-                                                Gratuito
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </TabsContent>
+
 
                 <TabsContent value="paid" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -318,3 +242,4 @@ export default function MarketplacePage() {
         </div>
     )
 }
+

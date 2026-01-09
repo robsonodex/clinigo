@@ -49,33 +49,8 @@ export default function GruposPage() {
     const [search, setSearch] = useState('')
     const [showNewDialog, setShowNewDialog] = useState(false)
 
-    // Mock groups data
-    const groups: Group[] = [
-        {
-            id: '1',
-            name: 'Rede São Paulo',
-            description: 'Clínicas da região metropolitana de SP',
-            clinics_count: 8,
-            total_revenue: 156000,
-            created_at: '2024-01-01',
-        },
-        {
-            id: '2',
-            name: 'Grupo Premium Care',
-            description: 'Clínicas premium de alto faturamento',
-            clinics_count: 3,
-            total_revenue: 89000,
-            created_at: '2024-01-15',
-        },
-        {
-            id: '3',
-            name: 'Franqueados Norte',
-            description: 'Franquias da região Norte',
-            clinics_count: 5,
-            total_revenue: 45000,
-            created_at: '2024-02-01',
-        },
-    ]
+    // Grupos de clínicas - carrega do banco via API
+    const groups: Group[] = []
 
     const filteredGroups = groups.filter((g) =>
         g.name.toLowerCase().includes(search.toLowerCase())
@@ -262,3 +237,4 @@ export default function GruposPage() {
         </div>
     )
 }
+

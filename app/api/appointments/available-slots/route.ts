@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
             throw new BadRequestError('Data não pode ser no passado')
         }
 
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
 
         // Verify doctor exists
         const { data: doctor, error: doctorError } = await supabase
@@ -82,3 +82,4 @@ export async function GET(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

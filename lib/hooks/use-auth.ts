@@ -159,3 +159,4 @@ export function useRole() {
         clinicId: profile?.clinic_id,
     }
 }
+

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         const query = listAppointmentsQuerySchema.parse(Object.fromEntries(searchParams))
         const { page, pageSize, offset } = parsePaginationParams(searchParams)
 
-        const supabase = await createClient()
+        const supabase = await createClient() as any
 
         // Get user's clinic and doctor_id if applicable
         const { data: currentUser } = await supabase
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         const validatedData = createAppointmentSchema.parse(body)
 
         // Use service role for public operations (bypasses RLS)
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
 
         // 1. Verify clinic exists and is active
         const { data: clinic, error: clinicError } = await supabase
@@ -123,8 +123,48 @@ export async function POST(request: NextRequest) {
             throw new NotFoundError('Clínica')
         }
 
-        if (!clinic.is_active) {
+        // Type-safe extraction for clinic
+        const clinicData = clinic as { id?: string; name?: string; is_active?: boolean; mercadopago_access_token?: string; addons?: Record<string, unknown> } | null
+
+        if (!clinicData?.is_active) {
             throw new BadRequestError('Esta clínica não está aceitando agendamentos')
+        }
+
+        // 🔥 COST PROTECTION: Validate plan limits for BASIC plan
+        const { data: clinicPlan, error: planError } = await supabase
+            .from('clinics')
+            .select('plan_type, plan_limits')
+            .eq('id', clinic.id)
+            .single()
+
+        if (planError) {
+            console.error('[PLAN CHECK] Error fetching plan:', planError)
+        }
+
+        // Check appointment limits for STARTER and BASIC plans
+        if (clinicPlan && (clinicPlan.plan_type === 'BASIC' || clinicPlan.plan_type === 'STARTER')) {
+            const defaultLimit = clinicPlan.plan_type === 'STARTER' ? 50 : 200
+            const maxAppointments = (clinicPlan.plan_limits as any)?.max_appointments_month || defaultLimit
+
+            if (maxAppointments !== -1) {
+                // Get count for current month
+                const firstDayOfMonth = new Date()
+                firstDayOfMonth.setDate(1)
+                firstDayOfMonth.setHours(0, 0, 0, 0)
+
+                const { count: monthlyCount } = await supabase
+                    .from('appointments')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('clinic_id', clinic.id)
+                    .gte('created_at', firstDayOfMonth.toISOString())
+
+                if ((monthlyCount || 0) >= maxAppointments) {
+                    const planName = clinicPlan.plan_type === 'STARTER' ? 'Starter' : 'Básico'
+                    throw new BadRequestError(
+                        `Limite de consultas mensais atingido (${maxAppointments} consultas/mês no plano ${planName}). Faça upgrade para aumentar seu limite.`
+                    )
+                }
+            }
         }
 
         // 2. Verify doctor exists and accepts appointments
@@ -258,12 +298,12 @@ export async function POST(request: NextRequest) {
                     .rpc('get_available_slots', {
                         p_doctor_id: validatedData.doctor_id,
                         p_date: validatedData.appointment_date,
-                    })
+                    }) as { data: Array<{ slot_time: string }> | null }
 
                 throw new ConflictError(
                     'Este horário acabou de ser reservado. Escolha outro horário.',
                     {
-                        available_slots: availableSlots?.map((slot: { slot_time: string }) => slot.slot_time) || [],
+                        available_slots: (availableSlots || []).map(slot => slot.slot_time),
                     }
                 )
             }
@@ -281,7 +321,7 @@ export async function POST(request: NextRequest) {
                     amount: doctor.consultation_price,
                     status: 'PENDING',
                     mercadopago_external_reference: appointment.id,
-                })
+                } as Record<string, unknown>)
                 .select()
                 .single()
 
@@ -331,3 +371,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+

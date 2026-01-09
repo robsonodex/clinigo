@@ -97,3 +97,79 @@ export const cancellationFormSchema = z.object({
 })
 
 export type CancellationFormData = z.infer<typeof cancellationFormSchema>
+
+/**
+ * Pre-Check-in form schema
+ * Used for patient check-in before consultation
+ */
+export const preCheckinSchema = z.object({
+    // Contact info
+    phone: z.string()
+        .min(10, 'Telefone deve ter pelo menos 10 dígitos')
+        .max(15, 'Telefone inválido')
+        .refine((val) => /^\d{10,11}$/.test(val.replace(/\D/g, '')), {
+            message: 'Telefone deve ter 10 ou 11 dígitos',
+        }),
+
+    // Address
+    address: z.string()
+        .min(5, 'Endereço deve ter pelo menos 5 caracteres')
+        .max(200, 'Endereço muito longo'),
+
+    // Medical info
+    main_complaint: z.string()
+        .min(5, 'Queixa principal deve ter pelo menos 5 caracteres')
+        .max(500, 'Queixa principal muito longa'),
+
+    medications: z.string()
+        .max(500, 'Lista de medicamentos muito longa')
+        .optional()
+        .nullable(),
+
+    allergies: z.string()
+        .max(300, 'Lista de alergias muito longa')
+        .optional()
+        .nullable(),
+
+    // Additional info
+    emergency_contact: z.string()
+        .min(10, 'Contato de emergência inválido')
+        .optional()
+        .nullable(),
+
+    emergency_contact_name: z.string()
+        .min(2, 'Nome do contato de emergência inválido')
+        .optional()
+        .nullable(),
+
+    health_insurance: z.string()
+        .optional()
+        .nullable(),
+
+    health_insurance_number: z.string()
+        .optional()
+        .nullable(),
+
+    // Consent
+    consent: z.boolean().refine((val) => val === true, {
+        message: 'Você deve concordar com os termos para continuar',
+    }),
+
+    consent_data_usage: z.boolean().refine((val) => val === true, {
+        message: 'Você deve autorizar o uso dos dados para a consulta',
+    }),
+})
+
+export type PreCheckinFormData = z.infer<typeof preCheckinSchema>
+
+/**
+ * Queue entry schema
+ */
+export const queueEntrySchema = z.object({
+    appointment_id: z.string().uuid('ID do agendamento inválido'),
+    priority_reason: z.enum(['normal', 'idoso', 'gestante', 'deficiente', 'emergencia', 'retorno_urgente']).default('normal'),
+})
+
+export type QueueEntryData = z.infer<typeof queueEntrySchema>
+
+

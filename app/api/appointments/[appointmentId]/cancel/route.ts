@@ -28,8 +28,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const body = await request.json()
         const { cancellation_reason } = cancelAppointmentSchema.parse(body)
 
-        const supabase = await createClient()
-        const adminClient = createServiceRoleClient()
+        const supabase = await createClient() as any
+        const adminClient = createServiceRoleClient() as any
 
         // Get appointment with related data
         const { data: appointment, error: fetchError } = await supabase

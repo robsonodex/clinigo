@@ -111,9 +111,10 @@ export async function POST(request: NextRequest) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
-        // Only CLINIC_ADMIN or SUPER_ADMIN can create doctors
-        if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
-            throw new ForbiddenError('Apenas administradores podem cadastrar médicos')
+        // Only CLINIC_ADMIN, SUPER_ADMIN or DOCTOR can create doctors
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR']
+        if (!userRole || !allowedRoles.includes(userRole)) {
+            throw new ForbiddenError('Apenas administradores e médicos podem cadastrar médicos')
         }
 
         const body = await request.json()
@@ -141,12 +142,16 @@ export async function POST(request: NextRequest) {
             clinicId = (user as any).clinic_id
         }
 
-        // Check plan limits
-        const { data: clinic } = await supabase
+        // 🔥 COST PROTECTION: Check plan limits with plan_type validation
+        const { data: clinic, error: clinicError } = await supabase
             .from('clinics')
-            .select('name, plan_limits, addons')
+            .select('name, plan_type, plan_limits, addons')
             .eq('id', clinicId as any)
             .single()
+
+        if (clinicError || !clinic) {
+            throw new BadRequestError('Clínica não encontrada')
+        }
 
         const { count: doctorCount } = await (supabase as any)
             .from('doctors')
@@ -157,9 +162,15 @@ export async function POST(request: NextRequest) {
         const extraDoctors = ((clinic as any)?.addons as { extra_doctors?: number })?.extra_doctors || 0
         const totalMaxDoctors = baseMaxDoctors + extraDoctors
 
+        // Special validation for BASIC plan (max 3 doctors)
+        if ((clinic as any).plan_type === 'BASIC' && baseMaxDoctors !== 3) {
+            console.warn('[PLAN MISMATCH] BASIC plan should have max_doctors=3, found:', baseMaxDoctors)
+        }
+
         if ((doctorCount || 0) >= totalMaxDoctors) {
+            const planName = (clinic as any).plan_type === 'BASIC' ? 'Básico' : (clinic as any).plan_type === 'PRO' ? 'Profissional' : 'Enterprise'
             throw new BadRequestError(
-                `Limite de médicos atingido (Base: ${baseMaxDoctors} + Extras: ${extraDoctors} = ${totalMaxDoctors}). Faça upgrade do plano ou adicione médicos extras.`
+                `Limite de médicos atingido (${baseMaxDoctors} médicos no plano ${planName}${extraDoctors ? ` + ${extraDoctors} extras` : ''}). ${(clinic as any).plan_type === 'BASIC' ? 'Faça upgrade para o plano Profissional (15 médicos).' : 'Adicione médicos extras ou faça upgrade.'}`
             )
         }
 
@@ -242,3 +253,4 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
+
