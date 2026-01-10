@@ -5,13 +5,13 @@
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from './supabase.generated'
+import type { Database } from './database.types'
 import type {
     StrictUser,
     StrictClinic,
     UserWithClinic,
     PlanType
-} from './core'
+} from '@/types/core'
 
 export type TypedSupabaseClient = SupabaseClient<Database>
 
@@ -25,8 +25,25 @@ export async function getClinic(
 ): Promise<StrictClinic> {
     const { data, error } = await supabase
         .from('clinics')
-        .select('id, name, plan_type, plan_limits, is_active, created_at, updated_at')
+        .select('id, name, plan_type, plan_limits, is_active, logo_url, primary_color, created_at, updated_at')
         .eq('id', clinicId)
+        .single()
+
+    if (error) throw new Error(`Failed to fetch clinic: ${error.message}`)
+    if (!data) throw new Error('Clinic not found')
+
+    return data as StrictClinic
+}
+
+export async function getClinicBySlug(
+    supabase: TypedSupabaseClient,
+    slug: string
+): Promise<StrictClinic> {
+    const { data, error } = await supabase
+        .from('clinics')
+        .select('id, name, plan_type, plan_limits, is_active, logo_url, primary_color, created_at, updated_at')
+        .eq('slug', slug)
+        .eq('is_active', true)
         .single()
 
     if (error) throw new Error(`Failed to fetch clinic: ${error.message}`)
@@ -42,7 +59,7 @@ export async function updateClinicPlan(
 ): Promise<void> {
     const { error } = await supabase
         .from('clinics')
-        .update({ plan_type: planType })
+        .update({ plan_type: planType } as any)
         .eq('id', clinicId)
 
     if (error) throw new Error(`Failed to update clinic plan: ${error.message}`)
@@ -89,6 +106,8 @@ export async function getUserWithClinic(
         plan_type,
         plan_limits,
         is_active,
+        logo_url,
+        primary_color,
         created_at,
         updated_at
       )

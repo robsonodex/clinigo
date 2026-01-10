@@ -2,7 +2,7 @@
 
 import { Check, X, Sparkles, Lock } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { PlanConfig } from '@/lib/constants/plans'
@@ -31,7 +31,22 @@ export function PlanCard({
         ? `border-${plan.color}-500`
         : 'border-border'
 
-    const FooterButton = (
+    const FooterButton = ctaLink ? (
+        <Link
+            href={ctaLink}
+            className={cn(
+                buttonVariants({
+                    variant: selected ? 'default' : plan.recommended ? 'default' : 'outline',
+                    size: 'lg',
+                }),
+                'w-full',
+                selected && `bg-${plan.color}-600 hover:bg-${plan.color}-700`,
+                plan.recommended && !selected && 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            )}
+        >
+            {ctaText || 'Escolher Plano'}
+        </Link>
+    ) : (
         <Button
             onClick={onSelect}
             variant={selected ? 'default' : plan.recommended ? 'default' : 'outline'}
@@ -41,15 +56,8 @@ export function PlanCard({
                 selected && `bg-${plan.color}-600 hover:bg-${plan.color}-700`,
                 plan.recommended && !selected && 'bg-emerald-600 hover:bg-emerald-700 text-white'
             )}
-            asChild={!!ctaLink}
         >
-            {ctaLink ? (
-                <Link href={ctaLink}>
-                    {ctaText || 'Escolher Plano'}
-                </Link>
-            ) : (
-                ctaText || (selected ? 'Selecionado' : 'Escolher Plano')
-            )}
+            {ctaText || (selected ? 'Selecionado' : 'Escolher Plano')}
         </Button>
     )
 
@@ -113,14 +121,15 @@ export function PlanCard({
                                     </div>
                                     <span className="flex-1 font-medium">{feature.name}</span>
                                     {!disableUpgradeLinks && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 text-[10px] px-2 text-primary"
-                                            asChild
+                                        <Link
+                                            href="/dashboard/configuracoes/plano"
+                                            className={cn(
+                                                buttonVariants({ variant: "ghost", size: "sm" }),
+                                                "h-6 text-[10px] px-2 text-primary"
+                                            )}
                                         >
-                                            <Link href="/dashboard/configuracoes/plano">UPGRADE</Link>
-                                        </Button>
+                                            UPGRADE
+                                        </Link>
                                     )}
                                 </li>
                             )

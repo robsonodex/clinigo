@@ -48,6 +48,7 @@ app/
 
 ### 1. Área Pública (Paciente)
 *   **Landing da Clínica (`/[clinic_slug]`):** Página inicial da clínica.
+*   **Triagem AiA Inteligente:** Fluxo de triagem com inteligência artificial para classificação de risco pré-consulta.
 *   **Agendamento (`/[clinic_slug]/agendar`):**
     *   Seleção de médico com filtro por especialidade.
     *   Seleção de data e horário (Agenda disponível em tempo real).
@@ -56,10 +57,10 @@ app/
     *   Páginas de status (Sucesso, Pendente, Falha).
 
 ### 2. Dashboard da Clínica
-*   **Gestão de Médicos:** Cadastro, edição e listagem.
+*   **Gestão de Médicos:** Cadastro, edição e listagem. (Admins visualizam todos os registros por padrão, incluindo pendentes).
 *   **Configuração de Horários:** Definição de disponibilidade semanal por médico.
 *   **Agenda Global:** Visualização de todos os agendamentos da clínica.
-*   **Pagamentos:** Relatório de receita e histórico de transações.
+*   **Pagamentos:** Relatório de receita e histórico de transações (Dados persistentes do banco).
 *   **Configurações:** Dados da clínica (nome, contato, cores).
 
 ### 3. Área do Médico

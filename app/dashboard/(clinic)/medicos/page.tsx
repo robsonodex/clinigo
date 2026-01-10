@@ -52,8 +52,9 @@ export default function DoctorsPage() {
     const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
     const [page, setPage] = useState(1)
     const [search, setSearch] = useState('')
-    const [statusFilter, setStatusFilter] = useState<string>('true')
+    const [statusFilter, setStatusFilter] = useState<string>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+
 
     const { data: response, isLoading, error } = useQuery({
         queryKey: ['doctors', clinicId, page, search, statusFilter],

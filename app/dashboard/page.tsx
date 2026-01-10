@@ -102,7 +102,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">
-                        Olá, {profile?.full_name?.split(' ')[0]}! 👋
+                        Olá, {profile?.full_name?.split(' ')[0]}!
                     </h1>
                     <p className="text-muted-foreground">
                         {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
@@ -205,29 +205,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-900">Médicos</CardTitle>
-                            <Users className="h-4 w-4 text-emerald-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-emerald-900">-</div>
-                            <p className="text-xs text-emerald-700">Ver em Relatórios</p>
-                        </CardContent>
-                    </Card>
 
-                    <Card className="bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-rose-900">
-                                Consultas Hoje
-                            </CardTitle>
-                            <Video className="h-4 w-4 text-rose-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-rose-900">-</div>
-                            <p className="text-xs text-rose-700">Ver em Relatórios</p>
-                        </CardContent>
-                    </Card>
 
                     <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

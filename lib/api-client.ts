@@ -109,14 +109,24 @@ export const api = new ApiClient('/api')
 // ============================================================================
 
 // Doctors
+export interface DoctorDisplaySettings {
+    show_duration?: boolean
+    show_price?: boolean
+    show_rating?: boolean
+    show_teleconsulta?: boolean
+    show_convenio?: boolean
+}
+
 export interface Doctor {
     id: string
     crm: string
     crm_state: string
     specialty: string
     consultation_price: number
+    consultation_duration?: number
     bio?: string
     is_accepting_appointments: boolean
+    display_settings?: DoctorDisplaySettings
     user: {
         full_name: string
         email: string
@@ -169,6 +179,10 @@ export interface CreateAppointmentData {
     doctor_id: string
     appointment_date: string
     appointment_time: string
+    payment_type?: 'PRIVATE' | 'HEALTH_INSURANCE'
+    health_insurance_plan_id?: string
+    insurance_card_number?: string
+    insurance_card_validity?: string
     patient: {
         cpf: string
         full_name: string
@@ -227,6 +241,7 @@ export interface Clinic {
     logo_url?: string
     primary_color?: string
     is_active: boolean
+    plan_type?: string
 }
 
 export async function fetchClinicBySlug(slug: string) {

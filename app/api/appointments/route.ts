@@ -274,7 +274,9 @@ export async function POST(request: NextRequest) {
             patientId = newPatient.id
         }
 
-        const isPrepaid = !!clinic.addons?.prepaid_booking
+
+
+        const isPrepaid = !!clinic.addons?.prepaid_booking && validatedData.payment_type !== 'HEALTH_INSURANCE'
         const initialStatus = isPrepaid ? 'PENDING_PAYMENT' : 'CONFIRMED'
 
         // 6. Create appointment
@@ -287,6 +289,10 @@ export async function POST(request: NextRequest) {
                 appointment_date: validatedData.appointment_date,
                 appointment_time: validatedData.appointment_time,
                 status: initialStatus,
+                payment_type: validatedData.payment_type || 'PRIVATE',
+                health_insurance_plan_id: validatedData.health_insurance_plan_id || null,
+                insurance_card_number: validatedData.insurance_card_number || null,
+                insurance_card_validity: validatedData.insurance_card_validity || null,
             })
             .select()
             .single()

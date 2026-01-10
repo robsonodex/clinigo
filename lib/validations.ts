@@ -50,6 +50,34 @@ export const patientFormSchema = z.object({
     terms: z.boolean().refine((val) => val === true, {
         message: 'Você deve aceitar os termos',
     }),
+    payment_type: z.enum(['PRIVATE', 'HEALTH_INSURANCE']).default('PRIVATE'),
+    health_insurance_plan_id: z.string().optional(),
+    insurance_card_number: z.string().optional(),
+    insurance_card_validity: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional().or(z.literal('')),
+}).superRefine((data, ctx) => {
+    if (data.payment_type === 'HEALTH_INSURANCE') {
+        if (!data.health_insurance_plan_id) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Selecione o convênio',
+                path: ['health_insurance_plan_id'],
+            })
+        }
+        if (!data.insurance_card_number) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Informe o número da carteirinha',
+                path: ['insurance_card_number'],
+            })
+        }
+        if (!data.insurance_card_validity) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Informe a validade',
+                path: ['insurance_card_validity'],
+            })
+        }
+    }
 })
 
 export type PatientFormData = z.infer<typeof patientFormSchema>

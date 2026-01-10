@@ -1,9 +1,9 @@
 'use client'
 
-import { use, Suspense } from 'react'
+import { use, Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { format, parse } from 'date-fns'
@@ -16,6 +16,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { patientFormSchema, type PatientFormData } from '@/lib/validations'
 import { api, type Doctor, createAppointment } from '@/lib/api-client'
 import { formatCurrency, formatCPF, formatPhone } from '@/lib/utils'
@@ -27,7 +35,9 @@ import {
     CreditCard,
     Shield,
     Loader2,
+    CheckCircle2
 } from 'lucide-react'
+import type { DoctorHealthInsurance } from '@/lib/types/health-insurance'
 
 interface PageProps {
     params: Promise<{ clinic_slug: string; doctor_id: string }>
@@ -53,19 +63,56 @@ function ConfirmBookingContent({ params }: PageProps) {
         queryFn: () => api.get<Doctor>(`/doctors/${doctor_id}`),
     })
 
+    // Fetch doctor insurances
+    const { data: insurancesResponse } = useQuery({
+        queryKey: ['doctor-insurances', doctor_id],
+        queryFn: () => api.getFull<DoctorHealthInsurance[]>(`/doctors/${doctor_id}/health-insurances`, {
+            status: 'ACTIVE'
+        }),
+        enabled: !!doctor_id
+    })
+    const insurances = insurancesResponse?.data || []
+
     // Form
     const {
         register,
         handleSubmit,
         setValue,
         watch,
+        trigger,
+        control,
         formState: { errors },
     } = useForm<PatientFormData>({
         resolver: zodResolver(patientFormSchema),
         defaultValues: {
             terms: false,
+            payment_type: 'PRIVATE'
         },
     })
+
+    const paymentType = watch('payment_type')
+    const selectedPlanId = watch('health_insurance_plan_id')
+
+    // Calculate price
+    const [currentPrice, setCurrentPrice] = useState(0)
+
+    useEffect(() => {
+        if (doctor) {
+            if (paymentType === 'PRIVATE') {
+                setCurrentPrice(doctor.consultation_price)
+            } else if (selectedPlanId) {
+                const insurance = insurances.find(i => i.health_insurance_plan_id === selectedPlanId)
+                if (insurance) {
+                    setCurrentPrice(insurance.consultation_price)
+                }
+            } else {
+                // If health insurance selected but no plan yet, maybe show 0 or keep private price?
+                // Better to show "A partir de..." or just handle when selected.
+                setCurrentPrice(0) // Invalid state effectively, waiting for selection
+            }
+        }
+    }, [doctor, paymentType, selectedPlanId, insurances])
+
 
     // Mutation
     const { mutate: submitBooking, isPending } = useMutation({
@@ -75,6 +122,10 @@ function ConfirmBookingContent({ params }: PageProps) {
                 doctor_id,
                 appointment_date: date,
                 appointment_time: time,
+                payment_type: data.payment_type,
+                health_insurance_plan_id: data.health_insurance_plan_id,
+                insurance_card_number: data.insurance_card_number,
+                insurance_card_validity: data.insurance_card_validity,
                 patient: {
                     cpf: data.cpf.replace(/\D/g, ''),
                     full_name: data.full_name,
@@ -84,8 +135,14 @@ function ConfirmBookingContent({ params }: PageProps) {
                 },
             }),
         onSuccess: (response) => {
-            // Redirect to Mercado Pago
-            window.location.href = response.payment_url
+            if (response.payment_url) {
+                // Redirect to Mercado Pago
+                window.location.href = response.payment_url
+            } else {
+                // Success without payment URL (maybe insurance or free)
+                toast.success('Agendamento realizado com sucesso!')
+                router.push(`/${clinic_slug}/agendar/sucesso?appointmentId=${response.appointment_id}`)
+            }
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Erro ao criar agendamento')
@@ -133,13 +190,13 @@ function ConfirmBookingContent({ params }: PageProps) {
 
                 <div className="grid md:grid-cols-3 gap-6">
                     {/* Form */}
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2 space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Dados do paciente</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                                <form id="booking-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                                     {/* Name */}
                                     <div className="space-y-2">
                                         <Label htmlFor="full_name">Nome completo *</Label>
@@ -218,62 +275,179 @@ function ConfirmBookingContent({ params }: PageProps) {
                                             {...register('date_of_birth')}
                                         />
                                     </div>
+                                </form>
+                            </CardContent>
+                        </Card>
 
-                                    {/* Terms */}
-                                    <div className="flex items-start gap-3 pt-4">
-                                        <Checkbox
-                                            id="terms"
-                                            checked={watch('terms')}
-                                            onCheckedChange={(checked) =>
-                                                setValue('terms', checked as boolean)
-                                            }
-                                        />
-                                        <div className="grid gap-1.5 leading-none">
-                                            <label
-                                                htmlFor="terms"
-                                                className="text-sm font-medium cursor-pointer"
+                        {/* Payment Selection */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Forma de Pagamento</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <RadioGroup
+                                    defaultValue="PRIVATE"
+                                    className="grid grid-cols-2 gap-4"
+                                    onValueChange={(val) => setValue('payment_type', val as 'PRIVATE' | 'HEALTH_INSURANCE')}
+                                >
+                                    <div>
+                                        <RadioGroupItem value="PRIVATE" id="private" className="peer sr-only" />
+                                        <Label
+                                            htmlFor="private"
+                                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
+                                        >
+                                            <CreditCard className="mb-3 h-6 w-6" />
+                                            <span className="font-semibold px-1 text-center">Particular</span>
+                                            {doctor && (
+                                                <span className="text-sm text-muted-foreground mt-1">
+                                                    {formatCurrency(doctor.consultation_price)}
+                                                </span>
+                                            )}
+                                        </Label>
+                                    </div>
+                                    <div>
+                                        <RadioGroupItem value="HEALTH_INSURANCE" id="insurance" className="peer sr-only" />
+                                        <Label
+                                            htmlFor="insurance"
+                                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
+                                        >
+                                            <Shield className="mb-3 h-6 w-6" />
+                                            <span className="font-semibold px-1 text-center">Convênio</span>
+                                            <span className="text-sm text-muted-foreground mt-1">
+                                                {insurances.length} opções
+                                            </span>
+                                        </Label>
+                                    </div>
+                                </RadioGroup>
+
+                                {paymentType === 'HEALTH_INSURANCE' && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                                        <div className="space-y-2">
+                                            <Label>Plano de Convênio *</Label>
+                                            <Select
+                                                onValueChange={(val) => {
+                                                    setValue('health_insurance_plan_id', val)
+                                                    trigger('health_insurance_plan_id')
+                                                }}
                                             >
-                                                Concordo com os termos de uso
-                                            </label>
-                                            <p className="text-xs text-muted-foreground">
-                                                Ao prosseguir, você concorda com os{' '}
-                                                <a href="#" className="text-primary underline">
-                                                    termos de uso
-                                                </a>{' '}
-                                                e{' '}
-                                                <a href="#" className="text-primary underline">
-                                                    política de privacidade
-                                                </a>
-                                                .
-                                            </p>
-                                            {errors.terms && (
+                                                <SelectTrigger className={errors.health_insurance_plan_id ? "border-destructive" : ""}>
+                                                    <SelectValue placeholder="Selecione seu convênio" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {insurances.map((ins) => (
+                                                        <SelectItem key={ins.health_insurance_plan_id} value={ins.health_insurance_plan_id}>
+                                                            {ins.insurance_name} - {ins.plan_name}
+                                                            {ins.consultation_price > 0 && ` (${formatCurrency(ins.consultation_price)})`}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.health_insurance_plan_id && (
                                                 <p className="text-xs text-destructive">
-                                                    {errors.terms.message}
+                                                    {errors.health_insurance_plan_id.message}
                                                 </p>
                                             )}
                                         </div>
-                                    </div>
 
-                                    {/* Submit */}
-                                    <Button
-                                        type="submit"
-                                        size="xl"
-                                        className="w-full mt-6"
-                                        disabled={isPending}
-                                    >
-                                        {isPending ? (
-                                            <>
-                                                <Loader2 className="animate-spin" />
-                                                Processando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CreditCard className="w-5 h-5" />
-                                                Ir para pagamento
-                                            </>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="card_number">Número da Carteirinha *</Label>
+                                                <Input
+                                                    id="card_number"
+                                                    placeholder="000000000000"
+                                                    {...register('insurance_card_number')}
+                                                    error={!!errors.insurance_card_number}
+                                                />
+                                                {errors.insurance_card_number && (
+                                                    <p className="text-xs text-destructive">
+                                                        {errors.insurance_card_number.message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="validity">Validade *</Label>
+                                                <Input
+                                                    id="validity"
+                                                    type="date"
+                                                    {...register('insurance_card_validity')}
+                                                    error={!!errors.insurance_card_validity}
+                                                />
+                                                {errors.insurance_card_validity && (
+                                                    <p className="text-xs text-destructive">
+                                                        {errors.insurance_card_validity.message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Terms and Submit */}
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex items-start gap-3">
+                                    <Controller
+                                        control={control}
+                                        name="terms"
+                                        render={({ field }) => (
+                                            <Checkbox
+                                                id="terms"
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
                                         )}
-                                    </Button>
-                                </form>
+                                    />
+                                    <div className="grid gap-1.5 leading-none">
+                                        <label
+                                            htmlFor="terms"
+                                            className="text-sm font-medium cursor-pointer select-none"
+                                        >
+                                            Concordo com os termos de uso
+                                        </label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Ao prosseguir, você concorda com os{' '}
+                                            <a href="#" className="text-primary underline hover:text-primary/80">
+                                                termos de uso
+                                            </a>{' '}
+                                            e{' '}
+                                            <a href="#" className="text-primary underline hover:text-primary/80">
+                                                política de privacidade
+                                            </a>
+                                            .
+                                        </p>
+                                        {errors.terms && (
+                                            <p className="text-xs text-destructive mt-1">
+                                                {errors.terms.message}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <Button
+                                    onClick={handleSubmit(onSubmit)}
+                                    size="xl"
+                                    className="w-full mt-6"
+                                    disabled={isPending}
+                                >
+                                    {isPending ? (
+                                        <>
+                                            <Loader2 className="animate-spin mr-2" />
+                                            Processando...
+                                        </>
+                                    ) : paymentType === 'HEALTH_INSURANCE' ? (
+                                        <>
+                                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                                            Confirmar Agendamento
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CreditCard className="w-5 h-5 mr-2" />
+                                            Ir para pagamento
+                                        </>
+                                    )}
+                                </Button>
                             </CardContent>
                         </Card>
                     </div>
@@ -327,19 +501,22 @@ function ConfirmBookingContent({ params }: PageProps) {
                                         <div className="py-3 border-t">
                                             <p className="text-sm text-muted-foreground">
                                                 Valor da consulta
+                                                {paymentType === 'HEALTH_INSURANCE' && ' (Convênio)'}
                                             </p>
                                             <p className="text-3xl font-bold text-primary">
-                                                {formatCurrency(doctor.consultation_price)}
+                                                {currentPrice > 0 ? formatCurrency(currentPrice) : 'Sob Consulta'}
                                             </p>
                                         </div>
                                     </>
                                 ) : null}
 
                                 {/* Security badge */}
-                                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
-                                    <Shield className="w-4 h-4" />
-                                    <span className="text-xs">Pagamento seguro via Mercado Pago</span>
-                                </div>
+                                {paymentType === 'PRIVATE' && (
+                                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
+                                        <Shield className="w-4 h-4" />
+                                        <span className="text-xs">Pagamento seguro via Mercado Pago</span>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

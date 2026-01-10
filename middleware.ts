@@ -181,10 +181,14 @@ export async function middleware(request: NextRequest) {
     const { supabase, response } = createSupabaseClient(request)
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Public routes - no auth needed
+    // Public routes - no auth REQUIRED, but if user IS logged in, continue to add headers
     const isPublicRoute = PUBLIC_ROUTES.some((route) => {
         if (route === '/api/appointments' && pathname === '/api/appointments') {
             return request.method === 'POST'
+        }
+        if (route === '/api/doctors') {
+            // GET is public, but if user is logged in, we still want to pass headers
+            return pathname.startsWith(route) && request.method === 'GET'
         }
         return pathname.startsWith(route)
     })
@@ -199,7 +203,8 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/registro') ||
         pathname.match(/^\/[^/]+\/agendar/)
 
-    if (isPublicPage || isPublicRoute) {
+    // For public routes/pages: if NO user, return early. If user exists, continue to add headers
+    if ((isPublicPage || isPublicRoute) && !user) {
         return response
     }
 

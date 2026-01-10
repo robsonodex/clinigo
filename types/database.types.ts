@@ -84,6 +84,8 @@ export interface Database {
           specialty: string
           crm: string
           consultation_price: number
+          consultation_duration: number
+          display_settings: Json | null
           is_accepting_appointments: boolean
           is_active: boolean
           user?: { full_name: string }
@@ -97,6 +99,8 @@ export interface Database {
           specialty: string
           crm: string
           consultation_price?: number
+          consultation_duration?: number
+          display_settings?: Json | null
           is_accepting_appointments?: boolean
           is_active?: boolean
           created_at?: string

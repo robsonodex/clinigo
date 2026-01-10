@@ -87,6 +87,9 @@ export async function GET(request: NextRequest) {
             case 'top_specialties':
                 return await getTopSpecialties(supabase, clinicId, startDate, endDate)
 
+            case 'health_insurance_stats':
+                return await getHealthInsuranceStats(supabase, clinicId, startDate, endDate)
+
             default:
                 return NextResponse.json({ error: 'Tipo de relatório inválido' }, { status: 400 })
         }
@@ -369,5 +372,58 @@ function getStatusLabel(status: string): string {
         'NO_SHOW': 'Não Compareceu',
     }
     return labels[status] || status
+}
+
+async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    const { data: appointments } = await supabase
+        .from('appointments')
+        .select(`
+            id,
+            status,
+            health_insurance_plan_id,
+            health_insurance_plans (
+                name,
+                health_insurances (name)
+            )
+        `)
+        .eq('clinic_id', clinicId)
+        .eq('payment_type', 'HEALTH_INSURANCE')
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
+
+    const stats: Record<string, {
+        insuranceName: string,
+        total: number,
+        plans: Record<string, number>
+    }> = {}
+
+    for (const appt of appointments || []) {
+        // @ts-ignore - Supabase types join inference can be tricky
+        const rawPlan = appt.health_insurance_plans
+        const plan = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan
+
+        // @ts-ignore
+        const rawInsurance = plan?.health_insurances
+        const insurance = Array.isArray(rawInsurance) ? rawInsurance[0] : rawInsurance
+
+        if (insurance && plan) {
+            const insuranceName = insurance.name
+            const planName = plan.name
+
+            if (!stats[insuranceName]) {
+                stats[insuranceName] = { insuranceName, total: 0, plans: {} }
+            }
+
+            stats[insuranceName].total++
+            stats[insuranceName].plans[planName] = (stats[insuranceName].plans[planName] || 0) + 1
+        }
+    }
+
+    const result = Object.values(stats).map(item => ({
+        ...item,
+        plans: Object.entries(item.plans).map(([name, count]) => ({ name, count }))
+    })).sort((a, b) => b.total - a.total)
+
+    return NextResponse.json({ data: result })
 }
 

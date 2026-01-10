@@ -186,6 +186,12 @@ const navigationSections: NavSection[] = [
                 badge: 'PRO',
                 minPlan: 'PROFESSIONAL',
             },
+            {
+                title: 'Convênios',
+                href: '/dashboard/convenios',
+                icon: Shield,
+                roles: ['CLINIC_ADMIN'],
+            },
         ],
     },
     {

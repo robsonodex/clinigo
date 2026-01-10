@@ -49,6 +49,35 @@ export const createAppointmentSchema = z
             .string()
             .regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:MM'),
         patient: patientSchema,
+        payment_type: z.enum(['PRIVATE', 'HEALTH_INSURANCE']).default('PRIVATE'),
+        health_insurance_plan_id: z.string().uuid().optional().nullable(),
+        insurance_card_number: z.string().optional().nullable(),
+        insurance_card_validity: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional().nullable(),
+    })
+    .superRefine((data, ctx) => {
+        if (data.payment_type === 'HEALTH_INSURANCE') {
+            if (!data.health_insurance_plan_id) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Selecione o plano de convênio',
+                    path: ['health_insurance_plan_id'],
+                })
+            }
+            if (!data.insurance_card_number) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Informe o número da carteirinha',
+                    path: ['insurance_card_number'],
+                })
+            }
+            if (!data.insurance_card_validity) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Informe a validade da carteirinha',
+                    path: ['insurance_card_validity'],
+                })
+            }
+        }
     })
     .refine(
         (data) => {

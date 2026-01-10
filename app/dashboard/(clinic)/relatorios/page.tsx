@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw } from 'lucide-react'
+import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw, Shield } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface KPIs {
@@ -45,6 +45,7 @@ export default function ReportsPage() {
     const [kpis, setKpis] = useState<KPIs | null>(null)
     const [revenueByDoctor, setRevenueByDoctor] = useState<RevenueByDoctor[]>([])
     const [appointmentsByDay, setAppointmentsByDay] = useState<AppointmentsByDay[]>([])
+    const [insuranceStats, setInsuranceStats] = useState<any[]>([])
     const [dateRange, setDateRange] = useState('month')
     const [exporting, setExporting] = useState(false)
 
@@ -101,6 +102,14 @@ export default function ReportsPage() {
                 const data = await appointmentsRes.json()
                 setAppointmentsByDay(data.data || [])
             }
+
+            // Fetch Insurance Stats
+            const insuranceRes = await fetch(`/api/reports?type=health_insurance_stats&${params}`)
+            if (insuranceRes.ok) {
+                const data = await insuranceRes.json()
+                setInsuranceStats(data.data || [])
+            }
+
         } catch (error) {
             console.error('Error fetching reports:', error)
             toast.error('Erro ao carregar relatórios')
@@ -258,6 +267,10 @@ export default function ReportsPage() {
                         <PieChart className="h-4 w-4" />
                         Agendamentos
                     </TabsTrigger>
+                    <TabsTrigger value="insurances" className="gap-2">
+                        <Shield className="h-4 w-4" />
+                        Convênios
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="revenue">
@@ -354,6 +367,59 @@ export default function ReportsPage() {
                                             </tbody>
                                         </table>
                                     </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="insurances">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Consultas por Convênio</CardTitle>
+                            <CardDescription>
+                                Volume de atendimentos por operadora e plano
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {insuranceStats.length === 0 ? (
+                                <p className="text-center text-muted-foreground py-8">
+                                    Nenhum dado de convênio disponível para o período
+                                </p>
+                            ) : (
+                                <div className="space-y-6">
+                                    {insuranceStats.map((stat) => (
+                                        <div key={stat.insuranceName} className="border rounded-lg p-4">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-primary/10 rounded-full">
+                                                        <Shield className="w-5 h-5 text-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-lg">{stat.insuranceName}</h3>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {stat.total} consultas totais
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Badge variant="outline" className="text-lg px-3 py-1">
+                                                    {stat.total}
+                                                </Badge>
+                                            </div>
+
+                                            <div className="pl-14">
+                                                <p className="text-sm font-medium mb-2 text-muted-foreground">Detalhamento por Plano:</p>
+                                                <div className="grid gap-2">
+                                                    {stat.plans.map((plan: any) => (
+                                                        <div key={plan.name} className="flex items-center justify-between text-sm bg-muted/30 p-2 rounded">
+                                                            <span>{plan.name}</span>
+                                                            <span className="font-medium">{plan.count}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </CardContent>

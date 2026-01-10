@@ -47,6 +47,20 @@ export const createDoctorSchema = z.object({
         .string()
         .max(1000, 'Biografia muito longa')
         .optional(),
+    display_settings: z
+        .object({
+            show_duration: z.boolean().optional(),
+            show_price: z.boolean().optional(),
+            show_rating: z.boolean().optional(),
+            show_teleconsulta: z.boolean().optional(),
+            show_convenio: z.boolean().optional(),
+        })
+        .optional(),
+    consultation_duration: z
+        .number()
+        .min(15, 'Duração mínima de 15 minutos')
+        .max(120, 'Duração máxima de 120 minutos')
+        .optional(),
 })
 
 /**
@@ -68,6 +82,21 @@ export const updateDoctorSchema = z.object({
         .positive()
         .max(10000)
         .optional(),
+    consultation_duration: z
+        .number()
+        .min(15)
+        .max(120)
+        .optional(),
+    display_settings: z
+        .object({
+            show_duration: z.boolean().optional(),
+            show_price: z.boolean().optional(),
+            show_rating: z.boolean().optional(),
+            show_teleconsulta: z.boolean().optional(),
+            show_convenio: z.boolean().optional(),
+        })
+        .optional()
+        .nullable(),
     bio: z
         .string()
         .max(1000)

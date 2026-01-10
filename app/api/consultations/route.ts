@@ -156,29 +156,31 @@ export async function POST(request: NextRequest) {
             .eq('id', validatedData.appointment_id)
             .single()
 
-        if (appointmentError || !appointment) {
+        const appointmentData = appointment as any
+
+        if (appointmentError || !appointmentData) {
             throw new NotFoundError('Agendamento')
         }
 
         // Verify doctor is assigned to this appointment
-        if (userRole === 'DOCTOR' && appointment.doctor_id !== doctorId) {
+        if (userRole === 'DOCTOR' && appointmentData.doctor_id !== doctorId) {
             throw new ForbiddenError('Você não está atribuído a este agendamento')
         }
 
         // Check appointment status
-        if (appointment.status !== 'CONFIRMED') {
+        if (appointmentData.status !== 'CONFIRMED') {
             throw new BadRequestError(
-                `Não é possível registrar consulta. Status atual: ${appointment.status}`
+                `Não é possível registrar consulta. Status atual: ${appointmentData.status}`
             )
         }
 
         // Check if consultation already exists
-        if (appointment.existing_consultation?.id) {
+        if (appointmentData.existing_consultation?.id) {
             throw new BadRequestError('Consulta já registrada para este agendamento')
         }
 
         // Check payment status
-        const payment = appointment.payment as { status: string } | null
+        const payment = appointmentData.payment as { status: string } | null
         if (payment?.status !== 'PAID') {
             throw new BadRequestError('Pagamento não confirmado')
         }
@@ -187,10 +189,10 @@ export async function POST(request: NextRequest) {
         const { data: consultation, error: createError } = await supabase
             .from('consultations')
             .insert({
-                clinic_id: appointment.clinic_id,
+                clinic_id: appointmentData.clinic_id,
                 appointment_id: validatedData.appointment_id,
                 doctor_id: doctorId,
-                patient_id: appointment.patient_id,
+                patient_id: appointmentData.patient_id,
                 started_at: new Date().toISOString(),
                 notes: validatedData.notes,
                 prescriptions: validatedData.prescriptions,

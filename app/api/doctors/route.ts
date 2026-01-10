@@ -23,9 +23,16 @@ export async function GET(request: NextRequest) {
         const query = listDoctorsQuerySchema.parse(Object.fromEntries(searchParams))
         const { page, pageSize, offset } = parsePaginationParams(searchParams)
 
-        const supabase = userRole === 'SUPER_ADMIN'
+        // Use Service Role for CLINIC_ADMIN to bypass RLS issues (Trust inputs & filtering)
+        const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN')
             ? createServiceRoleClient()
             : await createClient()
+
+        console.log('[GET /api/doctors] Debug:', {
+            userRole,
+            isServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN'),
+            query: Object.fromEntries(searchParams)
+        })
 
         console.log('[GET /api/doctors] Using client:', userRole === 'SUPER_ADMIN' ? 'SERVICE_ROLE' : 'AUTHENTICATED')
 
@@ -35,7 +42,11 @@ export async function GET(request: NextRequest) {
         if (query.clinic_id) {
             clinicId = query.clinic_id
         }
-        // Priority 2: Public access via clinic_slug
+        // Priority 2: Clinic ID from verified Middleware Header (Fastest & Safest)
+        else if (request.headers.get('x-clinic-id')) {
+            clinicId = request.headers.get('x-clinic-id')
+        }
+        // Priority 3: Public access via clinic_slug
         else if (query.clinic_slug) {
             const { data: clinic } = await supabase
                 .from('clinics')
@@ -84,8 +95,9 @@ export async function GET(request: NextRequest) {
 
         if (query.is_accepting !== undefined) {
             queryBuilder = queryBuilder.eq('is_accepting_appointments', query.is_accepting)
-        } else {
-            // Default to active only
+        } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
+            // Default to active only for public/patients
+            // Admins see ALL by default
             queryBuilder = queryBuilder.eq('is_accepting_appointments', true)
         }
 
@@ -94,7 +106,21 @@ export async function GET(request: NextRequest) {
             .order('created_at', { ascending: false })
             .range(offset, offset + pageSize - 1)
 
+        console.log('[GET /api/doctors] FINAL DEBUG:', {
+            clinicId,
+            userRole,
+            xClinicIdHeader: request.headers.get('x-clinic-id'),
+            is_accepting_filter: query.is_accepting,
+        })
+
         const { data: doctors, count, error } = await queryBuilder
+
+        console.log('[GET /api/doctors] RESULT:', {
+            doctorCount: doctors?.length || 0,
+            totalCount: count,
+            error: error?.message || null,
+            firstDoctor: doctors?.[0] ? { id: (doctors[0] as any).id, name: (doctors[0] as any).user?.full_name } : null
+        })
 
         if (error) throw error
 
@@ -111,6 +137,12 @@ export async function POST(request: NextRequest) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
+        console.log('[POST /api/doctors] Auth Debug:', {
+            userId,
+            userRole,
+            headers: Object.fromEntries(request.headers.entries())
+        })
+
         // Only CLINIC_ADMIN, SUPER_ADMIN or DOCTOR can create doctors
         const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR']
         if (!userRole || !allowedRoles.includes(userRole)) {
@@ -126,10 +158,18 @@ export async function POST(request: NextRequest) {
         const adminClient = createServiceRoleClient()
 
         // Get clinic_id
-        let clinicId: string
+        let clinicId: string | null = null
+
+        // Priority 1: Super Admin overrides clinic
         if (userRole === 'SUPER_ADMIN' && body.clinic_id) {
             clinicId = body.clinic_id
-        } else {
+        }
+        // Priority 2: Use verified header from middleware (Fastest & Safest)
+        else if (request.headers.get('x-clinic-id')) {
+            clinicId = request.headers.get('x-clinic-id')
+        }
+        // Priority 3: Fallback to DB (should rarely be reached)
+        else {
             const { data: user } = await supabase
                 .from('users')
                 .select('clinic_id')
@@ -142,15 +182,36 @@ export async function POST(request: NextRequest) {
             clinicId = (user as any).clinic_id
         }
 
+        if (!clinicId) {
+            throw new BadRequestError('Clínica não encontrada (ID inválido)')
+        }
+
         // 🔥 COST PROTECTION: Check plan limits with plan_type validation
-        const { data: clinic, error: clinicError } = await supabase
+        // Use adminClient to ensure we can read the clinic details regardless of RLS
+
+        console.log('[POST /api/doctors] Lookup Clinic ID:', JSON.stringify(clinicId))
+
+        const { data: clinic, error: clinicError } = await adminClient
             .from('clinics')
             .select('name, plan_type, plan_limits, addons')
             .eq('id', clinicId as any)
             .single()
 
-        if (clinicError || !clinic) {
-            throw new BadRequestError('Clínica não encontrada')
+        if (clinicError) {
+            console.error('[POST /api/doctors] FAILIURE TO FIND CLINIC:', {
+                clinicId,
+                error: clinicError,
+                details: clinicError.details,
+                hint: clinicError.hint,
+                code: clinicError.code
+            })
+            // Throw detailed error for debugging (remove in prod later if sensitive, but safe for now)
+            throw new BadRequestError(`Erro ao buscar clínica: ${clinicError.message} (${clinicError.code})`)
+        }
+
+        if (!clinic) {
+            console.error('[POST /api/doctors] Clinic not found (no error, but null data)')
+            throw new BadRequestError('Clínica não encontrada (Dados nulos)')
         }
 
         const { count: doctorCount } = await (supabase as any)
@@ -216,6 +277,8 @@ export async function POST(request: NextRequest) {
                 crm_state: validatedData.crm_state,
                 specialty: validatedData.specialty,
                 consultation_price: validatedData.consultation_price,
+                consultation_duration: validatedData.consultation_duration,
+                display_settings: validatedData.display_settings,
                 bio: validatedData.bio,
             })
             .select()

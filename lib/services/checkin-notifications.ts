@@ -60,8 +60,8 @@ export async function schedulePreCheckinNotification(
         }
 
         // Check if notification already exists
-        const { data: existing } = await supabase
-            .from('notification_queue')
+        const { data: existing } = await (supabase
+            .from('notification_queue') as any)
             .select('id')
             .eq('appointment_id', appointment.id)
             .eq('type', 'PRE_CHECKIN_LINK')
@@ -77,8 +77,8 @@ export async function schedulePreCheckinNotification(
         }
 
         // Insert notification
-        const { data, error } = await supabase
-            .from('notification_queue')
+        const { data, error } = await (supabase
+            .from('notification_queue') as any)
             .insert({
                 appointment_id: appointment.id,
                 clinic_id: appointment.clinic_id,
@@ -138,8 +138,8 @@ export async function scheduleReminderNotification(
             return { success: false, error: 'Appointment is too soon for reminder' }
         }
 
-        const { data, error } = await supabase
-            .from('notification_queue')
+        const { data, error } = await (supabase
+            .from('notification_queue') as any)
             .insert({
                 appointment_id: appointment.id,
                 clinic_id: appointment.clinic_id,
@@ -183,8 +183,8 @@ export async function sendQueueCalledNotification(
         const supabase = createClient()
 
         // This notification should be sent immediately
-        const { data, error } = await supabase
-            .from('notification_queue')
+        const { data, error } = await (supabase
+            .from('notification_queue') as any)
             .insert({
                 appointment_id: appointment.id,
                 clinic_id: appointment.clinic_id,
@@ -224,8 +224,8 @@ export async function cancelAppointmentNotifications(
     try {
         const supabase = createClient()
 
-        const { error } = await supabase
-            .from('notification_queue')
+        const { error } = await (supabase
+            .from('notification_queue') as any)
             .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
             .eq('appointment_id', appointmentId)
             .eq('status', 'PENDING')
@@ -343,21 +343,21 @@ export async function getNotificationStats(clinicId: string): Promise<{
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
-        const { data: pending } = await supabase
-            .from('notification_queue')
+        const { data: pending } = await (supabase
+            .from('notification_queue') as any)
             .select('id', { count: 'exact', head: true })
             .eq('clinic_id', clinicId)
             .eq('status', 'PENDING')
 
-        const { data: sentToday } = await supabase
-            .from('notification_queue')
+        const { data: sentToday } = await (supabase
+            .from('notification_queue') as any)
             .select('id', { count: 'exact', head: true })
             .eq('clinic_id', clinicId)
             .eq('status', 'SENT')
             .gte('sent_at', today.toISOString())
 
-        const { data: failedToday } = await supabase
-            .from('notification_queue')
+        const { data: failedToday } = await (supabase
+            .from('notification_queue') as any)
             .select('id', { count: 'exact', head: true })
             .eq('clinic_id', clinicId)
             .eq('status', 'FAILED')

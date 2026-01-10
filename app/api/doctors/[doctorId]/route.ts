@@ -110,6 +110,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (validatedData.specialty !== undefined) doctorFields.specialty = validatedData.specialty
         if (validatedData.consultation_price !== undefined) doctorFields.consultation_price = validatedData.consultation_price
+        if (validatedData.consultation_duration !== undefined) doctorFields.consultation_duration = validatedData.consultation_duration
+        if (validatedData.display_settings !== undefined) doctorFields.display_settings = validatedData.display_settings
         if (validatedData.bio !== undefined) doctorFields.bio = validatedData.bio
         if (validatedData.is_accepting_appointments !== undefined) doctorFields.is_accepting_appointments = validatedData.is_accepting_appointments
 

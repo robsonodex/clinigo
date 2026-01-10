@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { PlanType } from '@/lib/constants/plans'
+import { migrateLegacyPlan } from '@/types/core'
 
 interface UsePlanResult {
     planType: PlanType | null
@@ -37,7 +38,7 @@ export function usePlan(): UsePlanResult {
                     .eq('id', user.id)
                     .single()
 
-                if (!userData?.clinic_id) {
+                if (!(userData as any)?.clinic_id) {
                     setIsLoading(false)
                     return
                 }
@@ -45,11 +46,14 @@ export function usePlan(): UsePlanResult {
                 const { data: clinic } = await supabase
                     .from('clinics')
                     .select('plan_type')
-                    .eq('id', userData.clinic_id)
+                    .eq('id', (userData as any).clinic_id)
                     .single()
 
                 if (clinic) {
-                    setPlanType(clinic.plan_type as PlanType)
+                    // Normalize plan type (PRO -> PROFESSIONAL, etc)
+                    const rawPlan = (clinic as any).plan_type
+                    const normalizedPlan = migrateLegacyPlan(rawPlan || 'STARTER')
+                    setPlanType(normalizedPlan)
                 }
             } catch (error) {
                 console.error('[usePlan] Error fetching plan:', error)
@@ -68,7 +72,7 @@ export function usePlan(): UsePlanResult {
         const premiumFeatures = ['crm', 'tiss', 'marketplace', 'ai_reasoning', 'daily_video']
 
         if (premiumFeatures.includes(feature)) {
-            return planType === 'PRO' || planType === 'ENTERPRISE'
+            return planType === 'PROFESSIONAL' || planType === 'ENTERPRISE' || planType === 'NETWORK'
         }
 
         return true
@@ -78,8 +82,8 @@ export function usePlan(): UsePlanResult {
         planType,
         isLoading,
         isBasic: planType === 'BASIC',
-        isPro: planType === 'PRO',
-        isEnterprise: planType === 'ENTERPRISE',
+        isPro: planType === 'PROFESSIONAL',
+        isEnterprise: planType === 'ENTERPRISE' || planType === 'NETWORK',
         canAccess,
     }
 }
