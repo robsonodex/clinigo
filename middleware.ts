@@ -10,9 +10,6 @@ import { jwtVerify } from 'jose'
 import { ROUTE_MIN_PLAN } from '@/lib/constants/route-features'
 import { type PlanType } from '@/lib/constants/plans'
 
-// ... existing imports ...
-
-
 // ============================================
 // CONFIGURATION
 // ============================================
@@ -40,7 +37,7 @@ const PUBLIC_ROUTES = [
     '/api/doctors',
     '/api/patient/auth',
     '/api/marketplace',
-    '/api/aia/triage', // AiA Medical Triage - allows anonymous access
+    '/api/aia/triage',
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
@@ -181,7 +178,7 @@ export async function middleware(request: NextRequest) {
     const { supabase, response } = createSupabaseClient(request)
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Public routes - no auth REQUIRED, but if user IS logged in, continue to add headers
+    // Public routes - no auth needed
     const isPublicRoute = PUBLIC_ROUTES.some((route) => {
         if (route === '/api/appointments' && pathname === '/api/appointments') {
             return request.method === 'POST'
@@ -203,7 +200,6 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/registro') ||
         pathname.match(/^\/[^/]+\/agendar/)
 
-    // For public routes/pages: if NO user, return early. If user exists, continue to add headers
     if ((isPublicPage || isPublicRoute) && !user) {
         return response
     }
@@ -360,6 +356,9 @@ export async function middleware(request: NextRequest) {
         if (userRole) requestHeaders.set('x-user-role', userRole)
         if (userClinicId) requestHeaders.set('x-clinic-id', userClinicId)
         requestHeaders.set('x-plan-type', userPlanType)
+
+        // DEBUG: Tagging traffic as processed by full middleware
+        requestHeaders.set('x-middleware-full', 'true')
 
         const finalResponse = NextResponse.next({
             request: {

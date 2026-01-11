@@ -135,12 +135,20 @@ function ConfirmBookingContent({ params }: PageProps) {
                 },
             }),
         onSuccess: (response) => {
+            // Gateway-Agnostic: Salvar instruções de pagamento no sessionStorage
+            if (response.payment_instructions) {
+                sessionStorage.setItem(
+                    `payment_${response.appointment_id}`,
+                    JSON.stringify(response.payment_instructions)
+                )
+            }
+
+            // Legacy: Se tiver payment_url (Mercado Pago), redireciona
             if (response.payment_url) {
-                // Redirect to Mercado Pago
                 window.location.href = response.payment_url
             } else {
-                // Success without payment URL (maybe insurance or free)
-                toast.success('Agendamento realizado com sucesso!')
+                // Novo fluxo: sempre vai para página de sucesso com instruções
+                toast.success(response.message || 'Agendamento realizado com sucesso!')
                 router.push(`/${clinic_slug}/agendar/sucesso?appointmentId=${response.appointment_id}`)
             }
         },
@@ -188,16 +196,15 @@ function ConfirmBookingContent({ params }: PageProps) {
             <main className="container mx-auto px-4 py-6 max-w-4xl">
                 <h1 className="text-2xl font-bold mb-6">Confirme seus dados</h1>
 
-                <div className="grid md:grid-cols-3 gap-6">
-                    {/* Form */}
-                    <div className="md:col-span-2 space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Dados do paciente</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form id="booking-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                                    {/* Name */}
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {/* Form Column */}
+                        <div className="md:col-span-2 space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Dados do paciente</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="full_name">Nome completo *</Label>
                                         <Input
@@ -207,13 +214,10 @@ function ConfirmBookingContent({ params }: PageProps) {
                                             {...register('full_name')}
                                         />
                                         {errors.full_name && (
-                                            <p className="text-xs text-destructive">
-                                                {errors.full_name.message}
-                                            </p>
+                                            <p className="text-xs text-destructive">{errors.full_name.message}</p>
                                         )}
                                     </div>
 
-                                    {/* CPF */}
                                     <div className="space-y-2">
                                         <Label htmlFor="cpf">CPF *</Label>
                                         <Input
@@ -224,13 +228,10 @@ function ConfirmBookingContent({ params }: PageProps) {
                                             onChange={handleCPFChange}
                                         />
                                         {errors.cpf && (
-                                            <p className="text-xs text-destructive">
-                                                {errors.cpf.message}
-                                            </p>
+                                            <p className="text-xs text-destructive">{errors.cpf.message}</p>
                                         )}
                                     </div>
 
-                                    {/* Email */}
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email *</Label>
                                         <Input
@@ -241,13 +242,10 @@ function ConfirmBookingContent({ params }: PageProps) {
                                             {...register('email')}
                                         />
                                         {errors.email && (
-                                            <p className="text-xs text-destructive">
-                                                {errors.email.message}
-                                            </p>
+                                            <p className="text-xs text-destructive">{errors.email.message}</p>
                                         )}
                                     </div>
 
-                                    {/* Phone */}
                                     <div className="space-y-2">
                                         <Label htmlFor="phone">Telefone *</Label>
                                         <Input
@@ -258,273 +256,262 @@ function ConfirmBookingContent({ params }: PageProps) {
                                             onChange={handlePhoneChange}
                                         />
                                         {errors.phone && (
-                                            <p className="text-xs text-destructive">
-                                                {errors.phone.message}
-                                            </p>
+                                            <p className="text-xs text-destructive">{errors.phone.message}</p>
                                         )}
                                     </div>
 
-                                    {/* Date of Birth */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="date_of_birth">
-                                            Data de nascimento (opcional)
-                                        </Label>
+                                        <Label htmlFor="date_of_birth">Data de nascimento (opcional)</Label>
                                         <Input
                                             id="date_of_birth"
                                             type="date"
                                             {...register('date_of_birth')}
                                         />
                                     </div>
-                                </form>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
 
-                        {/* Payment Selection */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Forma de Pagamento</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <RadioGroup
-                                    defaultValue="PRIVATE"
-                                    className="grid grid-cols-2 gap-4"
-                                    onValueChange={(val) => setValue('payment_type', val as 'PRIVATE' | 'HEALTH_INSURANCE')}
-                                >
-                                    <div>
-                                        <RadioGroupItem value="PRIVATE" id="private" className="peer sr-only" />
-                                        <Label
-                                            htmlFor="private"
-                                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
-                                        >
-                                            <CreditCard className="mb-3 h-6 w-6" />
-                                            <span className="font-semibold px-1 text-center">Particular</span>
-                                            {doctor && (
-                                                <span className="text-sm text-muted-foreground mt-1">
-                                                    {formatCurrency(doctor.consultation_price)}
-                                                </span>
-                                            )}
-                                        </Label>
-                                    </div>
-                                    <div>
-                                        <RadioGroupItem value="HEALTH_INSURANCE" id="insurance" className="peer sr-only" />
-                                        <Label
-                                            htmlFor="insurance"
-                                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
-                                        >
-                                            <Shield className="mb-3 h-6 w-6" />
-                                            <span className="font-semibold px-1 text-center">Convênio</span>
-                                            <span className="text-sm text-muted-foreground mt-1">
-                                                {insurances.length} opções
-                                            </span>
-                                        </Label>
-                                    </div>
-                                </RadioGroup>
-
-                                {paymentType === 'HEALTH_INSURANCE' && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
-                                        <div className="space-y-2">
-                                            <Label>Plano de Convênio *</Label>
-                                            <Select
-                                                onValueChange={(val) => {
-                                                    setValue('health_insurance_plan_id', val)
-                                                    trigger('health_insurance_plan_id')
-                                                }}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Forma de Pagamento</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <RadioGroup
+                                        defaultValue="PRIVATE"
+                                        className="grid grid-cols-2 gap-4"
+                                        onValueChange={(val) => setValue('payment_type', val as 'PRIVATE' | 'HEALTH_INSURANCE')}
+                                    >
+                                        <div>
+                                            <RadioGroupItem value="PRIVATE" id="private" className="peer sr-only" />
+                                            <Label
+                                                htmlFor="private"
+                                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
                                             >
-                                                <SelectTrigger className={errors.health_insurance_plan_id ? "border-destructive" : ""}>
-                                                    <SelectValue placeholder="Selecione seu convênio" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {insurances.map((ins) => (
-                                                        <SelectItem key={ins.health_insurance_plan_id} value={ins.health_insurance_plan_id}>
-                                                            {ins.insurance_name} - {ins.plan_name}
-                                                            {ins.consultation_price > 0 && ` (${formatCurrency(ins.consultation_price)})`}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            {errors.health_insurance_plan_id && (
-                                                <p className="text-xs text-destructive">
-                                                    {errors.health_insurance_plan_id.message}
-                                                </p>
+                                                <CreditCard className="mb-3 h-6 w-6" />
+                                                <span className="font-semibold px-1 text-center">Particular</span>
+                                                {doctor && (
+                                                    <span className="text-sm text-muted-foreground mt-1">
+                                                        {formatCurrency(doctor.consultation_price)}
+                                                    </span>
+                                                )}
+                                            </Label>
+                                        </div>
+                                        <div>
+                                            <RadioGroupItem value="HEALTH_INSURANCE" id="insurance" className="peer sr-only" />
+                                            <Label
+                                                htmlFor="insurance"
+                                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
+                                            >
+                                                <Shield className="mb-3 h-6 w-6" />
+                                                <span className="font-semibold px-1 text-center">Convênio</span>
+                                                <span className="text-sm text-muted-foreground mt-1">
+                                                    {insurances.length} opções
+                                                </span>
+                                            </Label>
+                                        </div>
+                                    </RadioGroup>
+
+                                    {paymentType === 'HEALTH_INSURANCE' && (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                                            <div className="space-y-2">
+                                                <Label>Plano de Convênio *</Label>
+                                                <Select
+                                                    onValueChange={(val) => {
+                                                        setValue('health_insurance_plan_id', val)
+                                                        trigger('health_insurance_plan_id')
+                                                    }}
+                                                >
+                                                    <SelectTrigger className={errors.health_insurance_plan_id ? "border-destructive" : ""}>
+                                                        <SelectValue placeholder="Selecione seu convênio" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {insurances.map((ins) => (
+                                                            <SelectItem key={ins.health_insurance_plan_id} value={ins.health_insurance_plan_id}>
+                                                                {ins.insurance_name} - {ins.plan_name}
+                                                                {ins.consultation_price > 0 && ` (${formatCurrency(ins.consultation_price)})`}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.health_insurance_plan_id && (
+                                                    <p className="text-xs text-destructive">{errors.health_insurance_plan_id.message}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="card_number">Número da Carteirinha *</Label>
+                                                    <Input
+                                                        id="card_number"
+                                                        placeholder="000000000000"
+                                                        {...register('insurance_card_number')}
+                                                        error={!!errors.insurance_card_number}
+                                                    />
+                                                    {errors.insurance_card_number && (
+                                                        <p className="text-xs text-destructive">{errors.insurance_card_number.message}</p>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="validity">Validade *</Label>
+                                                    <Input
+                                                        id="validity"
+                                                        type="date"
+                                                        {...register('insurance_card_validity')}
+                                                        error={!!errors.insurance_card_validity}
+                                                    />
+                                                    {errors.insurance_card_validity && (
+                                                        <p className="text-xs text-destructive">{errors.insurance_card_validity.message}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardContent className="pt-6 space-y-6">
+                                    <div
+                                        className="flex items-start gap-3 cursor-pointer"
+                                        onClick={() => {
+                                            const currentValue = watch('terms')
+                                            setValue('terms', !currentValue, { shouldValidate: true })
+                                        }}
+                                    >
+                                        <Checkbox
+                                            id="terms"
+                                            checked={watch('terms')}
+                                            onCheckedChange={(checked) => {
+                                                setValue('terms', checked as boolean, { shouldValidate: true })
+                                            }}
+                                            className="mt-1"
+                                        />
+                                        <div className="grid gap-1.5 leading-none select-none">
+                                            <span className="text-sm font-medium">
+                                                Concordo com os termos de uso
+                                            </span>
+                                            <p className="text-xs text-muted-foreground">
+                                                Ao prosseguir, você concorda com os{' '}
+                                                <a
+                                                    href="/termos"
+                                                    target="_blank"
+                                                    className="text-primary underline hover:text-primary/80"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    termos de uso
+                                                </a>{' '}
+                                                e{' '}
+                                                <a
+                                                    href="/privacidade"
+                                                    target="_blank"
+                                                    className="text-primary underline hover:text-primary/80"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    política de privacidade
+                                                </a>.
+                                            </p>
+                                            {errors.terms && (
+                                                <p className="text-xs text-destructive mt-1 font-medium">{errors.terms.message}</p>
                                             )}
                                         </div>
+                                    </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="card_number">Número da Carteirinha *</Label>
-                                                <Input
-                                                    id="card_number"
-                                                    placeholder="000000000000"
-                                                    {...register('insurance_card_number')}
-                                                    error={!!errors.insurance_card_number}
-                                                />
-                                                {errors.insurance_card_number && (
-                                                    <p className="text-xs text-destructive">
-                                                        {errors.insurance_card_number.message}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="validity">Validade *</Label>
-                                                <Input
-                                                    id="validity"
-                                                    type="date"
-                                                    {...register('insurance_card_validity')}
-                                                    error={!!errors.insurance_card_validity}
-                                                />
-                                                {errors.insurance_card_validity && (
-                                                    <p className="text-xs text-destructive">
-                                                        {errors.insurance_card_validity.message}
-                                                    </p>
-                                                )}
-                                            </div>
+                                    <Button
+                                        type="submit"
+                                        size="xl"
+                                        className="w-full"
+                                        disabled={isPending}
+                                    >
+                                        {isPending ? (
+                                            <>
+                                                <Loader2 className="animate-spin mr-2" />
+                                                Processando...
+                                            </>
+                                        ) : paymentType === 'HEALTH_INSURANCE' ? (
+                                            <>
+                                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                                                Confirmar Agendamento
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CreditCard className="w-5 h-5 mr-2" />
+                                                Ir para pagamento
+                                            </>
+                                        )}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Summary Column */}
+                        <div className="md:col-span-1">
+                            <Card className="sticky top-24">
+                                <CardHeader>
+                                    <CardTitle>Resumo</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {doctorLoading ? (
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-12 w-full" />
+                                            <Skeleton className="h-4 w-3/4" />
+                                            <Skeleton className="h-4 w-1/2" />
                                         </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Terms and Submit */}
-                        <Card>
-                            <CardContent className="pt-6">
-                                <div className="flex items-start gap-3">
-                                    <Controller
-                                        control={control}
-                                        name="terms"
-                                        render={({ field }) => (
-                                            <Checkbox
-                                                id="terms"
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        )}
-                                    />
-                                    <div className="grid gap-1.5 leading-none">
-                                        <label
-                                            htmlFor="terms"
-                                            className="text-sm font-medium cursor-pointer select-none"
-                                        >
-                                            Concordo com os termos de uso
-                                        </label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Ao prosseguir, você concorda com os{' '}
-                                            <a href="#" className="text-primary underline hover:text-primary/80">
-                                                termos de uso
-                                            </a>{' '}
-                                            e{' '}
-                                            <a href="#" className="text-primary underline hover:text-primary/80">
-                                                política de privacidade
-                                            </a>
-                                            .
-                                        </p>
-                                        {errors.terms && (
-                                            <p className="text-xs text-destructive mt-1">
-                                                {errors.terms.message}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <Button
-                                    onClick={handleSubmit(onSubmit)}
-                                    size="xl"
-                                    className="w-full mt-6"
-                                    disabled={isPending}
-                                >
-                                    {isPending ? (
+                                    ) : doctor ? (
                                         <>
-                                            <Loader2 className="animate-spin mr-2" />
-                                            Processando...
-                                        </>
-                                    ) : paymentType === 'HEALTH_INSURANCE' ? (
-                                        <>
-                                            <CheckCircle2 className="w-5 h-5 mr-2" />
-                                            Confirmar Agendamento
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CreditCard className="w-5 h-5 mr-2" />
-                                            Ir para pagamento
-                                        </>
-                                    )}
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="md:col-span-1">
-                        <Card className="sticky top-20">
-                            <CardHeader>
-                                <CardTitle>Resumo</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {doctorLoading ? (
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-4 w-3/4" />
-                                        <Skeleton className="h-4 w-1/2" />
-                                    </div>
-                                ) : doctor ? (
-                                    <>
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                <User className="w-5 h-5 text-primary" />
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                    <User className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">{doctor.user.full_name}</p>
+                                                    <p className="text-sm text-muted-foreground">CRM {doctor.crm}/{doctor.crm_state}</p>
+                                                    <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-medium">{doctor.user.full_name}</p>
+
+                                            <div className="py-3 border-t flex items-center gap-3">
+                                                <Calendar className="w-5 h-5 text-muted-foreground shrink-0" />
+                                                <div>
+                                                    <p className="text-sm text-muted-foreground">Data</p>
+                                                    <p className="font-medium capitalize">{formattedDate}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="py-3 border-t flex items-center gap-3">
+                                                <Clock className="w-5 h-5 text-muted-foreground shrink-0" />
+                                                <div>
+                                                    <p className="text-sm text-muted-foreground">Horário</p>
+                                                    <p className="font-medium">{time}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="py-3 border-t">
                                                 <p className="text-sm text-muted-foreground">
-                                                    CRM {doctor.crm}/{doctor.crm_state}
+                                                    Valor da consulta{paymentType === 'HEALTH_INSURANCE' && ' (Convênio)'}
                                                 </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {doctor.specialty}
+                                                <p className="text-3xl font-bold text-primary">
+                                                    {currentPrice > 0 ? formatCurrency(currentPrice) : 'Sob Consulta'}
                                                 </p>
                                             </div>
-                                        </div>
 
-                                        <div className="py-3 border-t flex items-center gap-3">
-                                            <Calendar className="w-5 h-5 text-muted-foreground" />
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Data</p>
-                                                <p className="font-medium capitalize">{formattedDate}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="py-3 border-t flex items-center gap-3">
-                                            <Clock className="w-5 h-5 text-muted-foreground" />
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Horário</p>
-                                                <p className="font-medium">{time}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="py-3 border-t">
-                                            <p className="text-sm text-muted-foreground">
-                                                Valor da consulta
-                                                {paymentType === 'HEALTH_INSURANCE' && ' (Convênio)'}
-                                            </p>
-                                            <p className="text-3xl font-bold text-primary">
-                                                {currentPrice > 0 ? formatCurrency(currentPrice) : 'Sob Consulta'}
-                                            </p>
-                                        </div>
-                                    </>
-                                ) : null}
-
-                                {/* Security badge */}
-                                {paymentType === 'PRIVATE' && (
-                                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
-                                        <Shield className="w-4 h-4" />
-                                        <span className="text-xs">Pagamento seguro via Mercado Pago</span>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                            {paymentType === 'PRIVATE' && (
+                                                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
+                                                    <Shield className="w-4 h-4" />
+                                                    <span className="text-xs">Pagamento seguro via Mercado Pago</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : null}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
-                </div>
+                </form>
             </main>
         </div>
     )
 }
+
 
 export default function ConfirmBookingPage({ params }: PageProps) {
     return (

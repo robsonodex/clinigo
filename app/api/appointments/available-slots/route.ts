@@ -18,10 +18,13 @@ export async function GET(request: NextRequest) {
             date: searchParams.get('date'),
         })
 
-        // Validate date is not in the past
-        // Use parseDate to ensure local time is used (avoiding UTC timezone issues)
-        const requestedDate = parseDate(query.date)
-        if (isDateInPast(requestedDate)) {
+        const daysToFetch = parseInt(searchParams.get('days') || '1')
+        // Limit max days to 7 to prevent abuse
+        const validatedDays = Math.min(Math.max(daysToFetch, 1), 7)
+
+        // Validate start date
+        const startDate = parseDate(query.date)
+        if (isDateInPast(startDate)) {
             throw new BadRequestError('Data não pode ser no passado')
         }
 
@@ -47,36 +50,64 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        // Get all available slots using database function
-        const { data: slots, error: slotsError } = await supabase
-            .rpc('get_available_slots', {
-                p_doctor_id: query.doctor_id,
-                p_date: query.date,
+        // Generate response for multiple days
+        const responseData = []
+
+        for (let i = 0; i < validatedDays; i++) {
+            const currentDate = new Date(startDate)
+            currentDate.setDate(startDate.getDate() + i)
+            const dateStr = currentDate.toISOString().split('T')[0]
+
+            // Get available slots for this date
+            const { data: slots, error: slotsError } = await supabase
+                .rpc('get_available_slots', {
+                    p_doctor_id: query.doctor_id,
+                    p_date: dateStr,
+                })
+
+            if (slotsError) {
+                console.error(`Error fetching slots for ${dateStr}:`, slotsError)
+                continue
+            }
+
+            let availableSlots = slots || []
+
+            // Filter if today
+            if (isToday(currentDate)) {
+                availableSlots = availableSlots.filter((slot: { slot_time: string }) =>
+                    isSlotAvailableToday(slot.slot_time)
+                )
+            }
+
+            // Format slots
+            const formattedSlots = availableSlots.map((slot: { slot_time: string; slot_end_time: string }) => ({
+                time: slot.slot_time.substring(0, 5),
+                end_time: slot.slot_end_time.substring(0, 5),
+                available: true,
+            }))
+
+            responseData.push({
+                date: dateStr,
+                slots: formattedSlots
             })
-
-        if (slotsError) throw slotsError
-
-        // Filter slots if today (remove slots that are too close)
-        let availableSlots = slots || []
-
-        if (isToday(requestedDate)) {
-            availableSlots = availableSlots.filter((slot: { slot_time: string }) =>
-                isSlotAvailableToday(slot.slot_time)
-            )
         }
 
-        // Format response
-        const formattedSlots = availableSlots.map((slot: { slot_time: string; slot_end_time: string }) => ({
-            time: slot.slot_time.substring(0, 5), // HH:MM format
-            end_time: slot.slot_end_time.substring(0, 5),
-            available: true,
-        }))
+        // If requesting single day (legacy compatibility), return old format
+        if (validatedDays === 1) {
+            return successResponse({
+                date: responseData[0].date,
+                doctor_id: query.doctor_id,
+                available_slots: responseData[0].slots,
+                total_available: responseData[0].slots.length,
+            })
+        }
 
+        // New format for multi-day
         return successResponse({
-            date: query.date,
             doctor_id: query.doctor_id,
-            available_slots: formattedSlots,
-            total_available: formattedSlots.length,
+            start_date: query.date,
+            days: responseData,
+            total_days: responseData.length
         })
     } catch (error) {
         return handleApiError(error)

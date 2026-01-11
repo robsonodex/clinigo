@@ -9,7 +9,7 @@ import { successResponse, paginatedResponse, parsePaginationParams, buildPaginat
 import { createAppointmentSchema, listAppointmentsQuerySchema } from '@/lib/validations/appointment'
 import { cleanCPF } from '@/lib/utils/cpf'
 import { isDateInPast, isToday, isSlotAvailableToday } from '@/lib/utils/date'
-import { createPaymentPreference } from '@/lib/services/mercadopago'
+// Gateway-Agnostic: Mercado Pago removido - clínica gerencia pagamentos externamente
 
 /**
  * GET - List appointments (authenticated users only)
@@ -316,9 +316,10 @@ export async function POST(request: NextRequest) {
             throw appointmentError
         }
 
-        // 7. Handle Payment if required
+        // 7. Handle Payment Registration (Gateway-Agnostic)
+        // Agora apenas registramos que pagamento é necessário, sem gateway integrado
         if (isPrepaid) {
-            const { data: payment, error: paymentError } = await supabase
+            const { error: paymentError } = await supabase
                 .from('payments')
                 .insert({
                     clinic_id: clinic.id,
@@ -326,40 +327,36 @@ export async function POST(request: NextRequest) {
                     patient_id: patientId,
                     amount: doctor.consultation_price,
                     status: 'PENDING',
-                    mercadopago_external_reference: appointment.id,
                 } as Record<string, unknown>)
-                .select()
-                .single()
 
             if (paymentError) throw paymentError
 
-            // 8. Create Mercado Pago preference
+            // Buscar dados da clínica para instruções de pagamento
+            const { data: clinicPaymentInfo } = await supabase
+                .from('clinics')
+                .select('pix_key, bank_account_info, payment_instructions, phone, email')
+                .eq('id', clinic.id)
+                .single()
+
             const doctorName = (doctor.user as { full_name: string })?.full_name || 'Médico'
 
-            const preference = await createPaymentPreference({
-                appointment_id: appointment.id,
-                amount: doctor.consultation_price,
-                patient_email: validatedData.patient.email,
-                patient_name: validatedData.patient.full_name,
-                description: `Teleconsulta com ${doctorName}`,
-                clinic_name: clinic.name,
-                clinic_access_token: clinic.mercadopago_access_token || undefined,
-            })
-
-            // 9. Update payment with preference ID
-            await supabase
-                .from('payments')
-                .update({
-                    mercadopago_preference_id: preference.preference_id,
-                })
-                .eq('id', payment.id)
-
+            // Gateway-Agnostic: Retornar instruções de pagamento em vez de URL do gateway
             return successResponse(
                 {
                     appointment_id: appointment.id,
-                    payment_url: preference.init_point,
-                    sandbox_payment_url: preference.sandbox_init_point,
-                    preference_id: preference.preference_id,
+                    status: 'PENDING_PAYMENT',
+                    message: 'Agendamento criado! Complete o pagamento para confirmar.',
+                    payment_instructions: {
+                        amount: doctor.consultation_price,
+                        doctor_name: doctorName,
+                        clinic_name: clinic.name,
+                        clinic_phone: clinicPaymentInfo?.phone || null,
+                        clinic_email: clinicPaymentInfo?.email || clinic.email,
+                        pix_key: clinicPaymentInfo?.pix_key || null,
+                        bank_account: clinicPaymentInfo?.bank_account_info || null,
+                        instructions: clinicPaymentInfo?.payment_instructions ||
+                            'Entre em contato com a clínica para realizar o pagamento.',
+                    }
                 },
                 { status: 201 }
             )

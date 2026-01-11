@@ -127,6 +127,16 @@ export interface Doctor {
     bio?: string
     is_accepting_appointments: boolean
     display_settings?: DoctorDisplaySettings
+    // Professional profile fields
+    rating?: number
+    review_count?: number
+    experience_years?: number
+    is_premium?: boolean
+    bio_extended?: string
+    faithful_patients_count?: number
+    specialties_additional?: string[]
+    certifications?: string[]
+    languages?: string[]
     user: {
         full_name: string
         email: string
@@ -192,11 +202,27 @@ export interface CreateAppointmentData {
     }
 }
 
+export interface PaymentInstructions {
+    amount: number
+    doctor_name: string
+    clinic_name: string
+    clinic_phone: string | null
+    clinic_email: string | null
+    pix_key: string | null
+    bank_account: string | null
+    instructions: string
+}
+
 export interface CreateAppointmentResponse {
     appointment_id: string
-    payment_url: string
+    status?: string
+    message?: string
+    // Gateway-Agnostic: instruções de pagamento em vez de URL do gateway
+    payment_instructions?: PaymentInstructions
+    // Legacy (mantido para compatibilidade)
+    payment_url?: string
     sandbox_payment_url?: string
-    preference_id: string
+    preference_id?: string
 }
 
 export async function createAppointment(data: CreateAppointmentData) {

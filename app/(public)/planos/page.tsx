@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge'
 import { PlanCard } from '@/components/plans/plan-card'
 import { PLANS, PLAN_ORDER } from '@/lib/constants/plans'
+import { IntegracaoSitesSection } from '@/components/public/integracao-sites-section'
 
 export default function PlanosPage() {
     return (
@@ -213,6 +214,9 @@ export default function PlanosPage() {
                     </Card>
                 </div>
             </section>
+
+            {/* Integração e Criação de Sites Section */}
+            <IntegracaoSitesSection />
 
             {/* CTA Section */}
             <section className="bg-primary text-primary-foreground py-16">
