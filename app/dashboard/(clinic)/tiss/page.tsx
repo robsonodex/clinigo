@@ -20,6 +20,7 @@ import {
     Calendar,
     DollarSign,
     Send,
+    BarChart3,
 } from 'lucide-react'
 
 interface TissGuia {
@@ -105,6 +106,10 @@ export default function TissPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => window.location.href = '/dashboard/tiss/reports/loss-analysis'}>
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Relatórios
+                    </Button>
                     <Button variant="outline" onClick={() => setTab('import')}>
                         <Upload className="w-4 h-4 mr-2" />
                         Importar XML
@@ -224,7 +229,7 @@ export default function TissPage() {
                                         formData.append('file', file)
 
                                         try {
-                                            toast.default('Importando arquivo...') // Need to add toast import or generic alert
+                                            toast('Importando arquivo...')
                                             const res = await fetch('/api/tiss/import', {
                                                 method: 'POST',
                                                 body: formData

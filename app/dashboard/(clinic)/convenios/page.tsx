@@ -1052,6 +1052,208 @@ function MedicosTab() {
 }
 
 // =============================================================================
+// TAB: ELEGIBILIDADE
+// =============================================================================
+
+function ElegibilidadeTab() {
+    const [formData, setFormData] = useState({
+        insurance_company: '',
+        card_number: '',
+        patient_cpf: '',
+        patient_name: '',
+    });
+
+    const checkMutation = useMutation({
+        mutationFn: async (data: typeof formData) => {
+            const res = await fetch('/api/insurance/check-eligibility', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            return json.data;
+        },
+        onError: (error: Error) => toast.error(error.message),
+    });
+
+    const result = checkMutation.data;
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Form */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Dados do Beneficiário</CardTitle>
+                    <CardDescription>
+                        Preencha os dados conforme a carteirinha do convênio
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Operadora</Label>
+                        <Select
+                            value={formData.insurance_company}
+                            onValueChange={(v) => setFormData(prev => ({ ...prev, insurance_company: v }))}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Unimed">Unimed</SelectItem>
+                                <SelectItem value="Bradesco Saúde">Bradesco Saúde</SelectItem>
+                                <SelectItem value="Amil">Amil</SelectItem>
+                                <SelectItem value="SulAmérica">SulAmérica</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Número da Carteirinha</Label>
+                        <div className="relative">
+                            <CreditCard className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                className="pl-9"
+                                value={formData.card_number}
+                                onChange={(e) => setFormData(prev => ({ ...prev, card_number: e.target.value }))}
+                                placeholder="0000 0000 0000 0000"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>CPF do Paciente</Label>
+                        <Input
+                            value={formData.patient_cpf}
+                            onChange={(e) => setFormData(prev => ({ ...prev, patient_cpf: e.target.value }))}
+                            placeholder="000.000.000-00"
+                            maxLength={11}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Nome Completo</Label>
+                        <div className="relative">
+                            <Users className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                className="pl-9"
+                                value={formData.patient_name}
+                                onChange={(e) => setFormData(prev => ({ ...prev, patient_name: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+
+                    <Button
+                        className="w-full"
+                        onClick={() => checkMutation.mutate(formData)}
+                        disabled={
+                            checkMutation.isPending ||
+                            !formData.insurance_company ||
+                            !formData.card_number
+                        }
+                    >
+                        {checkMutation.isPending ? (
+                            <Skeleton className="w-4 h-4 mr-2 animate-spin rounded-full" />
+                        ) : (
+                            <Search className="w-4 h-4 mr-2" />
+                        )}
+                        Verificar Elegibilidade
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Result */}
+            <div className="space-y-6">
+                {checkMutation.isPending && (
+                    <Card>
+                        <CardContent className="py-12 flex flex-col items-center justify-center text-center space-y-4">
+                            <Skeleton className="w-12 h-12 rounded-full" />
+                            <div>
+                                <h3 className="text-lg font-medium">Consultando Operadora...</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Aguardando resposta do webservice
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {result && !checkMutation.isPending && (
+                    <Card className={result.is_active ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                {result.is_active ? (
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                        <Shield className="w-5 h-5" />
+                                    </div>
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                                        <Shield className="w-5 h-5" />
+                                    </div>
+                                )}
+                                <div>
+                                    <CardTitle className={result.is_active ? 'text-green-700' : 'text-red-700'}>
+                                        {result.is_active ? 'Beneficiário Ativo' : 'Beneficiário Inativo/Não Encontrado'}
+                                    </CardTitle>
+                                    <CardDescription className={result.is_active ? 'text-green-600' : 'text-red-600'}>
+                                        Verificação concluída com sucesso
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        {result.is_active && (
+                            <CardContent className="space-y-4">
+                                <div className="bg-white/50 p-4 rounded-lg space-y-2">
+                                    <p className="text-sm font-medium text-green-800">Plano Identificado</p>
+                                    <p className="text-lg font-bold text-green-900">{result.plan_name}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white/50 p-3 rounded-lg">
+                                        <p className="text-xs text-green-800 mb-1">Carência</p>
+                                        <Badge variant="outline" className="text-green-700 border-green-200 bg-green-100">
+                                            Cumprida
+                                        </Badge>
+                                    </div>
+                                    <div className="bg-white/50 p-3 rounded-lg">
+                                        <p className="text-xs text-green-800 mb-1">Coparticipação</p>
+                                        <p className="font-medium text-green-900">
+                                            {result.coverage_details?.copay_value
+                                                ? `R$ ${result.coverage_details.copay_value}`
+                                                : 'Isento'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white/50 p-4 rounded-lg">
+                                    <p className="text-sm font-medium text-green-800 mb-2">Coberturas Principais</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {result.coverage_details?.procedures_covered?.map((proc: string) => (
+                                            <Badge key={proc} variant="secondary" className="bg-white">
+                                                {proc}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        )}
+                    </Card>
+                )}
+
+                {!result && !checkMutation.isPending && (
+                    <Card className="bg-muted/50 border-dashed">
+                        <CardContent className="py-12 text-center text-muted-foreground">
+                            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                            <p>O resultado da verificação aparecerá aqui</p>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// =============================================================================
 // MAIN PAGE
 // =============================================================================
 
@@ -1061,12 +1263,12 @@ export default function ConveniosPage() {
             <div>
                 <h1 className="text-2xl font-bold">Convênios</h1>
                 <p className="text-muted-foreground">
-                    Gerencie operadoras, planos e vínculos de convênios médicos
+                    Gerencie operadoras, planos e regras de atendimento
                 </p>
             </div>
 
             <Tabs defaultValue="operadoras" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-3 max-w-md">
+                <TabsList className="grid w-full grid-cols-4 max-w-2xl">
                     <TabsTrigger value="operadoras" className="gap-2">
                         <Building2 className="w-4 h-4" />
                         Operadoras
@@ -1079,18 +1281,23 @@ export default function ConveniosPage() {
                         <Users className="w-4 h-4" />
                         Médicos
                     </TabsTrigger>
+                    <TabsTrigger value="elegibilidade" className="gap-2">
+                        <Shield className="w-4 h-4" />
+                        Elegibilidade
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="operadoras">
                     <OperadorasTab />
                 </TabsContent>
-
                 <TabsContent value="planos">
                     <PlanosTab />
                 </TabsContent>
-
                 <TabsContent value="medicos">
                     <MedicosTab />
+                </TabsContent>
+                <TabsContent value="elegibilidade">
+                    <ElegibilidadeTab />
                 </TabsContent>
             </Tabs>
         </div>

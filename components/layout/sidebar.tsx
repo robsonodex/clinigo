@@ -39,6 +39,8 @@ import {
     Users2,
     Lock,
     Activity,
+    TrendingUp,
+    ShieldAlert,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
@@ -175,16 +177,33 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+            },
+            {
+                title: 'Repasse Médico',
+                href: '/dashboard/financial/payroll',
+                icon: Users,
+                roles: ['CLINIC_ADMIN'],
+                badge: 'NOVO',
+            },
+            {
+                title: 'DRE',
+                href: '/dashboard/financial/dre',
+                icon: TrendingUp,
+                roles: ['CLINIC_ADMIN'],
+                badge: 'NOVO',
+            },
+            {
+                title: 'Auditoria',
+                href: '/dashboard/financial/audit',
+                icon: ShieldAlert,
+                roles: ['CLINIC_ADMIN'],
+                badge: 'NOVO',
             },
             {
                 title: 'Faturamento TISS',
                 href: '/dashboard/tiss',
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN'],
-                // badge: 'PRO', // Temporariamente removido para teste
-                // minPlan: 'PROFESSIONAL', // Temporariamente removido para teste
             },
             {
                 title: 'Convênios',
