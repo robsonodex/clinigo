@@ -61,6 +61,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+import { useRouter } from 'next/navigation'
+
 // Validation schema
 const PatientFormSchema = z.object({
     full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
@@ -86,10 +88,12 @@ interface Patient {
 
 export default function PacientesPage() {
     const { toast } = useToast()
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState('')
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [showDetailsDialog, setShowDetailsDialog] = useState(false)
     const [showCreateModal, setShowCreateModal] = useState(false)
 
     // Form
@@ -343,11 +347,14 @@ export default function PacientesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => {
+                                                        setSelectedPatient(patient)
+                                                        setShowDetailsDialog(true)
+                                                    }}>
                                                         <Eye className="w-4 h-4 mr-2" />
                                                         Ver detalhes
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}>
                                                         <FileText className="w-4 h-4 mr-2" />
                                                         Prontuários
                                                     </DropdownMenuItem>
@@ -529,6 +536,53 @@ export default function PacientesPage() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Details Dialog */}
+            <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Detalhes do Paciente</DialogTitle>
+                    </DialogHeader>
+                    {selectedPatient && (
+                        <div className="grid gap-4 py-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <User className="w-8 h-8 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-lg">{selectedPatient.full_name}</h3>
+                                    <p className="text-sm text-muted-foreground">Paciente desde {formatDate(selectedPatient.created_at)}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                                <div>
+                                    <Label className="text-muted-foreground">CPF</Label>
+                                    <p className="font-medium">{selectedPatient.cpf ? formatCPF(selectedPatient.cpf) : '-'}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Gênero</Label>
+                                    <p className="font-medium">
+                                        {selectedPatient.gender === 'M' ? 'Masculino' : selectedPatient.gender === 'F' ? 'Feminino' : 'Outro'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Telefone</Label>
+                                    <p className="font-medium">{formatPhone(selectedPatient.phone)}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Email</Label>
+                                    <p className="font-medium">{selectedPatient.email || '-'}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Data de Nascimento</Label>
+                                    <p className="font-medium">{selectedPatient.date_of_birth || '-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 

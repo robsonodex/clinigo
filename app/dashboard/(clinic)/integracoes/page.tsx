@@ -133,7 +133,6 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
 // Types
 interface IntegrationSettings {
     mercadopago_configured?: boolean
-    daily_configured?: boolean
     google_calendar_configured?: boolean
     smtp_configured?: boolean
     resend_configured?: boolean
@@ -164,7 +163,7 @@ function useClinicData() {
 
     return {
         clinic,
-        planType: (clinic?.plan_type as PlanType) || 'STARTER',
+        planType: ((clinic as any)?.plan_type as PlanType) || 'STARTER',
         isLoading,
     }
 }
@@ -511,7 +510,7 @@ export default function IntegracoesPage() {
                             )}
                         </DialogTitle>
                         <DialogDescription>
-                            {isConfigured(selectedIntegration!)
+                            {selectedIntegration && isConfigured(selectedIntegration)
                                 ? 'Atualize as credenciais ou desconecte a integração.'
                                 : 'Configure as credenciais para ativar esta integração.'}
                         </DialogDescription>
@@ -568,7 +567,7 @@ export default function IntegracoesPage() {
                         )}
                         <Button onClick={handleSave} disabled={saving}>
                             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-                            {isConfigured(selectedIntegration!) ? 'Atualizar' : 'Ativar'}
+                            {selectedIntegration && isConfigured(selectedIntegration) ? 'Atualizar' : 'Ativar'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -595,15 +594,17 @@ export default function IntegracoesPage() {
                                 <Label className="text-sm font-medium">Sua API Key</Label>
                                 <div className="flex gap-2 mt-2">
                                     <Input
-                                        value={`sk_live_${clinic?.id?.substring(0, 16) || '••••••••••••••••'}`}
+                                        value={`sk_live_${(clinic as any)?.id ? (clinic as any).id.substring(0, 16) : '••••••••••••••••'}`}
                                         readOnly
                                         className="font-mono"
                                     />
                                     <Button
                                         variant="outline"
                                         onClick={() => {
-                                            navigator.clipboard.writeText(`sk_live_${clinic?.id}`)
-                                            toast({ title: 'Copiado!' })
+                                            if ((clinic as any)?.id) {
+                                                navigator.clipboard.writeText(`sk_live_${(clinic as any).id}`)
+                                                toast({ title: 'Copiado!' })
+                                            }
                                         }}
                                     >
                                         Copiar

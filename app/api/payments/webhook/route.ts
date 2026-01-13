@@ -11,7 +11,8 @@ import {
     mapPaymentStatus,
     mapPaymentMethod
 } from '@/lib/services/mercadopago'
-import { generateMeetLink } from '@/lib/services/google-meet'
+// Google Meet integration removed in favor of WebRTC
+// import { generateMeetLink } from '@/lib/services/google-meet'
 import { sendConfirmationEmail, isEmailConfigured } from '@/lib/services/email'
 import { sendAppointmentConfirmation, isWhatsAppConfigured } from '@/lib/services/whatsapp'
 import { formatDateBR } from '@/lib/utils/date'
@@ -146,42 +147,13 @@ async function handlePaymentConfirmed(
             return
         }
 
-        // Generate video link
+        // Generate video link logic (WebRTC placeholder)
         let videoLink = appointment.video_link
         if (!videoLink) {
-            try {
-                const doctor = appointment.doctor as { user: { full_name: string } }
-                const patient = appointment.patient as { full_name: string }
-                const clinic = appointment.clinic as { name: string }
-
-                const meetResult = await generateMeetLink({
-                    appointment_id: appointmentId,
-                    doctor_name: doctor?.user?.full_name || 'Médico',
-                    patient_name: patient?.full_name || 'Paciente',
-                    clinic_name: clinic?.name || 'CliniGo',
-                    appointment_date: appointment.appointment_date,
-                    appointment_time: appointment.appointment_time,
-                    duration_minutes: 30, // Default duration
-                })
-
-                videoLink = meetResult.video_link
-
-                // Update appointment with video link
-                await supabase
-                    .from('appointments')
-                    .update({
-                        video_link: videoLink,
-                        video_room_id: meetResult.meeting_id,
-                    })
-                    .eq('id', appointmentId)
-            } catch (meetError) {
-                console.error('Failed to generate Meet link:', meetError)
-                // Continue without video link - can be generated later
-            }
+            videoLink = '' // Placeholder - will be dynamic
         }
 
         // Update appointment status to CONFIRMED
-        // Note: This might be handled by trigger, but we ensure it here
         await supabase
             .from('appointments')
             .update({ status: 'CONFIRMED' })
@@ -231,7 +203,6 @@ async function handlePaymentConfirmed(
                     appointment_id: appointmentId,
                 })
 
-                // Update notification status
                 await supabase
                     .from('notifications')
                     .update({ status: 'SENT', sent_at: new Date().toISOString() })
@@ -265,7 +236,6 @@ async function handlePaymentConfirmed(
                     video_link: videoLink,
                 })
 
-                // Update notification status
                 await supabase
                     .from('notifications')
                     .update({ status: 'SENT', sent_at: new Date().toISOString() })

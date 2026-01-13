@@ -1,34 +1,199 @@
-# CliniGo Landing Page Transformation & System Refinement
+# CliniGo - Status das Funcionalidades
 
-## ✅ Semana 1 - Transformação Visual e Conceitual (Concluído)
-- [x] **Hero Section Redesign**
-  - [x] Headline com número concreto ("Fature 40% mais")
-  - [x] Correções visuais (Contraste nos badges, remoção de overlaps)
-  - [x] Badges de confiança (Sem cartão, Cancele quando quiser)
-- [x] **Correções de Conteúdo Críticas**
-  - [x] 🚫 **Remoção de "Pagamento Online"** (Hero, Demo, FAQ, Prova Social)
-  - [x] 🚫 **Definição Clara de IA** (Triagem e Otimização, não diagnóstico)
-- [x] **Header Fixo Responsivo**
-  - [x] Logo Estetoscópio + CliniGo
-  - [x] Links de navegação para personas
-- [x] **Demonstração (Demo Section)**
-  - [x] Fluxo real de agendamento (sem PIX na tela)
-- [x] **Prova Social e Credibilidade**
-  - [x] Depoimentos de Médicos
-  - [x] Métricas Reais (+30% faturamento, sem "R$ processados")
+> **Atualizado:** 11/01/2026
+> **Produção:** https://clinigo.app
 
-## ✅ Recuperação dos Portais (Concluído)
-- [x] **Portal da Clínica** (`/clinica`)
-  - [x] Substituída landing page genérica por **Tela de Login Administrativa**.
-- [x] **Portal do Médico** (`/medico`)
-  - [x] Substituída landing page genérica por **Tela de Login Profissional**.
-- [x] **Portal do Paciente** (`/paciente`)
-  - [x] Substituída landing page genérica por **Tela de Login com CPF**.
-- [x] **Landing Page Principal** (`clinigo.app`)
-  - [x] Mantida como Hub de Conversão e Marketing.
+---
 
-## 🔜 Próximos Passos (Semana 2 - Otimização)
-- [ ] Otimização Mobile Profunda
-- [ ] Calculadora de ROI
-- [ ] Banner de Urgência
-- [ ] Integração com Backend de Email/WhatsApp Real
+## ✅ Funcionalidades Completas (Funcionando)
+
+### 🔐 Autenticação
+| Funcionalidade | Descrição | Tipo de Usuário |
+|----------------|-----------|-----------------|
+| Cadastro de Clínica | Formulário completo com plano | Clínica |
+| Login por Portal | 3 portais separados (/clinica, /medico, /paciente) | Todos |
+| Recuperação de Senha | Token por e-mail (1h validade) | Todos |
+| Ativação de Conta | Médicos convidados e pacientes | Médico, Paciente |
+| Logout | - | Todos |
+| Sessões Ativas | Listar e encerrar sessões | Todos |
+
+### 💳 Pagamentos e Assinaturas
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Checkout Mercado Pago | Redireciona para MP para pagamento |
+| Webhook Automático | Ativa clínica após pagamento |
+| Envio de Credenciais | 2 e-mails automáticos |
+| Planos (5 tiers) | Starter, Básico, Profissional, Enterprise, Network |
+| Desconto Anual | 2 meses grátis no plano anual |
+
+### 📅 Agendamento
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Agenda do Médico | Visualização diária/semanal |
+| Slots Disponíveis | Cálculo automático baseado em horários |
+| Agendamento Online | Paciente agenda pelo site público |
+| Encaixe | Agendamento walk-in |
+| Cancelamento | Com motivo e notificação |
+| Confirmação | Manual ou automática |
+
+### 👨‍⚕️ Gestão de Médicos
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| CRUD Médicos | Criar, editar, excluir |
+| Convite por E-mail | Token de ativação (7 dias) |
+| Horários | Configuração por dia da semana |
+| Exceções | Férias, feriados, etc |
+| Convênios por Médico | Associar convênios |
+| Especialidades | Múltiplas especialidades |
+
+### 🧑‍🤝‍🧑 Gestão de Pacientes
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| CRUD Pacientes | Completo |
+| Auto-cadastro | Paciente se cadastra pelo portal |
+| Login por CPF | Portal do paciente |
+| Histórico | Consultas anteriores |
+| Documentos | Upload de exames |
+
+### 📋 Prontuário Eletrônico
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Consulta | Registro completo |
+| Anamnese | Queixa, história, exame físico |
+| Diagnóstico | CID-10 |
+| Prescrição | Medicamentos com posologia |
+| Arquivos | Upload de exames/laudos |
+| Histórico | Timeline por paciente |
+
+### 💰 Financeiro
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Entradas/Saídas | Lançamentos manuais |
+| Resumo | Dashboard com totais |
+| Por Período | Filtro por datas |
+| Métodos | PIX, Cartão, Dinheiro |
+| Relatórios | Básicos |
+
+### 📦 Estoque
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Produtos | CRUD completo |
+| Movimentação | Entrada/saída |
+| Estoque Mínimo | Alertas |
+| Categorias | Organização |
+
+### 🏦 TISS
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Guias | SP/SADT, Consulta |
+| Status | Rascunho, Enviada, Aprovada, Glosada |
+| Relatórios | Por convênio |
+
+### 🤖 Inteligência Artificial
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Triagem | Classificação de sintomas |
+| Sugestão de Diagnóstico | Baseado em sintomas |
+| Resumo de Consulta | Geração automática |
+
+### 📊 CRM
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Automações | Lembretes de retorno |
+| Campanhas | E-mail marketing |
+| Anotações | Por paciente |
+
+### 🎥 Telemedicina
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Daily.co | Vídeo HD integrado (Profissional+) |
+| Google Meet | Link externo (Básico) |
+| Gravação | Planos Enterprise+ |
+
+### 👑 Super Admin
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| Dashboard | Estatísticas gerais |
+| Clínicas | Listar todas |
+| Aprovação | Aprovar/rejeitar clínicas |
+| Receita | Relatório financeiro |
+
+---
+
+## ⚠️ Funcionalidades que Requerem Configuração Externa
+
+| Funcionalidade | O que precisa | Status |
+|----------------|---------------|--------|
+| **E-mails** | Configurar SMTP no `.env` | Pronto (vars não setadas) |
+| **Mercado Pago** | ACCESS_TOKEN e WEBHOOK | Pronto (vars não setadas) |
+| **WhatsApp** | Conta Business API + Provedor | Código pronto, sem conta |
+| **Daily.co** | API Key (telemedicina HD) | Código pronto, sem chave |
+
+### Como configurar:
+
+**SMTP (Gmail):**
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=seu-email@gmail.com
+SMTP_PASSWORD=senha-de-app-16-digitos
+```
+
+**Mercado Pago:**
+1. Criar app em mercadopago.com.br/developers
+2. Copiar Access Token
+3. Configurar webhook URL
+
+---
+
+## ❌ Funcionalidades NÃO Implementadas
+
+| Funcionalidade | Motivo |
+|----------------|--------|
+| App Mobile Nativo | Fora do escopo (existe PWA) |
+| Integração Laboratórios | Não há API padronizada |
+| BI Avançado | Placeholder, precisa desenvolvimento |
+| Pagamento de Consultas | Clínicas cuidam externamente |
+| Marketplace entre Clínicas | Não solicitado |
+| Multi-idioma | Apenas PT-BR |
+
+---
+
+## 🔄 Funcionalidades Parciais
+
+| Funcionalidade | Status | Pendência |
+|----------------|--------|-----------|
+| MFA (2FA) | 🟡 Código existe | Falta UI completa |
+| Relatórios Avançados | 🟡 Básicos funcionam | Gráficos limitados |
+| Notificações Push | 🟡 Infraestrutura existe | Falta PWA manifest |
+
+---
+
+## 📊 Métricas do Sistema
+
+| Métrica | Valor |
+|---------|-------|
+| Rotas API | 108 |
+| Páginas Frontend | ~60 |
+| Tabelas no BD | ~25 |
+| Componentes UI | 100+ |
+| Linhas de Código | ~50.000 |
+
+---
+
+## 🚀 Roadmap Sugerido
+
+### Curto Prazo (1-2 semanas)
+- [ ] Configurar variáveis de ambiente em produção
+- [ ] Testar fluxo completo de pagamento
+- [ ] Configurar WhatsApp Business
+
+### Médio Prazo (1-2 meses)
+- [ ] App mobile React Native
+- [ ] Relatórios BI avançados
+- [ ] Integração com mais convênios
+
+### Longo Prazo (3-6 meses)
+- [ ] Marketplace de especialistas
+- [ ] IA preditiva avançada
+- [ ] Expansão internacional

@@ -73,9 +73,21 @@ export function useAuth() {
     }, [supabase.auth, loadUser])
 
     const signOut = useCallback(async () => {
+        const role = state.profile?.role
+        const isPatient = state.user && !state.profile
+
         await supabase.auth.signOut()
-        router.push('/login')
-    }, [supabase.auth, router])
+
+        if (role === 'CLINIC_ADMIN') {
+            router.push('/clinica')
+        } else if (role === 'DOCTOR') {
+            router.push('/medico')
+        } else if (isPatient) {
+            router.push('/paciente')
+        } else {
+            router.push('/login')
+        }
+    }, [supabase.auth, router, state.profile?.role, state.user, state.profile])
 
     const signIn = useCallback(async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({

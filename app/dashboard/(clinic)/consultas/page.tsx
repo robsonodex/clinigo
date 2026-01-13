@@ -198,7 +198,7 @@ export default function ConsultasPage() {
                                                 <MessageCircle className="w-4 h-4" />
                                             </Button>
 
-                                            <Link href={`/dashboard/consultas/${appointment.id}`}>
+                                            <Link href={`/dashboard/atendimentos/${appointment.id}`}>
                                                 <Button size="sm" variant="outline">
                                                     <Eye className="w-4 h-4 mr-1" />
                                                     Ver
@@ -206,7 +206,7 @@ export default function ConsultasPage() {
                                             </Link>
 
                                             {appointment.status === 'CONFIRMED' && appointment.video_link && (
-                                                <Link href={`/dashboard/consultas/${appointment.id}`}>
+                                                <Link href={`/dashboard/atendimentos/${appointment.id}`}>
                                                     <Button size="sm">
                                                         <Play className="w-4 h-4 mr-1" />
                                                         Iniciar

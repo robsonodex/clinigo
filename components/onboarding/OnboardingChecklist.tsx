@@ -134,10 +134,10 @@ export default function OnboardingChecklist() {
                         <div className="flex items-center gap-3">
                             <Rocket className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="font-medium">Guia de Configuração Inicial</p>
-                                <p className="text-sm text-muted-foreground">
+                                <div className="font-medium">Guia de Configuração Inicial</div>
+                                <div className="text-sm text-muted-foreground">
                                     {completed.length} de {CHECKLIST_ITEMS.length} concluídos ({Math.round(progressPercent)}%)
-                                </p>
+                                </div>
                             </div>
                         </div>
                         <Button variant="outline" size="sm" onClick={showChecklist}>
@@ -208,8 +208,8 @@ export default function OnboardingChecklist() {
                         <div
                             key={item.id}
                             className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${isCompleted
-                                    ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
-                                    : 'bg-card hover:bg-muted/50 border-border'
+                                ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                                : 'bg-card hover:bg-muted/50 border-border'
                                 }`}
                         >
                             <Checkbox

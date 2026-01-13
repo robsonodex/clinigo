@@ -42,11 +42,17 @@ export function VisualLock({
 }: VisualLockProps) {
     const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
-    const hasAccess = PLAN_LEVEL[currentPlan] >= PLAN_LEVEL[requiredPlan]
+    // Safety check for plan levels
+    const currentLevel = PLAN_LEVEL[currentPlan] || 0
+    const requiredLevel = PLAN_LEVEL[requiredPlan] || 0
+    const hasAccess = currentLevel >= requiredLevel
 
     if (hasAccess) {
         return <>{children}</>
     }
+
+    // Safety check for plan config
+    const plan = PLANS[requiredPlan] || PLANS.STARTER
 
     return (
         <>
@@ -63,9 +69,9 @@ export function VisualLock({
                 role="button"
                 tabIndex={0}
                 aria-disabled="true"
-                aria-label={`${featureName} - Requer plano ${PLANS[requiredPlan].name}`}
+                aria-label={`${featureName} - Requer plano ${plan.name}`}
             >
-                {children}
+                <span>{children}</span>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>

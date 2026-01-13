@@ -51,16 +51,18 @@ function ConfirmBookingContent({ params }: PageProps) {
     const date = searchParams.get('date')
     const time = searchParams.get('time')
 
-    // Validate required params
-    if (!date || !time) {
-        router.push(`/${clinic_slug}/agendar/${doctor_id}`)
-        return null
-    }
+    // Redirect if missing params - must be in useEffect to avoid render loop
+    useEffect(() => {
+        if (!date || !time) {
+            router.push(`/${clinic_slug}/agendar/${doctor_id}`)
+        }
+    }, [date, time, clinic_slug, doctor_id, router])
 
     // Fetch doctor
     const { data: doctor, isLoading: doctorLoading } = useQuery({
         queryKey: ['doctor', doctor_id],
         queryFn: () => api.get<Doctor>(`/doctors/${doctor_id}`),
+        enabled: !!date && !!time, // Only fetch if we have valid params
     })
 
     // Fetch doctor insurances
@@ -69,7 +71,7 @@ function ConfirmBookingContent({ params }: PageProps) {
         queryFn: () => api.getFull<DoctorHealthInsurance[]>(`/doctors/${doctor_id}/health-insurances`, {
             status: 'ACTIVE'
         }),
-        enabled: !!doctor_id
+        enabled: !!doctor_id && !!date && !!time
     })
     const insurances = insurancesResponse?.data || []
 
@@ -106,12 +108,19 @@ function ConfirmBookingContent({ params }: PageProps) {
                     setCurrentPrice(insurance.consultation_price)
                 }
             } else {
-                // If health insurance selected but no plan yet, maybe show 0 or keep private price?
-                // Better to show "A partir de..." or just handle when selected.
-                setCurrentPrice(0) // Invalid state effectively, waiting for selection
+                setCurrentPrice(0)
             }
         }
     }, [doctor, paymentType, selectedPlanId, insurances])
+
+    // Show loading while redirecting
+    if (!date || !time) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        )
+    }
 
 
     // Mutation

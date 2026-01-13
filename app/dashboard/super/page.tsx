@@ -58,6 +58,16 @@ interface SuperMetrics {
     activity: {
         appointmentsToday: number
     }
+    billing: {
+        pendingCharges: number
+        upcomingRenewals: Array<{
+            id: string
+            name: string
+            plan: string
+            dueDate: string
+            daysUntil: number
+        }>
+    }
     generatedAt: string
 }
 
@@ -66,6 +76,11 @@ export default function SuperAdminDashboard() {
     const [metrics, setMetrics] = useState<SuperMetrics | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    // Helper for manual charge (copied logic due to component isolation)
+    const handleCharge = (clinicId: string) => {
+        router.push(`/dashboard/clinicas/${clinicId}?tab=billing`)
+    }
 
     const fetchMetrics = async () => {
         setLoading(true)
@@ -125,11 +140,68 @@ export default function SuperAdminDashboard() {
                         Visão global de todas as clínicas (bypass RLS)
                     </p>
                 </div>
-                <Button onClick={fetchMetrics} variant="outline" size="sm">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Atualizar
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={fetchMetrics} variant="outline" size="sm">
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Atualizar
+                    </Button>
+                </div>
             </div>
+
+            {/* Billing Alerts Widget */}
+            {(metrics.billing.pendingCharges > 0 || metrics.billing.upcomingRenewals.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Pending Charges */}
+                    <Card className="border-amber-200 bg-amber-50">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-amber-800">Cobranças Pendentes</CardTitle>
+                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-amber-700">
+                                {metrics.billing.pendingCharges}
+                            </div>
+                            <p className="text-xs text-amber-600">aguardando pagamento</p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Quick Renewals List */}
+                    <Card className="border-blue-200 bg-blue-50 md:col-span-1">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-blue-800">
+                                Vencimentos Próximos (7 dias)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {metrics.billing.upcomingRenewals.length === 0 ? (
+                                <p className="text-sm text-blue-600">Nenhuma renovação próxima.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {metrics.billing.upcomingRenewals.map(clinic => (
+                                        <div key={clinic.id} className="flex items-center justify-between bg-white/50 p-2 rounded text-sm">
+                                            <div>
+                                                <span className="font-medium text-blue-900">{clinic.name}</span>
+                                                <span className="text-xs text-blue-700 ml-2">({clinic.plan})</span>
+                                                <div className="text-[10px] text-blue-600">
+                                                    Vence em {new Date(clinic.dueDate).toLocaleDateString('pt-BR')} ({clinic.daysUntil} dias)
+                                                </div>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="h-7 text-xs"
+                                                onClick={() => handleCharge(clinic.id)}
+                                            >
+                                                Cobrar
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

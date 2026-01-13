@@ -5,13 +5,10 @@ export const metadata = {
     description: 'Sistema de gestão para clínicas médicas',
 }
 
+/**
+ * Public pages layout
+ * Note: Does NOT render html/body as the root layout already provides these
+ */
 export default function PublicLayout({ children }: { children: ReactNode }) {
-    return (
-        <html lang="pt-BR">
-            <body className="antialiased">
-                {children}
-            </body>
-        </html>
-    )
+    return <>{children}</>
 }
-

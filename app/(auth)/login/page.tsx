@@ -12,12 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { loginFormSchema, type LoginFormData } from '@/lib/validations'
-import { useAuth } from '@/lib/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
 import { Stethoscope, Loader2, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
     const router = useRouter()
-    const { signIn } = useAuth()
+    const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
 
     const {
@@ -31,8 +31,31 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginFormData) => {
         setIsLoading(true)
         try {
-            await signIn(data.email, data.password)
+            // Direct sign in to check role before redirecting
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email: data.email,
+                password: data.password,
+            })
+
+            if (authError) throw authError
+
+            // Check db role
+            const { data: profile } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', authData.user.id)
+                .single()
+
+            if (profile?.role !== 'SUPER_ADMIN') {
+                await supabase.auth.signOut()
+                throw new Error('Acesso restrito: Apenas Super Administradores.')
+            }
+
+            // Force reload to update auth state
             toast.success('Login realizado com sucesso!')
+            router.push('/dashboard')
+            router.refresh()
+
         } catch (error) {
             toast.error(
                 error instanceof Error

@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { uploadClinicLogo } from '@/app/actions/white-label'
 import { Sparkles } from 'lucide-react'
+import { PlanAndBilling } from './components/PlanAndBilling'
 
 // ... existing code ...
 
@@ -236,56 +237,7 @@ export default function SettingsPage() {
                 </TabsContent>
 
                 <TabsContent value="plan" className="mt-6">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Plano Atual</CardTitle>
-                                    <CardDescription>
-                                        Gerencie sua assinatura e recursos disponíveis.
-                                    </CardDescription>
-                                </div>
-                                <CreditCard className="w-8 h-8 text-primary/50" />
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 flex items-start space-x-4">
-                                <Zap className="w-6 h-6 text-primary mt-1" />
-                                <div>
-                                    <h3 className="font-bold text-lg">Plano Profissional</h3>
-                                    <p className="text-sm text-muted-foreground">Sua assinatura está ativa e vence em 15/01/2026.</p>
-                                </div>
-                                <div className="ml-auto">
-                                    <span className="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-200 uppercase tracking-wider">Ativo</span>
-                                </div>
-                            </div>
-
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="flex items-center space-x-3 p-3 rounded-md border bg-card">
-                                    <ShieldCheck className="w-5 h-5 text-green-500" />
-                                    <span className="text-sm">Teleconsultas Ilimitadas</span>
-                                </div>
-                                <div className="flex items-center space-x-3 p-3 rounded-md border bg-card">
-                                    <ShieldCheck className="w-5 h-5 text-green-500" />
-                                    <span className="text-sm">Até 10 Médicos</span>
-                                </div>
-                                <div className="flex items-center space-x-3 p-3 rounded-md border bg-card">
-                                    <ShieldCheck className="w-5 h-5 text-green-500" />
-                                    <span className="text-sm">Pagamentos Online (Pix)</span>
-                                </div>
-                                <div className="flex items-center space-x-3 p-3 rounded-md border bg-card text-muted-foreground">
-                                    <Zap className="w-5 h-5 text-amber-500" />
-                                    <span className="text-sm italic">Upgrade: Agenda Personalizada</span>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t">
-                                <Button variant="outline" className="w-full md:w-auto">
-                                    Ver outros planos
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <PlanAndBilling />
                 </TabsContent>
             </Tabs>
         </div>

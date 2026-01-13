@@ -1,0 +1,145 @@
+<!--
+  EXEMPLO DE XML RETORNO TISS REAL (Estrutura Complexa)
+  Versão: ANS 4.02.00
+  Operadora: Unimed (Anonimizado)
+  Encoding: ISO-8859-1 (comum em legado)
+-->
+
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<ans:mensagemTISS xmlns:ans="http://www.ans.gov.br/padroes/tiss/schemas" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ans:cabecalho>
+    <ans:identificadorTransacao>20260113001</ans:identificadorTransacao>
+    <ans:tipoTransacao>RETORNO_PROCESSAMENTO</ans:tipoTransacao>
+    <ans:sequencialTransacao>1</ans:sequencialTransacao>
+    <ans:dataEnvio>2026-01-13</ans:dataEnvio>
+    <ans:horaEnvio>14:30:00</ans:horaEnvio>
+    <ans:versaoPadrao>4.02.00</ans:versaoPadrao>
+  </ans:cabecalho>
+
+  <ans:prestadorParaOperadora>
+    <ans:dadosOperadora>
+      <ans:codigoOperadora>306258</ans:codigoOperadora>
+      <ans:nomeOperadora>UNIMED SEGUROS SAÚDE S/A</ans:nomeOperadora>
+      <ans:cnpjOperadora>12.345.678/0001-90</ans:cnpjOperadora>
+    </ans:dadosOperadora>
+
+    <ans:dadosPrestador>
+      <ans:codigoPrestador>123456</ans:codigoPrestador>
+      <ans:nomePrestador>CLÍNICA EXEMPLO LTDA</ans:nomePrestador>
+      <ans:cnpjPrestador>98.765.432/0001-10</ans:cnpjPrestador>
+    </ans:dadosPrestador>
+
+    <ans:loteGuias>
+      <ans:numeroLote>202601001</ans:numeroLote>
+      <ans:dataEmissaoLote>2026-01-10</ans:dataEmissaoLote>
+      
+      <!-- GUIA 1: APROVADA -->
+      <ans:guia>
+        <ans:numeroGuiaPrestador>20260100001</ans:numeroGuiaPrestador>
+        <ans:numeroGuiaOperadora>UN123456789</ans:numeroGuiaOperadora>
+        <ans:senhaAutorizacao>AUTH001</ans:senhaAutorizacao>
+        
+        <ans:dadosBeneficiario>
+          <ans:numeroCarteira>1234567890123456</ans:numeroCarteira>
+          <ans:nomeBeneficiario>João da Silva</ans:nomeBeneficiario>
+          <ans:cpf>12345678901</ans:cpf>
+        </ans:dadosBeneficiario>
+
+        <ans:statusProcessamento>1</ans:statusProcessamento> <!-- 1 = Aprovado -->
+        <ans:valorTotalGuia>250.00</ans:valorTotalGuia>
+        <ans:valorProcessado>250.00</ans:valorProcessado>
+        <ans:valorLiberado>250.00</ans:valorLiberado>
+        <ans:valorTotalGlosa>0.00</ans:valorTotalGlosa>
+        <ans:observacao>Guia processada com sucesso</ans:observacao>
+      </ans:guia>
+
+      <!-- GUIA 2: PARCIALMENTE APROVADA (COM GLOSA) -->
+      <ans:guia>
+        <ans:numeroGuiaPrestador>20260100002</ans:numeroGuiaPrestador>
+        <ans:numeroGuiaOperadora>UN123456790</ans:numeroGuiaOperadora>
+        <ans:senhaAutorizacao>AUTH002</ans:senhaAutorizacao>
+        
+        <ans:dadosBeneficiario>
+          <ans:numeroCarteira>9876543210987654</ans:numeroCarteira>
+          <ans:nomeBeneficiario>Maria Santos</ans:nomeBeneficiario>
+          <ans:cpf>98765432109</ans:cpf>
+        </ans:dadosBeneficiario>
+
+        <ans:statusProcessamento>3</ans:statusProcessamento> <!-- 3 = Parcial -->
+        <ans:valorTotalGuia>450.00</ans:valorTotalGuia>
+        <ans:valorProcessado>370.00</ans:valorProcessado>
+        <ans:valorLiberado>370.00</ans:valorLiberado>
+        <ans:valorTotalGlosa>80.00</ans:valorTotalGlosa>
+
+        <!-- Glosas -->
+        <ans:motivoGlosa>
+          <ans:codigoGlosa>01</ans:codigoGlosa>
+          <ans:descricaoGlosa>Procedimento não previsto no contrato</ans:descricaoGlosa>
+          <ans:valorGlosa>80.00</ans:valorGlosa>
+          <ans:sequencialItem>2</ans:sequencialItem>
+          <ans:permiteRecurso>S</ans:permiteRecurso>
+        </ans:motivoGlosa>
+
+        <ans:observacao>Guia processada parcialmente. Verificar procedimento não autorizado.</ans:observacao>
+      </ans:guia>
+
+      <!-- GUIA 3: NEGADA -->
+      <ans:guia>
+        <ans:numeroGuiaPrestador>20260100003</ans:numeroGuiaPrestador>
+        <ans:numeroGuiaOperadora>UN123456791</ans:numeroGuiaOperadora>
+        
+        <ans:dadosBeneficiario>
+          <ans:numeroCarteira>5555666677778888</ans:numeroCarteira>
+          <ans:nomeBeneficiario>José Oliveira</ans:nomeBeneficiario>
+          <ans:cpf>55566677788</ans:cpf>
+        </ans:dadosBeneficiario>
+
+        <ans:statusProcessamento>2</ans:statusProcessamento> <!-- 2 = Negado -->
+        <ans:valorTotalGuia>180.00</ans:valorTotalGuia>
+        <ans:valorProcessado>0.00</ans:valorProcessado>
+        <ans:valorLiberado>0.00</ans:valorLiberado>
+        <ans:valorTotalGlosa>180.00</ans:valorTotalGlosa>
+
+        <!-- Múltiplas glosas -->
+        <ans:motivoGlosa>
+          <ans:codigoGlosa>03</ans:codigoGlosa>
+          <ans:descricaoGlosa>Beneficiário sem carência cumprida</ans:descricaoGlosa>
+          <ans:valorGlosa>180.00</ans:valorGlosa>
+          <ans:permiteRecurso>N</ans:permiteRecurso>
+        </ans:motivoGlosa>
+
+        <ans:observacao>Guia negada integralmente. Verificar situação do beneficiário.</ans:observacao>
+        <ans:mensagemRetorno>BENEFICIARIO SEM COBERTURA ATIVA</ans:mensagemRetorno>
+      </ans:guia>
+
+      <!-- GUIA 4: APROVADA COM VALORES DIFERENTES (caso complexo) -->
+      <ans:guia>
+        <ans:numeroGuiaPrestador>20260100004</ans:numeroGuiaPrestador>
+        <ans:numeroGuiaOperadora>UN123456792</ans:numeroGuiaOperadora>
+        <ans:senhaAutorizacao>AUTH004</ans:senhaAutorizacao>
+        
+        <ans:dadosBeneficiario>
+          <ans:numeroCarteira>1111222233334444</ans:numeroCarteira>
+          <ans:nomeBeneficiario>Ana Paula Costa</ans:nomeBeneficiario>
+          <ans:cpf>11122233344</ans:cpf>
+        </ans:dadosBeneficiario>
+
+        <ans:statusProcessamento>1</ans:statusProcessamento>
+        <ans:valorTotalGuia>850.00</ans:valorTotalGuia>
+        <ans:valorProcessado>820.00</ans:valorProcessado> <!-- Operadora ajustou valor -->
+        <ans:valorLiberado>820.00</ans:valorLiberado>
+        <ans:valorTotalGlosa>30.00</ans:valorTotalGlosa> <!-- Ajuste técnico, mas aprovada -->
+
+        <ans:motivoGlosa>
+          <ans:codigoGlosa>15</ans:codigoGlosa>
+          <ans:descricaoGlosa>Valor ajustado conforme tabela de referência</ans:descricaoGlosa>
+          <ans:valorGlosa>30.00</ans:valorGlosa>
+          <ans:permiteRecurso>S</ans:permiteRecurso>
+        </ans:motivoGlosa>
+
+        <ans:observacao>Aprovada com ressalvas. Valor ajustado para tabela de preços.</ans:observacao>
+      </ans:guia>
+
+    </ans:loteGuias>
+  </ans:prestadorParaOperadora>
+</ans:mensagemTISS>

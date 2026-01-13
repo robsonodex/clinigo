@@ -102,3 +102,53 @@ export function requireSuperAdmin(handler: Function) {
     }
 }
 
+export interface SuperAdminAuthResult {
+    authorized: boolean
+    userId?: string
+    error?: string
+}
+
+/**
+ * Verify Super Admin access for API routes
+ * Returns structured result with authorization status
+ */
+export async function verifySuperAdmin(request: NextRequest): Promise<SuperAdminAuthResult> {
+    try {
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) {
+                        return request.cookies.get(name)?.value
+                    },
+                    set() { },
+                    remove() { },
+                },
+            }
+        )
+
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { authorized: false, error: 'Usuário não autenticado' }
+        }
+
+        // Check role from database
+        const { data: profile } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (profile?.role !== 'SUPER_ADMIN') {
+            return { authorized: false, error: 'Acesso restrito a Super Admin' }
+        }
+
+        return { authorized: true, userId: user.id }
+
+    } catch (error) {
+        console.error('[verifySuperAdmin] Error:', error)
+        return { authorized: false, error: 'Erro interno de autenticação' }
+    }
+}

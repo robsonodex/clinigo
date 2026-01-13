@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer'
-import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export interface EmailOptions {
     to: string
@@ -10,48 +9,76 @@ export interface EmailOptions {
 }
 
 /**
- * Gets the SMTP transporter configured in the database, 
- * or falls back to environment variables if not found.
+ * SMTP Configuration from Environment Variables
+ * Set these in .env.local and Vercel:
+ * - SMTP_HOST
+ * - SMTP_PORT
+ * - SMTP_USER
+ * - SMTP_PASSWORD
+ * - SMTP_FROM_NAME
+ * - SMTP_FROM_EMAIL
+ * - SMTP_SECURE (true/false)
  */
-export async function getTransporter() {
-    const supabase = createServiceRoleClient()
-    const { data: settingsData } = await supabase
-        .from('system_settings')
-        .select('*')
-        .eq('key', 'smtp_settings')
-        .single()
+function getSmtpConfig() {
+    const host = process.env.SMTP_HOST
+    const port = parseInt(process.env.SMTP_PORT || '587')
+    const user = process.env.SMTP_USER
+    const password = process.env.SMTP_PASSWORD
+    const secure = process.env.SMTP_SECURE === 'true'
+    const fromName = process.env.SMTP_FROM_NAME || 'CliniGo'
+    const fromEmail = process.env.SMTP_FROM_EMAIL || user
 
-    const smtp = settingsData?.value as any
-
-    if (smtp && smtp.host && smtp.user && smtp.password) {
-        return {
-            transporter: nodemailer.createTransport({
-                host: smtp.host,
-                port: smtp.port,
-                secure: smtp.secure,
-                auth: {
-                    user: smtp.user,
-                    pass: smtp.password,
-                },
-            }),
-            from: `"${smtp.from_name || 'CliniGo'}" <${smtp.from_email || smtp.user}>`
-        }
+    if (!host || !user || !password) {
+        return null
     }
 
-    // Fallback or Error
-    return null
+    return {
+        host,
+        port,
+        secure,
+        user,
+        password,
+        fromName,
+        fromEmail
+    }
 }
 
 /**
- * Sends an email using the dynamic SMTP configuration.
+ * Gets the SMTP transporter using environment variables
+ */
+export function getTransporter() {
+    const config = getSmtpConfig()
+
+    if (!config) {
+        console.error('[MailService] SMTP not configured. Check environment variables:')
+        console.error('  Required: SMTP_HOST, SMTP_USER, SMTP_PASSWORD')
+        console.error('  Optional: SMTP_PORT (default 587), SMTP_SECURE, SMTP_FROM_NAME, SMTP_FROM_EMAIL')
+        return null
+    }
+
+    return {
+        transporter: nodemailer.createTransport({
+            host: config.host,
+            port: config.port,
+            secure: config.secure,
+            auth: {
+                user: config.user,
+                pass: config.password,
+            },
+        }),
+        from: `"${config.fromName}" <${config.fromEmail}>`
+    }
+}
+
+/**
+ * Sends an email using SMTP configuration from environment variables
  */
 export async function sendMail(options: EmailOptions) {
     try {
-        const config = await getTransporter()
+        const config = getTransporter()
 
         if (!config) {
-            console.error('[MailService] SMTP not configured. Check system_settings table.')
-            return { success: false, error: 'SMTP not configured' }
+            return { success: false, error: 'SMTP not configured. Check environment variables.' }
         }
 
         const { transporter, from } = config
@@ -64,7 +91,7 @@ export async function sendMail(options: EmailOptions) {
             text: options.text,
         })
 
-        console.log('[MailService] Email sent:', info.messageId)
+        console.log('[MailService] Email sent:', info.messageId, 'to:', options.to)
         return { success: true, messageId: info.messageId }
     } catch (error: any) {
         console.error('[MailService] Failed to send email:', error)
@@ -72,3 +99,31 @@ export async function sendMail(options: EmailOptions) {
     }
 }
 
+/**
+ * Check if SMTP is properly configured
+ */
+export function isSmtpConfigured(): boolean {
+    return getSmtpConfig() !== null
+}
+
+/**
+ * Get SMTP status for debugging (hides password)
+ */
+export function getSmtpStatus() {
+    const config = getSmtpConfig()
+    if (!config) {
+        return {
+            configured: false,
+            message: 'SMTP not configured'
+        }
+    }
+    return {
+        configured: true,
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        user: config.user,
+        fromName: config.fromName,
+        fromEmail: config.fromEmail
+    }
+}

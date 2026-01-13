@@ -139,9 +139,24 @@ export async function middleware(request: NextRequest) {
         const { supabase } = createSupabaseClient(request)
         const { data: { user } } = await supabase.auth.getUser()
 
-        // Return 404 to hide existence of route
-        if (!user || user.email !== MASTER_ADMIN_EMAIL) {
+        if (!user) {
             return new NextResponse('Not Found', { status: 404 })
+        }
+
+        // Check if email is in whitelist (Master Admin)
+        const isWhitelisted = SUPER_ADMIN_EMAILS.includes((user.email || '').toLowerCase())
+
+        if (!isWhitelisted) {
+            // If not whitelisted, check DB role
+            const { data: profile } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', user.id)
+                .single()
+
+            if (profile?.role !== 'SUPER_ADMIN') {
+                return new NextResponse('Not Found', { status: 404 })
+            }
         }
     }
 

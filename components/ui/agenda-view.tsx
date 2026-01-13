@@ -12,6 +12,7 @@ import {
     MoreVertical,
     X,
     CreditCard,
+    PlusCircle,
 } from 'lucide-react'
 import {
     format,
@@ -54,6 +55,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
+import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
 
 const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
     const hour = Math.floor(i / 2) + 9 // Start at 09:00
@@ -66,6 +68,8 @@ export default function AgendaPage() {
     const { isDoctor } = useRole()
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [view, setView] = useState<'week' | 'day'>('week')
+    const [manualAppointmentOpen, setManualAppointmentOpen] = useState(false)
+    const [preselectedSlot, setPreselectedSlot] = useState<{ date: string; time: string } | null>(null)
 
     // Date navigation
     const currentDate = startOfDay(selectedDate)
@@ -85,7 +89,7 @@ export default function AgendaPage() {
 
     const goToToday = () => setSelectedDate(new Date())
 
-    // Fetch appointments
+    // Fetch appointments with caching
     const { data: appointments, isLoading } = useQuery({
         queryKey: ['appointments', view, currentDate.toISOString()],
         queryFn: () =>
@@ -93,6 +97,8 @@ export default function AgendaPage() {
                 date_from: view === 'week' ? format(weekStart, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
                 date_to: view === 'week' ? format(weekEnd, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
             }),
+        staleTime: 60 * 1000, // 1 minute cache
+        refetchOnWindowFocus: false,
     })
 
     // Group appointments by date and time
@@ -166,6 +172,17 @@ export default function AgendaPage() {
                     </div>
                     <Button variant="outline" size="sm" onClick={goToToday}>
                         Hoje
+                    </Button>
+                    <Button
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                            setPreselectedSlot(null)
+                            setManualAppointmentOpen(true)
+                        }}
+                    >
+                        <PlusCircle className="h-4 w-4" />
+                        Novo Agendamento
                     </Button>
                 </div>
 
@@ -243,9 +260,18 @@ export default function AgendaPage() {
                                         <div
                                             key={day.toISOString()}
                                             className={cn(
-                                                'border-r last:border-r-0 p-1 relative group hover:bg-muted/30 transition-colors',
+                                                'border-r last:border-r-0 p-1 relative group hover:bg-muted/30 transition-colors cursor-pointer',
                                                 !isSameMonth(day, currentDate) && 'bg-gray-50/50'
                                             )}
+                                            onClick={() => {
+                                                if (!appointment) {
+                                                    setPreselectedSlot({
+                                                        date: format(day, 'yyyy-MM-dd'),
+                                                        time: time
+                                                    })
+                                                    setManualAppointmentOpen(true)
+                                                }
+                                            }}
                                         >
                                             {appointment ? (
                                                 <div
@@ -351,6 +377,14 @@ export default function AgendaPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Manual Appointment Modal */}
+            <ManualAppointmentModal
+                open={manualAppointmentOpen}
+                onOpenChange={setManualAppointmentOpen}
+                preselectedDate={preselectedSlot?.date}
+                preselectedTime={preselectedSlot?.time}
+            />
         </div>
     )
 }

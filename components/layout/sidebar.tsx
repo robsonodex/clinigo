@@ -183,8 +183,8 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/tiss',
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                // badge: 'PRO', // Temporariamente removido para teste
+                // minPlan: 'PROFESSIONAL', // Temporariamente removido para teste
             },
             {
                 title: 'Convênios',
@@ -212,7 +212,7 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN'],
             },
             {
-                title: 'CRM',
+                title: 'FluxoMed',
                 href: '/dashboard/crm',
                 icon: Megaphone,
                 roles: ['CLINIC_ADMIN'],
@@ -253,6 +253,12 @@ const navigationSections: NavSection[] = [
                 title: 'Minha Clínica',
                 href: '/dashboard/configuracoes',
                 icon: Settings,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
+                title: 'Página Pública',
+                href: '/dashboard/configuracoes/pagina-publica',
+                icon: Globe,
                 roles: ['CLINIC_ADMIN'],
             },
             {
@@ -327,6 +333,12 @@ const navigationSections: NavSection[] = [
                 title: 'Health Check',
                 href: '/dashboard/health',
                 icon: Activity,
+                roles: ['SUPER_ADMIN'],
+            },
+            {
+                title: 'Super Admins',
+                href: '/dashboard/super/admins',
+                icon: Shield,
                 roles: ['SUPER_ADMIN'],
             },
         ],

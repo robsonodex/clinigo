@@ -53,7 +53,7 @@ export function HeroSection() {
                     <p className="text-lg md:text-xl lg:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto animate-fade-in-up animation-delay-200">
                         Seus pacientes agendam consultas{' '}
                         <span className="text-white font-semibold">24 horas por dia</span>
-                        e recebem confirmação automática.
+                        {' '}e recebem confirmação automática.
                         <span className="text-emerald-400 font-semibold"> Sem secretária. Sem telefonemas.</span>
                     </p>
 

@@ -75,10 +75,9 @@ export async function PATCH(
             console.error('Failed to update payment:', paymentError)
         }
 
-        // 3. Gerar link do Google Meet (se configurado)
-        let videoLink = null
-        // TODO: Integrar com Google Calendar API para gerar link automaticamente
-        // Por enquanto, deixamos null e a clínica pode adicionar manualmente
+        // 3. Gerar link de vídeo automaticamente
+        const { generateVideoRoomUrl } = await import('@/lib/utils/video')
+        const videoLink = generateVideoRoomUrl(appointmentId)
 
         // 4. Atualizar appointment para CONFIRMED
         const { error: updateError } = await supabase

@@ -34,6 +34,9 @@ interface TissGuia {
     data_criacao: string
 }
 
+import { toast } from 'sonner'
+import { NewGuideDialog } from './new-guide-dialog'
+
 export default function TissPage() {
     const [search, setSearch] = useState('')
     const [tab, setTab] = useState('all')
@@ -41,24 +44,26 @@ export default function TissPage() {
     const [guias, setGuias] = useState<TissGuia[]>([])
 
     // Fetch TISS guides from API
-    useEffect(() => {
-        const fetchGuias = async () => {
-            setIsLoading(true)
-            try {
-                const response = await fetch('/api/tiss/guias')
-                if (response.ok) {
-                    const data = await response.json()
-                    setGuias(data.guias || [])
-                } else {
-                    setGuias([])
-                }
-            } catch (error) {
-                console.error('Error fetching TISS guias:', error)
+    const fetchGuias = async () => {
+        setIsLoading(true)
+        try {
+            const response = await fetch('/api/tiss/guides?limit=100')
+            if (response.ok) {
+                const data = await response.json()
+                setGuias(data.guides || [])
+            } else {
                 setGuias([])
-            } finally {
-                setIsLoading(false)
+                // toast.error('Erro ao buscar guias')
             }
+        } catch (error) {
+            console.error('Error fetching TISS guides:', error)
+            setGuias([])
+        } finally {
+            setIsLoading(false)
         }
+    }
+
+    useEffect(() => {
         fetchGuias()
     }, [])
 
@@ -78,9 +83,9 @@ export default function TissPage() {
     }
 
     const filteredGuias = guias.filter((g) =>
-        g.paciente.toLowerCase().includes(search.toLowerCase()) ||
-        g.numero.toLowerCase().includes(search.toLowerCase()) ||
-        g.operadora.toLowerCase().includes(search.toLowerCase())
+        g.paciente?.toLowerCase().includes(search.toLowerCase()) ||
+        g.numero?.toLowerCase().includes(search.toLowerCase()) ||
+        g.operadora?.toLowerCase().includes(search.toLowerCase())
     )
 
     return (
@@ -100,14 +105,11 @@ export default function TissPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => setTab('import')}>
                         <Upload className="w-4 h-4 mr-2" />
                         Importar XML
                     </Button>
-                    <Button>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Nova Guia
-                    </Button>
+                    <NewGuideDialog onSuccess={fetchGuias} />
                 </div>
             </div>
 

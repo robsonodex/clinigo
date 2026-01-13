@@ -20,10 +20,12 @@ import {
     MessageSquare,
     CreditCard,
     Video,
-    Users
+    Users,
+    ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ButtonManualCharge, PaymentHistoryList } from '../components/ClinicBillingHelpers'
 
 interface Clinic {
     id: string
@@ -248,12 +250,54 @@ export default function ClinicDetailsPage() {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="billing" className="pt-4">
+                <TabsContent value="billing" className="pt-4 space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Histórico de Faturamento</CardTitle>
-                            <CardDescription>Em desenvolvimento.</CardDescription>
+                            <CardTitle>Gestão de Assinatura</CardTitle>
+                            <CardDescription>Gerencie o plano e status de pagamento da clínica.</CardDescription>
                         </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Plano Atual</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-base py-1 px-3">
+                                            {clinic.plan_type}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Status Financeiro</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant={clinic.is_active ? 'success' : 'destructive'} className="text-base py-1 px-3 w-fit">
+                                            {clinic.is_active ? 'EM DIA' : 'PENDENTE'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-muted/30 p-4 rounded-lg border">
+                                <h3 className="font-semibold mb-2">Ações Rápidas</h3>
+                                <div className="flex flex-wrap gap-4">
+                                    <ButtonManualCharge clinicId={clinic.id} />
+                                    <Link href={`https://www.mercadopago.com.br/activities`} target="_blank">
+                                        <Button variant="outline">
+                                            <ExternalLink className="h-4 w-4 mr-2" />
+                                            Ver no Mercado Pago
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Histórico (Últimos Pagamentos)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <PaymentHistoryList clinicId={clinic.id} />
+                        </CardContent>
                     </Card>
                 </TabsContent>
             </Tabs>

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { getInitials } from '@/lib/utils'
 import { Menu, LogOut, User, Bell } from 'lucide-react'
+import { NotificationBell } from './notification-bell'
 
 interface HeaderProps {
     onMenuClick?: () => void
@@ -39,9 +40,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             {/* Right side */}
             <div className="flex items-center gap-2">
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" aria-label="Notificações">
-                    <Bell className="w-5 h-5" />
-                </Button>
+                <NotificationBell />
 
                 {/* User menu */}
                 <DropdownMenu>

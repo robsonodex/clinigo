@@ -113,7 +113,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
             { name: 'Check-in avançado + Upload', included: true, tooltip: 'Upload de docs pré-consulta' },
             { name: 'Prontuário completo', included: true },
             { name: 'IA com Reasoning', included: true, tooltip: 'Claude/GPT-4o com raciocínio' },
-            { name: 'Teleconsulta Daily.co integrada', included: true, tooltip: 'Vídeo HD nativo' },
+            { name: 'Teleconsulta WebRTC integrada', included: true, tooltip: 'Vídeo HD nativo' },
             { name: 'WhatsApp automação completa', included: true, tooltip: 'Envios automáticos 24h antes' },
             { name: 'CRM completo', included: true },
             { name: 'Integração TISS', included: true },

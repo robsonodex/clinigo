@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -24,12 +23,25 @@ import {
     Pill,
     FileCheck,
     AlertTriangle,
-    History,
+    Loader2,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { useRouter } from 'next/navigation'
+import { PatientSearchCombobox, type PatientSearchResult } from '@/components/appointments/PatientSearchCombobox'
+
 interface MedicalRecord {
     id: string
+    appointment_id?: string
     patient_name: string
     doctor_name: string
     specialty: string
@@ -41,9 +53,64 @@ interface MedicalRecord {
 
 export default function ProntuariosPage() {
     const { toast } = useToast()
+    const router = useRouter()
     const [search, setSearch] = useState('')
     const [isLoading, setIsLoading] = useState(true)
     const [records, setRecords] = useState<MedicalRecord[]>([])
+    const [showNewRecordModal, setShowNewRecordModal] = useState(false)
+    const [isCreating, setIsCreating] = useState(false)
+    const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null)
+
+    // Create new walk-in appointment and redirect to consultation
+    const handleCreateRecord = async () => {
+        if (!selectedPatient) return
+
+        setIsCreating(true)
+        try {
+            // 1. Create walk-in appointment (using manual API for direct creation)
+            const response = await fetch('/api/appointments/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: selectedPatient.id,
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    duration: 30, // 30 min default duration for quick record
+                    type: 'presencial',
+                    notes: 'Atendimento Prontuário Rápido (Avulso)',
+                    status: 'CONFIRMED' // Auto-confirm
+                })
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.error || 'Falha ao criar atendimento')
+            }
+
+            const data = await response.json()
+            const appointmentId = data.appointment?.id
+
+            // 2. Redirect to consultation page
+            if (appointmentId) {
+                toast({
+                    title: "Atendimento iniciado",
+                    description: "Redirecionando para o prontuário...",
+                })
+                router.push(`/dashboard/atendimentos/${appointmentId}`)
+            } else {
+                throw new Error('ID do agendamento não retornado')
+            }
+
+        } catch (error) {
+            console.error('Error creating record:', error)
+            toast({
+                variant: 'destructive',
+                title: "Erro ao iniciar atendimento",
+                description: error instanceof Error ? error.message : "Tente novamente mais tarde."
+            })
+            setIsCreating(false)
+        }
+    }
 
     // Fetch medical records from API
     useEffect(() => {
@@ -89,6 +156,10 @@ export default function ProntuariosPage() {
                         Prontuário eletrônico completo e seguro
                     </p>
                 </div>
+                <Button onClick={() => setShowNewRecordModal(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Prontuário
+                </Button>
             </div>
 
             {/* Stats */}
@@ -240,19 +311,16 @@ export default function ProntuariosPage() {
                                                     )}
                                                 </Badge>
                                             </div>
-                                            <Button variant="outline" size="sm">
+                                            <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
                                                 <Eye className="w-4 h-4 mr-1" />
                                                 Ver
                                             </Button>
                                             {!record.is_signed && (
-                                                <Button variant="outline" size="sm">
+                                                <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
                                                     <Edit className="w-4 h-4 mr-1" />
                                                     Editar
                                                 </Button>
                                             )}
-                                            <Button variant="outline" size="sm">
-                                                <Download className="w-4 h-4" />
-                                            </Button>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -264,7 +332,7 @@ export default function ProntuariosPage() {
                                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                                 <p className="font-medium">Nenhum prontuário encontrado</p>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    Os prontuários serão criados automaticamente após as consultas
+                                    Os prontuários serão criados automaticamente ao iniciar um atendimento.
                                 </p>
                             </CardContent>
                         </Card>
@@ -288,7 +356,7 @@ export default function ProntuariosPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Button size="sm">
+                                        <Button size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
                                             <Edit className="w-4 h-4 mr-1" />
                                             Completar e Assinar
                                         </Button>
@@ -321,12 +389,9 @@ export default function ProntuariosPage() {
                                             <Lock className="w-3 h-3 mr-1" />
                                             Assinado
                                         </Badge>
-                                        <Button variant="outline" size="sm">
+                                        <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
                                             <Eye className="w-4 h-4 mr-1" />
                                             Ver
-                                        </Button>
-                                        <Button variant="outline" size="sm">
-                                            <Download className="w-4 h-4" />
                                         </Button>
                                     </div>
                                 </div>
@@ -352,7 +417,83 @@ export default function ProntuariosPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={showNewRecordModal} onOpenChange={setShowNewRecordModal}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Novo Prontuário</DialogTitle>
+                        <DialogDescription>
+                            Para criar um prontuário, selecione um paciente para iniciar um atendimento imediato.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex gap-3">
+                                <Stethoscope className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-medium text-blue-900">Novo Atendimento</h4>
+                                    <p className="text-sm text-blue-800 mt-1">
+                                        Isso criará um agendamento do tipo "Avulso" para <strong>agora</strong> e abrirá o prontuário para preenchimento imediato.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Buscar Paciente</Label>
+                                <PatientSearchCombobox
+                                    onSelect={(patient) => setSelectedPatient(patient)}
+                                    onCreateNew={() => {
+                                        toast({
+                                            title: "Novo Paciente",
+                                            description: "Redirecionando para cadastro de paciente...",
+                                        })
+                                        router.push('/dashboard/pacientes?action=new')
+                                    }}
+                                />
+                            </div>
+
+                            {selectedPatient && (
+                                <div className="bg-slate-50 p-4 rounded-lg border">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-primary/10 p-2 rounded-full">
+                                            <User className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium">{selectedPatient.full_name}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {selectedPatient.cpf || 'Sem CPF'} • {selectedPatient.phone || 'Sem telefone'} • {selectedPatient.email || 'Sem email'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowNewRecordModal(false)}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleCreateRecord}
+                            disabled={!selectedPatient || isCreating}
+                        >
+                            {isCreating ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Criando Atendimento...
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Iniciar Atendimento
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
-

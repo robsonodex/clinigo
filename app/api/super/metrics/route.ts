@@ -39,7 +39,7 @@ export async function GET() {
         // 2. Clinic Stats
         const { data: clinics, count: totalClinics } = await adminClient
             .from('clinics')
-            .select('id, name, plan_type, is_active, created_at', { count: 'exact' })
+            .select('id, name, plan_type, is_active, created_at, subscription_due_date', { count: 'exact' })
 
         const activeClinics = clinics?.filter(c => c.is_active).length || 0
         const inactiveClinics = clinics?.filter(c => !c.is_active).length || 0
@@ -104,6 +104,34 @@ export async function GET() {
             return created.toDateString() === today.toDateString()
         }).length || 0
 
+        // 5. Billing Stats
+        const { count: pendingCharges } = await adminClient
+            .from('payment_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'PENDING')
+
+        // Filter upcoming renewals from already fetched clinics (need to ensure field is selected)
+        // We need to re-fetch or adjust the initial query. Let's adjust the initial query.
+        // But for minimal diff, let's fetch specific renewal candidates here or rely on the updated main query.
+        // Let's assume we update the main query to include subscription_due_date.
+
+        const upcomingRenewals = clinics
+            ?.filter(c => {
+                if (!c.is_active || !(c as any).subscription_due_date) return false
+                const due = new Date((c as any).subscription_due_date)
+                const today = new Date()
+                const diffTime = due.getTime() - today.getTime()
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                return diffDays >= 0 && diffDays <= 7
+            })
+            .map(c => ({
+                id: c.id,
+                name: c.name,
+                plan: c.plan_type,
+                dueDate: (c as any).subscription_due_date,
+                daysUntil: Math.ceil((new Date((c as any).subscription_due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+            })) || []
+
         return NextResponse.json({
             success: true,
             data: {
@@ -132,6 +160,10 @@ export async function GET() {
                 topClinics,
                 activity: {
                     appointmentsToday,
+                },
+                billing: {
+                    pendingCharges: pendingCharges || 0,
+                    upcomingRenewals,
                 },
                 generatedAt: new Date().toISOString(),
             },

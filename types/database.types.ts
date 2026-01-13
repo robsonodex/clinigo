@@ -28,6 +28,8 @@ export interface Database {
           is_active: boolean
           addons: Json | null
           mercadopago_access_token: string | null
+          theme: Json | null
+          public_page_settings: Json | null
           created_at: string
           updated_at: string
         }
@@ -44,6 +46,8 @@ export interface Database {
           is_active?: boolean
           addons?: Json | null
           mercadopago_access_token?: string | null
+          theme?: Json | null
+          public_page_settings?: Json | null
           created_at?: string
           updated_at?: string
         }

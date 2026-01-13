@@ -187,16 +187,214 @@ export async function POST(request: NextRequest) {
         logger.info({ paymentId, status: paymentData.status }, 'Payment details fetched')
 
         const externalReference = paymentData.external_reference
-        if (!externalReference || !externalReference.startsWith('sub_')) {
-            logger.warn({ externalReference }, 'Invalid external reference')
-            await markWebhookFailed(webhookId, 'Invalid external reference')
-            return NextResponse.json({ error: 'Invalid reference' }, { status: 400 })
+
+        // Handle both subscription and clinic registration payments
+        if (!externalReference) {
+            logger.warn({ externalReference }, 'Missing external reference')
+            await markWebhookFailed(webhookId, 'Missing external reference')
+            return NextResponse.json({ error: 'Missing reference' }, { status: 400 })
+        }
+
+        // Use service role client (bypasses RLS for webhook)
+        const supabase = createServiceRoleClient()
+
+        // ============================================
+        // CLINIC REGISTRATION PAYMENT (clinic_ prefix)
+        // ============================================
+        if (externalReference.startsWith('clinic_')) {
+            const clinicId = externalReference.replace('clinic_', '')
+
+            logger.info({ clinicId, status: paymentData.status }, 'Processing clinic payment')
+
+            // Get clinic data
+            const { data: clinic, error: clinicError } = await (supabase as any)
+                .from('clinics')
+                .select('id, name, email, responsible_name, plan_type, billing_cycle, approval_status')
+                .eq('id', clinicId)
+                .single()
+
+            if (clinicError || !clinic) {
+                logger.error({ clinicId, error: clinicError }, 'Clinic not found')
+                await markWebhookFailed(webhookId, 'Clinic not found')
+                return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            // Check if already processed
+            if (clinic.approval_status === 'active' || clinic.approval_status === 'trial') {
+                logger.info({ clinicId }, 'Clinic already active (idempotent)')
+                await markWebhookCompleted(webhookId)
+                return NextResponse.json({ received: true, alreadyProcessed: true })
+            }
+
+            if (paymentData.status === 'approved') {
+                // Calculate subscription period
+                const billingCycle = clinic.billing_cycle || 'MONTHLY'
+                const subscriptionEnds = billingCycle === 'ANNUAL'
+                    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // +1 year
+                    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)  // +30 days
+
+                // Generate random password
+                const tempPassword = `Clinigo${new Date().getFullYear()}!${Math.random().toString(36).slice(-4)}`
+
+                // Get user linked to this clinic
+                const { data: existingUser } = await (supabase as any)
+                    .from('users')
+                    .select('id, email')
+                    .eq('clinic_id', clinicId)
+                    .eq('role', 'CLINIC_ADMIN')
+                    .single()
+
+                if (existingUser) {
+                    // Update existing user in Supabase Auth
+                    await supabase.auth.admin.updateUserById(existingUser.id, {
+                        password: tempPassword,
+                        email_confirm: true,
+                    })
+
+                    // Activate user
+                    await (supabase as any)
+                        .from('users')
+                        .update({
+                            is_active: true,
+                            activation_status: 'active'
+                        })
+                        .eq('id', existingUser.id)
+                }
+
+                // Activate clinic
+                await (supabase as any)
+                    .from('clinics')
+                    .update({
+                        approval_status: 'active',
+                        is_active: true,
+                        mercadopago_payment_id: paymentId.toString(),
+                        paid_amount: paymentData.transaction_amount,
+                        subscription_starts_at: new Date().toISOString(),
+                        subscription_ends_at: subscriptionEnds.toISOString(),
+                        approved_at: new Date().toISOString(),
+                    })
+                    .eq('id', clinicId)
+
+                // Send emails
+                const { sendMail } = await import('@/lib/services/mail-service')
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'
+
+                // Email 1: Payment confirmation
+                await sendMail({
+                    to: clinic.email,
+                    subject: '✅ Pagamento Confirmado - Bem-vindo ao CliniGo!',
+                    html: `
+                        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+                            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+                                <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Pagamento Confirmado!</h1>
+                            </div>
+                            <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
+                                <p style="font-size: 18px; color: #1f2937;">Olá, <strong>${clinic.responsible_name || 'Gestor'}</strong>!</p>
+                                <p style="color: #4b5563;">Seu pagamento foi aprovado com sucesso!</p>
+                                
+                                <div style="background: #f0fdf4; border-radius: 10px; padding: 20px; margin: 20px 0;">
+                                    <h3 style="color: #166534; margin: 0 0 15px 0;">📋 Detalhes da Compra:</h3>
+                                    <table style="width: 100%; color: #374151;">
+                                        <tr><td><strong>Plano:</strong></td><td>${clinic.plan_type} (${billingCycle === 'ANNUAL' ? 'Anual' : 'Mensal'})</td></tr>
+                                        <tr><td><strong>Valor:</strong></td><td>R$ ${paymentData.transaction_amount?.toFixed(2)}</td></tr>
+                                        <tr><td><strong>Método:</strong></td><td>${paymentData.payment_method_id?.toUpperCase()}</td></tr>
+                                        <tr><td><strong>ID Transação:</strong></td><td>#${paymentId}</td></tr>
+                                    </table>
+                                </div>
+                                
+                                <p style="color: #059669; font-weight: bold;">✅ Sua clínica já está ATIVA no CliniGo!</p>
+                                <p style="color: #6b7280; font-size: 14px;">Em até 5 minutos você receberá outro e-mail com suas credenciais de acesso.</p>
+                            </div>
+                        </div>
+                    `
+                })
+
+                // Wait 2 minutes then send credentials
+                setTimeout(async () => {
+                    try {
+                        await sendMail({
+                            to: clinic.email,
+                            subject: '🔐 Suas Credenciais de Acesso - CliniGo',
+                            html: `
+                                <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+                                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+                                        <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Suas Credenciais de Acesso</h1>
+                                    </div>
+                                    <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
+                                        <p style="font-size: 18px; color: #1f2937;">Olá, <strong>${clinic.responsible_name || 'Gestor'}</strong>!</p>
+                                        <p style="color: #4b5563;">Sua conta CliniGo está pronta para uso!</p>
+                                        
+                                        <div style="background: #fef3c7; border-radius: 10px; padding: 20px; margin: 20px 0; border: 2px solid #f59e0b;">
+                                            <h3 style="color: #92400e; margin: 0 0 15px 0;">🔑 DADOS DE ACESSO:</h3>
+                                            <p style="margin: 8px 0; color: #374151;"><strong>Portal:</strong> <a href="${appUrl}/clinica">${appUrl}/clinica</a></p>
+                                            <p style="margin: 8px 0; color: #374151;"><strong>E-mail:</strong> ${clinic.email}</p>
+                                            <p style="margin: 8px 0; color: #374151; font-size: 18px;"><strong>Senha:</strong> <code style="background: #fef3c7; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
+                                        </div>
+                                        
+                                        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
+                                            <p style="margin: 0; color: #991b1b;">⚠️ <strong>IMPORTANTE:</strong> Por segurança, altere sua senha no primeiro acesso!</p>
+                                        </div>
+                                        
+                                        <div style="text-align: center; margin: 25px 0;">
+                                            <a href="${appUrl}/clinica" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block;">
+                                                👉 ACESSAR AGORA
+                                            </a>
+                                        </div>
+                                        
+                                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+                                        <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                                            Dúvidas? WhatsApp: (21) 96553-2247 | suporte@clinigo.app
+                                        </p>
+                                    </div>
+                                </div>
+                            `
+                        })
+                        logger.info({ clinicId }, 'Credentials email sent')
+                    } catch (emailError) {
+                        logger.error({ clinicId, error: emailError }, 'Failed to send credentials email')
+                    }
+                }, 120000) // 2 minutes
+
+                logger.info({ clinicId, paymentId }, 'Clinic activated via payment')
+                await markWebhookCompleted(webhookId)
+
+                return NextResponse.json({
+                    received: true,
+                    processed: true,
+                    type: 'clinic_activation',
+                    clinicId
+                })
+
+            } else if (paymentData.status === 'pending' || paymentData.status === 'in_process') {
+                // Payment pending (PIX/boleto waiting)
+                await (supabase as any)
+                    .from('clinics')
+                    .update({ mercadopago_payment_id: paymentId.toString() })
+                    .eq('id', clinicId)
+
+                logger.info({ clinicId, status: paymentData.status }, 'Clinic payment pending')
+                return NextResponse.json({ received: true, status: 'pending' })
+
+            } else {
+                // Payment failed/rejected
+                logger.warn({ clinicId, status: paymentData.status }, 'Clinic payment failed')
+                return NextResponse.json({ received: true, status: 'failed' })
+            }
+        }
+
+        // ============================================
+        // SUBSCRIPTION PAYMENT (sub_ prefix) - existing logic
+        // ============================================
+        if (!externalReference.startsWith('sub_')) {
+            logger.warn({ externalReference }, 'Unknown external reference format')
+            await markWebhookFailed(webhookId, 'Unknown external reference format')
+            return NextResponse.json({ error: 'Invalid reference format' }, { status: 400 })
         }
 
         const subscriptionId = externalReference.replace('sub_', '')
 
         // Use service role client (bypasses RLS for webhook)
-        const supabase = createServiceRoleClient()
+        // supabase already declared above for clinic payments
 
         // Get subscription with type assertion
         const { data: subscription, error: subError } = await supabase

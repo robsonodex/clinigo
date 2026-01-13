@@ -129,15 +129,17 @@ function CadastroContent() {
     const handleFinalSubmit = async (data: FormData) => {
         setIsSubmitting(true)
         try {
-            const response = await fetch('/api/clinics', {
+            const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: data.clinic_name,
-                    slug: data.slug,
-                    email: data.email,
+                    email: data.admin_email,
+                    password: data.password,
+                    full_name: data.admin_name,
+                    clinic_name: data.clinic_name,
                     cnpj: cleanCNPJ(data.cnpj),
                     phone: data.phone,
+                    responsible_phone: data.phone,
                     plan_type: data.plan_type,
                     address: {
                         street: data.street,
@@ -148,22 +150,20 @@ function CadastroContent() {
                         state: data.state,
                         zip: data.zip,
                     },
-                    admin_email: data.admin_email,
-                    admin_name: data.admin_name,
-                    admin_password: data.password,
                 }),
             })
 
+            const result = await response.json()
+
             if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Erro ao criar clínica')
+                throw new Error(result.error?.message || 'Erro ao criar clínica')
             }
 
-            toast.success('Clínica criada com sucesso! Redirecionando...')
+            toast.success('Cadastro recebido! Você receberá um e-mail quando for aprovado.')
 
-            // Redirect to success or login
+            // Redirect to waiting approval page
             setTimeout(() => {
-                router.push('/login?registered=true')
+                router.push('/aguardando-aprovacao')
             }, 1500)
         } catch (error) {
             console.error('Registration error:', error)
@@ -172,6 +172,7 @@ function CadastroContent() {
             setIsSubmitting(false)
         }
     }
+
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">

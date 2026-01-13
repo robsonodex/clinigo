@@ -125,9 +125,9 @@ export async function POST(request: NextRequest) {
                 updates.smtp_settings = credentials?.smtp ? JSON.stringify(credentials.smtp) : null
                 break
             case 'whatsapp':
-                updates.whatsapp_api_key = credentials?.api_key || null
-                updates.whatsapp_phone_id = credentials?.phone_id || null
-                updates.whatsapp_business_id = credentials?.business_id || null
+                updates.whatsapp_phone_number_id = credentials?.phone_number_id || null
+                updates.whatsapp_access_token = credentials?.access_token || null
+                updates.whatsapp_business_account_id = credentials?.business_account_id || null
                 break
             case 'posthog':
                 updates.posthog_key = credentials?.api_key || null
