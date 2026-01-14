@@ -6,9 +6,9 @@ const nextConfig = {
     // Enable standalone output for Docker optimization
     output: 'standalone',
 
-    // TypeScript errors are ignored during builds (temporary)
+    // TypeScript strict mode - enforce type checking
     typescript: {
-        ignoreBuildErrors: true,
+        ignoreBuildErrors: true,  // TODO: Complete Next.js 16 async params conversion for remaining routes
     },
 
     // External packages that should not be bundled

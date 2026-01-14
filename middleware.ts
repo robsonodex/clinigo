@@ -38,6 +38,7 @@ const PUBLIC_ROUTES = [
     '/api/patient/auth',
     '/api/marketplace',
     '/api/aia/triage',
+    '/api/plans', // New public plans API
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
@@ -191,6 +192,11 @@ export async function middleware(request: NextRequest) {
     // SUPABASE AUTH (Clinic/Doctor/Admin)
     // ----------------------------------------
     const { supabase, response } = createSupabaseClient(request)
+
+    // Securely get the user (validates token against Supabase Auth)
+    // This handles token refresh if needed via the checkConfig defined above
+
+    // Now get user (session is refreshed)
     const { data: { user } } = await supabase.auth.getUser()
 
     // Public routes - no auth needed

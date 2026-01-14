@@ -70,11 +70,31 @@ export async function POST(
             throw new Error('Nenhuma guia encontrada no lote');
         }
 
-        // PARSER SIMPLIFICADO (MVP)
-        // TODO: Implementar parser real de XML/TXT da operadora
-        // Por enquanto, simulamos processamento básico
+        // REAL PARSER - Not mockado anymore!
+        // Parse XML content with operator-specific logic
+        const { parseTISSReturn } = await import('@/lib/services/tiss/tiss-xml-parser')
 
-        const mockReturnData = generateMockReturnData(guides);
+        // Get operator name from batch
+        const operatorName = returnRecord.batch?.operator_name || 'UNIMED'
+
+        let parsedReturn
+        try {
+            // Assume XML content uploaded to Supabase Storage
+            const { data: fileData } = await supabase.storage
+                .from('tiss-returns')
+                .download(returnRecord.file_path)
+
+            if (!fileData) {
+                throw new Error('Arquivo de retorno não encontrado')
+            }
+
+            const xmlContent = await fileData.text()
+            parsedReturn = parseTISSReturn(xmlContent, operatorName)
+
+        } catch (parseError) {
+            console.error('[TISS] Parse error:', parseError)
+            throw new Error(`Erro ao parsear arquivo da operadora: ${parseError instanceof Error ? parseError.message : 'Unknown'}`)
+        };
 
         let totalApproved = 0;
         let totalDenied = 0;

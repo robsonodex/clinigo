@@ -1,249 +1,387 @@
 'use client'
 
-import { useUser } from '@/hooks/use-user'
-import { QRScannerRecepcao } from '@/components/checkin/QRScannerRecepcao'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, QrCode, Users, History, Clock } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+    Users, Clock, CheckCircle, XCircle, AlertTriangle,
+    Plus, Search, QrCode, User, Calendar, Phone
+} from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import PatientSelector from '@/components/prontuarios/patient-selector'
 
-interface RecentCheckin {
+interface QueueItem {
     id: string
-    patient_name: string
-    queue_position: number
-    checked_in_at: string
+    type: 'appointment' | 'walk-in'
+    patient: {
+        id: string
+        full_name: string
+        birth_date?: string
+        gender?: string
+    }
+    doctor?: {
+        user: {
+            name: string
+        }
+    }
+    arrivalTime: string
+    isPriority: boolean
     status: string
+    notes?: string
+}
+
+interface Stats {
+    waiting_count: number
+    in_service_count: number
+    completed_count: number
+    no_show_count: number
 }
 
 export default function RecepcaoPage() {
-    const { user, isLoading } = useUser()
-    const [recentCheckins, setRecentCheckins] = useState<RecentCheckin[]>([])
-    const [stats, setStats] = useState({ today: 0, waiting: 0, completed: 0 })
-    const supabase = createClient()
+    const { toast } = useToast()
+    const [queue, setQueue] = useState<QueueItem[]>([])
+    const [stats, setStats] = useState<Stats>({
+        waiting_count: 0,
+        in_service_count: 0,
+        completed_count: 0,
+        no_show_count: 0
+    })
+    const [loading, setLoading] = useState(true)
+    const [showWalkInDialog, setShowWalkInDialog] = useState(false)
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+    const [urgency, setUrgency] = useState<string>('normal')
+    const [reason, setReason] = useState('')
 
     useEffect(() => {
-        if (!user?.clinic_id) return
+        loadData()
+        // Poll every 30s
+        const interval = setInterval(loadData, 30000)
+        return () => clearInterval(interval)
+    }, [])
 
-        const fetchRecentCheckins = async () => {
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-
-            const { data } = await supabase
-                .from('appointment_queue')
-                .select(`
-                    id,
-                    queue_position,
-                    entered_queue_at,
-                    status,
-                    appointments (
-                        patients ( full_name )
-                    )
-                `)
-                .eq('clinic_id', user.clinic_id)
-                .gte('entered_queue_at', today.toISOString())
-                .order('entered_queue_at', { ascending: false })
-                .limit(10)
-
-            if (data) {
-                const formatted = data.map((item: any) => ({
-                    id: item.id,
-                    patient_name: item.appointments?.patients?.full_name || 'Paciente',
-                    queue_position: item.queue_position,
-                    checked_in_at: item.entered_queue_at,
-                    status: item.status,
-                }))
-                setRecentCheckins(formatted)
-
-                // Calculate stats
-                const waiting = data.filter((d: any) => d.status === 'waiting').length
-                const completed = data.filter((d: any) =>
-                    ['completed', 'in_consultation'].includes(d.status)
-                ).length
-                setStats({ today: data.length, waiting, completed })
+    async function loadData() {
+        setLoading(true)
+        try {
+            // Load stats
+            const statsRes = await fetch('/api/reception/dashboard')
+            if (statsRes.ok) {
+                const data = await statsRes.json()
+                if (data.stats) {
+                    setStats(data.stats)
+                }
             }
+
+            // Load queue
+            const queueRes = await fetch('/api/reception/queue')
+            if (queueRes.ok) {
+                const data = await queueRes.json()
+                setQueue(data.queue || [])
+            }
+        } catch (error) {
+            console.error('Error loading reception data:', error)
+        } finally {
+            setLoading(false)
         }
-
-        fetchRecentCheckins()
-
-        // Subscribe to changes
-        const channel = supabase
-            .channel('recepcao-checkins')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'appointment_queue',
-                    filter: `clinic_id=eq.${user.clinic_id}`,
-                },
-                () => fetchRecentCheckins()
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [user?.clinic_id, supabase])
-
-    const handleCheckinSuccess = (data: any) => {
-        // Refresh recent checkins
-        console.log('Check-in realizado:', data)
     }
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-        )
+    async function handleCheckIn(appointmentId: string) {
+        try {
+            const res = await fetch(`/api/reception/checkin/${appointmentId}`, {
+                method: 'POST'
+            })
+
+            if (res.ok) {
+                toast({
+                    title: 'Check-in realizado',
+                    description: 'Paciente confirmado na fila de atendimento'
+                })
+                loadData()
+            } else {
+                throw new Error('Falha no check-in')
+            }
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Não foi possível realizar o check-in'
+            })
+        }
     }
 
-    if (!user?.clinic_id) {
-        return (
-            <div className="p-6">
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">Clínica não configurada</p>
-                    </CardContent>
-                </Card>
-            </div>
-        )
+    async function handleCreateWalkIn() {
+        if (!selectedPatientId) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Selecione um paciente'
+            })
+            return
+        }
+
+        try {
+            const res = await fetch('/api/reception/walk-in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: selectedPatientId,
+                    urgency_level: urgency,
+                    reason
+                })
+            })
+
+            if (res.ok) {
+                toast({
+                    title: 'Atendimento criado',
+                    description: 'Paciente adicionado à fila de espera'
+                })
+                setShowWalkInDialog(false)
+                setSelectedPatientId(null)
+                setReason('')
+                loadData()
+            } else {
+                throw new Error('Falha ao criar walk-in')
+            }
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Não foi possível adicionar o paciente'
+            })
+        }
+    }
+
+    function getTimeWaiting(arrivalTime: string): string {
+        const now = new Date()
+        const arrival = new Date(arrivalTime)
+        const diffMs = now.getTime() - arrival.getTime()
+        const diffMins = Math.floor(diffMs / 60000)
+
+        if (diffMins < 60) return `${diffMins} min`
+        const hours = Math.floor(diffMins / 60)
+        const mins = diffMins % 60
+        return `${hours}h ${mins}min`
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <QrCode className="w-6 h-6" />
-                    Recepção - Check-in
-                </h1>
-                <p className="text-muted-foreground">
-                    Escaneie o QR Code do paciente para confirmar a presença
-                </p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-blue-100 rounded-xl">
-                                <Users className="w-5 h-5 text-blue-700" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{stats.today}</p>
-                                <p className="text-sm text-muted-foreground">Check-ins hoje</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-amber-100 rounded-xl">
-                                <Clock className="w-5 h-5 text-amber-700" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{stats.waiting}</p>
-                                <p className="text-sm text-muted-foreground">Aguardando</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-green-100 rounded-xl">
-                                <Users className="w-5 h-5 text-green-700" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{stats.completed}</p>
-                                <p className="text-sm text-muted-foreground">Atendidos</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Tabs defaultValue="scanner" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="scanner" className="flex items-center gap-2">
-                        <QrCode className="w-4 h-4" />
-                        Scanner
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="flex items-center gap-2">
-                        <History className="w-4 h-4" />
-                        Histórico
-                    </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="scanner">
-                    <QRScannerRecepcao
-                        clinicId={user.clinic_id}
-                        onCheckinSuccess={handleCheckinSuccess}
-                    />
-                </TabsContent>
-
-                <TabsContent value="history">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Check-ins Recentes</CardTitle>
-                            <CardDescription>Últimos 10 check-ins realizados hoje</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {recentCheckins.length === 0 ? (
-                                <p className="text-center py-8 text-muted-foreground">
-                                    Nenhum check-in realizado hoje
-                                </p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {recentCheckins.map((checkin) => (
-                                        <div
-                                            key={checkin.id}
-                                            className="flex items-center justify-between p-3 rounded-lg border"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center font-bold">
-                                                    {checkin.queue_position}
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium">{checkin.patient_name}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {new Date(checkin.checked_in_at).toLocaleTimeString('pt-BR', {
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                        })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <Badge
-                                                variant={
-                                                    checkin.status === 'waiting'
-                                                        ? 'secondary'
-                                                        : checkin.status === 'in_consultation'
-                                                            ? 'default'
-                                                            : 'outline'
-                                                }
-                                            >
-                                                {checkin.status === 'waiting'
-                                                    ? 'Aguardando'
-                                                    : checkin.status === 'called'
-                                                        ? 'Chamado'
-                                                        : checkin.status === 'in_consultation'
-                                                            ? 'Em Atendimento'
-                                                            : 'Concluído'}
-                                            </Badge>
-                                        </div>
-                                    ))}
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                        <Users className="w-7 h-7" />
+                        Recepção
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Gestão de fila e check-in de pacientes
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <Dialog open={showWalkInDialog} onOpenChange={setShowWalkInDialog}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Atendimento Sem Agendamento
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Novo Atendimento (Walk-in)</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Paciente</Label>
+                                    <PatientSelector
+                                        value={selectedPatientId}
+                                        onChange={setSelectedPatientId}
+                                        onNewPatient={() => {
+                                            window.open('/dashboard/pacientes?action=new', '_blank')
+                                        }}
+                                    />
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+                                <div className="space-y-2">
+                                    <Label>Urgência</Label>
+                                    <Select value={urgency} onValueChange={setUrgency}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="normal">Normal</SelectItem>
+                                            <SelectItem value="priority">Prioridade</SelectItem>
+                                            <SelectItem value="urgent">Urgente</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Motivo</Label>
+                                    <Input
+                                        placeholder="Motivo da consulta..."
+                                        value={reason}
+                                        onChange={(e) => setReason(e.target.value)}
+                                    />
+                                </div>
+                                <Button className="w-full" onClick={handleCreateWalkIn}>
+                                    Adicionar à Fila
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid gap-4 md:grid-cols-4">
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-amber-100 rounded-lg">
+                                <Clock className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-amber-600">
+                                    {stats.waiting_count}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Aguardando</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-blue-100 rounded-lg">
+                                <Users className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-blue-600">
+                                    {stats.in_service_count}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Em Atendimento</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-green-100 rounded-lg">
+                                <CheckCircle className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-green-600">
+                                    {stats.completed_count}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Atendidos Hoje</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-red-100 rounded-lg">
+                                <XCircle className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-red-600">
+                                    {stats.no_show_count}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Não Compareceram</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Queue */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Fila de Atendimento</CardTitle>
+                    <CardDescription>
+                        {queue.length} {queue.length === 1 ? 'paciente' : 'pacientes'} na fila
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <p className="text-center py-8 text-muted-foreground">Carregando...</p>
+                    ) : queue.length === 0 ? (
+                        <p className="text-center py-8 text-muted-foreground">
+                            Nenhum paciente na fila
+                        </p>
+                    ) : (
+                        <div className="space-y-3">
+                            {queue.map((item, index) => (
+                                <div
+                                    key={item.id}
+                                    className={`p-4 rounded-lg border-2 ${item.isPriority ? 'border-red-200 bg-red-50' : 'border-border'
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-bold text-primary">
+                                                {index + 1}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-semibold">{item.patient.full_name}</h4>
+                                                    {item.isPriority && (
+                                                        <Badge variant="destructive" className="text-xs">
+                                                            <AlertTriangle className="w-3 h-3 mr-1" />
+                                                            Prioridade
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {item.type === 'appointment' ? 'Agendado' : 'Walk-in'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        Aguardando há {getTimeWaiting(item.arrivalTime)}
+                                                    </span>
+                                                    {item.doctor && (
+                                                        <span className="flex items-center gap-1">
+                                                            <User className="w-3 h-3" />
+                                                            {item.doctor.user.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {item.notes && (
+                                                    <p className="text-sm text-muted-foreground mt-1">
+                                                        {item.notes}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleCheckIn(item.id)}
+                                                >
+                                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                                    Check-in
+                                                </Button>
+                                            )}
+                                            <Button size="sm">
+                                                Chamar Paciente
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }
-

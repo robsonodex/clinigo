@@ -37,7 +37,8 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useRouter } from 'next/navigation'
-import { PatientSearchCombobox, type PatientSearchResult } from '@/components/appointments/PatientSearchCombobox'
+import PatientSelector from '@/components/prontuarios/patient-selector'
+import PatientHistory from '@/components/prontuarios/patient-history'
 
 interface MedicalRecord {
     id: string
@@ -59,11 +60,11 @@ export default function ProntuariosPage() {
     const [records, setRecords] = useState<MedicalRecord[]>([])
     const [showNewRecordModal, setShowNewRecordModal] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
-    const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null)
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
 
     // Create new walk-in appointment and redirect to consultation
     const handleCreateRecord = async () => {
-        if (!selectedPatient) return
+        if (!selectedPatientId) return
 
         setIsCreating(true)
         try {
@@ -72,7 +73,7 @@ export default function ProntuariosPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    patient_id: selectedPatient.id,
+                    patient_id: selectedPatientId,
                     date: new Date().toISOString().split('T')[0],
                     time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                     duration: 30, // 30 min default duration for quick record
@@ -156,7 +157,10 @@ export default function ProntuariosPage() {
                         Prontuário eletrônico completo e seguro
                     </p>
                 </div>
-                <Button onClick={() => setShowNewRecordModal(true)}>
+                <Button onClick={() => {
+                    setSelectedPatientId(null)
+                    setShowNewRecordModal(true)
+                }}>
                     <Plus className="w-4 h-4 mr-2" />
                     Novo Prontuário
                 </Button>
@@ -441,9 +445,10 @@ export default function ProntuariosPage() {
 
                             <div className="space-y-2">
                                 <Label>Buscar Paciente</Label>
-                                <PatientSearchCombobox
-                                    onSelect={(patient) => setSelectedPatient(patient)}
-                                    onCreateNew={() => {
+                                <PatientSelector
+                                    value={selectedPatientId}
+                                    onChange={setSelectedPatientId}
+                                    onNewPatient={() => {
                                         toast({
                                             title: "Novo Paciente",
                                             description: "Redirecionando para cadastro de paciente...",
@@ -453,20 +458,8 @@ export default function ProntuariosPage() {
                                 />
                             </div>
 
-                            {selectedPatient && (
-                                <div className="bg-slate-50 p-4 rounded-lg border">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary/10 p-2 rounded-full">
-                                            <User className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">{selectedPatient.full_name}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {selectedPatient.cpf || 'Sem CPF'} • {selectedPatient.phone || 'Sem telefone'} • {selectedPatient.email || 'Sem email'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                            {selectedPatientId && (
+                                <PatientHistory patientId={selectedPatientId} />
                             )}
                         </div>
                     </div>
@@ -477,7 +470,7 @@ export default function ProntuariosPage() {
                         </Button>
                         <Button
                             onClick={handleCreateRecord}
-                            disabled={!selectedPatient || isCreating}
+                            disabled={!selectedPatientId || isCreating}
                         >
                             {isCreating ? (
                                 <>

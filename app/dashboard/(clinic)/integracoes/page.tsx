@@ -75,19 +75,6 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
         docsUrl: 'https://www.mercadopago.com.br/developers/pt/docs',
     },
     {
-        id: 'daily',
-        name: 'Daily.co (Vídeo HD)',
-        description: 'Teleconsulta HD integrada ao sistema',
-        icon: Video,
-        category: 'video',
-        requiredPlan: 'PROFESSIONAL',
-        settingsKey: 'daily_configured',
-        fields: [
-            { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Sua Daily.co API Key' },
-        ],
-        docsUrl: 'https://docs.daily.co',
-    },
-    {
         id: 'resend',
         name: 'Resend/SendGrid',
         description: 'Emails transacionais personalizados',

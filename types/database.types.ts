@@ -335,76 +335,77 @@ export interface Database {
           prescription?: string | null
           created_at?: string
           updated_at?: string
-        }
+        },
+        Update: Partial<Database['public']['Tables']['consultations']['Insert']>
+      },
+      consultation_ai_analyses: {
+        Row: {
+          id: string
+          consultation_id: string
+          clinic_id: string | null
+          doctor_id: string | null
+          analysis_type: string
+          prompt: string
+          result: string | null
+          model_used: string | null
+          plan_type: string | null
+          reasoning_enabled: boolean
+          tokens_used: number
+          created_at: string
+        },
+        Insert: {
+          id?: string
+          consultation_id: string
+          clinic_id?: string | null
+          doctor_id?: string | null
+          analysis_type: string
+          prompt: string
+          result?: string | null
+          model_used?: string | null
+          plan_type?: string | null
+          reasoning_enabled?: boolean
+          tokens_used?: number
+          created_at?: string
+        },
+        Update: Partial<Database['public']['Tables']['consultation_ai_analyses']['Insert']>
       }
-      Update: Partial<Database['public']['Tables']['consultations']['Insert']>
-    }
-    consultation_ai_analyses: {
-      Row: {
-        id: string
-        consultation_id: string
-        clinic_id: string | null
-        doctor_id: string | null
-        analysis_type: string
-        prompt: string
-        result: string | null
-        model_used: string | null
-        plan_type: string | null
-        reasoning_enabled: boolean
-        tokens_used: number
-        created_at: string
+    },
+    Views: {
+      [_ in never]: never
+    },
+    Functions: {
+      get_available_slots: {
+        Args: { p_doctor_id: string; p_date: string }
+        Returns: { slot_time: string }[]
+      },
+      is_slot_available: {
+        Args: { p_doctor_id: string; p_date: string; p_time: string }
+        Returns: boolean
+      },
+      get_clinic_kpis: {
+        Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      },
+      get_revenue_by_doctor: {
+        Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      },
+      get_appointments_by_day: {
+        Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
       }
-      Insert: {
-        id?: string
-        consultation_id: string
-        clinic_id?: string | null
-        doctor_id?: string | null
-        analysis_type: string
-        prompt: string
-        result?: string | null
-        model_used?: string | null
-        plan_type?: string | null
-        reasoning_enabled?: boolean
-        tokens_used?: number
-        created_at?: string
-      }
-      Update: Partial<Database['public']['Tables']['consultation_ai_analyses']['Insert']>
+    },
+    Enums: {
+      user_role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF',
+      plan_type: 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK',
+      appointment_status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW',
+      payment_status: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
     }
-  }
-  Views: {
-    [_ in never]: never
-  }
-  Functions: {
-    get_available_slots: {
-      Args: { p_doctor_id: string; p_date: string }
-      Returns: { slot_time: string }[]
-    }
-    is_slot_available: {
-      Args: { p_doctor_id: string; p_date: string; p_time: string }
-      Returns: boolean
-    }
-    get_clinic_kpis: {
-      Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
-      Returns: Json
-    }
-    get_revenue_by_doctor: {
-      Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
-      Returns: Json
-    }
-    get_appointments_by_day: {
-      Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
-      Returns: Json
-    }
-  }
-  Enums: {
-    user_role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
-    plan_type: 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
-    appointment_status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
-    payment_status: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
   }
 }
+
 // Export type aliases for easier usage
-export type UserRole = Database['public']['Enums']['user_role']
-export type PlanType = Database['public']['Enums']['plan_type']
-export type AppointmentStatus = Database['public']['Enums']['appointment_status']
-export type PaymentStatus = Database['public']['Enums']['payment_status']
+export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+export type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+export type AppointmentStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+export type PaymentStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'

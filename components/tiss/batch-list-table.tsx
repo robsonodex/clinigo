@@ -197,6 +197,7 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                             <TableHead>Período</TableHead>
                             <TableHead className="text-center">Guias</TableHead>
                             <TableHead className="text-right">Valor Total</TableHead>
+                            <TableHead>Versão</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -242,6 +243,16 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                             Glosa: R$ {new Intl.NumberFormat('pt-BR').format(batch.glosa_value)}
                                             ({batch.glosa_percentage.toFixed(1)}%)
                                         </div>
+                                    )}
+                                </TableCell>
+
+                                <TableCell>
+                                    {batch.tiss_version_used ? (
+                                        <Badge variant="secondary" className="text-xs">
+                                            v{batch.tiss_version_used}
+                                        </Badge>
+                                    ) : (
+                                        <span className="text-muted-foreground text-xs">-</span>
                                     )}
                                 </TableCell>
 
@@ -293,6 +304,6 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                     </TableBody>
                 </Table>
             </CardContent>
-        </Card>
+        </Card >
     );
 }

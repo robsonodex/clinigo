@@ -50,6 +50,7 @@ interface ManualAppointmentRequest {
     overrides?: ScheduleOverrides
     notifications?: NotificationSettings
     notes?: string
+    lock_id?: string // PREMIUM: Anti-overbooking lock ID
 }
 
 export async function POST(request: NextRequest) {
@@ -205,8 +206,57 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Check for schedule conflicts (if not overriding)
-        if (!body.overrides?.allow_double_booking) {
+        // PREMIUM: Validate lock if provided
+        if (body.lock_id) {
+            // Verify lock belongs to this user and is still active
+            const { data: lock } = await supabase
+                .from('appointment_slot_locks')
+                .select('id, locked_by, expires_at, lock_status, doctor_id, slot_datetime')
+                .eq('id', body.lock_id)
+                .single()
+
+            if (!lock) {
+                return NextResponse.json(
+                    { error: 'Lock de slot inválido ou expirado', code: 'INVALID_LOCK' },
+                    { status: 410 } // Gone
+                )
+            }
+
+            if (lock.locked_by !== user.id) {
+                return NextResponse.json(
+                    { error: 'Lock pertence a outro usuário', code: 'LOCK_OWNERSHIP' },
+                    { status: 403 }
+                )
+            }
+
+            if (lock.lock_status !== 'ACTIVE') {
+                return NextResponse.json(
+                    { error: `Lock já foi ${lock.lock_status.toLowerCase()}`, code: 'LOCK_USED' },
+                    { status: 410 }
+                )
+            }
+
+            if (new Date(lock.expires_at) < new Date()) {
+                return NextResponse.json(
+                    { error: 'Lock expirou. Tente reservar o horário novamente', code: 'LOCK_EXPIRED' },
+                    { status: 410 }
+                )
+            }
+
+            // Verify lock matches the appointment details
+            const lockDateTime = new Date(lock.slot_datetime)
+            const requestDateTime = new Date(`${body.appointment_date}T${body.appointment_time}`)
+
+            if (lock.doctor_id !== body.doctor_id || lockDateTime.getTime() !== requestDateTime.getTime()) {
+                return NextResponse.json(
+                    { error: 'Lock não corresponde aos dados do agendamento', code: 'LOCK_MISMATCH' },
+                    { status: 400 }
+                )
+            }
+        }
+
+        // Check for schedule conflicts (if not overriding and no lock)
+        if (!body.overrides?.allow_double_booking && !body.lock_id) {
             const { data: conflicts } = await supabase
                 .from('appointments')
                 .select('id')
@@ -220,7 +270,7 @@ export async function POST(request: NextRequest) {
                     {
                         error: 'Conflito de horário detectado',
                         conflict: true,
-                        message: 'Já existe um agendamento para este horário. Use override para permitir double-booking.'
+                        message: 'Já existe um agendamento para este horário. Use /api/appointments/check-availability primeiro.'
                     },
                     { status: 409 }
                 )
@@ -319,6 +369,22 @@ export async function POST(request: NextRequest) {
                 })
         }
 
+        // PREMIUM: Confirm lock if provided
+        if (body.lock_id) {
+            await supabase.rpc('confirm_slot_lock', {
+                p_lock_id: body.lock_id,
+                p_appointment_id: appointmentId
+            })
+
+            // Audit log
+            await supabase.from('appointment_lock_audit').insert({
+                lock_id: body.lock_id,
+                action: 'CONFIRMED',
+                user_id: user.id,
+                metadata: { appointment_id: appointmentId }
+            })
+        }
+
         // TODO: Send notifications if enabled
         // if (body.notifications?.send_sms) { ... }
         // if (body.notifications?.send_whatsapp) { ... }
@@ -326,8 +392,14 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            appointment_id: appointmentId,
-            patient_id: patientId,
+            appointment: {
+                id: appointmentId,
+                patient_id: patientId,
+                doctor_id: body.doctor_id,
+                appointment_date: appointmentDate,
+                appointment_time: appointmentTime,
+                status: 'CONFIRMED'
+            },
             message: 'Agendamento criado com sucesso',
         })
 

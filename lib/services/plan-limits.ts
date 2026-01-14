@@ -73,6 +73,7 @@ export interface PlanLimitError extends Error {
 export async function getClinicPlan(clinicId: string) {
     const supabase = await createClient()
 
+    // 1. Get clinic's plan type
     const { data: clinic, error } = await supabase
         .from('clinics')
         .select('plan_type, plan_limits')
@@ -84,7 +85,34 @@ export async function getClinicPlan(clinicId: string) {
     }
 
     const planType = (clinic.plan_type as PlanType) || 'BASIC'
-    const limits = PLAN_LIMITS[planType]
+
+    // 2. Fetch dyanmic plan configuration from DB
+    const { data: planConfig } = await supabase
+        .from('plans')
+        .select('limits, features')
+        .eq('id', planType)
+        .single()
+
+    // 3. Merge or fallback
+    let limits;
+    if (planConfig) {
+        // Transform DB features (jsonb objects) to array of strings for compatibility
+        const enabledFeatures = Array.isArray(planConfig.features)
+            ? planConfig.features
+                .filter((f: any) => typeof f === 'string' || f.included)
+                .map((f: any) => typeof f === 'string' ? f : f.name)
+            : [];
+
+        limits = {
+            ...planConfig.limits,
+            features: enabledFeatures,
+            // Ensure price is present if needed by interface, though mostly strictly limits here
+            price: 0 // Placeholder as it's not used for limit checks usually
+        }
+    } else {
+        // Fallback to constants
+        limits = PLAN_LIMITS[planType]
+    }
 
     return {
         planType,

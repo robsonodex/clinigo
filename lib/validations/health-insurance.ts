@@ -40,6 +40,7 @@ export const createHealthInsuranceSchema = z.object({
         .max(500, 'Observações deve ter no máximo 500 caracteres')
         .optional()
         .nullable(),
+    tiss_version: z.enum(['4.01.00', '4.02.00']).optional().nullable().default('4.01.00'),
 })
 
 export const updateHealthInsuranceSchema = createHealthInsuranceSchema.partial().extend({

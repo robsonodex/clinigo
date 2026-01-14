@@ -141,13 +141,14 @@ export async function POST(request: NextRequest) {
                 email: validatedData.email || null,
                 notes: validatedData.notes || null,
                 status: 'ACTIVE',
-            })
+                tiss_version: validatedData.tiss_version || '4.01.00',
+            } as any)
             .select()
             .single()
 
         if (error) throw error
 
-        return successResponse(data, 'Operadora criada com sucesso', 201)
+        return successResponse(data, { status: 201 })
     } catch (error) {
         return handleApiError(error)
     }

@@ -1,214 +1,167 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
-import { processDocument } from '@/lib/services/ocr-service'
+import { NextResponse } from 'next/server'
+import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/middlewares/auth'
+import { log } from '@/lib/logger'
+import { uploadDocumentSchema, listDocumentsQuerySchema } from '@/lib/validations/documents'
+import { withRateLimit } from '@/lib/rate-limit'
 
-// GET: List documents
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic'
+
+// GET /api/documents - List documents with filters
+export async function GET(request: Request) {
     try {
+        // Authorization: All medical staff can view documents
+        const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
+
+        if (!authResult.authorized) {
+            if (authResult.error?.includes('No valid session')) {
+                return unauthorizedResponse(authResult.error)
+            }
+            return forbiddenResponse(authResult.error)
+        }
+
+        const { user } = authResult
         const supabase = await createClient()
 
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        const { searchParams } = new URL(request.url)
+        const queryParams = {
+            patient_id: searchParams.get('patient_id') || undefined,
+            category: searchParams.get('category') || undefined,
+            search: searchParams.get('search') || undefined,
+            page: searchParams.get('page') || undefined,
+            limit: searchParams.get('limit') || undefined
         }
 
-        const { data: userData } = await supabase
-            .from('users')
-            .select('clinic_id')
-            .eq('id', user.id)
-            .single()
+        // Validate query parameters with Zod
+        const validationResult = listDocumentsQuerySchema.safeParse(queryParams)
 
-        const clinicId = (userData as any)?.clinic_id
-        if (!clinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        if (!validationResult.success) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                details: validationResult.error.format()
+            }, { status: 400 })
         }
 
-        const searchParams = request.nextUrl.searchParams
-        const patientId = searchParams.get('patient_id')
-        const documentType = searchParams.get('type')
-        const search = searchParams.get('search')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '20')
-        const offset = (page - 1) * limit
+        const { patient_id: patientId, category, search } = validationResult.data
 
         let query = supabase
             .from('patient_documents')
             .select(`
-        *,
-        patients(full_name, cpf),
-        users!uploaded_by(full_name)
-      `, { count: 'exact' })
-            .eq('clinic_id', clinicId)
-            .is('deleted_at', null)
+                id,
+                patient_id,
+                file_name,
+                file_url,
+                file_size,
+                file_type,
+                category,
+                description,
+                tags,
+                created_at,
+                patient:patients(id, full_name),
+                uploaded_by_user:users!uploaded_by(name)
+            `)
             .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1)
+            .limit(50) // Limite de performance
 
         if (patientId) {
             query = query.eq('patient_id', patientId)
         }
-
-        if (documentType) {
-            query = query.eq('document_type', documentType)
+        if (category) {
+            query = query.eq('category', category)
         }
-
         if (search) {
-            // Use full-text search if available
-            query = query.or(`name.ilike.%${search}%,ocr_text.ilike.%${search}%`)
+            query = query.or(`file_name.ilike.%${search}%,description.ilike.%${search}%`)
         }
 
-        const { data: documents, error, count } = await query
+        const { data: documents, error } = await query
 
         if (error) {
-            console.error('Documents fetch error:', error)
-            return NextResponse.json({ error: 'Erro ao buscar documentos' }, { status: 500 })
+            log.error('Error fetching documents', { error, userId: user.id })
+            return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        return NextResponse.json({
-            documents,
-            total: count || 0,
-            page,
-            limit,
-            totalPages: Math.ceil((count || 0) / limit)
-        })
+        return NextResponse.json({ documents })
     } catch (error) {
-        console.error('Documents error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        log.error('Error in documents API', { error })
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
 
-// POST: Upload document
-export async function POST(request: NextRequest) {
+// POST /api/documents - Create document record (file already uploaded to Supabase Storage)
+export async function POST(request: Request) {
     try {
+        // Authorization: All medical staff can upload documents
+        const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
+
+        if (!authResult.authorized) {
+            if (authResult.error?.includes('No valid session')) {
+                return unauthorizedResponse(authResult.error)
+            }
+            return forbiddenResponse(authResult.error)
+        }
+
+        const { user } = authResult
+
+        // Rate limiting: General API limit (100 req/min)
+        const rateLimitResponse = await withRateLimit('api', user.id)
+        if (rateLimitResponse) return rateLimitResponse
+
         const supabase = await createClient()
 
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        const body = await request.json()
+
+        // Validate request body with Zod
+        const validationResult = uploadDocumentSchema.safeParse(body)
+
+        if (!validationResult.success) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                details: validationResult.error.format()
+            }, { status: 400 })
         }
 
-        const { data: userData } = await supabase
-            .from('users')
-            .select('clinic_id')
-            .eq('id', user.id)
-            .single()
+        const {
+            patient_id,
+            file_name,
+            file_url,
+            file_size,
+            file_type,
+            category,
+            description,
+            tags
+        } = validationResult.data
 
-        const clinicId = (userData as any)?.clinic_id
-        if (!clinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
-        }
-
-        const formData = await request.formData()
-        const file = formData.get('file') as File
-        const patientId = formData.get('patient_id') as string
-        const appointmentId = formData.get('appointment_id') as string | null
-        const documentType = formData.get('document_type') as string | null
-        const notes = formData.get('notes') as string | null
-        const runOcr = formData.get('run_ocr') === 'true'
-
-        if (!file) {
-            return NextResponse.json({ error: 'Arquivo é obrigatório' }, { status: 400 })
-        }
-
-        if (!patientId) {
-            return NextResponse.json({ error: 'Paciente é obrigatório' }, { status: 400 })
-        }
-
-        // Validate patient belongs to clinic
-        const { data: patient } = await supabase
-            .from('patients')
-            .select('id')
-            .eq('id', patientId)
-            .eq('clinic_id', clinicId)
-            .single()
-
-        if (!patient) {
-            return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
-        }
-
-        // Generate unique file path
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${clinicId}/${patientId}/${Date.now()}.${fileExt}`
-
-        // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('patient-documents')
-            .upload(fileName, file, {
-                contentType: file.type,
-                upsert: false
-            })
-
-        if (uploadError) {
-            console.error('Upload error:', uploadError)
-            return NextResponse.json({ error: 'Erro ao fazer upload' }, { status: 500 })
-        }
-
-        // Process OCR if requested and file is an image
-        let ocrResult = null
-        let classification = documentType || 'other'
-
-        if (runOcr && file.type.startsWith('image/')) {
-            const arrayBuffer = await file.arrayBuffer()
-            const base64 = Buffer.from(arrayBuffer).toString('base64')
-
-            const result = await processDocument(base64, file.type)
-            ocrResult = result
-
-            if (result.ocr.success) {
-                classification = result.classification
-            }
-        }
-
-        // Insert document record
-        const { data: document, error: insertError } = await supabase
+        const { data: document, error } = await supabase
             .from('patient_documents')
             .insert({
-                clinic_id: clinicId,
-                patient_id: patientId,
-                appointment_id: appointmentId || null,
-                name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-                original_name: file.name,
-                file_type: file.type,
-                file_size: file.size,
-                storage_path: uploadData.path,
-                storage_bucket: 'patient-documents',
-                document_type: classification,
-                notes: notes,
-                ocr_status: runOcr ? (ocrResult?.ocr.success ? 'completed' : 'failed') : 'pending',
-                ocr_text: ocrResult?.ocr.text || null,
-                ocr_processed_at: runOcr ? new Date().toISOString() : null,
-                ocr_provider: runOcr ? 'nvidia' : null,
-                ocr_confidence: ocrResult?.ocr.confidence || null,
-                icd_codes: ocrResult?.extractedData?.icdCodes || [],
+                patient_id,
+                file_name,
+                file_url,
+                file_size,
+                file_type,
+                category,
+                description,
+                tags,
                 uploaded_by: user.id
-            })
+            } as any)
             .select()
             .single()
 
-        if (insertError) {
-            console.error('Insert error:', insertError)
-            // Try to delete uploaded file
-            await supabase.storage.from('patient-documents').remove([uploadData.path])
-            return NextResponse.json({ error: 'Erro ao salvar documento' }, { status: 500 })
+        if (error) {
+            log.error('Error creating document', { error, userId: user.id })
+            return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        // Log access
-        await supabase.from('document_access_log').insert({
-            document_id: document.id,
-            clinic_id: clinicId,
-            user_id: user.id,
-            action: 'UPLOAD',
-            ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
-            user_agent: request.headers.get('user-agent')
+        // Audit log document upload
+        log.audit(user.id, 'upload_document', {
+            patient_id,
+            file_name,
+            category
         })
 
-        return NextResponse.json({
-            document,
-            ocr: ocrResult?.ocr,
-            extractedData: ocrResult?.extractedData
-        })
+        return NextResponse.json({ success: true, document })
     } catch (error) {
-        console.error('Document upload error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        console.error('Error in documents API:', error)
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
-

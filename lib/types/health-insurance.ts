@@ -19,7 +19,10 @@ export interface HealthInsurance {
     code: string | null
     phone: string | null
     email: string | null
+    website: string | null
     notes: string | null
+    logo_url: string | null
+    tiss_version?: '4.01.00' | '4.02.00' | null
     status: HealthInsuranceStatus
     deleted_at: string | null
     created_at: string

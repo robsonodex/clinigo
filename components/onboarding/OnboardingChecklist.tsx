@@ -48,41 +48,6 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
         link: '/dashboard/horarios',
         required: true,
     },
-    {
-        id: 'first-appointment',
-        title: 'Criar Primeiro Agendamento (Teste)',
-        description: 'Faça um teste completo do fluxo',
-        icon: CheckCircle2,
-        link: '/dashboard/agenda',
-        required: true,
-    },
-    {
-        id: 'notifications',
-        title: 'Ativar Notificações Automáticas',
-        description: 'Lembretes 24h e 1h antes da consulta',
-        icon: Zap,
-        link: '/dashboard/notificacoes',
-        required: false,
-        planRequired: 'STARTER',
-    },
-    {
-        id: 'whatsapp-config',
-        title: 'Configurar WhatsApp',
-        description: 'Envio automático de mensagens',
-        icon: Zap,
-        link: '/dashboard/whatsapp',
-        required: false,
-        planRequired: 'PRO',
-    },
-    {
-        id: 'financial-setup',
-        title: 'Configurar Financeiro',
-        description: 'Categorias de receitas e despesas',
-        icon: FileText,
-        link: '/dashboard/financeiro',
-        required: false,
-        planRequired: 'PRO',
-    },
 ]
 
 export default function OnboardingChecklist() {
@@ -168,7 +133,7 @@ export default function OnboardingChecklist() {
                                 )}
                             </CardTitle>
                             <CardDescription>
-                                Configure seu CliniGo em poucos passos. Tempo estimado: <Clock className="inline h-3 w-3" /> 15-20 minutos
+                                Configure seu CliniGo em 3 passos essenciais. Tempo estimado: <Clock className="inline h-3 w-3" /> 5-10 minutos
                             </CardDescription>
                         </div>
                     </div>

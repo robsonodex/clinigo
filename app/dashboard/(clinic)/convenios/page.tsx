@@ -68,6 +68,8 @@ import type {
     DoctorHealthInsurance,
     DoctorWithInsurances
 } from '@/lib/types/health-insurance'
+import { TissVersionSelector } from '@/components/tiss/version-selector'
+import type { TissVersion } from '@/lib/types/tiss-versions'
 
 // =============================================================================
 // TAB: OPERADORAS
@@ -83,7 +85,10 @@ function OperadorasTab() {
         code: '',
         phone: '',
         email: '',
-        notes: ''
+        phone: '',
+        email: '',
+        notes: '',
+        tiss_version: '4.01.00' as TissVersion
     })
 
     const { data: response, isLoading } = useQuery({
@@ -134,11 +139,12 @@ function OperadorasTab() {
                 code: item.code || '',
                 phone: item.phone || '',
                 email: item.email || '',
-                notes: item.notes || ''
+                notes: item.notes || '',
+                tiss_version: (item.tiss_version as TissVersion) || '4.01.00'
             })
         } else {
             setEditingItem(null)
-            setFormData({ name: '', code: '', phone: '', email: '', notes: '' })
+            setFormData({ name: '', code: '', phone: '', email: '', notes: '', tiss_version: '4.01.00' })
         }
         setIsDialogOpen(true)
     }
@@ -319,6 +325,19 @@ function OperadorasTab() {
                                 />
                             </div>
                         </div>
+
+                        {/* TISS Version Selector */}
+                        <div className="pt-2">
+                            <Label className="mb-2 block">Configuração TISS</Label>
+                            <TissVersionSelector
+                                currentVersion={formData.tiss_version || '4.01.00'}
+                                insuranceName={formData.name || 'Nova Operadora'}
+                                onVersionChange={(v) => setFormData({ ...formData, tiss_version: v })}
+                                showDetails={false}
+                                className="border shadow-sm"
+                            />
+                        </div>
+
                         <div className="grid gap-2">
                             <Label htmlFor="notes">Observações</Label>
                             <Textarea

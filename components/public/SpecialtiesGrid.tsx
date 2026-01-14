@@ -97,10 +97,9 @@ export function SpecialtiesGrid({ clinicSlug, specialties }: SpecialtiesGridProp
                                         className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
                                         style={{ backgroundColor: `${iconColor}15` }}
                                     >
-                                        <IconComponent
-                                            className="w-7 h-7"
-                                            style={{ color: iconColor }}
-                                        />
+                                        <span style={{ color: iconColor }}>
+                                            <IconComponent className="w-7 h-7" />
+                                        </span>
                                     </div>
 
                                     {/* Name */}

@@ -1,5 +1,6 @@
 import { Html, Head, Body, Container, Text, Button, Section } from '@react-email/components'
 import { formatDate } from '@/lib/utils'
+import type React from 'react'
 
 interface CancellationEmailProps {
     appointment: any
@@ -35,9 +36,9 @@ export function CancellationEmail({ appointment }: CancellationEmailProps) {
     )
 }
 
-const main = { backgroundColor: '#f6f9fc', fontFamily: 'Arial, sans-serif' }
-const container = { margin: '0 auto', padding: '20px 0 48px', maxWidth: '560px' }
-const heading = { fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }
-const box = { backgroundColor: '#fff', border: '1px solid #e6e6e6', borderRadius: '8px', padding: '24px' }
-const paragraph = { fontSize: '16px', lineHeight: '26px', marginTop: '20px' }
-const button = { backgroundColor: '#0070f3', borderRadius: '5px', color: '#fff', fontSize: '16px', fontWeight: 'bold', textDecoration: 'none', textAlign: 'center', display: 'block', padding: '12px', marginTop: '20px' }
+const main: React.CSSProperties = { backgroundColor: '#f6f9fc', fontFamily: 'Arial, sans-serif' }
+const container: React.CSSProperties = { margin: '0 auto', padding: '20px 0 48px', maxWidth: '560px' }
+const heading: React.CSSProperties = { fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }
+const box: React.CSSProperties = { backgroundColor: '#fff', border: '1px solid #e6e6e6', borderRadius: '8px', padding: '24px' }
+const paragraph: React.CSSProperties = { fontSize: '16px', lineHeight: '26px', marginTop: '20px' }
+const button: React.CSSProperties = { backgroundColor: '#0070f3', borderRadius: '5px', color: '#fff', fontSize: '16px', fontWeight: 'bold', textDecoration: 'none', textAlign: 'center', display: 'block', padding: '12px', marginTop: '20px' }

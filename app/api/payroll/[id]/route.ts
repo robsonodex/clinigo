@@ -14,8 +14,9 @@ const approveSchema = z.object({
 // GET: Detalhes de uma folha com itens
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
+    const params = await context.params;
     try {
         const supabase = await createClient();
 
@@ -75,8 +76,9 @@ export async function GET(
 // PUT: Aprovar, rejeitar ou marcar como pago
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
+    const params = await context.params;
     try {
         const supabase = await createClient();
 

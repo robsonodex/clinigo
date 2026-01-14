@@ -49,3 +49,17 @@ export function logAudit(event: string, data: Record<string, any>) {
     logger.info({ domain: 'AUDIT', event, ...data })
 }
 
+// Unified log interface for easier use
+export const log = {
+    info: (msg: string, obj?: Record<string, any>) => logger.info(obj, msg),
+    error: (msg: string, error?: any) => logger.error(error, msg),
+    warn: (msg: string, obj?: Record<string, any>) => logger.warn(obj, msg),
+    audit: (userId: string, action: string, details?: Record<string, any>) => {
+        logger.info({
+            type: 'AUDIT',
+            userId,
+            action,
+            ...details
+        }, `Audit: ${action}`)
+    }
+}

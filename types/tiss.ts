@@ -99,6 +99,9 @@ export interface TissBatch {
     updated_at: string;
     submitted_by: string | null;
     submitted_at: string | null;
+
+    // Versionamento
+    tiss_version_used: string | null;
 }
 
 /**

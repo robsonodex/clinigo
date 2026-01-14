@@ -21,7 +21,9 @@ import {
     DollarSign,
     Send,
     BarChart3,
+    ArrowRightLeft,
 } from 'lucide-react'
+import Link from 'next/link'
 
 interface TissGuia {
     id: string
@@ -110,6 +112,12 @@ export default function TissPage() {
                         <BarChart3 className="w-4 h-4 mr-2" />
                         Relatórios
                     </Button>
+                    <Link href="/dashboard/tiss/migration">
+                        <Button variant="outline">
+                            <ArrowRightLeft className="w-4 h-4 mr-2" />
+                            Migração TISS
+                        </Button>
+                    </Link>
                     <Button variant="outline" onClick={() => setTab('import')}>
                         <Upload className="w-4 h-4 mr-2" />
                         Importar XML
