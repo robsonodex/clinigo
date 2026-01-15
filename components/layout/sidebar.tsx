@@ -98,14 +98,6 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
             },
             {
-                title: 'Triagem AiA',
-                href: '/dashboard/triagem',
-                icon: HeartPulse,
-                roles: ['CLINIC_ADMIN', 'DOCTOR'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
-            },
-            {
                 title: 'Recepção',
                 href: '/dashboard/recepcao',
                 icon: Clipboard,

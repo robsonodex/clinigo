@@ -14,10 +14,27 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
 
+        // OBRIGATÓRIO: Buscar clinic_id do usuário logado para isolamento multi-tenant
+        const { data: userDataRaw } = await supabase
+            .from('users')
+            .select('clinic_id, role')
+            .eq('id', user.id)
+            .single()
+
+        const userData = userDataRaw as { clinic_id: string | null; role: string | null } | null
+
+        // Somente SUPER_ADMIN pode ver sem filtro de clínica
+        if (!userData) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 400 })
+        }
+
+        if (!userData.clinic_id && userData.role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
+        }
+
         // Get search params
         const { searchParams } = new URL(request.url)
         const search = searchParams.get('search') || ''
-        const clinicId = searchParams.get('clinic_id')
 
         let query = supabase
             .from('patients')
@@ -32,9 +49,9 @@ export async function GET(request: Request) {
         updated_at
       `)
 
-        // Filter by clinic if provided
-        if (clinicId) {
-            query = query.eq('clinic_id', clinicId)
+        // OBRIGATÓRIO: Filtro por clinic_id (exceto Super Admin)
+        if (userData.role !== 'SUPER_ADMIN') {
+            query = query.eq('clinic_id', userData.clinic_id)
         }
 
         // Search functionality

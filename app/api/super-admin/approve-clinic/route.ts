@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
                 approval_status: 'trial', // Start in trial mode
                 approved_at: new Date().toISOString(),
                 approved_by: authResult.userId,
-                trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days
+                trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
             })
             .eq('id', clinicId)
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
                                 <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-top: 25px;">
                                     <h4 style="color: #1e40af; margin: 0 0 10px 0;">📋 Seu período de teste inclui:</h4>
                                     <ul style="color: #374151; margin: 0; padding-left: 20px; line-height: 1.8;">
-                                        <li>14 dias de acesso completo</li>
+                                        <li>7 dias de acesso completo</li>
                                         <li>Dashboard Financeiro</li>
                                         <li>Gestão de Agenda</li>
                                         <li>Cadastro de Médicos</li>

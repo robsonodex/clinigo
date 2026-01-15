@@ -90,7 +90,7 @@ export default function DemoLoginPage() {
                         <p className="text-sm text-gray-600">
                             Gostou?
                             <a href="/cadastro" className="text-blue-600 hover:underline ml-1">
-                                Crie sua conta real e ganhe 15 dias grátis!
+                                Crie sua conta real e ganhe 7 dias grátis!
                             </a>
                         </p>
                     </div>

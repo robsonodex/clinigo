@@ -72,7 +72,7 @@ export function HeroSection() {
                                 )}
                             >
                                 <Play className="h-5 w-5 fill-current" />
-                                Teste Grátis por 14 dias
+                                Teste Grátis por 7 dias
                             </Button>
                         </Link>
 

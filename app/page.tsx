@@ -103,7 +103,7 @@ export default function LandingPage() {
                             </div>
                             <p className="text-gray-400 max-w-sm">
                                 A plataforma de gestão médica mais completa do Brasil.
-                                Agendamento online, prontuário eletrônico e IA para triagem e otimização.
+                                Agendamento online, prontuário eletrônico e gestão financeira integrada.
                             </p>
                         </div>
 
@@ -145,7 +145,7 @@ export default function LandingPage() {
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border border-emerald-700/30">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-xs font-medium text-emerald-400">
-                                Powered by AiA Predictive Intelligence
+                                Sistema Online
                             </span>
                         </div>
                     </div>
