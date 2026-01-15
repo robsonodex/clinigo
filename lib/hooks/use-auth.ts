@@ -138,6 +138,7 @@ export function useAuth() {
         signUp,
         signOut,
         isAuthenticated: !!state.user,
+        supabase,
     }
 }
 

@@ -13,6 +13,7 @@ import {
     X,
     CreditCard,
     PlusCircle,
+    Loader2
 } from 'lucide-react'
 import {
     format,
@@ -56,6 +57,8 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
+import { AppointmentDetailsModal } from '@/components/appointments/AppointmentDetailsModal'
+import { AlertTriangle } from 'lucide-react'
 
 const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
     const hour = Math.floor(i / 2) + 9 // Start at 09:00
@@ -70,6 +73,15 @@ export default function AgendaPage() {
     const [view, setView] = useState<'week' | 'day'>('week')
     const [manualAppointmentOpen, setManualAppointmentOpen] = useState(false)
     const [preselectedSlot, setPreselectedSlot] = useState<{ date: string; time: string } | null>(null)
+
+    // Details Modal
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+    const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+
+    // Drag and Drop
+    const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null)
+    const [dropTarget, setDropTarget] = useState<{ date: Date; time: string } | null>(null)
+    const [rescheduleConfirmOpen, setRescheduleConfirmOpen] = useState(false)
 
     // Date navigation
     const currentDate = startOfDay(selectedDate)
@@ -135,6 +147,58 @@ export default function AgendaPage() {
         },
         onError: (error: Error) => toast.error(error.message),
     })
+
+    // Reschedule Mutation
+    const rescheduleMutation = useMutation({
+        mutationFn: async () => {
+            if (!draggedAppointment || !dropTarget) return
+
+            const newDate = format(dropTarget.date, 'yyyy-MM-dd')
+
+            await api.patch(`/appointments/${draggedAppointment.id}`, {
+                appointment_date: newDate,
+                appointment_time: dropTarget.time
+            })
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'] })
+            setRescheduleConfirmOpen(false)
+            setDraggedAppointment(null)
+            setDropTarget(null)
+            toast.success('Agendamento remarcado com sucesso')
+        },
+        onError: (error: Error) => {
+            toast.error('Erro ao remarcar: ' + error.message)
+            setRescheduleConfirmOpen(false)
+        },
+    })
+
+    // Drag Handlers
+    const handleDragStart = (e: React.DragEvent, appointment: Appointment) => {
+        e.dataTransfer.setData('appointmentId', appointment.id)
+        e.dataTransfer.effectAllowed = 'move'
+        setDraggedAppointment(appointment)
+    }
+
+    const handleDragOver = (e: React.DragEvent, date: Date, time: string) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+    }
+
+    const handleDrop = (e: React.DragEvent, date: Date, time: string) => {
+        e.preventDefault()
+        if (!draggedAppointment) return
+
+        // Check if dropping on same slot
+        if (draggedAppointment.appointment_date === format(date, 'yyyy-MM-dd') &&
+            draggedAppointment.appointment_time.substring(0, 5) === time) {
+            setDraggedAppointment(null)
+            return
+        }
+
+        setDropTarget({ date, time })
+        setRescheduleConfirmOpen(true)
+    }
 
     return (
         <div className="flex flex-col h-[calc(100vh-6rem)]">
@@ -272,21 +336,25 @@ export default function AgendaPage() {
                                                     setManualAppointmentOpen(true)
                                                 }
                                             }}
+                                            onDragOver={(e) => !appointment && handleDragOver(e, day, time)}
+                                            onDrop={(e) => !appointment && handleDrop(e, day, time)}
                                         >
                                             {appointment ? (
                                                 <div
+                                                    draggable={appointment.status !== 'CANCELLED' && appointment.status !== 'COMPLETED'}
+                                                    onDragStart={(e) => handleDragStart(e, appointment)}
                                                     className={cn(
                                                         'w-full h-full rounded-md border p-2 text-xs flex flex-col justify-between shadow-sm cursor-pointer hover:shadow-md transition-shadow',
                                                         appointment.status === 'CONFIRMED'
                                                             ? 'bg-blue-50 border-blue-200 text-blue-700'
                                                             : appointment.status === 'PENDING_PAYMENT'
                                                                 ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                                                                : 'bg-gray-50 border-gray-200 text-gray-500' // Completed/Cancelled
+                                                                : 'bg-gray-50 border-gray-200 text-gray-500', // Completed/Cancelled
+                                                        draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
                                                     )}
                                                     onClick={() => {
-                                                        if (isDoctor && appointment.status === 'CONFIRMED') {
-                                                            router.push(`/dashboard/consultas/${appointment.id}`)
-                                                        }
+                                                        setSelectedAppointment(appointment)
+                                                        setDetailsModalOpen(true)
                                                     }}
                                                 >
                                                     <div>
@@ -316,7 +384,10 @@ export default function AgendaPage() {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => { }}>
+                                                                <DropdownMenuItem onClick={() => {
+                                                                    setSelectedAppointment(appointment)
+                                                                    setDetailsModalOpen(true)
+                                                                }}>
                                                                     <User className="w-4 h-4 mr-2" />
                                                                     Ver Detalhes
                                                                 </DropdownMenuItem>
@@ -381,10 +452,79 @@ export default function AgendaPage() {
             {/* Manual Appointment Modal */}
             <ManualAppointmentModal
                 open={manualAppointmentOpen}
-                onOpenChange={setManualAppointmentOpen}
+                onOpenChange={(open) => {
+                    setManualAppointmentOpen(open)
+                    if (!open) setSelectedAppointment(null)
+                }}
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}
+                appointmentToEdit={selectedAppointment}
             />
+
+            <AppointmentDetailsModal
+                appointment={selectedAppointment}
+                open={detailsModalOpen}
+                onOpenChange={setDetailsModalOpen}
+                onEdit={(apt) => {
+                    setSelectedAppointment(apt)
+                    setDetailsModalOpen(false)
+                    setManualAppointmentOpen(true)
+                }}
+            />
+
+            {/* Reschedule Confirmation Dialog */}
+            <Dialog open={rescheduleConfirmOpen} onOpenChange={setRescheduleConfirmOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Clock className="h-5 w-5 text-primary" />
+                            Confirmar Reagendamento
+                        </DialogTitle>
+                        <DialogDescription>
+                            Você está movendo o agendamento de <strong>{draggedAppointment?.patient.full_name}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {draggedAppointment && dropTarget && (
+                        <div className="py-4 space-y-4">
+                            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                <div className="text-sm">
+                                    <p className="text-muted-foreground">Original</p>
+                                    <p className="font-medium">
+                                        {format(new Date(draggedAppointment.appointment_date), "dd/MM 'às' ")}
+                                        {draggedAppointment.appointment_time.substring(0, 5)}
+                                    </p>
+                                </div>
+                                <div className="text-primary">➔</div>
+                                <div className="text-sm text-right">
+                                    <p className="text-muted-foreground">Novo Horário</p>
+                                    <p className="font-medium text-primary">
+                                        {format(dropTarget.date, "dd/MM 'às' ")}
+                                        {dropTarget.time}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-yellow-50 p-3 rounded-lg flex gap-3 border border-yellow-200">
+                                <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                                <p className="text-sm text-yellow-800">
+                                    O paciente receberá uma notificação sobre a alteração do horário.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRescheduleConfirmOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={() => rescheduleMutation.mutate()} disabled={rescheduleMutation.isPending}>
+                            {rescheduleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirmar Mudança
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

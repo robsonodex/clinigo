@@ -3,8 +3,7 @@ const nextConfig = {
     // Enable React strict mode for better development experience
     reactStrictMode: true,
 
-    // Enable standalone output for Docker optimization
-    output: 'standalone',
+
 
     // TypeScript strict mode - enforce type checking
     typescript: {

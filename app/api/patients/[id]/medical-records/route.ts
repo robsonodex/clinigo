@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic'
 // GET /api/patients/{id}/medical-records
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -16,7 +17,7 @@ export async function GET(
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
 
-        const patientId = params.id
+        const patientId = id
 
         const { data: records, error } = await supabase
             .from('medical_records')
@@ -33,7 +34,7 @@ export async function GET(
         updated_at,
         doctor:doctors(
           id,
-          user:users(name)
+          user:users(full_name)
         ),
         appointment:appointments(
           id,

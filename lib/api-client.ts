@@ -235,6 +235,8 @@ export interface Appointment {
     appointment_time: string
     status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
     video_link?: string
+    notes?: string
+    payment_type?: string
     doctor: Doctor
     patient: {
         id: string
@@ -246,6 +248,7 @@ export interface Appointment {
         id: string
         status: string
         amount: number
+        type?: string
     }
 }
 

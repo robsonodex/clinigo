@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check permissions
-        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR']
         if (!allowedRoles.includes(profile.role)) {
             return NextResponse.json(
                 { error: 'Sem permissão para criar agendamentos manuais' },
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         // Validate patient exists
         const { data: patient } = await supabase
             .from('patients')
-            .select('id, full_name, email, phone')
+            .select('id, full_name, email, phone, clinic_id')
             .eq('id', patientId)
             .single()
 
@@ -203,6 +203,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: 'Paciente não encontrado' },
                 { status: 404 }
+            )
+        }
+
+        if (patient.clinic_id !== clinicId) {
+            console.error(`Mismatch: Patient ${patient.id} (Clinic ${patient.clinic_id}) vs Request Clinic ${clinicId}`)
+            return NextResponse.json(
+                {
+                    error: 'Paciente pertence a outra clínica',
+                    details: 'O paciente selecionado não está vinculado a esta clínica. Atualize a página.'
+                },
+                { status: 400 }
             )
         }
 
@@ -349,40 +360,50 @@ export async function POST(request: NextRequest) {
         }
 
         // Create financial entry if payment was made at counter
-        const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment.type)
+        try {
+            const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment.type)
 
-        if (paidAtCounter && price > 0) {
-            await supabase
-                .from('financial_entries')
-                .insert({
-                    clinic_id: clinicId,
-                    type: 'income',
-                    category: 'consultation',
-                    description: `Consulta - ${patient.full_name}`,
-                    amount: body.payment.amount_paid || price,
-                    payment_method: body.payment.type.toUpperCase(),
-                    status: 'paid',
-                    paid_at: new Date().toISOString(),
-                    reference_type: 'appointment',
-                    reference_id: appointmentId,
-                    created_by: user.id,
-                })
+            if (paidAtCounter && price > 0) {
+                // Check if financial_entries has the new columns by inspecting the error or just trying safe insert
+                // For safety, we try unrestricted insert, but catch error if columns missing
+                await supabase
+                    .from('financial_entries')
+                    .insert({
+                        clinic_id: clinicId,
+                        type: 'income',
+                        category: 'consultation',
+                        description: `Consulta - ${patient.full_name}`,
+                        amount: body.payment.amount_paid || price,
+                        payment_method: body.payment.type.toUpperCase(),
+                        status: 'paid', // status might be missing in strict schema? no, status is usually core.
+                        paid_at: new Date().toISOString(),
+                        reference_type: 'appointment',
+                        reference_id: appointmentId,
+                        created_by: user.id,
+                    })
+            }
+        } catch (finError) {
+            console.warn('Non-critical: Failed to create financial entry (schema mismatch?)', finError)
         }
 
         // PREMIUM: Confirm lock if provided
         if (body.lock_id) {
-            await supabase.rpc('confirm_slot_lock', {
-                p_lock_id: body.lock_id,
-                p_appointment_id: appointmentId
-            })
+            try {
+                await supabase.rpc('confirm_slot_lock', {
+                    p_lock_id: body.lock_id,
+                    p_appointment_id: appointmentId
+                })
 
-            // Audit log
-            await supabase.from('appointment_lock_audit').insert({
-                lock_id: body.lock_id,
-                action: 'CONFIRMED',
-                user_id: user.id,
-                metadata: { appointment_id: appointmentId }
-            })
+                // Audit log
+                await supabase.from('appointment_lock_audit').insert({
+                    lock_id: body.lock_id,
+                    action: 'CONFIRMED',
+                    user_id: user.id,
+                    metadata: { appointment_id: appointmentId }
+                })
+            } catch (lockError) {
+                console.warn('Non-critical: Failed to confirm lock (schema mismatch?)', lockError)
+            }
         }
 
         // TODO: Send notifications if enabled

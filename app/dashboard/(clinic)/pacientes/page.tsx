@@ -117,7 +117,8 @@ export default function PacientesPage() {
                 if (response.status === 404) return []
                 throw new Error('Failed to fetch patients')
             }
-            return response.json()
+            const data = await response.json()
+            return data.patients || []
         },
     })
 

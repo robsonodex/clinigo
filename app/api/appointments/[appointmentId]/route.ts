@@ -3,7 +3,7 @@
  * PATCH /api/appointments/[appointmentId] - Update appointment
  */
 import { type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
@@ -18,7 +18,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
-        const supabase = await createClient() as any
+        // Use Service Role to bypass RLS, checking permissions manually below
+        const supabase = createServiceRoleClient() as any
 
         const { data: appointment, error } = await supabase
             .from('appointments')
@@ -36,7 +37,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .eq('id', appointmentId)
             .single()
 
-        if (error || !appointment) {
+        if (error) {
+            console.error('[GET Appointment] Database error:', error, 'ID:', appointmentId)
+        }
+
+        if (!appointment) {
+            console.error('[GET Appointment] Appointment not found. ID:', appointmentId)
             throw new NotFoundError('Agendamento')
         }
 
@@ -81,7 +87,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         const body = await request.json()
         const validatedData = updateAppointmentSchema.parse(body)
 
-        const supabase = await createClient() as any
+        // Use Service Role to bypass RLS, checking permissions manually below
+        const supabase = createServiceRoleClient() as any
 
         // Get appointment
         const { data: appointment, error: fetchError } = await supabase

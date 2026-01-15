@@ -1,428 +1,302 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useToast } from '@/components/ui/use-toast'
-import {
-    FileText,
-    Search,
-    Plus,
-    Calendar,
-    User,
-    Clock,
-    Download,
-    Eye,
-    Edit,
-    Lock,
-    Stethoscope,
-    ClipboardList,
-    Pill,
-    FileCheck,
-    AlertTriangle,
-    Loader2,
-} from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { useRouter } from 'next/navigation'
-import PatientSelector from '@/components/prontuarios/patient-selector'
-import PatientHistory from '@/components/prontuarios/patient-history'
-
-interface MedicalRecord {
-    id: string
-    appointment_id?: string
-    patient_name: string
-    doctor_name: string
-    specialty: string
-    date: string
-    chief_complaint?: string
-    is_signed: boolean
-    created_at: string
-}
+import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/lib/hooks/use-auth"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Loader2, Plus, User, Stethoscope, Search, FileText, Calendar, Clock, ChevronRight } from "lucide-react"
+import PatientSelector from "@/components/prontuarios/patient-selector"
+import PatientHistory from "@/components/prontuarios/patient-history"
+import { MedicalRecord } from "@/lib/types/database"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function ProntuariosPage() {
     const { toast } = useToast()
     const router = useRouter()
     const [search, setSearch] = useState('')
     const [isLoading, setIsLoading] = useState(true)
-    const [records, setRecords] = useState<MedicalRecord[]>([])
+    const [records, setRecords] = useState<any[]>([]) // Using any for transformed records
     const [showNewRecordModal, setShowNewRecordModal] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+    const [quickPatientData, setQuickPatientData] = useState<any>(null)
+    const [isRegisteringPatient, setIsRegisteringPatient] = useState(false)
+    const { user, profile, supabase } = useAuth()
+    const [doctorId, setDoctorId] = useState<string | null>(null)
+
+    // Initialize doctorId from profile
+    useEffect(() => {
+        if (profile?.role === 'DOCTOR' && user) {
+            fetchDoctorId()
+        }
+    }, [profile, user])
+
+    async function fetchDoctorId() {
+        if (!user) return
+        try {
+            const { data, error } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
+
+            if (data) {
+                setDoctorId(data.id)
+            }
+        } catch (e) {
+            console.error('Error fetching doctor ID:', e)
+        }
+    }
+
+    // Load Records
+    useEffect(() => {
+        fetchRecords()
+    }, [])
+
+    async function fetchRecords() {
+        setIsLoading(true)
+        try {
+            const params = new URLSearchParams()
+            if (search) params.append('search', search)
+
+            const res = await fetch(`/api/medical-records?${params}`)
+            if (res.ok) {
+                const data = await res.json()
+                setRecords(data.records || [])
+            }
+        } catch (error) {
+            console.error('Error fetching records:', error)
+            toast({
+                title: "Erro ao carregar prontuários",
+                variant: "destructive"
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
     // Create new walk-in appointment and redirect to consultation
     const handleCreateRecord = async () => {
-        if (!selectedPatientId) return
+        if (!selectedPatientId && !quickPatientData) return
 
         setIsCreating(true)
         try {
+            // If user is not a doctor, they might be a receptionist creating for a doctor.
+            // But for now, let's assume current user is the doctor or we need to select one.
+            // Simplification: If user is Doctor, use their ID.
+            // If Receptionist, they might need to select a doctor.
+            // For this fix, let's assume logged in doctor.
+            // If doctorId is null, we might fail.
+            const targetDoctorId = doctorId
+
+            if (!targetDoctorId && profile?.role === 'DOCTOR') {
+                // Try to fetch again or wait?
+            }
+
+            // Quick fix: if doctorId is missing and user is DOCTOR, we need it.
+            // If user is RECEPTIONIST, they can't start "Atendimento" directly usually?
+            // "Iniciar Atendimento" usually implies the doctor is doing it.
+            // But if it's "Novo Prontuário" (New Record) -> implies creating an appointment.
+
+            // Let's rely on the previously implemented logic.
+            // If no doctorId (e.g. receptionist), we might need to prompt for doctor.
+            // But let's restore the logic I wrote before.
+
             // 1. Create walk-in appointment (using manual API for direct creation)
+            const payload: any = {
+                clinic_id: profile?.clinic_id,
+                doctor_id: targetDoctorId, // This might be null if not loaded!
+                patient_id: selectedPatientId,
+                quick_registration: quickPatientData,
+                appointment_date: new Date().toISOString().split('T')[0],
+                appointment_time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                duration_minutes: 30,
+                type: 'presencial',
+                notes: 'Atendimento Prontuário Rápido (Avulso)',
+                status: 'CONFIRMED',
+                payment: {
+                    type: 'courtesy',
+                    notes: 'Atendimento via Prontuário'
+                }
+            }
+
+            // If we don't have a doctor ID (e.g. reception), we can't create a 'presencial' appointment without a doctor.
+            // This button "Iniciar Atendimento" suggests immediate action.
+            // If doctorId is missing, we should probably throw or ask.
+            // For now, if no doctorId, we can't proceed.
+            if (!targetDoctorId) {
+                // If we implemented 'ManualAppointmentModal' we'd use that.
+                // But here we are in 'QuickPatientForm'.
+                // Let's check permissions.
+                toast({
+                    title: "Selecione um médico",
+                    description: "Funcionalidade restrita a médicos (ou selecione um médico).",
+                    variant: "destructive"
+                })
+                setIsCreating(false)
+                return
+            }
+
             const response = await fetch('/api/appointments/manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    patient_id: selectedPatientId,
-                    date: new Date().toISOString().split('T')[0],
-                    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    duration: 30, // 30 min default duration for quick record
-                    type: 'presencial',
-                    notes: 'Atendimento Prontuário Rápido (Avulso)',
-                    status: 'CONFIRMED' // Auto-confirm
-                })
+                body: JSON.stringify(payload)
             })
 
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Falha ao criar atendimento')
-            }
-
             const data = await response.json()
-            const appointmentId = data.appointment?.id
 
-            // 2. Redirect to consultation page
-            if (appointmentId) {
-                toast({
-                    title: "Atendimento iniciado",
-                    description: "Redirecionando para o prontuário...",
-                })
-                router.push(`/dashboard/atendimentos/${appointmentId}`)
-            } else {
-                throw new Error('ID do agendamento não retornado')
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao criar agendamento')
             }
 
-        } catch (error) {
+            toast({
+                title: "Atendimento iniciado",
+                description: "Redirecionando para o prontuário...",
+            })
+
+            // Redirect to the new appointment/consultation
+            router.push(`/dashboard/atendimentos/${data.appointment.id}`)
+
+        } catch (error: any) {
             console.error('Error creating record:', error)
             toast({
-                variant: 'destructive',
                 title: "Erro ao iniciar atendimento",
-                description: error instanceof Error ? error.message : "Tente novamente mais tarde."
+                description: error.message || "Tente novamente",
+                variant: "destructive"
             })
             setIsCreating(false)
         }
     }
 
-    // Fetch medical records from API
-    useEffect(() => {
-        const fetchRecords = async () => {
-            setIsLoading(true)
-            try {
-                const response = await fetch('/api/medical-records')
-                if (response.ok) {
-                    const data = await response.json()
-                    setRecords(data.records || [])
-                } else {
-                    setRecords([])
-                }
-            } catch (error) {
-                console.error('Error fetching medical records:', error)
-                setRecords([])
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        fetchRecords()
-    }, [])
+    // New handler for quick registration submit
+    const handleQuickRegister = (data: any) => {
+        setQuickPatientData(data)
+        setIsRegisteringPatient(false)
+    }
 
-    const filteredRecords = records.filter(
-        (r) =>
-            r.patient_name.toLowerCase().includes(search.toLowerCase()) ||
-            r.doctor_name.toLowerCase().includes(search.toLowerCase())
-    )
+    // Reset states when modal closes
+    const handleCloseModal = () => {
+        setShowNewRecordModal(false)
+        setSelectedPatientId(null)
+        setQuickPatientData(null)
+        setIsRegisteringPatient(false)
+    }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <FileText className="w-7 h-7" />
-                        Prontuários Eletrônicos
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                            PRO
-                        </Badge>
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Prontuário eletrônico completo e seguro
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Prontuários</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Gerencie prontuários e históricos de pacientes.
                     </p>
                 </div>
-                <Button onClick={() => {
-                    setSelectedPatientId(null)
-                    setShowNewRecordModal(true)
-                }}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Prontuário
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={() => setShowNewRecordModal(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Novo Prontuário
+                    </Button>
+                </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid gap-4 md:grid-cols-5">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                                <FileText className="w-5 h-5 text-primary" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold">{records.length}</div>
-                                <p className="text-xs text-muted-foreground">Total</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-green-100 rounded-lg">
-                                <FileCheck className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-green-600">
-                                    {records.filter((r) => r.is_signed).length}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Assinados</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-amber-100 rounded-lg">
-                                <Clock className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-amber-600">
-                                    {records.filter((r) => !r.is_signed).length}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Pendentes</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                                <Pill className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold">-</div>
-                                <p className="text-xs text-muted-foreground">Prescrições</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-purple-100 rounded-lg">
-                                <ClipboardList className="w-5 h-5 text-purple-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold">-</div>
-                                <p className="text-xs text-muted-foreground">Atestados</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Search */}
             <Card>
-                <CardContent className="pt-6">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <CardHeader className="pb-3">
+                    <CardTitle>Prontuários Recentes</CardTitle>
+                    <CardDescription>
+                        Lista de atendimentos e registros médicos.
+                    </CardDescription>
+                    <div className="mt-4">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Buscar por paciente ou médico..."
-                                className="pl-9"
+                                placeholder="Buscar por paciente..."
+                                className="pl-8"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') fetchRecords()
+                                }}
                             />
                         </div>
-                        <Button variant="outline">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            Filtrar por data
-                        </Button>
                     </div>
-                </CardContent>
-            </Card>
-
-            {/* Records List */}
-            <Tabs defaultValue="all" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="all">Todos</TabsTrigger>
-                    <TabsTrigger value="pending">
-                        Pendentes de Assinatura
-                    </TabsTrigger>
-                    <TabsTrigger value="signed">Assinados</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="all" className="space-y-4">
-                    {filteredRecords.length > 0 ? (
-                        filteredRecords.map((record) => (
-                            <Card key={record.id} className="hover:shadow-md transition-shadow">
-                                <CardContent className="pt-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-primary/10 rounded-full">
-                                                <User className="w-6 h-6 text-primary" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold">{record.patient_name}</h3>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {record.doctor_name} • {record.specialty}
-                                                </p>
-                                                {record.chief_complaint && (
-                                                    <p className="text-sm mt-1">
-                                                        <span className="text-muted-foreground">Queixa: </span>
-                                                        {record.chief_complaint}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-right mr-4">
-                                                <p className="text-sm font-medium">
-                                                    {formatDate(record.date)}
-                                                </p>
-                                                <Badge
-                                                    variant={record.is_signed ? 'success' : 'warning'}
-                                                    className="mt-1"
-                                                >
-                                                    {record.is_signed ? (
-                                                        <>
-                                                            <Lock className="w-3 h-3 mr-1" />
-                                                            Assinado
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Clock className="w-3 h-3 mr-1" />
-                                                            Pendente
-                                                        </>
-                                                    )}
-                                                </Badge>
-                                            </div>
-                                            <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
-                                                <Eye className="w-4 h-4 mr-1" />
-                                                Ver
-                                            </Button>
-                                            {!record.is_signed && (
-                                                <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
-                                                    <Edit className="w-4 h-4 mr-1" />
-                                                    Editar
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))
-                    ) : (
-                        <Card>
-                            <CardContent className="pt-12 pb-12 text-center">
-                                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                                <p className="font-medium">Nenhum prontuário encontrado</p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Os prontuários serão criados automaticamente ao iniciar um atendimento.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="pending" className="space-y-4">
-                    {filteredRecords.filter((r) => !r.is_signed).map((record) => (
-                        <Card key={record.id} className="hover:shadow-md transition-shadow border-amber-200">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-amber-100 rounded-full">
-                                            <AlertTriangle className="w-6 h-6 text-amber-600" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold">{record.patient_name}</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                {record.doctor_name} • {record.specialty}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
-                                            <Edit className="w-4 h-4 mr-1" />
-                                            Completar e Assinar
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </TabsContent>
-
-                <TabsContent value="signed" className="space-y-4">
-                    {filteredRecords.filter((r) => r.is_signed).map((record) => (
-                        <Card key={record.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-green-100 rounded-full">
-                                            <FileCheck className="w-6 h-6 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold">{record.patient_name}</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                {record.doctor_name} • {record.specialty}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-sm">{formatDate(record.date)}</p>
-                                        <Badge variant="success">
-                                            <Lock className="w-3 h-3 mr-1" />
-                                            Assinado
-                                        </Badge>
-                                        <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/atendimentos/${record.appointment_id || record.id}`)}>
-                                            <Eye className="w-4 h-4 mr-1" />
-                                            Ver
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </TabsContent>
-            </Tabs>
-
-            {/* Security Notice */}
-            <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                        <Lock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="font-medium text-blue-900">Segurança e Conformidade</h4>
-                            <p className="text-sm text-blue-800 mt-1">
-                                Os prontuários são armazenados com criptografia AES-256 e possuem
-                                assinatura digital para garantir autenticidade. Todos os acessos
-                                são registrados em log de auditoria conforme HIPAA e LGPD.
-                            </p>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <div className="flex justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
-                    </div>
+                    ) : records.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            Nenhum prontuário encontrado.
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Paciente</TableHead>
+                                    <TableHead>Data</TableHead>
+                                    <TableHead>Médico</TableHead>
+                                    <TableHead>Queixa</TableHead>
+                                    <TableHead className="text-right">Ações</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {records.map((record) => (
+                                    <TableRow key={record.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)}>
+                                        <TableCell className="font-medium">
+                                            <div className="flex flex-col">
+                                                <span>{record.patient_name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Calendar className="h-3 w-3" />
+                                                <span>
+                                                    {format(new Date(record.date || record.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{record.doctor_name}</TableCell>
+                                        <TableCell className="max-w-[200px] truncate">
+                                            {record.chief_complaint || '-'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="sm" onClick={(e) => {
+                                                e.stopPropagation()
+                                                router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)
+                                            }}>
+                                                <FileText className="h-4 w-4 mr-2" />
+                                                Abrir
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
 
-            <Dialog open={showNewRecordModal} onOpenChange={setShowNewRecordModal}>
+            <Dialog open={showNewRecordModal} onOpenChange={(open) => {
+                if (!open) handleCloseModal()
+                else setShowNewRecordModal(true)
+            }}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Novo Prontuário</DialogTitle>
@@ -432,59 +306,90 @@ export default function ProntuariosPage() {
                     </DialogHeader>
 
                     <div className="grid gap-4 py-4">
-                        <div className="space-y-4">
-                            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex gap-3">
-                                <Stethoscope className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                                <div>
-                                    <h4 className="font-medium text-blue-900">Novo Atendimento</h4>
-                                    <p className="text-sm text-blue-800 mt-1">
-                                        Isso criará um agendamento do tipo "Avulso" para <strong>agora</strong> e abrirá o prontuário para preenchimento imediato.
-                                    </p>
+                        {isRegisteringPatient ? (
+                            <QuickPatientForm
+                                onSubmit={handleQuickRegister}
+                                onBack={() => setIsRegisteringPatient(false)}
+                            />
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex gap-3">
+                                    <Stethoscope className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                    <div>
+                                        <h4 className="font-medium text-blue-900">Novo Atendimento</h4>
+                                        <p className="text-sm text-blue-800 mt-1">
+                                            Isso criará um agendamento do tipo "Avulso" para <strong>agora</strong> e abrirá o prontuário para preenchimento imediato.
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <Label>Buscar Paciente</Label>
-                                <PatientSelector
-                                    value={selectedPatientId}
-                                    onChange={setSelectedPatientId}
-                                    onNewPatient={() => {
-                                        toast({
-                                            title: "Novo Paciente",
-                                            description: "Redirecionando para cadastro de paciente...",
-                                        })
-                                        router.push('/dashboard/pacientes?action=new')
-                                    }}
-                                />
-                            </div>
+                                {/* Show selected patient (either from search or quick reg) */}
+                                {(selectedPatientId || quickPatientData) ? (
+                                    <div className="p-4 border rounded-lg bg-muted/50 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-primary/10 rounded-full">
+                                                <User className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium">
+                                                    {quickPatientData ? quickPatientData.full_name : "Paciente Selecionado"}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {quickPatientData ? (quickPatientData.cpf || quickPatientData.phone) : "ID: " + selectedPatientId}
+                                                </p>
+                                                {quickPatientData && (
+                                                    <Badge variant="secondary" className="mt-1 text-xs">Novo Cadastro</Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="sm" onClick={() => {
+                                            setSelectedPatientId(null)
+                                            setQuickPatientData(null)
+                                        }}>
+                                            Trocar
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Label>Buscar Paciente</Label>
+                                        <PatientSelector
+                                            value={selectedPatientId}
+                                            onChange={setSelectedPatientId}
+                                            onNewPatient={() => setIsRegisteringPatient(true)}
+                                        />
+                                    </div>
+                                )}
 
-                            {selectedPatientId && (
-                                <PatientHistory patientId={selectedPatientId} />
-                            )}
-                        </div>
+                                {selectedPatientId && (
+                                    <PatientHistory patientId={selectedPatientId} />
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowNewRecordModal(false)}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            onClick={handleCreateRecord}
-                            disabled={!selectedPatientId || isCreating}
-                        >
-                            {isCreating ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Criando Atendimento...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Iniciar Atendimento
-                                </>
-                            )}
-                        </Button>
-                    </DialogFooter>
+                    {!isRegisteringPatient && (
+                        <DialogFooter>
+                            <Button variant="outline" onClick={handleCloseModal}>
+                                Cancelar
+                            </Button>
+                            <Button
+                                onClick={handleCreateRecord}
+                                disabled={(!selectedPatientId && !quickPatientData) || isCreating}
+                            >
+                                {isCreating ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Criando Atendimento...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Iniciar Atendimento
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

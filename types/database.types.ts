@@ -32,6 +32,9 @@ export interface Database {
           public_page_settings: Json | null
           created_at: string
           updated_at: string
+          subscription_due_date?: string | null
+          last_payment_date?: string | null
+          payment_status?: string | null
         }
         Insert: {
           id?: string
@@ -50,6 +53,9 @@ export interface Database {
           public_page_settings?: Json | null
           created_at?: string
           updated_at?: string
+          subscription_due_date?: string | null
+          last_payment_date?: string | null
+          payment_status?: string | null
         }
         Update: Partial<Database['public']['Tables']['clinics']['Insert']>
       }
@@ -193,6 +199,41 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['payments']['Insert']>
       }
+      financial_entries: {
+        Row: {
+          id: string
+          clinic_id: string
+          type: 'income' | 'expense'
+          category: string
+          description: string
+          amount: number
+          payment_method: string | null
+          status: 'pending' | 'paid' | 'cancelled'
+          paid_at: string | null
+          reference_type: string | null
+          reference_id: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          type: 'income' | 'expense'
+          category: string
+          description: string
+          amount: number
+          payment_method?: string | null
+          status?: 'pending' | 'paid' | 'cancelled'
+          paid_at?: string | null
+          reference_type?: string | null
+          reference_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['financial_entries']['Insert']>
+      }
       schedules: {
         Row: {
           id: string
@@ -228,6 +269,10 @@ export interface Database {
           diagnosis: string | null
           prescription: string | null
           notes: string | null
+          chief_complaint: string | null
+          present_illness: string | null
+          physical_exam: string | null
+          treatment_plan: string | null
           created_at: string
           updated_at: string
         }
@@ -240,6 +285,10 @@ export interface Database {
           diagnosis?: string | null
           prescription?: string | null
           notes?: string | null
+          chief_complaint?: string | null
+          present_illness?: string | null
+          physical_exam?: string | null
+          treatment_plan?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -305,6 +354,70 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['api_keys']['Insert']>
       }
+      import_jobs: {
+        Row: {
+          id: string
+          clinic_id: string
+          import_type: string
+          status: string
+          file_url: string
+          total_rows: number
+          processed_rows: number
+          successful_rows: number
+          failed_rows: number
+          validation_errors: Json | null
+          processing_errors: Json | null
+          field_mapping: Json | null
+          started_at: string | null
+          completed_at: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          import_type: string
+          status?: string
+          file_url: string
+          total_rows?: number
+          processed_rows?: number
+          successful_rows?: number
+          failed_rows?: number
+          validation_errors?: Json | null
+          processing_errors?: Json | null
+          field_mapping?: Json | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['import_jobs']['Insert']>
+      },
+      import_logs: {
+        Row: {
+          id: string
+          import_job_id: string
+          row_number: number
+          action: string
+          entity_id: string | null
+          error_message: string | null
+          row_data: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          import_job_id: string
+          row_number: number
+          action: string
+          entity_id?: string | null
+          error_message?: string | null
+          row_data?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['import_logs']['Insert']>
+      },
       consultations: {
         Row: {
           id: string
@@ -368,6 +481,94 @@ export interface Database {
           created_at?: string
         },
         Update: Partial<Database['public']['Tables']['consultation_ai_analyses']['Insert']>
+      },
+      clinic_automation_configs: {
+        Row: {
+          id: string
+          clinic_id: string
+          automation_type: string
+          is_enabled: boolean
+          config: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          automation_type: string
+          is_enabled?: boolean
+          config?: Json
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['clinic_automation_configs']['Insert']>
+      }
+      appointment_slot_locks: {
+        Row: {
+          id: string
+          doctor_id: string
+          slot_datetime: string
+          locked_by: string
+          lock_status: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          doctor_id: string
+          slot_datetime: string
+          locked_by: string
+          lock_status?: string
+          expires_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['appointment_slot_locks']['Insert']>
+      }
+      appointment_lock_audit: {
+        Row: {
+          id: string
+          lock_id: string
+          action: string
+          user_id: string
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lock_id: string
+          action: string
+          user_id: string
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['appointment_lock_audit']['Insert']>
+      }
+      doctor_health_insurances: {
+        Row: {
+          id: string
+          doctor_id: string
+          health_insurance_plan_id: string
+          consultation_price: number
+          accepts_new_patients: boolean
+          notes: string | null
+          status: string
+          deleted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          doctor_id: string
+          health_insurance_plan_id: string
+          consultation_price?: number
+          accepts_new_patients?: boolean
+          notes?: string | null
+          status?: string
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['doctor_health_insurances']['Insert']>
       }
     },
     Views: {

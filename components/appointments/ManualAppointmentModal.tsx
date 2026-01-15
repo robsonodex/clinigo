@@ -87,6 +87,7 @@ interface ManualAppointmentModalProps {
     preselectedDate?: string
     preselectedTime?: string
     preselectedDoctorId?: string
+    appointmentToEdit?: any // Typed as any to avoid circular deps for now, but should be Appointment
 }
 
 export function ManualAppointmentModal({
@@ -95,12 +96,16 @@ export function ManualAppointmentModal({
     preselectedDate,
     preselectedTime,
     preselectedDoctorId,
+    appointmentToEdit,
 }: ManualAppointmentModalProps) {
     const queryClient = useQueryClient()
     const [step, setStep] = useState<'search' | 'register' | 'form'>('search')
     const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null)
     const [quickRegistration, setQuickRegistration] = useState<any>(null)
     const [showScheduleWarning, setShowScheduleWarning] = useState(false)
+
+    // Check if we are in edit mode
+    const isEditing = !!appointmentToEdit
 
     // Form
     const form = useForm<ManualAppointmentFormData>({
@@ -118,16 +123,48 @@ export function ManualAppointmentModal({
         },
     })
 
-    const { watch, setValue, handleSubmit, formState: { errors } } = form
+    const { watch, setValue, handleSubmit, reset, formState: { errors } } = form
     const selectedDoctorId = watch('doctor_id')
     const paymentType = watch('payment_type') as ManualPaymentType
+
+    // Initial setup for edit mode
+    useEffect(() => {
+        if (open && appointmentToEdit) {
+            setStep('form')
+            setSelectedPatient({
+                id: appointmentToEdit.patient.id,
+                full_name: appointmentToEdit.patient.full_name,
+                phone: appointmentToEdit.patient.phone,
+                // other fields map as needed
+            } as any)
+
+            reset({
+                doctor_id: appointmentToEdit.doctor_id,
+                appointment_date: appointmentToEdit.appointment_date,
+                appointment_time: appointmentToEdit.appointment_time,
+                duration_minutes: 30, // Default or calc from end_time
+                type: appointmentToEdit.video_link ? 'telemedicina' : 'presencial',
+                payment_type: appointmentToEdit.payment?.payment_method || 'cash',
+                notes: appointmentToEdit.notes || '',
+                send_sms: false, // Don't resend by default on edit
+                send_whatsapp: false,
+                send_email: false,
+                ignore_schedule_constraints: true, // Assume valid if existing
+            })
+        } else if (open && !appointmentToEdit) {
+            // Reset for create mode
+            if (preselectedDate) setValue('appointment_date', preselectedDate)
+            if (preselectedTime) setValue('appointment_time', preselectedTime)
+            if (preselectedDoctorId) setValue('doctor_id', preselectedDoctorId)
+        }
+    }, [open, appointmentToEdit, preselectedDate, preselectedTime, preselectedDoctorId, reset, setValue])
 
     // Fetch doctors with caching
     const { data: doctors, isLoading: doctorsLoading } = useQuery({
         queryKey: ['doctors-for-manual'],
         queryFn: () => api.get<Doctor[]>('/doctors'),
         enabled: open,
-        staleTime: 5 * 60 * 1000, // 5 minutes - doctors rarely change
+        staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     })
 
@@ -135,17 +172,11 @@ export function ManualAppointmentModal({
     const selectedDoctor = doctors?.find(d => d.id === selectedDoctorId)
     const price = selectedDoctor?.consultation_price || 0
 
-    // Set preselected doctor
-    useEffect(() => {
-        if (preselectedDoctorId && open) {
-            setValue('doctor_id', preselectedDoctorId)
-        }
-    }, [preselectedDoctorId, open, setValue])
-
-    // Create appointment mutation
-    const { mutate: createAppointment, isPending } = useMutation({
+    // Create/Update appointment mutation
+    const { mutate: saveAppointment, isPending } = useMutation({
         mutationFn: async (data: ManualAppointmentFormData) => {
             const payload = {
+                // ... payload construction
                 patient_id: selectedPatient?.id,
                 quick_registration: quickRegistration,
                 doctor_id: data.doctor_id,
@@ -171,21 +202,30 @@ export function ManualAppointmentModal({
                 notes: data.notes,
             }
 
-            const response = await fetch('/api/appointments/manual', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            })
+            let response;
+            if (isEditing && appointmentToEdit) {
+                response = await fetch(`/api/appointments/${appointmentToEdit.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+            } else {
+                response = await fetch('/api/appointments/manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+            }
 
             if (!response.ok) {
                 const error = await response.json()
-                throw new Error(error.error || 'Erro ao criar agendamento')
+                throw new Error(error.error || 'Erro ao salvar agendamento')
             }
 
             return response.json()
         },
         onSuccess: () => {
-            toast.success('Agendamento criado com sucesso!')
+            toast.success(isEditing ? 'Agendamento atualizado!' : 'Agendamento criado com sucesso!')
             queryClient.invalidateQueries({ queryKey: ['appointments'] })
             handleClose()
         },
@@ -226,12 +266,12 @@ export function ManualAppointmentModal({
     }
 
     const onSubmit = (data: ManualAppointmentFormData) => {
-        if (!selectedPatient && !quickRegistration) {
+        if (!selectedPatient && !quickRegistration && !isEditing) {
             toast.error('Selecione ou cadastre um paciente')
             setStep('search')
             return
         }
-        createAppointment(data)
+        saveAppointment(data)
     }
 
     // Generate time slots

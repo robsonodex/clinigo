@@ -8,8 +8,7 @@ import { Notification } from '@/types/notification'
 import { toast } from 'sonner'
 
 export function useNotifications() {
-    const { user } = useAuth()
-    const supabase = createClient()
+    const { user, supabase } = useAuth()
     const queryClient = useQueryClient()
 
     // Fetch notifications

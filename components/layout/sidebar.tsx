@@ -41,6 +41,8 @@ import {
     Activity,
     TrendingUp,
     ShieldAlert,
+    Upload,
+    Bot,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
@@ -262,6 +264,30 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/termos',
                 icon: Scale,
                 roles: ['CLINIC_ADMIN'],
+            },
+            {
+                title: 'Importação',
+                href: '/dashboard/importacao',
+                icon: Upload,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
+                title: 'Automação',
+                href: '/dashboard/automacao',
+                icon: Bot,
+                roles: ['CLINIC_ADMIN'],
+                children: [
+                    {
+                        title: 'Painel',
+                        href: '/dashboard/automacao',
+                        icon: Bot,
+                    },
+                    {
+                        title: 'Configurações',
+                        href: '/dashboard/automacao/configuracoes',
+                        icon: Settings,
+                    }
+                ]
             },
         ],
     },

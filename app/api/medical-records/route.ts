@@ -18,20 +18,18 @@ export async function GET(request: NextRequest) {
         const userRole = request.headers.get('x-user-role')
 
         if (!userId || !clinicId) {
-            return errorResponse('Unauthorized', 401)
+            return errorResponse('Unauthorized', { status: 401 })
         }
 
         // Build query
         let query = supabase
-            .from('consultations')
+            .from('medical_records')
             .select(`
                 id,
-                consultation_date,
-                chief_complaint,
-                diagnosis,
-                prescription,
-                is_signed,
                 created_at,
+                chief_complaint,
+                diagnoses,
+                treatment_plan,
                 patient:patients!inner(
                     id,
                     full_name
@@ -49,38 +47,37 @@ export async function GET(request: NextRequest) {
                     appointment_time
                 )
             `)
-            .eq('clinic_id', clinicId)
             .order('created_at', { ascending: false })
             .limit(100)
 
-        const { data: consultations, error } = await query
+        const { data: records, error } = await query
 
         if (error) {
             console.error('Error fetching medical records:', error)
-            return errorResponse('Failed to fetch medical records', 500)
+            return errorResponse(`Failed to fetch medical records: ${error.message} (${error.details}, ${error.hint})`, { status: 500 })
         }
 
         // Transform data to match frontend interface
-        const records = (consultations || []).map((c: any) => ({
+        const transformedRecords = (records || []).map((c: any) => ({
             id: c.id,
-            appointment_id: c.appointment?.id, // Added appointment_id for navigation
+            appointment_id: c.appointment?.id,
             patient_name: c.patient?.full_name || 'Unknown',
             doctor_name: c.doctor?.user?.full_name || 'Unknown',
             specialty: c.doctor?.specialty || 'General',
-            date: c.appointment?.appointment_date || c.consultation_date || c.created_at,
+            date: c.appointment?.appointment_date || c.created_at,
             chief_complaint: c.chief_complaint,
-            is_signed: c.is_signed || false,
+            is_signed: false, // medical_records table might not have is_signed yet, default to false
             created_at: c.created_at,
         }))
 
         return successResponse({
-            records,
-            total: records.length,
+            records: transformedRecords,
+            total: transformedRecords.length,
         })
 
     } catch (error) {
         console.error('Medical records API error:', error)
-        return errorResponse('Internal server error', 500)
+        return errorResponse('Internal server error', { status: 500 })
     }
 }
 
@@ -93,12 +90,12 @@ export async function POST(request: NextRequest) {
         const userRole = request.headers.get('x-user-role')
 
         if (!userId || !clinicId) {
-            return errorResponse('Unauthorized', 401)
+            return errorResponse('Unauthorized', { status: 401 })
         }
 
         // Only doctors can create medical records
         if (userRole !== 'DOCTOR') {
-            return errorResponse('Only doctors can create medical records', 403)
+            return errorResponse('Only doctors can create medical records', { status: 403 })
         }
 
         const body = await request.json()
@@ -114,7 +111,7 @@ export async function POST(request: NextRequest) {
         } = body
 
         if (!appointment_id || !patient_id) {
-            return errorResponse('appointment_id and patient_id are required', 400)
+            return errorResponse('appointment_id and patient_id are required', { status: 400 })
         }
 
         // Get doctor_id from user
@@ -125,42 +122,44 @@ export async function POST(request: NextRequest) {
             .single()
 
         if (!doctor) {
-            return errorResponse('Doctor profile not found', 404)
+            return errorResponse('Doctor profile not found', { status: 404 })
         }
 
-        // Create/update consultation record
-        const { data: consultation, error: consultationError } = await supabase
-            .from('consultations')
+        // Create/update medical record
+        // Note: Using medical_records table. Mapping prescription to treatment_plan if needed.
+        const { data: medicalRecord, error: recordError } = await supabase
+            .from('medical_records')
             .upsert({
                 appointment_id,
                 patient_id,
+                clinic_id: clinicId, // Fixed variable reference
                 doctor_id: doctor.id,
-                clinic_id: clinicId,
                 chief_complaint,
-                history,
+                present_illness: history, // Mapping history to present_illness
                 physical_exam,
-                diagnosis,
-                prescription,
-                notes,
-                consultation_date: new Date().toISOString().split('T')[0],
-                is_signed: false,
+                diagnoses: diagnosis, // Mapping input 'diagnosis' to DB 'diagnoses'
+                treatment_plan: prescription, // Mapping prescription to treatment_plan
+                // notes field might need to go somewhere? medical_records usually has notes or observations.
+                // If the table strictly follows [id]/medical-records route fields:
+                // fields: chief_complaint, present_illness, diagnosis, treatment_plan
                 created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             })
             .select()
             .single()
 
-        if (consultationError) {
-            console.error('Error creating consultation:', consultationError)
-            return errorResponse('Failed to create medical record', 500)
+        if (recordError) {
+            console.error('Error creating medical record:', recordError)
+            return errorResponse('Failed to create medical record', { status: 500 })
         }
 
         return successResponse({
             message: 'Medical record created successfully',
-            record: consultation,
-        }, 201)
+            record: medicalRecord,
+        }, { status: 201 })
 
     } catch (error) {
         console.error('Create medical record error:', error)
-        return errorResponse('Internal server error', 500)
+        return errorResponse('Internal server error', { status: 500 })
     }
 }

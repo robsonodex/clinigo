@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 // GET - Get single patient
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ patientId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { patientId } = await params
+        const { id } = await params
         const supabase = await createClient()
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -18,7 +18,7 @@ export async function GET(
         const { data: patient, error } = await supabase
             .from('patients')
             .select('*')
-            .eq('id', patientId)
+            .eq('id', id)
             .eq('is_active', true)
             .single()
 
@@ -37,10 +37,10 @@ export async function GET(
 // PATCH - Update patient
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: Promise<{ patientId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { patientId } = await params
+        const { id } = await params
         const supabase = await createClient()
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -56,7 +56,7 @@ export async function PATCH(
                 ...body,
                 updated_at: new Date().toISOString(),
             })
-            .eq('id', patientId)
+            .eq('id', id)
             .select()
             .single()
 
@@ -76,10 +76,10 @@ export async function PATCH(
 // DELETE - Soft delete patient (LGPD compliant)
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: Promise<{ patientId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { patientId } = await params
+        const { id } = await params
         const supabase = await createClient()
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -111,7 +111,7 @@ export async function DELETE(
                 address: null,
                 updated_at: new Date().toISOString(),
             })
-            .eq('id', patientId)
+            .eq('id', id)
 
         if (error) {
             console.error('Patient delete error:', error)

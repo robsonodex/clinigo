@@ -8,7 +8,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/components/ui/use-toast'
 
 export interface SlotLockUpdate {
@@ -38,7 +38,7 @@ export function useRealtimeSlotLocks({
 
     const [activeLocks, setActiveLocks] = useState<SlotLockUpdate[]>([])
     const { toast } = useToast()
-    const supabase = createClient()
+    const { supabase } = useAuth()
 
     useEffect(() => {
         // Fetch initial active locks
@@ -79,7 +79,6 @@ export function useRealtimeSlotLocks({
                     toast({
                         title: '📌 Horário reservado',
                         description: `${new Date(lock.slot_datetime).toLocaleString('pt-BR')} - por outro usuário`,
-                        duration: 3000,
                     })
                 }
             )
@@ -105,7 +104,6 @@ export function useRealtimeSlotLocks({
                                 toast({
                                     title: '✅ Agendamento confirmado',
                                     description: `${new Date(lock.slot_datetime).toLocaleString('pt-BR')}`,
-                                    duration: 2000,
                                 })
                             }
 
