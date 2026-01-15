@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Use clinic from profile or body
-        const clinicId = body.clinic_id || profile.clinic_id
+        // Use clinic from profile (safer) unless SUPER_ADMIN overriding it
+        const clinicId = profile.role === 'SUPER_ADMIN' ? (body.clinic_id || profile.clinic_id) : profile.clinic_id
 
         // Validate doctor belongs to clinic
         const { data: doctor } = await supabase

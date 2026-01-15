@@ -1,10 +1,8 @@
 -- ==========================================
--- FIX DEMO DATA ALIGNMENT
+-- FIX DEMO DATA ALIGNMENT (UPDATED)
 -- ==========================================
--- Purpose: Fix "Patient does not belong to this clinic" errors by ensuring
--- all demo data points to the active 'demo' clinic.
--- This handles cases where the demo setup was run multiple times, leaving 
--- orphaned records or IDs from deleted clinics.
+-- Purpose: Fix "Patient does not belong to this clinic" and "404 Not Found" errors.
+-- Ensures all demo data (Patients, Appointments, Medical Records) belongs to the active 'demo' clinic.
 
 DO $$
 DECLARE
@@ -47,7 +45,15 @@ BEGIN
         )
         AND clinic_id != v_demo_clinic_id;
 
-        -- 6. Update Financial Entries
+        -- 6. Update Medical Records [NEW: Critical for 500/404 errors]
+        UPDATE medical_records
+        SET clinic_id = v_demo_clinic_id
+        WHERE patient_id IN (
+            SELECT id FROM patients WHERE clinic_id = v_demo_clinic_id
+        )
+        AND clinic_id != v_demo_clinic_id;
+
+        -- 7. Update Financial Entries
         UPDATE financial_entries
         SET clinic_id = v_demo_clinic_id
         WHERE created_by IN (
@@ -55,7 +61,7 @@ BEGIN
         )
         AND clinic_id != v_demo_clinic_id;
 
-        RAISE NOTICE 'Data alignment complete.';
+        RAISE NOTICE 'Data alignment complete. All demo data now belongs to Clinic %', v_demo_clinic_id;
     ELSE
         RAISE WARNING 'No clinic found with slug=demo';
     END IF;
