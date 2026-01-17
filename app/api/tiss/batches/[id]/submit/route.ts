@@ -16,9 +16,10 @@ const submitSchema = z.object({
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id: batch_id } = await params;
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -37,7 +38,8 @@ export async function POST(
             .eq('id', user.id)
             .single();
 
-        if (!profile?.clinic_id) {
+        const userProfile = profile as { clinic_id: string; role: string } | null;
+        if (!userProfile?.clinic_id) {
             return NextResponse.json(
                 { success: false, error: 'Clínica não encontrada' },
                 { status: 403 }
@@ -45,26 +47,26 @@ export async function POST(
         }
 
         // Verificar permissão
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN') {
+        if (userProfile.role !== 'CLINIC_ADMIN' && userProfile.role !== 'SUPER_ADMIN') {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para enviar lotes' },
                 { status: 403 }
             );
         }
 
-        const batch_id = params.id;
-
         // Parse body
         const body = await request.json();
         const validated = submitSchema.parse(body);
 
         // Buscar lote
-        const { data: batch } = await supabase
+        const { data: batchData } = await supabase
             .from('tiss_batches')
             .select('status, xml_file_url')
             .eq('id', batch_id)
-            .eq('clinic_id', profile.clinic_id)
+            .eq('clinic_id', userProfile.clinic_id)
             .single();
+
+        const batch = batchData as { status: string; xml_file_url: string | null } | null;
 
         if (!batch) {
             return NextResponse.json(
@@ -90,8 +92,8 @@ export async function POST(
         }
 
         // Atualizar lote
-        const { data: updatedBatch, error: updateError } = await supabase
-            .from('tiss_batches')
+        const { data: updatedBatch, error: updateError } = await (supabase
+            .from('tiss_batches') as any)
             .update({
                 status: 'SENT',
                 submission_date: validated.submission_date || new Date().toISOString().split('T')[0],
@@ -113,8 +115,8 @@ export async function POST(
         }
 
         // Atualizar status das guias
-        await supabase
-            .from('tiss_guides')
+        await (supabase
+            .from('tiss_guides') as any)
             .update({ status: 'SENT', sent_at: new Date().toISOString() })
             .eq('batch_id', batch_id)
             .eq('status', 'PENDING');

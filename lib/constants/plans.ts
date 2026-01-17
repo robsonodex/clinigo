@@ -1,6 +1,7 @@
 /**
- * Plan Definitions and Configuration - RJ Market
- * 5-Tier Structure: Starter, Básico, Profissional, Enterprise, Network
+ * Plan Definitions - CliniGo B2B
+ * 4-Tier Structure: CliniGO Consultório, Clínica, Centro Clínico, Rede Enterprise
+ * Maps to database: STARTER, BASIC, PROFESSIONAL, ENTERPRISE
  */
 
 export type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
@@ -25,6 +26,7 @@ export interface PlanConfig {
     tagline: string
     price: number
     priceLabel: string
+    priceExtra?: string
     billing: string
     recommended?: boolean
     features: PlanFeature[]
@@ -36,61 +38,26 @@ export interface PlanConfig {
 export const PLANS: Record<PlanType, PlanConfig> = {
     STARTER: {
         id: 'STARTER',
-        name: 'Starter',
-        tagline: 'Para médicos autônomos iniciantes',
-        price: 47,
-        priceLabel: 'R$ 47',
+        name: 'CliniGo Básico',
+        tagline: 'Para consultórios com até 2 médicos',
+        price: 149,
+        priceLabel: 'R$ 149',
         billing: 'por mês',
         features: [
-            { name: '1 médico', included: true },
-            { name: 'Até 50 consultas/mês', included: true },
-            { name: 'Agendamento online básico', included: true },
-            { name: 'Prontuário simplificado', included: true },
-            { name: 'IA - Resumo básico', included: true, tooltip: 'Modelo gratuito para resumos' },
-            { name: 'Suporte por email', included: true },
-            { name: 'Teleconsulta', included: false },
-            { name: 'WhatsApp', included: false },
-            { name: 'Financeiro', included: false },
-            { name: 'Relatórios', included: false },
-        ],
-        limits: {
-            max_doctors: 1,
-            max_appointments_month: 50,
-            max_patients: 100,
-            max_storage_gb: 1,
-            max_units: 1,
-        },
-        color: 'gray',
-        badgeColor: 'bg-gray-100 text-gray-800',
-    },
-    BASIC: {
-        id: 'BASIC',
-        name: 'Básico',
-        tagline: 'Para consultórios pequenos',
-        price: 87,
-        priceLabel: 'R$ 87',
-        billing: 'por mês',
-        features: [
-            { name: 'Até 3 médicos', included: true },
-            { name: 'Até 200 consultas/mês', included: true },
-            { name: 'Agendamento online completo', included: true },
-            { name: 'Check-in QR Code simples', included: true },
-            { name: 'Prontuário básico', included: true },
-            { name: 'IA - Resumo simples', included: true, tooltip: 'Modelo básico para resumos' },
-            { name: 'Teleconsulta Google Meet', included: true, tooltip: 'Link externo' },
+            { name: 'Até 2 médicos', included: true },
+            { name: 'Check-in QR Code', included: true, tooltip: 'Paciente apresenta QR na recepção' },
+            { name: 'Prontuário eletrônico', included: true },
+            { name: 'Teleconsulta integrada', included: true },
             { name: 'WhatsApp manual', included: true, tooltip: 'Sistema gera link, você envia' },
+            { name: 'SMTP próprio', included: true, tooltip: 'Configure seu servidor de email' },
             { name: 'Financeiro básico', included: true },
             { name: 'Relatórios básicos', included: true },
-            { name: 'Suporte 24/7', included: true },
-            { name: 'IA com Reasoning', included: false },
-            { name: 'Vídeo integrado', included: false },
-            { name: 'WhatsApp automação', included: false },
-            { name: 'CRM', included: false },
-            { name: 'TISS', included: false },
+            { name: 'Agenda anti-overbooking', included: true },
+            { name: 'Suporte padrão', included: true },
         ],
         limits: {
-            max_doctors: 3,
-            max_appointments_month: 200,
+            max_doctors: 2,
+            max_appointments_month: 100,
             max_patients: 500,
             max_storage_gb: 5,
             max_units: 1,
@@ -98,115 +65,131 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         color: 'blue',
         badgeColor: 'bg-blue-100 text-blue-800',
     },
-    PROFESSIONAL: {
-        id: 'PROFESSIONAL',
-        name: 'Profissional',
-        tagline: 'Para clínicas em crescimento',
-        price: 247,
-        priceLabel: 'R$ 247',
+    BASIC: {
+        id: 'BASIC',
+        name: 'CliniGo Avançado',
+        tagline: 'Para clínicas com até 5 médicos',
+        price: 299,
+        priceLabel: 'R$ 299',
         billing: 'por mês',
         recommended: true,
         features: [
-            { name: 'Até 10 médicos', included: true },
-            { name: 'Consultas ilimitadas', included: true },
-            { name: 'Tudo do Básico +', included: true },
+            { name: 'Até 5 médicos', included: true },
+            { name: 'Tudo do Consultório +', included: true },
             { name: 'Check-in avançado + Upload', included: true, tooltip: 'Upload de docs pré-consulta' },
             { name: 'Prontuário completo', included: true },
-            { name: 'IA com Reasoning', included: true, tooltip: 'Claude/GPT-4o com raciocínio' },
-            { name: 'Teleconsulta WebRTC integrada', included: true, tooltip: 'Vídeo HD nativo' },
-            { name: 'WhatsApp automação completa', included: true, tooltip: 'Envios automáticos 24h antes' },
+            { name: 'Teleconsulta WebRTC', included: true },
+            { name: 'WhatsApp automação', included: true, tooltip: 'Envios automáticos 24h antes' },
+            { name: 'SMTP próprio', included: true },
             { name: 'CRM completo', included: true },
-            { name: 'Integração TISS', included: true },
             { name: 'Financeiro completo', included: true },
             { name: 'Relatórios avançados', included: true },
-            { name: 'Marketplace público', included: true, tooltip: 'Perfil visível + agendamento' },
-            { name: 'Suporte 24/7 prioritário', included: true },
-            { name: 'Migração gratuita', included: true },
-            { name: 'Multi-unidade', included: false },
-            { name: 'API dedicada', included: false },
-            { name: 'White-label', included: false },
+            { name: 'Suporte prioritário', included: true },
         ],
         limits: {
-            max_doctors: 10,
-            max_appointments_month: -1, // unlimited
+            max_doctors: 5,
+            max_appointments_month: 500,
             max_patients: -1,
-            max_storage_gb: 50,
+            max_storage_gb: 20,
             max_units: 1,
         },
         color: 'emerald',
         badgeColor: 'bg-emerald-100 text-emerald-800',
     },
-    ENTERPRISE: {
-        id: 'ENTERPRISE',
-        name: 'Enterprise',
-        tagline: 'Para clínicas estabelecidas',
-        price: 497,
-        priceLabel: 'R$ 497',
+    PROFESSIONAL: {
+        id: 'PROFESSIONAL',
+        name: 'CliniGo Professional',
+        tagline: 'Para centros com até 30 médicos',
+        price: 549,
+        priceLabel: 'R$ 549',
         billing: 'por mês',
         features: [
             { name: 'Até 30 médicos', included: true },
             { name: 'Consultas ilimitadas', included: true },
-            { name: 'Tudo do Profissional +', included: true },
+            { name: 'Tudo do Clínica +', included: true },
             { name: 'Até 3 unidades', included: true },
             { name: 'Prontuário multi-unidade', included: true },
-            { name: 'IA Preditiva', included: true, tooltip: 'Análise preditiva de diagnósticos' },
-            { name: 'WhatsApp Chatbot', included: true, tooltip: 'IA conversacional' },
-            { name: 'Integrações Labs RJ', included: true, tooltip: 'Sérgio Franco, Richet' },
-            { name: 'DataSUS/e-SUS', included: true, tooltip: 'Integração com sistema público' },
+            { name: 'Faturamento TISS', included: true },
+            { name: 'SMTP próprio', included: true },
             { name: 'API dedicada', included: true },
-            { name: 'BI multi-filiais', included: true },
-            { name: 'Gerente de conta', included: true },
+            { name: 'BI e relatórios gerenciais', included: true },
             { name: 'SLA 99.5%', included: true },
             { name: 'Onboarding personalizado', included: true },
-            { name: 'White-label total', included: false },
-            { name: 'Unidades ilimitadas', included: false },
+            { name: 'Suporte 24/7', included: true },
         ],
         limits: {
             max_doctors: 30,
             max_appointments_month: -1,
             max_patients: -1,
-            max_storage_gb: 200,
+            max_storage_gb: 100,
             max_units: 3,
         },
         color: 'purple',
         badgeColor: 'bg-purple-100 text-purple-800',
     },
-    NETWORK: {
-        id: 'NETWORK',
-        name: 'Network',
-        tagline: 'Para redes multi-unidade',
-        price: 997,
-        priceLabel: 'R$ 997',
+    ENTERPRISE: {
+        id: 'ENTERPRISE',
+        name: 'CliniGo Enterprise',
+        tagline: 'Para redes com médicos ilimitados',
+        price: 799,
+        priceLabel: 'A partir de R$ 799',
+        priceExtra: 'Médicos sob contrato',
         billing: 'por mês',
         features: [
-            { name: 'Médicos ilimitados', included: true },
-            { name: 'Consultas ilimitadas', included: true },
-            { name: 'Tudo do Enterprise +', included: true },
+            { name: 'Médicos ilimitados', included: true, tooltip: 'Quantidade conforme contrato' },
+            { name: 'Tudo do Centro Clínico +', included: true },
             { name: 'Unidades ilimitadas', included: true },
-            { name: 'White-label total', included: true, tooltip: 'Sua marca em tudo' },
-            { name: 'IA Preditiva + Treinamento', included: true, tooltip: 'Modelo personalizado' },
-            { name: 'Teleconsulta white-label', included: true },
-            { name: 'Customização completa', included: true },
-            { name: 'Integrações customizadas', included: true },
-            { name: 'SLA garantido 99.9%', included: true },
-            { name: 'Suporte VIP 24/7', included: true },
-            { name: 'Consultoria estratégica', included: true },
-            { name: 'Migração + consultoria', included: true },
+            { name: 'SMTP próprio', included: true },
+            { name: 'Migração dedicada', included: true, tooltip: 'Equipe exclusiva' },
+            { name: 'Atendimento direto', included: true },
+            { name: 'Ajustes sob demanda', included: true },
+            { name: 'Consultoria de implantação', included: true },
+            { name: 'Treinamento presencial', included: true },
+            { name: 'SLA garantido 99.5%', included: true },
+            { name: 'Gerente de conta dedicado', included: true },
         ],
         limits: {
-            max_doctors: -1, // unlimited
+            max_doctors: -1,
             max_appointments_month: -1,
             max_patients: -1,
-            max_storage_gb: 1000,
+            max_storage_gb: 500,
             max_units: -1,
         },
         color: 'amber',
         badgeColor: 'bg-amber-100 text-amber-800',
     },
+    // Hidden - legacy compatibility only, NOT shown in UI
+    NETWORK: {
+        id: 'NETWORK',
+        name: 'Legacy Network',
+        tagline: 'Plano descontinuado',
+        price: 999,
+        priceLabel: 'R$ 999',
+        billing: 'por mês',
+        features: [
+            { name: 'Migrado para Enterprise', included: true },
+        ],
+        limits: {
+            max_doctors: -1,
+            max_appointments_month: -1,
+            max_patients: -1,
+            max_storage_gb: 1000,
+            max_units: -1,
+        },
+        color: 'gray',
+        badgeColor: 'bg-gray-100 text-gray-800',
+    },
 }
 
-// Plan hierarchy (lowest to highest)
-export const PLAN_ORDER: PlanType[] = ['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK']
+// Plans shown in UI - only 4 active plans
+export const DISPLAY_PLANS: PlanConfig[] = [
+    PLANS.STARTER,
+    PLANS.BASIC,
+    PLANS.PROFESSIONAL,
+    PLANS.ENTERPRISE,
+]
+
+export const PLAN_ORDER: PlanType[] = ['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE']
 
 export const PLAN_LEVEL: Record<PlanType, number> = {
     STARTER: 1,
@@ -221,7 +204,7 @@ export function getPlanConfig(planType: PlanType): PlanConfig {
 }
 
 export function getRecommendedPlan(): PlanConfig {
-    return PLANS.PROFESSIONAL
+    return PLANS.BASIC
 }
 
 export function isPlanAtLeast(currentPlan: PlanType, requiredPlan: PlanType): boolean {
@@ -232,12 +215,16 @@ export function canUpgradeTo(currentPlan: PlanType, targetPlan: PlanType): boole
     return PLAN_LEVEL[targetPlan] > PLAN_LEVEL[currentPlan]
 }
 
-// Legacy compatibility - map old 3-tier to new 5-tier
 export function migrateLegacyPlan(legacyPlan: string): PlanType {
     const mapping: Record<string, PlanType> = {
+        'STARTER': 'STARTER',
         'BASIC': 'BASIC',
+        'PROFESSIONAL': 'PROFESSIONAL',
+        'ENTERPRISE': 'ENTERPRISE',
+        'NETWORK': 'ENTERPRISE', // Migrate NETWORK to ENTERPRISE
         'PRO': 'PROFESSIONAL',
-        'ENTERPRISE': 'NETWORK',
     }
     return mapping[legacyPlan] || 'STARTER'
 }
+
+export const TRIAL_DAYS = 7

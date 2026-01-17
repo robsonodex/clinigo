@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Save, CreditCard, Building, ShieldCheck, Zap } from 'lucide-react'
+import { Save, CreditCard, Building, ShieldCheck, Zap, Mail } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { uploadClinicLogo } from '@/app/actions/white-label'
 import { Sparkles } from 'lucide-react'
 import { PlanAndBilling } from './components/PlanAndBilling'
+import { SMTPSettings } from './components/SMTPSettings'
 
 // ... existing code ...
 
@@ -26,6 +27,12 @@ const clinicSettingsSchema = z.object({
     address: z.string().min(5, 'Endereço muito curto'),
     primary_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Cor inválida'),
     logo_url: z.string().optional().nullable(),
+    whatsapp_number: z.string()
+        .optional()
+        .refine(
+            (val) => !val || /^55\d{10,11}$/.test(val.replace(/\D/g, '')),
+            'Formato inválido. Use: 5511999999999'
+        ),
 })
 
 type ClinicSettingsData = z.infer<typeof clinicSettingsSchema>
@@ -49,6 +56,7 @@ export default function SettingsPage() {
             phone: '(11) 99999-9999',
             address: 'Av. Paulista, 1000 - São Paulo, SP',
             primary_color: '#3b82f6',
+            whatsapp_number: '',
         },
     })
 
@@ -104,9 +112,13 @@ export default function SettingsPage() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+                <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
                     <TabsTrigger value="general">Informações Gerais</TabsTrigger>
                     <TabsTrigger value="plan">Plano e Assinatura</TabsTrigger>
+                    <TabsTrigger value="smtp" className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        E-mail (SMTP)
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="mt-6">
@@ -215,6 +227,22 @@ export default function SettingsPage() {
                                             <p className="text-xs text-destructive">{errors.phone.message}</p>
                                         )}
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="whatsapp_number">WhatsApp da Clínica</Label>
+                                        <Input
+                                            id="whatsapp_number"
+                                            {...register('whatsapp_number')}
+                                            placeholder="5511999999999"
+                                            maxLength={13}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Formato: 55 + DDD + Número. Usado nos botões de compartilhamento WhatsApp.
+                                        </p>
+                                        {errors.whatsapp_number && (
+                                            <p className="text-xs text-destructive">{errors.whatsapp_number.message}</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -238,6 +266,10 @@ export default function SettingsPage() {
 
                 <TabsContent value="plan" className="mt-6">
                     <PlanAndBilling />
+                </TabsContent>
+
+                <TabsContent value="smtp" className="mt-6">
+                    <SMTPSettings />
                 </TabsContent>
             </Tabs>
         </div>

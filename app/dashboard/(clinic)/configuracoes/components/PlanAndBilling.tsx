@@ -33,28 +33,28 @@ interface ClinicData {
 
 const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: string[] }> = {
     STARTER: {
-        name: 'Starter',
-        price: 0,
-        features: ['Até 2 médicos', 'Agendamentos básicos'],
+        name: 'CliniGo Básico',
+        price: 149,
+        features: ['Até 2 médicos', '100 agendamentos/mês', 'Prontuário eletrônico'],
     },
     BASIC: {
-        name: 'Básico',
-        price: 147,
-        features: ['Até 5 médicos', 'Teleconsultas', 'Agenda online'],
+        name: 'CliniGo Avançado',
+        price: 299,
+        features: ['Até 5 médicos', '500 agendamentos/mês', 'CRM e Estoque', 'Teleconsulta'],
     },
     PROFESSIONAL: {
-        name: 'Profissional',
-        price: 297,
-        features: ['Até 10 médicos', 'Prontuário eletrônico', 'WhatsApp', 'Relatórios'],
+        name: 'CliniGo Professional',
+        price: 549,
+        features: ['Até 30 médicos', 'Até 3 unidades', 'TISS completo', 'API dedicada'],
     },
     ENTERPRISE: {
-        name: 'Enterprise',
-        price: 597,
-        features: ['Médicos ilimitados', 'Todas funcionalidades', 'Suporte prioritário'],
+        name: 'CliniGo Enterprise',
+        price: 799,
+        features: ['Médicos ilimitados', 'Unidades ilimitadas', 'Suporte dedicado'],
     },
     NETWORK: {
-        name: 'Network',
-        price: 997,
+        name: 'CliniGo Network',
+        price: 999,
         features: ['Multi-clínica', 'Dashboard consolidado', 'API completa'],
     },
 }
@@ -115,7 +115,7 @@ export function PlanAndBilling() {
         )
     }
 
-    const planDetails = PLAN_DETAILS[clinic.plan_type]
+    const planDetails = PLAN_DETAILS[clinic.plan_type] || PLAN_DETAILS.STARTER
     const daysUntilExpiration = clinic.subscription_due_date
         ? Math.ceil((new Date(clinic.subscription_due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
         : null
@@ -180,9 +180,18 @@ export function PlanAndBilling() {
                         ))}
                     </div>
 
-                    {/* Payment Button */}
+                    {/* Payment/Upgrade Section */}
                     <div className="pt-4 border-t">
-                        {clinic.plan_type !== 'STARTER' && planDetails.price > 0 && (
+                        {/* Plano ativo e válido: mostrar mensagem de tudo OK */}
+                        {clinic.payment_status === 'ACTIVE' && daysUntilExpiration !== null && daysUntilExpiration > 7 && (
+                            <p className="text-sm text-green-600 flex items-center gap-2">
+                                <Check className="w-4 h-4" />
+                                Sua assinatura está em dia. Próximo vencimento em {daysUntilExpiration} dias.
+                            </p>
+                        )}
+
+                        {/* Plano vencendo em breve: botão de renovar */}
+                        {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && planDetails.price > 0 && (
                             <Button onClick={handlePayment} disabled={generatePayment.isPending} className="w-full md:w-auto">
                                 {generatePayment.isPending ? (
                                     <>
@@ -191,16 +200,34 @@ export function PlanAndBilling() {
                                     </>
                                 ) : (
                                     <>
-                                        <CreditCard className="w-4 h-4 mr-2" />
-                                        Pagar Assinatura (R$ {planDetails.price})
+                                        <Clock className="w-4 h-4 mr-2" />
+                                        Renovar Assinatura (R$ {planDetails.price})
                                     </>
                                 )}
                             </Button>
                         )}
 
+                        {/* Plano vencido: botão de reativar */}
+                        {(daysUntilExpiration === null || daysUntilExpiration <= 0) && clinic.payment_status !== 'ACTIVE' && planDetails.price > 0 && (
+                            <Button onClick={handlePayment} disabled={generatePayment.isPending} variant="destructive" className="w-full md:w-auto">
+                                {generatePayment.isPending ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Gerando pagamento...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CreditCard className="w-4 h-4 mr-2" />
+                                        Reativar Assinatura (R$ {planDetails.price})
+                                    </>
+                                )}
+                            </Button>
+                        )}
+
+                        {/* Plano Starter: informação sobre upgrade */}
                         {clinic.plan_type === 'STARTER' && (
                             <p className="text-sm text-muted-foreground">
-                                Você está no plano gratuito. Entre em contato para fazer upgrade.
+                                Você está no plano gratuito. <a href="/planos" className="text-primary underline">Veja nossos planos</a> para fazer upgrade.
                             </p>
                         )}
                     </div>

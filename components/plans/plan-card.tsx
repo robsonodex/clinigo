@@ -36,12 +36,11 @@ export function PlanCard({
             href={ctaLink}
             className={cn(
                 buttonVariants({
-                    variant: selected ? 'default' : plan.recommended ? 'default' : 'outline',
+                    variant: 'outline',
                     size: 'lg',
                 }),
-                'w-full',
-                selected && `bg-${plan.color}-600 hover:bg-${plan.color}-700`,
-                plan.recommended && !selected && 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                'w-full transition-all duration-300',
+                selected && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 scale-105'
             )}
         >
             {ctaText || 'Escolher Plano'}
@@ -49,27 +48,31 @@ export function PlanCard({
     ) : (
         <Button
             onClick={onSelect}
-            variant={selected ? 'default' : plan.recommended ? 'default' : 'outline'}
+            variant="outline"
             size="lg"
             className={cn(
-                'w-full',
-                selected && `bg-${plan.color}-600 hover:bg-${plan.color}-700`,
-                plan.recommended && !selected && 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                'w-full transition-all duration-300',
+                selected && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 scale-105'
             )}
         >
-            {ctaText || (selected ? 'Selecionado' : 'Escolher Plano')}
+            {ctaText || (selected ? '✓ Selecionado' : 'Escolher Plano')}
         </Button>
     )
 
     return (
         <Card
             className={cn(
-                'relative transition-all duration-300 hover:shadow-lg flex flex-col',
-                selected && 'ring-2 ring-offset-2',
-                selected && `ring-${plan.color}-500`,
-                plan.recommended && 'border-2 border-emerald-500',
+                'relative flex flex-col cursor-pointer',
+                'transition-all duration-300 ease-in-out',
+                'hover:shadow-lg hover:-translate-y-1',
+                'border-2',
+                selected
+                    ? 'ring-2 ring-offset-2 ring-emerald-500 border-emerald-500 shadow-xl scale-[1.02]'
+                    : 'border-border hover:border-emerald-300',
+                plan.recommended && !selected && 'border-emerald-400',
                 className
             )}
+            onClick={onSelect}
         >
             {/* Recommended Badge */}
             {plan.recommended && (

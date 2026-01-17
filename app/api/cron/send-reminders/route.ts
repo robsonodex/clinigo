@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendReminderEmail } from '@/lib/services/email'
-import { sendWhatsAppMessage, WhatsAppTemplates } from '@/lib/services/whatsapp'
+// WhatsApp API removida - usar compartilhamento manual via WhatsAppShareButton
 import { formatDate } from '@/lib/utils'
 
 // Force Node.js runtime for nodemailer support
@@ -19,9 +19,8 @@ export async function GET(request: Request) {
     const supabase = await createClient() // createClient in recent Next.js helpers might be async
     const now = new Date()
     const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-    const in1Hour = new Date(now.getTime() + 60 * 60 * 1000)
 
-    // Lembretes de 24h
+    // Lembretes de 24h - Apenas e-mail (WhatsApp agora é compartilhamento manual)
     const { data: appointments24h } = await supabase
         .from('appointments')
         .select('*, doctor:doctors(*), patient:patients(*)')
@@ -31,17 +30,11 @@ export async function GET(request: Request) {
         .is('reminder_24h_sent', null)
 
     for (const appointment of appointments24h || []) {
+        // Enviar apenas e-mail - WhatsApp requer compartilhamento manual pelo staff
         await sendReminderEmail(appointment, 24)
-        await sendWhatsAppMessage({
-            to: appointment.patient.phone,
-            template: WhatsAppTemplates.REMINDER_24H,
-            variables: {
-                '1': appointment.patient.full_name,
-                '2': appointment.doctor.full_name,
-                '3': formatDate(appointment.appointment_date),
-                '4': appointment.appointment_time,
-            }
-        })
+
+        // Log para referência: staff pode compartilhar manualmente via WhatsApp
+        console.log(`[Reminder] E-mail de lembrete 24h enviado para ${appointment.patient?.email}. WhatsApp pode ser compartilhado manualmente.`)
 
         await supabase
             .from('appointments')

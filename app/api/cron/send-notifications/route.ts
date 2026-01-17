@@ -206,30 +206,21 @@ async function handleFailure(supabase: any, notificationId: string, errorMessage
     }
 }
 
-// Send WhatsApp notification
+// Send WhatsApp notification - API REMOVIDA
+// Agora apenas loga que compartilhamento manual é necessário
 async function sendWhatsAppNotification(item: NotificationItem, checkinUrl?: string): Promise<boolean> {
-    try {
-        // Use new WhatsApp adapter with clinic-specific configuration
-        const { sendWhatsAppMessage } = await import('@/lib/services/whatsapp-adapter')
+    // WhatsApp API foi removida - clínicas devem usar compartilhamento manual
+    // O botão WhatsAppShareButton na UI permite compartilhar via wa.me
+    const message = buildMessage(item, checkinUrl)
 
-        const message = buildMessage(item, checkinUrl)
+    console.log(`[WhatsApp] API removida - compartilhamento manual necessário`)
+    console.log(`[WhatsApp] Destinatário: ${item.recipient_phone}`)
+    console.log(`[WhatsApp] Mensagem que seria enviada:`, message)
+    console.log(`[WhatsApp] Use WhatsAppShareButton para compartilhar manualmente`)
 
-        const result = await sendWhatsAppMessage(item.clinic_id, {
-            to: item.recipient_phone!,
-            message,
-            templateId: item.template_id || undefined,
-            templateData: item.template_data,
-        })
-
-        return result.success
-    } catch (error: any) {
-        // If WhatsApp service doesn't exist, log and simulate success for dev
-        if (error.message?.includes('Cannot find module')) {
-            console.log(`[WhatsApp Simulation] Would send to ${item.recipient_phone}:`, buildMessage(item, checkinUrl))
-            return true // Simulate success in development
-        }
-        throw error
-    }
+    // Retorna false para indicar que não foi enviado automaticamente
+    // O sistema pode marcar como "MANUAL_PENDING" se necessário
+    return false
 }
 
 // Send Email notification
@@ -252,11 +243,13 @@ async function sendEmailNotification(item: NotificationItem, checkinUrl?: string
     }
 }
 
-// Send SMS notification
+// Send SMS notification - REMOVIDO
+// SMS nunca foi implementado, era apenas mock
 async function sendSmsNotification(item: NotificationItem, checkinUrl?: string): Promise<boolean> {
-    // SMS implementation placeholder
-    console.log(`[SMS] Would send to ${item.recipient_phone}:`, buildMessage(item, checkinUrl))
-    return true
+    console.log(`[SMS] Funcionalidade removida - era apenas mock`)
+    console.log(`[SMS] Destinatário: ${item.recipient_phone}`)
+    console.log(`[SMS] Use e-mail ou compartilhamento manual via WhatsApp`)
+    return false
 }
 
 // Build message based on notification type

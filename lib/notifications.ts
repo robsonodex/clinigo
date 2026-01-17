@@ -1,11 +1,10 @@
-import { sendWhatsAppMessage, WhatsAppTemplates } from '@/lib/services/whatsapp';
 import { sendMail } from '@/lib/services/mail-service'; // Direct simple mail
 import { sendReminderEmail } from '@/lib/services/email'; // React-email structured
 
 export const NotificationChannels = {
     EMAIL: 'EMAIL',
-    WHATSAPP: 'WHATSAPP',
-    SMS: 'SMS'
+    WHATSAPP: 'WHATSAPP', // Legacy - agora usa compartilhamento manual
+    SMS: 'SMS' // Removido - usar compartilhamento manual
 };
 
 export interface ReminderContext {
@@ -16,44 +15,26 @@ export interface ReminderContext {
 }
 
 /**
- * Adapter to send WhatsApp reminders using existing templates
+ * WhatsApp - API removida, usar compartilhamento manual via wa.me
+ * @deprecated Use WhatsAppShareButton component for manual sharing
+ * @see lib/utils/whatsapp-share.ts for URL generation
  */
-export async function sendWhatsApp(to: string, context: ReminderContext, type: 'REMINDER_24H' | 'REMINDER_2H' | 'REMINDER_15MIN') {
-    // Map cron type to available templates
-    let template = WhatsAppTemplates.APPOINTMENT_CONFIRMED; // Fallback
+export async function sendWhatsApp(
+    to: string,
+    context: ReminderContext,
+    type: 'REMINDER_24H' | 'REMINDER_2H' | 'REMINDER_15MIN'
+) {
+    // API WhatsApp removida - clínicas devem usar compartilhamento manual
+    console.log(`[WhatsApp] API removida - compartilhamento manual necessário para: ${to}, tipo: ${type}`);
+    console.log(`[WhatsApp] Paciente: ${context.patient?.full_name}, Consulta: ${context.appointment?.scheduled_at}`);
 
-    if (type === 'REMINDER_24H') {
-        template = WhatsAppTemplates.REMINDER_24H;
-    } else if (type === 'REMINDER_2H') {
-        template = WhatsAppTemplates.REMINDER_1H; // Best match
-    } else {
-        // 15 min reminder might not have a template, maybe skip or use generic
-        // For now, let's treat it as a generic reminder or skip strictly if strict compliance is needed.
-        // Given the user wants "Robust", let's fail gracefully if no template matches exactly or reuse 1H with different vars if possible.
-        // Actually, looking at whatsapp.ts, we only have REMINDER_24H and REMINDER_1H.
-        // We will skip WhatsApp for 15min to avoid policy violations, or use 1H if the text allows generic interpretation.
-        if (type === 'REMINDER_15MIN') throw new Error('No WhatsApp template for 15min');
-    }
-
-    // Map variables based on template requirements
-    // Assuming standard 1-N variable mapping as seen in whatsapp.ts services
-    // We need to check exact variable slots for each template, but for now we'll do a best-effort mapping
-    // typically: 1: patient, 2: doctor, 3: date, 4: time
-
-    const variables = {
-        '1': context.patient.full_name.split(' ')[0], // First name usually
-        '2': context.doctor.full_name,
-        '3': new Date(context.appointment.scheduled_at).toLocaleDateString('pt-BR'),
-        '4': new Date(context.appointment.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        '5': context.clinic.name
+    // Retorna sucesso para não quebrar fluxos existentes
+    // mas indica que compartilhamento manual é necessário
+    return {
+        success: false,
+        reason: 'MANUAL_SHARING_REQUIRED',
+        message: 'WhatsApp API removida. Use o botão de compartilhamento manual.'
     };
-
-    return await sendWhatsAppMessage({
-        clinicId: context.clinic.id,
-        to,
-        template,
-        variables
-    });
 }
 
 /**

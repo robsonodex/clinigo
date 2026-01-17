@@ -8,6 +8,7 @@ import { handleApiError, ForbiddenError, BadRequestError } from '@/lib/utils/err
 import { successResponse, paginatedResponse, parsePaginationParams, buildPaginatedData } from '@/lib/utils/responses'
 import { createDoctorSchema, listDoctorsQuerySchema } from '@/lib/validations/doctor'
 import { sendWelcomeEmail, isEmailConfigured } from '@/lib/services/email'
+import { PLANS, type PlanType } from '@/lib/constants/plans'
 
 // Force Node.js runtime for nodemailer support
 export const runtime = 'nodejs'
@@ -219,19 +220,19 @@ export async function POST(request: NextRequest) {
             .select('*', { count: 'exact', head: true })
             .eq('clinic_id', clinicId as any)
 
-        const baseMaxDoctors = ((clinic as any)?.plan_limits as { max_doctors?: number })?.max_doctors || 1
+        // Usar limites do banco, ou fallback para configuração do plans.ts
+        const planType = (clinic as any).plan_type as PlanType
+        const planConfig = PLANS[planType] || PLANS.STARTER
+        const dbMaxDoctors = ((clinic as any)?.plan_limits as { max_doctors?: number })?.max_doctors
+        const baseMaxDoctors = dbMaxDoctors !== undefined && dbMaxDoctors !== null ? dbMaxDoctors : planConfig.limits.max_doctors
         const extraDoctors = ((clinic as any)?.addons as { extra_doctors?: number })?.extra_doctors || 0
-        const totalMaxDoctors = baseMaxDoctors + extraDoctors
+        const totalMaxDoctors = baseMaxDoctors === -1 ? -1 : baseMaxDoctors + extraDoctors
 
-        // Special validation for BASIC plan (max 3 doctors)
-        if ((clinic as any).plan_type === 'BASIC' && baseMaxDoctors !== 3) {
-            console.warn('[PLAN MISMATCH] BASIC plan should have max_doctors=3, found:', baseMaxDoctors)
-        }
-
-        if ((doctorCount || 0) >= totalMaxDoctors) {
-            const planName = (clinic as any).plan_type === 'BASIC' ? 'Básico' : (clinic as any).plan_type === 'PRO' ? 'Profissional' : 'Enterprise'
+        // -1 significa ilimitado, não verificar limite
+        if (totalMaxDoctors !== -1 && (doctorCount || 0) >= totalMaxDoctors) {
+            const planName = planConfig.name
             throw new BadRequestError(
-                `Limite de médicos atingido (${baseMaxDoctors} médicos no plano ${planName}${extraDoctors ? ` + ${extraDoctors} extras` : ''}). ${(clinic as any).plan_type === 'BASIC' ? 'Faça upgrade para o plano Profissional (15 médicos).' : 'Adicione médicos extras ou faça upgrade.'}`
+                `Limite de médicos atingido (${baseMaxDoctors === -1 ? 'ilimitado' : baseMaxDoctors} médicos no plano ${planName}). Faça upgrade ou adicione médicos extras.`
             )
         }
 

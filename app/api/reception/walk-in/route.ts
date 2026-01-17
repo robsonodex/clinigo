@@ -4,6 +4,7 @@ import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/midd
 import { log } from '@/lib/logger'
 import { walkInPatientSchema } from '@/lib/validations/reception'
 import { withRateLimit } from '@/lib/rate-limit'
+import { generateQRToken, generateWhatsAppShareUrl, generateCheckinUrl } from '@/lib/utils/qr-code'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
         const { patient_id, doctor_id, urgency_level, reason } = validationResult.data
 
         // Create walk-in registration
-        const { data: walkIn, error } = await supabase
+        const { data: walkInResult, error } = await supabase
             .from('walk_in_registrations')
             .insert({
                 patient_id,
@@ -60,9 +61,11 @@ export async function POST(request: Request) {
       `)
             .single()
 
-        if (error) {
+        const walkIn = walkInResult as any
+
+        if (error || !walkIn) {
             log.error('Error creating walk-in', { error, userId: user.id })
-            return NextResponse.json({ error: error.message }, { status: 500 })
+            return NextResponse.json({ error: error?.message || 'Failed to create walk-in' }, { status: 500 })
         }
 
         // Audit log the walk-in registration
@@ -72,9 +75,28 @@ export async function POST(request: Request) {
             doctor_id
         })
 
+        // Generate QR Code data
+        const qrToken = generateQRToken(walkIn.id)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'
+        const checkinUrl = generateCheckinUrl(baseUrl, walkIn.id)
+
+        const whatsappLink = generateWhatsAppShareUrl({
+            clinicName: 'CliniGo', // Ideal: Fetch clinic name
+            doctorName: (walkIn as any).doctor?.user?.name || 'Clínico Geral',
+            appointmentDate: new Date().toISOString(),
+            appointmentTime: new Date().toLocaleTimeString(),
+            appointmentId: walkIn.id,
+            baseUrl
+        })
+
         return NextResponse.json({
             success: true,
-            walkIn
+            walkIn,
+            qrCode: {
+                token: qrToken,
+                checkinUrl,
+                whatsappLink
+            }
         })
     } catch (error) {
         log.error('Error in walk-in API', { error })

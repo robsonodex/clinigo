@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
 import { useQuery } from '@tanstack/react-query'
 
-export const ButtonManualCharge = ({ clinicId }: { clinicId: string }) => {
+export const ButtonManualCharge = ({ clinicId, customPrice }: { clinicId: string; customPrice?: number | null }) => {
     const [isLoading, setIsLoading] = useState(false)
 
     const handleSendCharge = async () => {
@@ -18,6 +18,7 @@ export const ButtonManualCharge = ({ clinicId }: { clinicId: string }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     clinic_id: clinicId,
+                    custom_price: customPrice, // Envia preço customizado se existir
                 }),
             })
 
@@ -39,7 +40,7 @@ export const ButtonManualCharge = ({ clinicId }: { clinicId: string }) => {
     return (
         <Button onClick={handleSendCharge} disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-            Enviar Cobrança (Push)
+            Enviar Cobrança {customPrice ? `(R$ ${customPrice.toFixed(0)})` : '(Push)'}
         </Button>
     )
 }

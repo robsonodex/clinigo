@@ -42,7 +42,7 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<AuthResult>
 
         // Get user profile with role
         const { data: profile, error: profileError } = await supabase
-            .from('profiles')
+            .from('users')
             .select('role, clinic_id')
             .eq('id', user.id)
             .single<{ role: string; clinic_id: string | null }>()

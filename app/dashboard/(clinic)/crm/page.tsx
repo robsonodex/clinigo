@@ -203,7 +203,6 @@ export default function CRMPage() {
     const getCampaignTypeIcon = (type: string) => {
         switch (type) {
             case 'EMAIL': return <Mail className="h-4 w-4" />
-            case 'SMS': return <Smartphone className="h-4 w-4" />
             case 'WHATSAPP': return <MessageSquare className="h-4 w-4" />
             case 'PUSH': return <Bell className="h-4 w-4" />
             default: return <Send className="h-4 w-4" />
@@ -298,9 +297,8 @@ export default function CRMPage() {
                                             >
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="send_whatsapp">Enviar WhatsApp</SelectItem>
+                                                    <SelectItem value="send_whatsapp">Compartilhar no WhatsApp</SelectItem>
                                                     <SelectItem value="send_email">Enviar Email</SelectItem>
-                                                    <SelectItem value="send_sms">Enviar SMS</SelectItem>
                                                     <SelectItem value="create_task">Criar Tarefa</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -399,9 +397,8 @@ export default function CRMPage() {
                                             >
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
+                                                    <SelectItem value="WHATSAPP">WhatsApp (Compartilhar)</SelectItem>
                                                     <SelectItem value="EMAIL">Email</SelectItem>
-                                                    <SelectItem value="SMS">SMS</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

@@ -490,11 +490,9 @@ export default function IntegracoesPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             {selectedIntegration && (
-                                <>
-                                    <selectedIntegration.icon className="w-5 h-5" />
-                                    Configurar {selectedIntegration.name}
-                                </>
+                                <selectedIntegration.icon className="w-5 h-5" />
                             )}
+                            {selectedIntegration ? `Configurar ${selectedIntegration.name}` : 'Configurar'}
                         </DialogTitle>
                         <DialogDescription>
                             {selectedIntegration && isConfigured(selectedIntegration)

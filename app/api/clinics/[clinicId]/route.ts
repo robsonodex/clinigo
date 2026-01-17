@@ -19,7 +19,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
-        const supabase = await createClient()
+        console.log('[GET /api/clinics/[clinicId]] Debug:', { clinicId, userId, userRole })
+
+        // SUPER_ADMIN and CLINIC_ADMIN use service role to bypass RLS
+        let supabase
+        if (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN') {
+            const { createServiceRoleClient } = await import('@/lib/supabase/server')
+            supabase = createServiceRoleClient()
+        } else {
+            supabase = await createClient()
+        }
 
         // Get clinic
         const { data: clinic, error } = await supabase
@@ -28,11 +37,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .eq('id', clinicId)
             .single()
 
+        console.log('[GET /api/clinics/[clinicId]] Result:', {
+            found: !!clinic,
+            error: error?.message,
+            clinicName: (clinic as any)?.name
+        })
+
         if (error || !clinic) {
             throw new NotFoundError('Clínica')
         }
 
-        // Check authorization
+        // Check authorization for non-super-admins
         if (userRole !== 'SUPER_ADMIN') {
             // Get user's clinic
             const { data: user } = await supabase
@@ -41,7 +56,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 .eq('id', userId)
                 .single()
 
-            if ((user as any)?.clinic_id !== clinicId) {
+            // CLINIC_ADMIN can see their own clinic
+            if (userRole !== 'CLINIC_ADMIN' && (user as any)?.clinic_id !== clinicId) {
                 throw new ForbiddenError('Acesso negado a esta clínica')
             }
 
@@ -51,6 +67,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(clinic)
     } catch (error) {
+        console.error('[GET /api/clinics/[clinicId]] Error:', error)
         return handleApiError(error)
     }
 }
@@ -116,7 +133,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             throw new ForbiddenError('Apenas super administradores podem excluir clínicas')
         }
 
-        const supabase = await createClient()
+        // SUPER_ADMIN uses service role to bypass RLS
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        const supabase = createServiceRoleClient()
 
         // Get clinic info first for audit log
         const { data: clinicData } = await supabase

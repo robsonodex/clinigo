@@ -572,7 +572,7 @@ export default function DashboardPage() {
                                     <div>
                                         <h3 className="font-semibold text-lg">Desbloqueie mais recursos</h3>
                                         <p className="text-muted-foreground">
-                                            Prontuário eletrônico, SMTP próprio, white-label e muito mais
+                                            Prontuário premium, white-label e muito mais
                                         </p>
                                     </div>
                                 </div>

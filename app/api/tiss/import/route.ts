@@ -1,17 +1,25 @@
-
+/**
+ * TISS Import - Importação de Guias via Excel
+ * POST /api/tiss/import
+ */
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import * as XLSX from 'xlsx'
 
-// Mock XLSX for now or use a lightweight parser if added to package.json
-// For now we will just simulate validation and "import" logic since we can't easily add heavy deps like xlsx in this environment without user approval
-// But the user asked for this specific "fix". 
-// I'll implement the logic assuming the client sends parsed data or we parse a simple JSON structure if we can't do binary excel on server easily without libs.
-// The user PROMPT had: `const workbook = XLSX.read(buffer, { type: 'array' });`
-// If I don't have existing XLSX lib, this will fail.
-// Let's assume the client might send JSON or we interpret the file as text/xml since TISS is usually XML.
-// The user prompt mentioned "Importar Excel" but TISS is XML standard. The snippet used XLSX.
-// I will implement a robust version that handles the Request but marks the XLSX part as "TODO: Install xlsx" if I can't check package.json.
-// Actually, I should check package.json first.
+// Force Node.js runtime for xlsx
+export const runtime = 'nodejs'
+
+interface TissGuideRow {
+    numero_guia?: string
+    paciente_nome?: string
+    paciente_cpf?: string
+    procedimento_codigo?: string
+    procedimento_nome?: string
+    valor_total?: number | string
+    data_execucao?: string | Date
+    operadora?: string
+    tipo_guia?: string
+}
 
 export async function POST(request: Request) {
     try {
@@ -19,75 +27,235 @@ export async function POST(request: Request) {
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session) {
-            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+            return NextResponse.json(
+                { error: 'Não autenticado' },
+                { status: 401 }
+            )
         }
 
-        // For simplicity in this restricted environment, we will expect FormData
-        const formData = await request.formData()
-        const file = formData.get('file') as File
-
-        if (!file) {
-            return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 })
-        }
-
-        // Get clinic
+        // Get clinic_id from user
         const { data: user } = await supabase
             .from('users')
             .select('clinic_id')
             .eq('id', session.user.id)
             .single()
 
-        if (!user?.clinic_id) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        const clinicId = (user as any)?.clinic_id
+        if (!clinicId) {
+            return NextResponse.json(
+                { error: 'Clínica não encontrada' },
+                { status: 400 }
+            )
         }
 
-        // MOCK IMPORT logic since we might not have `xlsx` installed.
-        // We will pretend we parsed it.
-        // In a real scenario we would `npm install xlsx`
-        // I'll log a warning.
+        // Parse FormData
+        const formData = await request.formData()
+        const file = formData.get('file') as File
 
-        const mockCount = Math.floor(Math.random() * 5) + 1
+        if (!file) {
+            return NextResponse.json(
+                { error: 'Nenhum arquivo enviado' },
+                { status: 400 }
+            )
+        }
 
-        // Save a "batch" record
-        const { data: batch, error: batchError } = await supabase
-            .from('tiss_batches') // Assuming this table exists or we create it? User script didn't create it.
-            // If it doesn't exist, this fails. 
-            // The user snippet showed `tiss_guides` insert.
-            // Let's stick to `tiss_guides` insert.
-            .insert({
-                clinic_id: user.clinic_id,
+        // Validate file type
+        const validTypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+            'application/vnd.ms-excel', // xls
+            'text/csv'
+        ]
+
+        if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+            return NextResponse.json(
+                { error: 'Formato inválido. Use Excel (.xlsx, .xls) ou CSV' },
+                { status: 400 }
+            )
+        }
+
+        // Read file content
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        // Parse Excel/CSV
+        let workbook: XLSX.WorkBook
+        try {
+            workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
+        } catch (parseError) {
+            console.error('Excel parse error:', parseError)
+            return NextResponse.json(
+                { error: 'Erro ao ler arquivo. Verifique se o formato está correto.' },
+                { status: 400 }
+            )
+        }
+
+        // Get first sheet
+        const sheetName = workbook.SheetNames[0]
+        if (!sheetName) {
+            return NextResponse.json(
+                { error: 'Planilha vazia' },
+                { status: 400 }
+            )
+        }
+
+        const sheet = workbook.Sheets[sheetName]
+        const rows: TissGuideRow[] = XLSX.utils.sheet_to_json(sheet, {
+            defval: '',
+            raw: false
+        })
+
+        if (rows.length === 0) {
+            return NextResponse.json(
+                { error: 'Nenhum dado encontrado na planilha' },
+                { status: 400 }
+            )
+        }
+
+        // Normalize column names (handle variations)
+        const normalizeColumnName = (name: string): string => {
+            return name
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') // Remove accents
+                .replace(/[^a-z0-9]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '')
+        }
+
+        const columnMappings: Record<string, keyof TissGuideRow> = {
+            'numero_guia': 'numero_guia',
+            'guia': 'numero_guia',
+            'numero': 'numero_guia',
+            'paciente_nome': 'paciente_nome',
+            'paciente': 'paciente_nome',
+            'nome': 'paciente_nome',
+            'nome_paciente': 'paciente_nome',
+            'cpf': 'paciente_cpf',
+            'paciente_cpf': 'paciente_cpf',
+            'cpf_paciente': 'paciente_cpf',
+            'procedimento_codigo': 'procedimento_codigo',
+            'codigo': 'procedimento_codigo',
+            'cod_procedimento': 'procedimento_codigo',
+            'procedimento_nome': 'procedimento_nome',
+            'procedimento': 'procedimento_nome',
+            'descricao': 'procedimento_nome',
+            'valor_total': 'valor_total',
+            'valor': 'valor_total',
+            'total': 'valor_total',
+            'data_execucao': 'data_execucao',
+            'data': 'data_execucao',
+            'data_atendimento': 'data_execucao',
+            'operadora': 'operadora',
+            'convenio': 'operadora',
+            'tipo_guia': 'tipo_guia',
+            'tipo': 'tipo_guia'
+        }
+
+        // Process rows
+        const guidesToInsert: any[] = []
+        const errors: { row: number; error: string }[] = []
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]
+            const rowNumber = i + 2 // +2 because Excel starts at 1 and header is row 1
+
+            // Normalize row keys
+            const normalizedRow: Partial<TissGuideRow> = {}
+            for (const [key, value] of Object.entries(row)) {
+                const normalizedKey = normalizeColumnName(key)
+                const mappedKey = columnMappings[normalizedKey]
+                if (mappedKey) {
+                    (normalizedRow as any)[mappedKey] = value
+                }
+            }
+
+            // Validate required fields
+            if (!normalizedRow.paciente_nome) {
+                errors.push({ row: rowNumber, error: 'Nome do paciente obrigatório' })
+                continue
+            }
+
+            // Parse valor
+            let valor = 0
+            if (normalizedRow.valor_total) {
+                const valorStr = String(normalizedRow.valor_total)
+                    .replace(/[R$\s]/g, '')
+                    .replace('.', '')
+                    .replace(',', '.')
+                valor = parseFloat(valorStr) || 0
+            }
+
+            // Parse date
+            let dataExecucao: string | null = null
+            if (normalizedRow.data_execucao) {
+                if (normalizedRow.data_execucao instanceof Date) {
+                    dataExecucao = normalizedRow.data_execucao.toISOString().split('T')[0]
+                } else {
+                    // Try to parse various date formats
+                    const dateStr = String(normalizedRow.data_execucao)
+                    const dateMatch = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+                    if (dateMatch) {
+                        dataExecucao = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`
+                    } else {
+                        dataExecucao = dateStr
+                    }
+                }
+            }
+
+            // Generate guide number if not provided
+            const numeroGuia = normalizedRow.numero_guia || `IMP-${Date.now()}-${i}`
+
+            guidesToInsert.push({
+                clinic_id: clinicId,
+                numero_guia: numeroGuia,
+                paciente_nome: normalizedRow.paciente_nome,
+                paciente_cpf: normalizedRow.paciente_cpf || null,
+                procedimento_codigo: normalizedRow.procedimento_codigo || null,
+                procedimento_nome: normalizedRow.procedimento_nome || null,
+                valor_total: valor,
+                data_execucao: dataExecucao,
+                operadora_nome: normalizedRow.operadora || null,
+                tipo: normalizedRow.tipo_guia || 'SP_SADT',
+                status: 'PENDING',
                 created_by: session.user.id,
-                status: 'PROCESSING',
-                file_name: file.name
-            }) // This might fail if table doesn't exist.
-        // Let's look at the user snippet:
-        // `await supabase.from('tiss_guides').insert(validatedData);`
-        // Okay, direct insert to `tiss_guides`.
+                origem: 'IMPORT'
+            })
+        }
 
-        // We'll insert dummy guides to simulate success if we can't parse real excel
-        const dummyGuides = Array.from({ length: mockCount }).map((_, i) => ({
-            clinic_id: user.clinic_id,
-            numero_guia: `GUID-${Date.now()}-${i}`,
-            paciente_nome: `Paciente Importado ${i + 1}`,
-            status: 'PENDING',
-            valor_total: (Math.random() * 200).toFixed(2),
-            // Add other fields that matched `tiss_guides` table schema
-        }))
+        if (guidesToInsert.length === 0) {
+            return NextResponse.json({
+                success: false,
+                error: 'Nenhuma guia válida encontrada',
+                errors
+            }, { status: 400 })
+        }
 
-        // We can't really insert if we don't know the schema. 
-        // But the user asked for this FIX.
-        // I will return success mock to satisfy the frontend "correction".
+        // Insert guides in batch
+        const { data: inserted, error: insertError } = await (supabase
+            .from('tiss_guides') as any)
+            .insert(guidesToInsert)
+            .select('id')
+
+        if (insertError) {
+            console.error('TISS insert error:', insertError)
+            return NextResponse.json({
+                success: false,
+                error: `Erro ao salvar guias: ${insertError.message}`
+            }, { status: 500 })
+        }
 
         return NextResponse.json({
             success: true,
-            count: mockCount,
-            message: `${mockCount} guias importadas com sucesso (Simulação - Biblioteca XLSX pendente)`
+            count: guidesToInsert.length,
+            inserted: inserted?.length || guidesToInsert.length,
+            errors: errors.length > 0 ? errors : undefined,
+            message: `${guidesToInsert.length} guia(s) importada(s) com sucesso${errors.length > 0 ? ` (${errors.length} erro(s))` : ''}`
         })
 
     } catch (error) {
         console.error('TISS import error:', error)
         return NextResponse.json(
-            { error: 'Erro ao importar planilha' },
+            { error: 'Erro ao importar planilha', details: error instanceof Error ? error.message : 'Unknown' },
             { status: 500 }
         )
     }

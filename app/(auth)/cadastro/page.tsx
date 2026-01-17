@@ -159,11 +159,11 @@ function CadastroContent() {
                 throw new Error(result.error?.message || 'Erro ao criar clínica')
             }
 
-            toast.success('Cadastro recebido! Você receberá um e-mail quando for aprovado.')
+            toast.success('🎉 Conta criada! Seu teste de 7 dias começou. Verifique seu e-mail!')
 
-            // Redirect to waiting approval page
+            // Redirect to clinic login
             setTimeout(() => {
-                router.push('/aguardando-aprovacao')
+                router.push('/clinica')
             }, 1500)
         } catch (error) {
             console.error('Registration error:', error)
@@ -467,17 +467,21 @@ function CadastroContent() {
                                             )}
                                         </div>
 
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex items-start space-x-2">
                                             <Checkbox
                                                 id="accept_terms"
-                                                {...register('accept_terms')}
+                                                checked={!!formData.accept_terms}
+                                                onCheckedChange={(checked) => {
+                                                    setFormData(prev => ({ ...prev, accept_terms: !!checked }))
+                                                    setValue('accept_terms', !!checked)
+                                                }}
                                             />
-                                            <Label htmlFor="accept_terms" className="text-sm cursor-pointer">
-                                                Aceito os <Link href="/termos" className="text-primary hover:underline">termos de uso</Link> e <Link href="/privacidade" className="text-primary hover:underline">política de privacidade</Link>
+                                            <Label htmlFor="accept_terms" className="text-sm cursor-pointer leading-tight">
+                                                Aceito os <Link href="/termos" className="text-primary hover:underline">termos de uso</Link> e <Link href="/privacidade" className="text-primary hover:underline">política de privacidade</Link> *
                                             </Label>
                                         </div>
-                                        {errors.accept_terms && (
-                                            <p className="text-xs text-destructive">{errors.accept_terms.message}</p>
+                                        {!formData.accept_terms && errors.accept_terms && (
+                                            <p className="text-xs text-destructive">Você deve aceitar os termos para continuar</p>
                                         )}
                                     </div>
 

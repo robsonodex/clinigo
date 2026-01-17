@@ -72,7 +72,6 @@ const manualAppointmentSchema = z.object({
     health_insurance_id: z.string().optional(),
     insurance_card_number: z.string().optional(),
     notes: z.string().optional(),
-    send_sms: z.boolean().default(true),
     send_whatsapp: z.boolean().default(true),
     send_email: z.boolean().default(false),
     ignore_schedule_constraints: z.boolean().default(false),
@@ -116,7 +115,6 @@ export function ManualAppointmentModal({
             duration_minutes: 30,
             type: 'presencial',
             payment_type: 'cash',
-            send_sms: true,
             send_whatsapp: true,
             send_email: false,
             ignore_schedule_constraints: false,
@@ -146,7 +144,6 @@ export function ManualAppointmentModal({
                 type: appointmentToEdit.video_link ? 'telemedicina' : 'presencial',
                 payment_type: appointmentToEdit.payment?.payment_method || 'cash',
                 notes: appointmentToEdit.notes || '',
-                send_sms: false, // Don't resend by default on edit
                 send_whatsapp: false,
                 send_email: false,
                 ignore_schedule_constraints: true, // Assume valid if existing
@@ -195,7 +192,6 @@ export function ManualAppointmentModal({
                     reason: data.override_reason || 'Encaixe autorizado',
                 } : undefined,
                 notifications: {
-                    send_sms: data.send_sms,
                     send_whatsapp: data.send_whatsapp,
                     send_email: data.send_email,
                 },
@@ -531,22 +527,12 @@ export function ManualAppointmentModal({
                             <div className="flex flex-wrap gap-4">
                                 <div className="flex items-center gap-2">
                                     <Checkbox
-                                        id="send_sms"
-                                        checked={form.watch('send_sms')}
-                                        onCheckedChange={(checked) => setValue('send_sms', checked as boolean)}
-                                    />
-                                    <Label htmlFor="send_sms" className="cursor-pointer">
-                                        Enviar SMS
-                                    </Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
                                         id="send_whatsapp"
                                         checked={form.watch('send_whatsapp')}
                                         onCheckedChange={(checked) => setValue('send_whatsapp', checked as boolean)}
                                     />
                                     <Label htmlFor="send_whatsapp" className="cursor-pointer">
-                                        Enviar WhatsApp
+                                        Compartilhar no WhatsApp
                                     </Label>
                                 </div>
                                 <div className="flex items-center gap-2">

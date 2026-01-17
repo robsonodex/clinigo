@@ -331,9 +331,9 @@ const navigationSections: NavSection[] = [
                 roles: ['SUPER_ADMIN'],
             },
             {
-                title: 'Marketplace',
-                href: '/dashboard/marketplace',
-                icon: Store,
+                title: 'Cobrança',
+                href: '/dashboard/cobranca',
+                icon: Wallet,
                 roles: ['SUPER_ADMIN'],
             },
             {

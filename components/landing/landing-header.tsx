@@ -1,18 +1,36 @@
 'use client'
 
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Stethoscope, Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { cn } from '@/lib/utils'
+import { Menu, X, Stethoscope, Building2, UserRound, Users, ChevronDown, Shield } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+const navLinks = [
+    { label: 'Funcionalidades', href: '#funcionalidades' },
+    { label: 'Planos', href: '/planos' },
+    { label: 'Contato', href: 'mailto:contato@clinigo.app' },
+]
+
+const loginPortals = [
+    { label: 'Login Clínica', href: '/clinica', icon: Building2, description: 'Administradores' },
+    { label: 'Login Médico', href: '/medico', icon: UserRound, description: 'Profissionais de saúde' },
+    { label: 'Login Paciente', href: '/paciente', icon: Users, description: 'Pacientes cadastrados' },
+    { label: 'Super Admin', href: '/login', icon: Shield, description: 'Painel de gestão' },
+]
 
 export function LandingHeader() {
     const [isScrolled, setIsScrolled] = useState(false)
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20)
+            setIsScrolled(window.scrollY > 10)
         }
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
@@ -20,120 +38,133 @@ export function LandingHeader() {
 
     return (
         <header
-            className={cn(
-                "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-                isScrolled
-                    ? "bg-white/80 backdrop-blur-md shadow-sm py-4"
-                    : "bg-transparent py-6"
-            )}
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+                ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200'
+                : 'bg-transparent'
+                }`}
         >
-            <div className="container mx-auto px-4 flex items-center justify-between">
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 group">
-                    <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                        isScrolled ? "bg-emerald-600 text-white" : "bg-white text-emerald-600"
-                    )}>
-                        <Stethoscope className="h-6 w-6" />
-                    </div>
-                    <span className={cn(
-                        "text-2xl font-bold transition-colors",
-                        isScrolled ? "text-gray-900" : "text-white"
-                    )}>
-                        CliniGo
-                    </span>
-                </Link>
-
-                {/* Desktop Nav */}
-                <nav className="hidden md:flex items-center gap-8">
-                    {['Paciente', 'Médico', 'Clínica'].map((item) => (
-                        <Link
-                            key={item}
-                            href={`/${item.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}
-                            className={cn(
-                                "text-sm font-medium transition-colors hover:text-emerald-400",
-                                isScrolled ? "text-gray-600" : "text-gray-200"
-                            )}
-                        >
-                            {item}
-                        </Link>
-                    ))}
-                    <Link
-                        href="/planos"
-                        className={cn(
-                            "text-sm font-medium transition-colors hover:text-emerald-400",
-                            isScrolled ? "text-gray-600" : "text-gray-200"
-                        )}
-                    >
-                        Planos
+            <div className="container mx-auto px-4">
+                <div className="h-20 flex items-center justify-between">
+                    {/* Logo */}
+                    <Link href="/" className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${isScrolled ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20' : 'bg-white/20 backdrop-blur-sm'}`}>
+                            <Stethoscope className="h-5 w-5 text-white" />
+                        </div>
+                        <span className={`text-xl font-bold ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
+                            CliniGo
+                        </span>
                     </Link>
-                </nav>
 
-                {/* Auth Buttons */}
-                <div className="hidden md:flex items-center gap-4">
-                    <Link href="/login">
-                        <Button
-                            variant="ghost"
-                            className={cn(
-                                "hover:text-emerald-500",
-                                isScrolled ? "text-gray-700" : "text-white hover:bg-white/10"
-                            )}
-                        >
-                            Entrar
-                        </Button>
-                    </Link>
-                    <Link href="/cadastro">
-                        <Button
-                            className={cn(
-                                "font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105",
-                                isScrolled
-                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                    : "bg-white text-emerald-600 hover:bg-gray-100"
-                            )}
-                        >
-                            Começar Agora
-                        </Button>
-                    </Link>
-                </div>
+                    {/* Desktop Nav */}
+                    <nav className="hidden md:flex items-center gap-8">
+                        {navLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className={`font-medium transition-colors ${isScrolled
+                                    ? 'text-slate-600 hover:text-emerald-600'
+                                    : 'text-white/90 hover:text-white'
+                                    }`}
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
+                    </nav>
 
-                {/* Mobile Menu Button */}
-                <button
-                    className="md:hidden p-2"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                >
-                    {mobileMenuOpen ? (
-                        <X className={cn("h-6 w-6", isScrolled ? "text-gray-900" : "text-white")} />
-                    ) : (
-                        <Menu className={cn("h-6 w-6", isScrolled ? "text-gray-900" : "text-white")} />
-                    )}
-                </button>
-            </div>
+                    {/* Desktop CTA */}
+                    <div className="hidden md:flex items-center gap-4">
+                        {/* Login Dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    className={isScrolled ? 'text-slate-600' : 'text-white hover:bg-white/10'}
+                                >
+                                    Entrar
+                                    <ChevronDown className="ml-1 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                {loginPortals.map((portal) => (
+                                    <DropdownMenuItem key={portal.href} asChild>
+                                        <Link href={portal.href} className="flex items-center gap-3 cursor-pointer">
+                                            <portal.icon className="h-4 w-4 text-emerald-600" />
+                                            <div>
+                                                <div className="font-medium">{portal.label}</div>
+                                                <div className="text-xs text-muted-foreground">{portal.description}</div>
+                                            </div>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-                <div className="absolute top-full left-0 right-0 bg-white border-b shadow-lg p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-5">
-                    {['Paciente', 'Médico', 'Clínica', 'Planos'].map((item) => (
-                        <Link
-                            key={item}
-                            href={`/${item.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}
-                            className="text-gray-600 font-medium py-2 hover:text-emerald-600"
-                            onClick={() => setMobileMenuOpen(false)}
-                        >
-                            {item}
-                        </Link>
-                    ))}
-                    <div className="border-t pt-4 flex flex-col gap-3">
-                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                            <Button variant="ghost" className="w-full justify-start">Entrar</Button>
-                        </Link>
-                        <Link href="/cadastro" onClick={() => setMobileMenuOpen(false)}>
-                            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                                Começar Agora
+                        <Link href="/cadastro">
+                            <Button
+                                className={`shadow-lg font-semibold ${isScrolled
+                                    ? 'btn-premium'
+                                    : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                                    }`}
+                            >
+                                Começar grátis
                             </Button>
                         </Link>
                     </div>
+
+                    {/* Mobile Menu Button */}
+                    <button
+                        className="md:hidden p-2"
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    >
+                        {isMobileMenuOpen ? (
+                            <X className={`h-6 w-6 ${isScrolled ? 'text-slate-700' : 'text-white'}`} />
+                        ) : (
+                            <Menu className={`h-6 w-6 ${isScrolled ? 'text-slate-700' : 'text-white'}`} />
+                        )}
+                    </button>
                 </div>
-            )}
+
+
+                {/* Mobile Menu */}
+                {isMobileMenuOpen && (
+                    <div className="md:hidden absolute top-20 left-0 right-0 bg-white border-b border-slate-200 shadow-lg p-4 space-y-4">
+                        {navLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className="block py-2 text-slate-600 font-medium"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
+
+                        {/* Mobile Login Portals */}
+                        <div className="pt-4 border-t border-slate-200 space-y-2">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Portais de Acesso</p>
+                            {loginPortals.map((portal) => (
+                                <Link
+                                    key={portal.href}
+                                    href={portal.href}
+                                    className="flex items-center gap-3 py-2 text-slate-600"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    <portal.icon className="h-4 w-4 text-emerald-600" />
+                                    <span>{portal.label}</span>
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-200">
+                            <Link href="/cadastro" className="block">
+                                <Button variant="premium" className="w-full">
+                                    Começar grátis
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
+                )}
+            </div>
         </header>
     )
 }

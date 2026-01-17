@@ -36,6 +36,8 @@ interface Clinic {
     cnpj: string
     plan_type: string
     is_active: boolean
+    custom_price: number | null
+    custom_price_note: string | null
     addons: {
         whatsapp: boolean
         prepaid_booking: boolean
@@ -66,7 +68,7 @@ export default function ClinicDetailsPage() {
         }
     })
 
-    const handleToggleAddon = (addon: keyof Clinic['addons'], value: boolean) => {
+    const handleToggleAddon = (addon: keyof Clinic['addons'], value: boolean | number) => {
         if (!clinic) return
         updateMutation.mutate({
             addons: {
@@ -276,10 +278,50 @@ export default function ClinicDetailsPage() {
                                 </div>
                             </div>
 
+                            {/* Preço Customizado */}
+                            <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                                <h3 className="font-semibold mb-3 text-amber-800 dark:text-amber-200">Preço Negociado (Customizado)</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Defina um preço especial para esta clínica. Se preenchido, este valor será usado nas cobranças em vez do preço padrão do plano.
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="custom_price">Preço Customizado (R$)</Label>
+                                        <Input
+                                            id="custom_price"
+                                            type="number"
+                                            placeholder="Ex: 450.00 (vazio = usa preço padrão)"
+                                            defaultValue={clinic.custom_price || ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value ? parseFloat(e.target.value) : null
+                                                updateMutation.mutate({ custom_price: val })
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="custom_price_note">Observação do Desconto</Label>
+                                        <Input
+                                            id="custom_price_note"
+                                            placeholder="Ex: Desconto 15% contrato anual"
+                                            defaultValue={clinic.custom_price_note || ''}
+                                            onChange={(e) => {
+                                                updateMutation.mutate({ custom_price_note: e.target.value || null })
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                {clinic.custom_price && (
+                                    <p className="text-sm text-green-600 mt-2">
+                                        ✅ Esta clínica tem preço especial: R$ {clinic.custom_price.toFixed(2)}
+                                        {clinic.custom_price_note && ` (${clinic.custom_price_note})`}
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="bg-muted/30 p-4 rounded-lg border">
                                 <h3 className="font-semibold mb-2">Ações Rápidas</h3>
                                 <div className="flex flex-wrap gap-4">
-                                    <ButtonManualCharge clinicId={clinic.id} />
+                                    <ButtonManualCharge clinicId={clinic.id} customPrice={clinic.custom_price} />
                                     <Link href={`https://www.mercadopago.com.br/activities`} target="_blank">
                                         <Button variant="outline">
                                             <ExternalLink className="h-4 w-4 mr-2" />

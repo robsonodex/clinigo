@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 
 const createPatientSchema = z.object({
     full_name: z.string().min(3),
-    cpf: z.string().min(11),
+    cpf: z.string().optional().or(z.literal('')),
     email: z.string().email().optional().or(z.literal('')),
     phone: z.string().optional(),
     date_of_birth: z.string().optional(),
@@ -99,8 +99,8 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const data = createPatientSchema.parse(body)
 
-        // Clean CPF
-        const cleanCPF = data.cpf.replace(/\D/g, '')
+        // Clean CPF if provided
+        const cleanCPF = data.cpf ? data.cpf.replace(/\D/g, '') : null
 
         // Get user clinic if not provided
         let clinicId = data.clinic_id

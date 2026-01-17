@@ -209,10 +209,11 @@ function UpgradeModal({
  * Small badge to indicate a feature is locked
  */
 export function LockedBadge({ plan }: { plan: PlanType }) {
+    const planInfo = PLANS[plan] || PLANS.STARTER
     return (
         <Badge variant="outline" className="text-xs gap-1 opacity-70">
             <Lock className="h-2.5 w-2.5" />
-            {PLANS[plan].name}
+            {planInfo.name}
         </Badge>
     )
 }

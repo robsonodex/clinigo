@@ -14,7 +14,7 @@ import {
 // Google Meet integration removed in favor of WebRTC
 // import { generateMeetLink } from '@/lib/services/google-meet'
 import { sendConfirmationEmail, isEmailConfigured } from '@/lib/services/email'
-import { sendAppointmentConfirmation, isWhatsAppConfigured } from '@/lib/services/whatsapp'
+// WhatsApp API removida - usar compartilhamento manual via WhatsAppShareButton
 import { formatDateBR } from '@/lib/utils/date'
 
 // Force Node.js runtime for nodemailer and crypto support
@@ -180,7 +180,7 @@ async function handlePaymentConfirmed(
                 type: 'WHATSAPP',
                 template: 'APPOINTMENT_CONFIRMED',
                 recipient_phone: patient.phone,
-                status: 'PENDING',
+                status: 'MANUAL_PENDING', // WhatsApp agora requer compartilhamento manual
             },
         ])
 
@@ -218,38 +218,8 @@ async function handlePaymentConfirmed(
             }
         }
 
-        // Send WhatsApp notification
-        if (isWhatsAppConfigured() && videoLink) {
-            const doctor = appointment.doctor as { user: { full_name: string } }
-            const clinic = appointment.clinic as { name: string }
-            const appointmentDate = new Date(appointment.appointment_date)
-
-            try {
-                await sendAppointmentConfirmation({
-                    clinicId: appointment.clinic_id,
-                    patient_phone: patient.phone,
-                    patient_name: patient.full_name,
-                    doctor_name: doctor?.user?.full_name || 'Médico',
-                    clinic_name: clinic?.name || 'CliniGo',
-                    appointment_date: formatDateBR(appointmentDate),
-                    appointment_time: (appointment as any).appointment_time?.substring(0, 5) || '',
-                    video_link: videoLink,
-                })
-
-                await supabase
-                    .from('notifications')
-                    .update({ status: 'SENT', sent_at: new Date().toISOString() })
-                    .eq('appointment_id', appointmentId)
-                    .eq('type', 'WHATSAPP')
-            } catch (whatsappError) {
-                console.error('Failed to send WhatsApp confirmation:', whatsappError)
-                await supabase
-                    .from('notifications')
-                    .update({ status: 'FAILED', error_message: String(whatsappError) })
-                    .eq('appointment_id', appointmentId)
-                    .eq('type', 'WHATSAPP')
-            }
-        }
+        // WhatsApp notification - API removida, compartilhamento manual requerido
+        console.log(`[WhatsApp] Compartilhamento manual requerido para appointment ${appointmentId}`)
 
         console.log(`Payment confirmed and notifications sent for appointment ${appointmentId}`)
     } catch (error) {

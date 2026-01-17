@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle, XCircle, AlertTriangle,
-    Plus, Search, QrCode, User, Calendar, Phone
+    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -14,6 +14,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import PatientSelector from '@/components/prontuarios/patient-selector'
+import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
+import { QRCodeSVG } from 'qrcode.react'
+import { QRScannerDialog } from '@/components/reception/qr-scanner-dialog'
 
 interface QueueItem {
     id: string
@@ -56,6 +59,10 @@ export default function RecepcaoPage() {
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
     const [urgency, setUrgency] = useState<string>('normal')
     const [reason, setReason] = useState('')
+
+    const [isCreatingPatient, setIsCreatingPatient] = useState(false)
+    const [isSubmittingPatient, setIsSubmittingPatient] = useState(false)
+    const [createdWalkIn, setCreatedWalkIn] = useState<any>(null)
 
     useEffect(() => {
         loadData()
@@ -135,6 +142,9 @@ export default function RecepcaoPage() {
             })
 
             if (res.ok) {
+                const data = await res.json()
+                setCreatedWalkIn(data)
+
                 toast({
                     title: 'Atendimento criado',
                     description: 'Paciente adicionado à fila de espera'
@@ -152,6 +162,40 @@ export default function RecepcaoPage() {
                 title: 'Erro',
                 description: 'Não foi possível adicionar o paciente'
             })
+        }
+    }
+
+    async function handleCreatePatient(data: any) {
+        setIsSubmittingPatient(true)
+        try {
+            const res = await fetch('/api/patients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao criar paciente')
+            }
+
+            const newPatient = await res.json()
+
+            toast({
+                title: 'Paciente criado',
+                description: 'Paciente cadastrado com sucesso'
+            })
+
+            setSelectedPatientId(newPatient.id)
+            setIsCreatingPatient(false)
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: error instanceof Error ? error.message : 'Erro ao criar paciente'
+            })
+        } finally {
+            setIsSubmittingPatient(false)
         }
     }
 
@@ -181,7 +225,13 @@ export default function RecepcaoPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Dialog open={showWalkInDialog} onOpenChange={setShowWalkInDialog}>
+                    {/* QR Scanner Button */}
+                    <QRScannerDialog onCheckIn={loadData} />
+
+                    <Dialog open={showWalkInDialog} onOpenChange={(open) => {
+                        setShowWalkInDialog(open)
+                        if (!open) setIsCreatingPatient(false)
+                    }}>
                         <DialogTrigger asChild>
                             <Button>
                                 <Plus className="w-4 h-4 mr-2" />
@@ -190,44 +240,53 @@ export default function RecepcaoPage() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Novo Atendimento (Walk-in)</DialogTitle>
+                                <DialogTitle>
+                                    {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
+                                </DialogTitle>
                             </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Paciente</Label>
-                                    <PatientSelector
-                                        value={selectedPatientId}
-                                        onChange={setSelectedPatientId}
-                                        onNewPatient={() => {
-                                            window.open('/dashboard/pacientes?action=new', '_blank')
-                                        }}
-                                    />
+
+                            {isCreatingPatient ? (
+                                <QuickPatientForm
+                                    onSubmit={handleCreatePatient}
+                                    onBack={() => setIsCreatingPatient(false)}
+                                    isSubmitting={isSubmittingPatient}
+                                />
+                            ) : (
+                                <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <Label>Paciente</Label>
+                                        <PatientSelector
+                                            value={selectedPatientId}
+                                            onChange={setSelectedPatientId}
+                                            onNewPatient={() => setIsCreatingPatient(true)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Urgência</Label>
+                                        <Select value={urgency} onValueChange={setUrgency}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="normal">Normal</SelectItem>
+                                                <SelectItem value="priority">Prioridade</SelectItem>
+                                                <SelectItem value="urgent">Urgente</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Motivo</Label>
+                                        <Input
+                                            placeholder="Motivo da consulta..."
+                                            value={reason}
+                                            onChange={(e) => setReason(e.target.value)}
+                                        />
+                                    </div>
+                                    <Button className="w-full" onClick={handleCreateWalkIn}>
+                                        Adicionar à Fila
+                                    </Button>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Urgência</Label>
-                                    <Select value={urgency} onValueChange={setUrgency}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="normal">Normal</SelectItem>
-                                            <SelectItem value="priority">Prioridade</SelectItem>
-                                            <SelectItem value="urgent">Urgente</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Motivo</Label>
-                                    <Input
-                                        placeholder="Motivo da consulta..."
-                                        value={reason}
-                                        onChange={(e) => setReason(e.target.value)}
-                                    />
-                                </div>
-                                <Button className="w-full" onClick={handleCreateWalkIn}>
-                                    Adicionar à Fila
-                                </Button>
-                            </div>
+                            )}
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -382,6 +441,32 @@ export default function RecepcaoPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Success Dialog */}
+            <Dialog open={!!createdWalkIn} onOpenChange={(open) => !open && setCreatedWalkIn(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Atendimento Criado!</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-4 py-4">
+                        <div className="p-4 bg-white rounded-lg shadow-sm border">
+                            <QRCodeSVG value={createdWalkIn?.qrCode?.checkinUrl || ''} size={200} />
+                        </div>
+                        <p className="text-center text-sm text-muted-foreground">
+                            Peça para o paciente escanear para fazer check-in ou envie pelo WhatsApp.
+                        </p>
+                        <div className="flex gap-2 w-full">
+                            <Button className="flex-1" variant="outline" onClick={() => window.open(createdWalkIn?.qrCode?.whatsappLink, '_blank')}>
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                                Enviar WhatsApp
+                            </Button>
+                            <Button className="flex-1" onClick={() => setCreatedWalkIn(null)}>
+                                Concluir
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

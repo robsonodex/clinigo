@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isEmailConfigured } from '@/lib/services/email';
-import { isWhatsAppConfigured } from '@/lib/services/whatsapp';
+// WhatsApp API removida - usa compartilhamento manual agora
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
@@ -63,11 +63,12 @@ export async function GET(request: Request) {
         details: { configured: isEmailConfigured() }
     });
 
+    // WhatsApp agora usa compartilhamento manual - marcado como deprecated
     checks.push({
         name: 'whatsapp_service',
-        status: isWhatsAppConfigured() ? 'HEALTHY' : 'DEGRADED',
+        status: 'DEPRECATED',
         latency: 0,
-        details: { configured: isWhatsAppConfigured() }
+        details: { configured: false, note: 'Migrado para compartilhamento manual via wa.me' }
     });
 
     // Log to DB

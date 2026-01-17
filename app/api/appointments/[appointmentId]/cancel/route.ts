@@ -9,7 +9,7 @@ import { successResponse } from '@/lib/utils/responses'
 import { cancelAppointmentSchema } from '@/lib/validations/appointment'
 import { createRefund } from '@/lib/services/mercadopago'
 import { sendCancellationNoticeEmail, isEmailConfigured } from '@/lib/services/email'
-import { sendCancellationNotice, isWhatsAppConfigured } from '@/lib/services/whatsapp'
+// WhatsApp API removida - usar compartilhamento manual via WhatsAppShareButton
 import { formatDateBR } from '@/lib/utils/date'
 
 // Force Node.js runtime for nodemailer and mercadopago support
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 type: 'WHATSAPP',
                 template: 'APPOINTMENT_CANCELLED',
                 recipient_phone: patient.phone,
-                status: 'PENDING',
+                status: 'MANUAL_PENDING', // WhatsApp agora requer compartilhamento manual
             },
         ])
 
@@ -194,23 +194,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             }
         }
 
-        // Send WhatsApp notification
-        if (isWhatsAppConfigured()) {
-            try {
-                await sendCancellationNotice({
-                    clinicId: (appointment as any).clinic_id,
-                    patient_phone: patient.phone,
-                    patient_name: patient.full_name,
-                    doctor_name: doctor?.user?.full_name || 'Médico',
-                    appointment_date: formatDateBR(appointmentDate),
-                    appointment_time: (appointment as any).appointment_time?.substring(0, 5) || '',
-                    reason: cancellation_reason,
-                    refund_status: refundStatus,
-                })
-            } catch (whatsappError) {
-                console.error('Failed to send WhatsApp cancellation notice:', whatsappError)
-            }
-        }
+        // WhatsApp notification - API removida, compartilhamento manual requerido
+        console.log(`[WhatsApp] Compartilhamento manual requerido para cancelamento de appointment ${appointmentId}`)
 
         return successResponse({
             appointment_id: appointmentId,

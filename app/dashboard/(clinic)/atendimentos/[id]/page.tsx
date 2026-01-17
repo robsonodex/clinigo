@@ -27,9 +27,13 @@ import {
     User,
     CheckCircle,
     Phone,
-    Loader2
+    Loader2,
+    Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { WhatsAppShareButton } from '@/components/notifications/whatsapp-share-button'
+import { whatsappTemplates } from '@/lib/utils/whatsapp-share'
+import { format } from 'date-fns'
 
 interface PageProps {
     params: Promise<{ id: string }>
@@ -250,6 +254,48 @@ export default function ConsultationRoomPage({ params }: PageProps) {
                             <CheckCircle className="w-4 h-4 mr-2" />
                             Salvar Rascunho
                         </Button>
+
+                        {/* WhatsApp Share & Email Buttons */}
+                        <div className="flex gap-2">
+                            <WhatsAppShareButton
+                                message={whatsappTemplates.appointmentConfirmation({
+                                    patientName: consultation.patient.full_name.split(' ')[0],
+                                    doctorName: consultation.doctor?.user?.full_name || 'Médico',
+                                    date: format(new Date(consultation.appointment_date), 'dd/MM/yyyy'),
+                                    time: consultation.appointment_time,
+                                    clinicName: 'CliniGo',
+                                })}
+                                phone={consultation.patient.phone}
+                                variant="outline"
+                                size="sm"
+                                label="WhatsApp"
+                                className="flex-1"
+                            />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch('/api/appointments/resend-email', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ appointmentId: id })
+                                        })
+                                        if (res.ok) {
+                                            toast.success('E-mail reenviado!')
+                                        } else {
+                                            toast.error('Erro ao reenviar e-mail')
+                                        }
+                                    } catch {
+                                        toast.error('Erro ao reenviar e-mail')
+                                    }
+                                }}
+                            >
+                                <Mail className="w-4 h-4 mr-1" />
+                                E-mail
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

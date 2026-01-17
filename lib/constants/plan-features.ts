@@ -7,7 +7,13 @@ import { type PlanType, PLAN_LEVEL } from './plans'
 
 // Feature keys for checking
 export type FeatureKey =
-    // AI Features
+    // Check-in Features
+    | 'check_in_qr'
+    | 'check_in_advanced'
+    | 'pre_registration'
+    // Teleconsulta Features
+    | 'teleconsulta_webrtc'
+    // AI Features (deprecated - kept for compatibility)
     | 'ai_simple'
     | 'ai_reasoning'
     | 'ai_predictive'
@@ -46,48 +52,56 @@ export type FeatureKey =
 
 // Feature matrix: which plan level unlocks each feature
 const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
-    // AI Features
-    ai_simple: 1,           // STARTER+
-    ai_reasoning: 3,        // PROFESSIONAL+
-    ai_predictive: 4,       // ENTERPRISE+
-    ai_custom_training: 5,  // NETWORK only
+    // Check-in Features
+    check_in_qr: 1,          // STARTER+ (all plans)
+    check_in_advanced: 2,    // BASIC+
+    pre_registration: 1,     // STARTER+ (all plans)
+
+    // Teleconsulta Features
+    teleconsulta_webrtc: 2,  // BASIC+
+
+    // AI Features (deprecated - keeping for compatibility)
+    ai_simple: 1,            // STARTER+
+    ai_reasoning: 3,         // PROFESSIONAL+
+    ai_predictive: 4,        // ENTERPRISE+
+    ai_custom_training: 5,   // NETWORK only
 
     // Video Features
-    video_google_meet: 2,   // BASIC+
-    video_daily: 3,         // PROFESSIONAL+
-    video_whitelabel: 5,    // NETWORK only
+    video_google_meet: 2,    // BASIC+
+    video_daily: 3,          // PROFESSIONAL+
+    video_whitelabel: 5,     // NETWORK only
 
     // WhatsApp Features
-    whatsapp_manual: 2,     // BASIC+
-    whatsapp_automation: 3, // PROFESSIONAL+
-    whatsapp_chatbot: 4,    // ENTERPRISE+
+    whatsapp_manual: 1,      // STARTER+ (all plans)
+    whatsapp_automation: 2,  // BASIC+
+    whatsapp_chatbot: 4,     // ENTERPRISE+
 
     // Core Features
-    prontuario_basic: 1,    // STARTER+
-    prontuario_advanced: 3, // PROFESSIONAL+
-    prontuario_multi_unit: 4, // ENTERPRISE+
-    financeiro_basic: 2,    // BASIC+
-    financeiro_advanced: 3, // PROFESSIONAL+
-    relatorios_basic: 2,    // BASIC+
-    relatorios_advanced: 3, // PROFESSIONAL+
-    relatorios_bi: 4,       // ENTERPRISE+
+    prontuario_basic: 1,     // STARTER+
+    prontuario_advanced: 2,  // BASIC+
+    prontuario_multi_unit: 3, // PROFESSIONAL+
+    financeiro_basic: 1,     // STARTER+
+    financeiro_advanced: 2,  // BASIC+
+    relatorios_basic: 1,     // STARTER+
+    relatorios_advanced: 2,  // BASIC+
+    relatorios_bi: 3,        // PROFESSIONAL+
 
     // Premium Features
-    crm: 3,                 // PROFESSIONAL+
-    tiss: 3,                // PROFESSIONAL+
-    marketplace: 3,         // PROFESSIONAL+
-    estoque: 3,             // PROFESSIONAL+
+    crm: 2,                  // BASIC+
+    tiss: 3,                 // PROFESSIONAL+
+    marketplace: 3,          // PROFESSIONAL+
+    estoque: 2,              // BASIC+
 
     // Enterprise Features
-    multi_units: 4,         // ENTERPRISE+
-    datasus: 4,             // ENTERPRISE+
-    labs_rj: 4,             // ENTERPRISE+
-    api_dedicated: 4,       // ENTERPRISE+
+    multi_units: 3,          // PROFESSIONAL+
+    datasus: 4,              // ENTERPRISE+
+    labs_rj: 4,              // ENTERPRISE+
+    api_dedicated: 3,        // PROFESSIONAL+
 
     // Network Features
-    whitelabel: 5,          // NETWORK only
-    custom_integrations: 5, // NETWORK only
-    unlimited_units: 5,     // NETWORK only
+    whitelabel: 5,           // NETWORK only
+    custom_integrations: 5,  // NETWORK only
+    unlimited_units: 4,      // ENTERPRISE+
 }
 
 /**

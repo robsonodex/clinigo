@@ -20,7 +20,7 @@ const registerSchema = z.object({
         state: z.string().optional(),
         zip: z.string().optional(),
     }).optional(),
-    plan_type: z.enum(['FREE', 'BASIC', 'PRO', 'ENTERPRISE']).optional(),
+    plan_type: z.enum(['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE']).optional(),
 })
 
 const EMAIL_ALREADY_EXISTS_ERROR = 'Este e-mail já está vinculado a uma clínica cadastrada. Por favor, use outro e-mail ou recupere sua senha.'
@@ -110,13 +110,13 @@ export async function POST(request: NextRequest) {
 
         if (authError) {
             console.error('[Register] Auth create error:', authError)
-            if (authError.message?.includes('already') || authError.message?.includes('exists')) {
+            if (authError.message?.includes('already') || authError.message?.includes('exists') || authError.message?.includes('User already registered')) {
                 return NextResponse.json(
                     { success: false, error: { message: EMAIL_ALREADY_EXISTS_ERROR } },
                     { status: 400 }
                 )
             }
-            return NextResponse.json({ success: false, error: { message: authError.message } }, { status: 400 })
+            return NextResponse.json({ success: false, error: { message: 'Database error creating new user' } }, { status: 400 })
         }
 
         if (!authUser.user) {
@@ -138,6 +138,10 @@ export async function POST(request: NextRequest) {
             finalSlug = `${slug}-${Math.floor(1000 + Math.random() * 9000)}`
         }
 
+        // Calculate trial end date (7 days from now)
+        const trialEndsAt = new Date()
+        trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+
         const { data: clinic, error: clinicError } = await (supabaseAdmin as any)
             .from('clinics')
             .insert({
@@ -149,9 +153,10 @@ export async function POST(request: NextRequest) {
                 responsible_name: data.full_name,
                 responsible_phone: data.responsible_phone || data.phone,
                 address: data.address || {},
-                plan_type: data.plan_type || 'BASIC',
-                is_active: false, // Not active until approved
-                approval_status: 'pending_approval', // Key change!
+                plan_type: data.plan_type || 'STARTER', // Default to STARTER for trial
+                is_active: true, // Active for trial period!
+                trial_ends_at: trialEndsAt.toISOString(), // Trial expiration
+                approval_status: 'trial', // Trial status
             })
             .select()
             .single()
@@ -173,8 +178,8 @@ export async function POST(request: NextRequest) {
                 full_name: data.full_name,
                 role: 'CLINIC_ADMIN',
                 clinic_id: clinic?.id,
-                is_active: false, // Not active until approved
-                activation_status: 'pending_activation'
+                is_active: true, // Active for trial!
+                activation_status: 'active'
             })
 
         if (profileError) {
@@ -223,42 +228,55 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // Email 2: To Clinic (confirmation of registration received)
-        await sendMail({
+        // Email 2: To Clinic (Welcome with trial access and password)
+        const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/clinica`
+        const trialEndFormatted = trialEndsAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+        console.log('[Register] Sending welcome email to:', data.email)
+        const welcomeEmailResult = await sendMail({
             to: data.email,
-            subject: '✅ Cadastro Recebido - CliniGo',
+            subject: '🎉 Bem-vindo ao CliniGo! Seu teste grátis começou',
             html: `
                 <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
                     <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-                        <h1 style="color: white; margin: 0; font-size: 24px;">✅ Cadastro Recebido!</h1>
+                        <h1 style="color: white; margin: 0; font-size: 24px;">🎉 Bem-vindo ao CliniGo!</h1>
                     </div>
                     <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
                         <p style="font-size: 18px; color: #1f2937;">Olá, <strong>${data.full_name}</strong>!</p>
-                        <p style="color: #4b5563; line-height: 1.6;">Seu cadastro foi recebido com sucesso e está em análise.</p>
+                        <p style="color: #4b5563; line-height: 1.6;">Sua conta foi criada com sucesso! Você tem <strong>7 dias de teste grátis</strong> para explorar todas as funcionalidades.</p>
                         
-                        <div style="background: #f0fdf4; border-radius: 10px; padding: 20px; margin: 20px 0;">
-                            <h3 style="color: #166534; margin: 0 0 15px 0;">📋 Dados cadastrados:</h3>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Clínica:</strong> ${data.clinic_name}</p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>CNPJ:</strong> ${data.cnpj || 'Não informado'}</p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Plano:</strong> ${data.plan_type || 'BASIC'}</p>
+                        <div style="background: #dbeafe; border-radius: 10px; padding: 20px; margin: 20px 0; border: 2px solid #3b82f6;">
+                            <h3 style="color: #1e40af; margin: 0 0 15px 0;">🔐 Seus dados de acesso:</h3>
+                            <p style="margin: 5px 0; color: #1f2937;"><strong>E-mail:</strong> ${data.email}</p>
+                            <p style="margin: 5px 0; color: #1f2937;"><strong>Senha:</strong> ${data.password}</p>
+                            <p style="margin: 5px 0; color: #1f2937;"><strong>Clínica:</strong> ${data.clinic_name}</p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 25px 0;">
+                            <a href="${loginUrl}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; font-size: 16px;">
+                                🚀 ACESSAR MINHA CLÍNICA
+                            </a>
                         </div>
                         
                         <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
                             <p style="margin: 0; color: #92400e;">
-                                ⏰ <strong>Prazo de análise:</strong> até 24 horas úteis
+                                ⏰ <strong>Teste válido até:</strong> ${trialEndFormatted}
+                            </p>
+                            <p style="margin: 5px 0 0 0; color: #92400e; font-size: 14px;">
+                                Após esse prazo, escolha um plano para continuar usando.
                             </p>
                         </div>
                         
-                        <p style="color: #4b5563;">Você receberá um novo e-mail assim que seu cadastro for aprovado.</p>
-                        
                         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
                         <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                            Por segurança, recomendamos que você altere sua senha no primeiro acesso.<br>
                             Dúvidas? Responda este e-mail ou fale conosco no WhatsApp.
                         </p>
                     </div>
                 </div>
             `
         })
+        console.log('[Register] Welcome email result:', welcomeEmailResult)
 
         // Log emails
         try {
@@ -289,8 +307,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: 'Cadastro recebido! Você receberá um e-mail quando for aprovado.',
-            redirectTo: '/aguardando-aprovacao'
+            message: '🎉 Conta criada com sucesso! Seu teste grátis de 7 dias começou. Verifique seu e-mail para os dados de acesso.',
+            redirectTo: '/login?trial=success'
         })
 
     } catch (error) {

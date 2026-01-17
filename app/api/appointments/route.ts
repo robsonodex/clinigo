@@ -9,6 +9,7 @@ import { successResponse, paginatedResponse, parsePaginationParams, buildPaginat
 import { createAppointmentSchema, listAppointmentsQuerySchema } from '@/lib/validations/appointment'
 import { cleanCPF } from '@/lib/utils/cpf'
 import { isDateInPast, isToday, isSlotAvailableToday } from '@/lib/utils/date'
+import { generateQRToken, generateWhatsAppShareUrl, generateCheckinUrl } from '@/lib/utils/qr-code'
 // Gateway-Agnostic: Mercado Pago removido - clínica gerencia pagamentos externamente
 
 /**
@@ -340,12 +341,30 @@ export async function POST(request: NextRequest) {
 
             const doctorName = (doctor.user as { full_name: string })?.full_name || 'Médico'
 
+            // Generate QR Code token
+            const qrToken = generateQRToken(appointment.id)
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+            const checkinUrl = generateCheckinUrl(baseUrl, appointment.id)
+            const whatsappShareUrl = generateWhatsAppShareUrl({
+                clinicName: clinic.name,
+                doctorName,
+                appointmentDate: validatedData.appointment_date,
+                appointmentTime: validatedData.appointment_time,
+                appointmentId: appointment.id,
+                baseUrl,
+            })
+
             // Gateway-Agnostic: Retornar instruções de pagamento em vez de URL do gateway
             return successResponse(
                 {
                     appointment_id: appointment.id,
                     status: 'PENDING_PAYMENT',
                     message: 'Agendamento criado! Complete o pagamento para confirmar.',
+                    qr_code: {
+                        token: qrToken,
+                        checkin_url: checkinUrl,
+                        whatsapp_share_url: whatsappShareUrl,
+                    },
                     payment_instructions: {
                         amount: doctor.consultation_price,
                         doctor_name: doctorName,
@@ -362,11 +381,29 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // 10. Return response for non-prepaid (confirmed directly)
+        // 10. Generate QR Code and return response for non-prepaid (confirmed directly)
+        const qrToken = generateQRToken(appointment.id)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+        const checkinUrl = generateCheckinUrl(baseUrl, appointment.id)
+        const doctorName = (doctor.user as { full_name: string })?.full_name || 'Médico'
+        const whatsappShareUrl = generateWhatsAppShareUrl({
+            clinicName: clinic.name,
+            doctorName,
+            appointmentDate: validatedData.appointment_date,
+            appointmentTime: validatedData.appointment_time,
+            appointmentId: appointment.id,
+            baseUrl,
+        })
+
         return successResponse(
             {
                 appointment_id: appointment.id,
                 message: 'Consulta agendada com sucesso',
+                qr_code: {
+                    token: qrToken,
+                    checkin_url: checkinUrl,
+                    whatsapp_share_url: whatsappShareUrl,
+                },
             },
             { status: 201 }
         )

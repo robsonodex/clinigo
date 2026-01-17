@@ -404,11 +404,11 @@ export default function PacientesPage() {
                             </div>
                             <h3 className="text-lg font-semibold mb-2">Nenhum paciente cadastrado</h3>
                             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                                Cadastre seu primeiro paciente para começar a gerenciar consultas e prontuários.
+                                Cadastre pacientes para começar a gerenciar consultas e prontuários.
                             </p>
                             <Button onClick={() => setShowCreateModal(true)}>
                                 <Plus className="w-4 h-4 mr-2" />
-                                Cadastrar Primeiro Paciente
+                                Cadastrar Paciente
                             </Button>
                         </div>
                     )}

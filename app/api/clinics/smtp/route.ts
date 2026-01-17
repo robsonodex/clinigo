@@ -8,7 +8,6 @@ import { type NextRequest } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, BadRequestError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
-import { canUseFeature } from '@/lib/services/plan-limits'
 import { encryptPassword, testSMTPConnection } from '@/lib/services/email-multi-tenant'
 import { z } from 'zod'
 
@@ -49,14 +48,7 @@ export async function GET(request: NextRequest) {
 
         const clinicId = (user as any).clinic_id
 
-
-        // Check feature access
-        if (clinicId) {
-            const hasCustomSMTP = await canUseFeature(clinicId, 'custom_smtp')
-            if (!hasCustomSMTP) {
-                throw new ForbiddenError('SMTP personalizado disponível apenas nos planos Profissional e Enterprise')
-            }
-        }
+        // SMTP is available for all plans - no feature check needed
 
         if (!clinicId) throw new BadRequestError('Clínica indefinida')
 
@@ -111,11 +103,7 @@ export async function PATCH(request: NextRequest) {
 
         const clinicId = (user as any).clinic_id
 
-        // Check feature access
-        const hasCustomSMTP = await canUseFeature(clinicId, 'custom_smtp')
-        if (!hasCustomSMTP) {
-            throw new ForbiddenError('SMTP personalizado disponível apenas nos planos Profissional e Enterprise')
-        }
+        // SMTP is available for all plans - no feature check needed
 
         // Build update object
         const updateData: Record<string, unknown> = {

@@ -18,7 +18,8 @@ interface PageProps {
 async function getAppointmentData(appointmentId: string) {
     const supabase = createServiceRoleClient()
 
-    const { data: appointment, error } = await supabase
+    // Try finding in appointments first
+    let { data: appointment, error } = await supabase
         .from('appointments')
         .select(`
             id,
@@ -46,11 +47,88 @@ async function getAppointmentData(appointmentId: string) {
         .eq('id', appointmentId)
         .single()
 
-    if (error || !appointment) {
+    if (!error && appointment) {
+        return appointment
+    }
+
+    // If not found, try walk_in_registrations
+    // Note: We need to adapt the structure to match appointment interface
+    const walkInResult = await supabase
+        .from('walk_in_registrations')
+        .select(`
+            id,
+            created_at,
+            status,
+            patient_id,
+            doctor_id,
+            patients (
+                id,
+                full_name,
+                phone,
+                email
+            ),
+            doctors (
+                id,
+                full_name
+            )
+        `)
+        .eq('id', appointmentId)
+        .single()
+
+    const walkIn = walkInResult.data as any
+    const walkInError = walkInResult.error
+
+    if (walkInError || !walkIn) {
         return null
     }
 
-    return appointment
+    // We need clinic info. Since walk_in tables might not store clinic_id directly or we don't have the relation handy,
+    // we might need to fetch it from the doctor or patient if possible, or use a default.
+    // For now, let's try to fetch clinic from the user who created it, but we don't have created_by in the select above.
+    // Let's add created_by to select.
+
+    // Actually, let's fetch the clinic separately using the doctor or patient context if needed, 
+    // but for checkin wizard we really need clinic_id.
+    // Let's assume the current user (receptionist) context isn't available here (public page).
+
+    // Strategy: Fetch clinic via doctor -> user -> clinic_id? No, Doctor is a profile. 
+    // Let's try to get clinic_id from the doctor's user profile.
+
+    let clinicId = null
+    let clinicData = null
+
+    if (walkIn.doctor_id) {
+        const { data: doctorUser } = await supabase
+            .from('doctors')
+            .select('user_id')
+            .eq('id', walkIn.doctor_id)
+            .single()
+
+        if (doctorUser) {
+            const { data: userData } = await supabase.from('users').select('clinic_id').eq('id', doctorUser.user_id).single()
+            clinicId = userData?.clinic_id
+        }
+    }
+
+    if (clinicId) {
+        const { data: c } = await supabase.from('clinics').select('id, name, logo_url').eq('id', clinicId).single()
+        clinicData = c
+    }
+
+    // Adapt to Appointment interface
+    const createdDate = new Date(walkIn.created_at)
+
+    return {
+        id: walkIn.id,
+        appointment_date: createdDate.toISOString().split('T')[0],
+        appointment_time: createdDate.toTimeString().split(' ')[0],
+        status: walkIn.status === 'waiting' ? 'CONFIRMED' : walkIn.status, // Map status
+        clinic_id: clinicId,
+        patient_id: walkIn.patient_id,
+        patients: walkIn.patients,
+        doctors: walkIn.doctors,
+        clinics: clinicData || { id: 'unknown', name: 'Clínica', logo_url: null }
+    }
 }
 
 async function CheckinContent({ appointmentId }: { appointmentId: string }) {

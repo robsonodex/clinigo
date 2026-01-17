@@ -16,7 +16,7 @@ export default async function DashboardRootLayout({
         redirect('/login')
     }
 
-    // Fetch clinic to check is_demo
+    // Fetch clinic slug to check if demo
     const { data: profile } = await supabase
         .from('users')
         .select('clinic_id')
@@ -27,10 +27,10 @@ export default async function DashboardRootLayout({
     if (profile?.clinic_id) {
         const { data: clinic } = await supabase
             .from('clinics')
-            .select('is_demo')
+            .select('slug')
             .eq('id', profile.clinic_id)
             .single()
-        isDemo = clinic?.is_demo || false
+        isDemo = clinic?.slug === 'demo'
     }
 
     return (
@@ -40,4 +40,3 @@ export default async function DashboardRootLayout({
         </DashboardLayout>
     )
 }
-
