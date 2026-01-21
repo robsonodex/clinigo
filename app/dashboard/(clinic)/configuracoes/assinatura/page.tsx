@@ -104,6 +104,7 @@ export default function AssinaturaPage() {
                 setClinic(clinicData)
                 // Use migrateLegacyPlan to correctly map BASIC -> BASICO (not AVANCADO)
                 const rawPlanType = (clinicData as any).plan_type || 'BASICO'
+                console.log('[Assinatura] Raw plan_type from DB:', rawPlanType, '-> Migrated to:', migrateLegacyPlan(rawPlanType))
                 setCurrentPlan(migrateLegacyPlan(rawPlanType))
             }
 
@@ -439,19 +440,19 @@ export default function AssinaturaPage() {
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium">Razão Social</label>
-                                    <p className="text-muted-foreground">{clinic?.name || '-'}</p>
+                                    <p className="text-muted-foreground">{typeof clinic?.name === 'string' ? clinic.name : '-'}</p>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium">CNPJ</label>
-                                    <p className="text-muted-foreground">{clinic?.cnpj || '-'}</p>
+                                    <p className="text-muted-foreground">{typeof clinic?.cnpj === 'string' ? clinic.cnpj : '-'}</p>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium">Email de Faturamento</label>
-                                    <p className="text-muted-foreground">{clinic?.email || '-'}</p>
+                                    <p className="text-muted-foreground">{typeof clinic?.email === 'string' ? clinic.email : '-'}</p>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium">Endereço</label>
-                                    <p className="text-muted-foreground">{clinic?.address || '-'}</p>
+                                    <p className="text-muted-foreground">{typeof clinic?.address === 'string' ? clinic.address : (typeof clinic?.address === 'object' && clinic?.address ? JSON.stringify(clinic.address) : '-')}</p>
                                 </div>
                             </div>
 
