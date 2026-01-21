@@ -21,7 +21,7 @@ import {
     Rocket
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { PLANS, type PlanType } from '@/lib/constants/plans'
+import { PLANS, type PlanType, migrateLegacyPlan } from '@/lib/constants/plans'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
@@ -102,7 +102,9 @@ export default function AssinaturaPage() {
 
             if (clinicData) {
                 setClinic(clinicData)
-                setCurrentPlan((clinicData.plan_type || 'BASICO') as PlanType)
+                // Use migrateLegacyPlan to correctly map BASIC -> BASICO (not AVANCADO)
+                const rawPlanType = (clinicData as any).plan_type || 'BASICO'
+                setCurrentPlan(migrateLegacyPlan(rawPlanType))
             }
 
             // Mock payment history (TODO: implementar tabela real)
@@ -244,15 +246,15 @@ export default function AssinaturaPage() {
                                     <ul className="space-y-2 text-sm">
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-green-600" />
-                                            Até {planConfig?.limits?.doctors || 3} médicos
+                                            Até {planConfig?.limits?.max_doctors || 3} médicos
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-green-600" />
-                                            {planConfig?.limits?.appointments === -1 ? 'Consultas ilimitadas' : `Até ${planConfig?.limits?.appointments} consultas/mês`}
+                                            {planConfig?.limits?.max_appointments_month === -1 ? 'Consultas ilimitadas' : `Até ${planConfig?.limits?.max_appointments_month} consultas/mês`}
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-green-600" />
-                                            {planConfig?.limits?.storage || 5}GB de armazenamento
+                                            {planConfig?.limits?.max_storage_gb || 5}GB de armazenamento
                                         </li>
                                     </ul>
                                 </div>

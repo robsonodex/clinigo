@@ -217,7 +217,7 @@ export function canUpgradeTo(currentPlan: PlanType, targetPlan: PlanType): boole
 
 /**
  * Migration function to convert legacy plan names to new nomenclature
- * STARTER → BASICO, BASIC → AVANCADO
+ * STARTER → BASICO, BASIC → BASICO (both legacy names map to BASICO)
  */
 export function migrateLegacyPlan(legacyPlan: string): PlanType {
     const mapping: Record<string, PlanType> = {
@@ -226,9 +226,9 @@ export function migrateLegacyPlan(legacyPlan: string): PlanType {
         'AVANCADO': 'AVANCADO',
         'PROFESSIONAL': 'PROFESSIONAL',
         'ENTERPRISE': 'ENTERPRISE',
-        // Legacy migration
+        // Legacy migration - both old names map to BASICO
         'STARTER': 'BASICO',
-        'BASIC': 'AVANCADO',
+        'BASIC': 'BASICO',
         'NETWORK': 'ENTERPRISE',
         'PRO': 'PROFESSIONAL',
     }
