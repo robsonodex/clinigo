@@ -182,13 +182,27 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         }
 
         if (hardDelete) {
-            // Hard delete
+            // Hard delete - cascade delete all related data first
+            console.log('[DELETE /api/clinics] Hard deleting clinic:', clinicId)
+
+            // Delete in order to respect foreign keys
+            await supabase.from('medical_records').delete().eq('clinic_id', clinicId)
+            await supabase.from('payments').delete().eq('clinic_id', clinicId)
+            await supabase.from('appointments').delete().eq('clinic_id', clinicId)
+            await supabase.from('doctors').delete().eq('clinic_id', clinicId)
+            await supabase.from('patients').delete().eq('clinic_id', clinicId)
+            await supabase.from('users').delete().eq('clinic_id', clinicId)
+
+            // Finally delete the clinic
             const { error } = await (supabase as any)
                 .from('clinics')
                 .delete()
                 .eq('id', clinicId)
 
-            if (error) throw error
+            if (error) {
+                console.error('[DELETE /api/clinics] Error:', error)
+                throw error
+            }
 
             return NextResponse.json({
                 success: true,

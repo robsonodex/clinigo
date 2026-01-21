@@ -120,10 +120,10 @@ export default function ClinicsPage() {
 
     const deleteMutation = useMutation({
         mutationFn: (id: string) =>
-            api.delete(`/clinics/${id}`),
+            api.delete(`/clinics/${id}?hard=true`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-clinics'] })
-            toast.success('Clínica removida com sucesso')
+            toast.success('Clínica excluída permanentemente')
         },
         onError: (error: any) => {
             toast.error(error.message || 'Erro ao remover clínica')
