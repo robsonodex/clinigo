@@ -578,7 +578,10 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         </h3>
                         <div className="space-y-1">
                             {section.items.map((item) => {
-                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                                // Special case: /dashboard should only be active when exactly on /dashboard
+                                const isActive = item.href === '/dashboard'
+                                    ? pathname === '/dashboard'
+                                    : pathname === item.href || pathname.startsWith(`${item.href}/`)
                                 return (
                                     <NavItemComponent
                                         key={item.href}
