@@ -54,7 +54,7 @@ interface NavItem {
     icon: React.ComponentType<{ className?: string }>
     roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR')[]
     badge?: string
-    minPlan?: 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE'
+    minPlan?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
     children?: NavItem[]
 }
 
@@ -137,8 +137,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/prontuarios',
                 icon: FileText,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Prescrições',
@@ -153,8 +152,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/documentos',
                 icon: FileArchive,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                // Acessível a todos os planos (BASICO+)
             },
         ],
     },
@@ -166,36 +164,38 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/pagamentos',
                 icon: CreditCard,
                 roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Financeiro',
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
                 roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos - apenas Novo Lançamento (receita/despesa)
             },
             {
                 title: 'Repasse Médico',
                 href: '/dashboard/financial/payroll',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
             {
                 title: 'DRE',
                 href: '/dashboard/financial/dre',
                 icon: TrendingUp,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
             {
                 title: 'Auditoria',
                 href: '/dashboard/financial/audit',
                 icon: ShieldAlert,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
             {
                 title: 'Faturamento TISS',
@@ -210,6 +210,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/convenios',
                 icon: Shield,
                 roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos (BASICO+)
             },
         ],
     },
@@ -221,22 +222,23 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/whatsapp',
                 icon: MessageCircle,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
             {
                 title: 'Notificações',
                 href: '/dashboard/notificacoes',
                 icon: Send,
                 roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'FluxoMed',
                 href: '/dashboard/crm',
                 icon: Megaphone,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
         ],
     },
@@ -248,46 +250,49 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/estoque',
                 icon: Package,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Relatórios',
                 href: '/dashboard/relatorios',
                 icon: BarChart3,
                 roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Termos Legais',
                 href: '/dashboard/termos',
                 icon: Scale,
                 roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Importação',
                 href: '/dashboard/importacao',
                 icon: Upload,
                 roles: ['CLINIC_ADMIN'],
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
             {
                 title: 'Automação',
                 href: '/dashboard/automacao',
                 icon: Bot,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
                 children: [
                     {
                         title: 'Painel',
                         href: '/dashboard/automacao',
                         icon: Bot,
-                        minPlan: 'PROFESSIONAL',
+                        minPlan: 'AVANCADO',
                     },
                     {
                         title: 'Configurações',
                         href: '/dashboard/automacao/configuracoes',
                         icon: Settings,
-                        minPlan: 'PROFESSIONAL',
+                        minPlan: 'AVANCADO',
                     }
                 ]
             },
@@ -319,8 +324,8 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/integracoes',
                 icon: Globe,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'ENT',
-                minPlan: 'ENTERPRISE',
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
             },
         ],
     },
@@ -395,11 +400,11 @@ const navigationSections: NavSection[] = [
 // Helper to check if plan meets requirement
 function planMeetsMinimum(currentPlan: PlanType, requiredPlan: PlanType): boolean {
     const planOrder: Record<PlanType, number> = {
-        'STARTER': 0,
-        'BASIC': 1,
-        'PROFESSIONAL': 2,
-        'ENTERPRISE': 3,
-        'NETWORK': 4,
+        'BASICO': 1,
+        'AVANCADO': 2,
+        'PROFESSIONAL': 3,
+        'ENTERPRISE': 4,
+        'NETWORK': 5,
     }
     return (planOrder[currentPlan] || 0) >= (planOrder[requiredPlan] || 0)
 }
@@ -461,7 +466,7 @@ function NavItemComponent({
                         {item.children?.map((child) => (
                             <VisualLock
                                 key={child.href}
-                                requiredPlan={child.minPlan || 'BASIC'}
+                                requiredPlan={child.minPlan || 'BASICO'}
                                 currentPlan={currentPlan}
                                 featureName={child.title}
                             >
@@ -486,10 +491,10 @@ function NavItemComponent({
 
     // Check if user has access to this item's required plan
     const PLAN_ORDER: Record<string, number> = {
-        'STARTER': 0, 'BASIC': 1, 'PROFESSIONAL': 2, 'ENTERPRISE': 3, 'NETWORK': 4
+        'BASICO': 1, 'AVANCADO': 2, 'PROFESSIONAL': 3, 'ENTERPRISE': 4, 'NETWORK': 5
     }
     const currentLevel = PLAN_ORDER[currentPlan] || 0
-    const requiredLevel = PLAN_ORDER[item.minPlan || 'BASIC'] || 0
+    const requiredLevel = PLAN_ORDER[item.minPlan || 'BASICO'] || 0
     const isLocked = currentLevel < requiredLevel
 
     return (
@@ -513,9 +518,10 @@ function NavItemComponent({
             {item.badge && !isLocked && (
                 <span className={cn(
                     "px-1.5 py-0.5 text-[10px] font-bold rounded",
-                    item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
-                        item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
-                            "bg-gray-100 text-gray-700"
+                    item.badge === 'AVÇ' ? "bg-emerald-100 text-emerald-700" :
+                        item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
+                            item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
+                                "bg-gray-100 text-gray-700"
                 )}>
                     {item.badge}
                 </span>
@@ -531,7 +537,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const { planType, isLoading } = usePlan()
 
     // Default to BASIC if loading
-    const currentPlan: PlanType = planType || 'BASIC'
+    const currentPlan: PlanType = planType || 'BASICO'
 
     // Filter sections based on role
     const filteredSections = navigationSections

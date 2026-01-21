@@ -19,8 +19,9 @@ export default function PlanosPage() {
                 const res = await fetch('/api/plans')
                 if (res.ok) {
                     const data = await res.json()
+                    // Use new plan names: BASICO, AVANCADO, PROFESSIONAL, ENTERPRISE
                     const filtered = data.filter((p: PlanConfig) =>
-                        ['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE'].includes(p.id)
+                        ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'].includes(p.id)
                     )
                     setPlans(filtered.length > 0 ? filtered : DISPLAY_PLANS)
                 } else {

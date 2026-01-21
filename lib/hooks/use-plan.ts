@@ -52,7 +52,7 @@ export function usePlan(): UsePlanResult {
                 if (clinic) {
                     // Normalize plan type (PRO -> PROFESSIONAL, etc)
                     const rawPlan = (clinic as any).plan_type
-                    const normalizedPlan = migrateLegacyPlan(rawPlan || 'STARTER')
+                    const normalizedPlan = migrateLegacyPlan(rawPlan || 'BASICO')
                     setPlanType(normalizedPlan)
                 }
             } catch (error) {
@@ -81,7 +81,7 @@ export function usePlan(): UsePlanResult {
     return {
         planType,
         isLoading,
-        isBasic: planType === 'BASIC',
+        isBasic: planType === 'BASICO',
         isPro: planType === 'PROFESSIONAL',
         isEnterprise: planType === 'ENTERPRISE' || planType === 'NETWORK',
         canAccess,
