@@ -596,9 +596,10 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         </h3>
                         <div className="space-y-1">
                             {section.items.map((item) => {
-                                // Special case: /dashboard should only be active when exactly on /dashboard
-                                const isActive = item.href === '/dashboard'
-                                    ? pathname === '/dashboard'
+                                // Special cases for exact matching to avoid multiple active items
+                                const exactMatchRoutes = ['/dashboard', '/dashboard/configuracoes']
+                                const isActive = exactMatchRoutes.includes(item.href)
+                                    ? pathname === item.href
                                     : pathname === item.href || pathname.startsWith(`${item.href}/`)
                                 return (
                                     <NavItemComponent
