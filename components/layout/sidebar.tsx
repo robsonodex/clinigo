@@ -314,6 +314,24 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN'],
             },
             {
+                title: 'Teleconsulta',
+                href: '/dashboard/configuracoes/teleconsulta',
+                icon: Video,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
+                title: 'Usuários',
+                href: '/dashboard/configuracoes/usuarios',
+                icon: Users,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
+                title: 'Assinatura',
+                href: '/dashboard/configuracoes/assinatura',
+                icon: CreditCard,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
                 title: 'Segurança',
                 href: '/dashboard/seguranca',
                 icon: Lock,

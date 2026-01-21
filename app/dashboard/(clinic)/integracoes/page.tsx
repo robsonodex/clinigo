@@ -66,7 +66,7 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
         description: 'Pagamentos via PIX e cartão de crédito',
         icon: CreditCard,
         category: 'payment',
-        requiredPlan: 'STARTER',
+        requiredPlan: 'BASICO',
         settingsKey: 'mercadopago_configured',
         fields: [
             { key: 'access_token', label: 'Access Token', type: 'password', placeholder: 'APP_USR-...' },
@@ -75,12 +75,40 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
         docsUrl: 'https://www.mercadopago.com.br/developers/pt/docs',
     },
     {
+        id: 'google_calendar',
+        name: 'Google Calendar',
+        description: 'Sincronize agenda com Google Calendar',
+        icon: Calendar,
+        category: 'calendar',
+        requiredPlan: 'AVANCADO',
+        settingsKey: 'google_calendar_configured',
+        fields: [
+            { key: 'client_id', label: 'Client ID', type: 'text', placeholder: 'ID do cliente OAuth' },
+            { key: 'client_secret', label: 'Client Secret', type: 'password', placeholder: 'Secret do cliente OAuth' },
+        ],
+        docsUrl: 'https://developers.google.com/calendar',
+    },
+    {
+        id: 'google_drive',
+        name: 'Google Drive',
+        description: 'Backup automático de documentos',
+        icon: Globe,
+        category: 'calendar',
+        requiredPlan: 'AVANCADO',
+        settingsKey: 'google_drive_configured',
+        fields: [
+            { key: 'client_id', label: 'Client ID', type: 'text', placeholder: 'ID do cliente OAuth' },
+            { key: 'client_secret', label: 'Client Secret', type: 'password', placeholder: 'Secret do cliente OAuth' },
+        ],
+        docsUrl: 'https://developers.google.com/drive',
+    },
+    {
         id: 'resend',
         name: 'Resend/SendGrid',
         description: 'Emails transacionais personalizados',
         icon: Mail,
         category: 'email',
-        requiredPlan: 'BASIC',
+        requiredPlan: 'AVANCADO',
         settingsKey: 'resend_configured',
         fields: [
             { key: 'api_key', label: 'API Key', type: 'password', placeholder: 're_...' },
@@ -93,7 +121,7 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
         description: 'Notificações automáticas via WhatsApp',
         icon: MessageCircle,
         category: 'messaging',
-        requiredPlan: 'PROFESSIONAL',
+        requiredPlan: 'AVANCADO',
         settingsKey: 'whatsapp_configured',
         fields: [
             { key: 'api_key', label: 'Access Token', type: 'password', placeholder: 'Token do WhatsApp Business' },
@@ -101,6 +129,45 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
             { key: 'business_id', label: 'Business Account ID', type: 'text', placeholder: 'ID da conta business' },
         ],
         docsUrl: 'https://developers.facebook.com/docs/whatsapp',
+    },
+    {
+        id: 'rdstation',
+        name: 'RD Station',
+        description: 'Marketing e CRM automatizado',
+        icon: Zap,
+        category: 'analytics',
+        requiredPlan: 'PROFESSIONAL',
+        settingsKey: 'rdstation_configured',
+        fields: [
+            { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Token de integração' },
+        ],
+        docsUrl: 'https://developers.rdstation.com',
+    },
+    {
+        id: 'hubspot',
+        name: 'HubSpot CRM',
+        description: 'CRM e automação de marketing',
+        icon: Zap,
+        category: 'analytics',
+        requiredPlan: 'PROFESSIONAL',
+        settingsKey: 'hubspot_configured',
+        fields: [
+            { key: 'api_key', label: 'Access Token', type: 'password', placeholder: 'pat-...' },
+        ],
+        docsUrl: 'https://developers.hubspot.com',
+    },
+    {
+        id: 'zapier',
+        name: 'Zapier',
+        description: 'Conecte com 5000+ apps',
+        icon: Zap,
+        category: 'analytics',
+        requiredPlan: 'ENTERPRISE',
+        settingsKey: 'zapier_configured',
+        fields: [
+            { key: 'webhook_url', label: 'Webhook URL', type: 'text', placeholder: 'https://hooks.zapier.com/...' },
+        ],
+        docsUrl: 'https://zapier.com/developer',
     },
     {
         id: 'posthog',
@@ -150,7 +217,7 @@ function useClinicData() {
 
     return {
         clinic,
-        planType: ((clinic as any)?.plan_type as PlanType) || 'STARTER',
+        planType: ((clinic as any)?.plan_type as PlanType) || 'BASICO',
         isLoading,
     }
 }
@@ -324,7 +391,7 @@ export default function IntegracoesPage() {
 
     const getPlanBadge = (plan: PlanType) => {
         const config = PLANS[plan]
-        if (!config || plan === 'STARTER') return null
+        if (!config || plan === 'BASICO') return null
         return (
             <Badge variant="secondary" className={config.badgeColor + ' text-xs'}>
                 {config.name}
