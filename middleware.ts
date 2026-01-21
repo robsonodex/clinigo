@@ -244,7 +244,7 @@ export async function middleware(request: NextRequest) {
     if (user) {
         let userRole = user.user_metadata?.role as string | undefined
         let userClinicId = user.user_metadata?.clinic_id as string | undefined
-        let userPlanType: PlanType = 'STARTER'
+        let userPlanType: PlanType = 'BASICO'
 
         // Get role from database
         const { data: profile } = await supabase
@@ -266,7 +266,7 @@ export async function middleware(request: NextRequest) {
         if (isSuperAdminEmail) {
             userRole = 'SUPER_ADMIN'
             userClinicId = undefined
-            userPlanType = 'NETWORK' // Super admin has all access
+            userPlanType = 'ENTERPRISE' // Super admin has all access
         }
 
         // Get clinic plan type (for non-super admins)
@@ -290,26 +290,30 @@ export async function middleware(request: NextRequest) {
                 }
 
                 // Capture plan type (with legacy migration)
-                const dbPlanType = (clinic.plan_type || 'STARTER') as string
-                // Migrate legacy plan names
+                const dbPlanType = (clinic.plan_type || 'BASICO') as string
+                // Migrate legacy plan names to new nomenclature
                 const planMapping: Record<string, PlanType> = {
-                    'BASIC': 'BASIC',
-                    'PRO': 'PROFESSIONAL',
-                    'ENTERPRISE': 'NETWORK',
-                    'STARTER': 'STARTER',
+                    // New names
+                    'BASICO': 'BASICO',
+                    'AVANCADO': 'AVANCADO',
                     'PROFESSIONAL': 'PROFESSIONAL',
-                    'NETWORK': 'NETWORK',
+                    'ENTERPRISE': 'ENTERPRISE',
+                    'NETWORK': 'ENTERPRISE',
+                    // Legacy names migration
+                    'STARTER': 'BASICO',
+                    'BASIC': 'AVANCADO',
+                    'PRO': 'PROFESSIONAL',
                 }
-                userPlanType = planMapping[dbPlanType] || 'STARTER'
+                userPlanType = planMapping[dbPlanType] || 'BASICO'
             }
         }
 
         // ----------------------------------------
-        // PLAN-BASED ROUTE PROTECTION (5-Tier Hard Gate)
+        // PLAN-BASED ROUTE PROTECTION (4-Tier Hard Gate)
         // ----------------------------------------
         const PLAN_ORDER: Record<PlanType, number> = {
-            'STARTER': 1,
-            'BASIC': 2,
+            'BASICO': 1,
+            'AVANCADO': 2,
             'PROFESSIONAL': 3,
             'ENTERPRISE': 4,
             'NETWORK': 5
@@ -362,9 +366,20 @@ export async function middleware(request: NextRequest) {
         // Check role permissions for API routes
         for (const [route, allowedRoles] of Object.entries(ROLE_PROTECTED_ROUTES)) {
             if (pathname.startsWith(route)) {
-                if (!userRole || !allowedRoles.includes(userRole)) {
+                // Allow if user has an allowed role OR if no role requirement specified
+                if (userRole && allowedRoles.includes(userRole)) {
+                    // Role is allowed, continue
+                    break
+                } else if (!userRole) {
+                    // No role assigned, block
                     return NextResponse.json(
-                        { error: 'Acesso negado', code: 'FORBIDDEN' },
+                        { error: 'Acesso negado - sem role', code: 'NO_ROLE' },
+                        { status: 403 }
+                    )
+                } else {
+                    // Has role but not allowed
+                    return NextResponse.json(
+                        { error: 'Acesso negado - role não permitida', code: 'FORBIDDEN', role: userRole, allowed: allowedRoles },
                         { status: 403 }
                     )
                 }

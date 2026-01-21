@@ -11,7 +11,7 @@ export default function NovaImportacaoPage() {
             <div className="mb-6">
                 <Button variant="ghost" size="sm" asChild className="mb-4 pl-0">
                     <Link href="/dashboard/importacao">
-                        <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
+                        <span className="flex items-center"><ChevronLeft className="h-4 w-4 mr-1" /> Voltar</span>
                     </Link>
                 </Button>
                 <h1 className="text-3xl font-bold">Nova Importação</h1>

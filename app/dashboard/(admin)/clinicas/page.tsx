@@ -46,6 +46,7 @@ interface Clinic {
     plan_type: 'BASIC' | 'PRO' | 'ENTERPRISE'
     is_active: boolean
     created_at: string
+    logo_url?: string | null
 }
 
 interface ClinicsResponse {
@@ -350,7 +351,19 @@ export default function ClinicsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                                                    {clinic.logo_url ? (
+                                                        <img
+                                                            src={clinic.logo_url}
+                                                            alt={`Logo ${clinic.name}`}
+                                                            className="h-10 w-10 rounded-full object-cover"
+                                                            onError={(e) => {
+                                                                // Fallback to icon if image fails to load
+                                                                e.currentTarget.style.display = 'none'
+                                                                e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 ${clinic.logo_url ? 'hidden' : ''}`}>
                                                         <Building2 className="h-5 w-5 text-primary" />
                                                     </div>
                                                     <div>

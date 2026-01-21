@@ -1,13 +1,13 @@
 /**
  * Core Types - Single Source of Truth
- * 5-Tier Plan System for RJ Market
+ * 4-Tier Plan System: Básico, Avançado, Professional, Enterprise
  */
 
 // ============================================================================
-// PLAN TYPES (5-Tier Source of Truth)
+// PLAN TYPES (4-Tier Source of Truth)
 // ============================================================================
 
-export type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
 
 export type PlanFeature =
     | 'ai_simple'
@@ -157,7 +157,7 @@ export interface BillingCheckoutResponse {
 // ============================================================================
 
 export function isPlanType(value: string): value is PlanType {
-    return ['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(value)
+    return ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(value)
 }
 
 export function isUserRole(value: string): value is UserRole {
@@ -169,62 +169,66 @@ export function isSubscriptionStatus(value: string): value is SubscriptionStatus
 }
 
 // ============================================================================
-// CONSTANTS (5-Tier RJ Market)
+// CONSTANTS (4-Tier)
 // ============================================================================
 
 export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
-    STARTER: {
-        type: 'STARTER',
-        name: 'Starter',
-        price_monthly: 47,
-        price_yearly: 470,
+    BASICO: {
+        type: 'BASICO',
+        name: 'Básico',
+        price_monthly: 149,
+        price_yearly: 1490,
         tier: 1,
         limits: {
-            max_doctors: 1,
-            max_appointments_month: 50,
-            max_patients: 100,
-            max_storage_gb: 1,
-            max_units: 1,
-        },
-        features: [
-            'ai_simple',
-            'prontuario_basic',
-        ],
-    },
-    BASIC: {
-        type: 'BASIC',
-        name: 'Básico',
-        price_monthly: 87,
-        price_yearly: 870,
-        tier: 2,
-        limits: {
-            max_doctors: 3,
-            max_appointments_month: 200,
+            max_doctors: 2,
+            max_appointments_month: 100,
             max_patients: 500,
             max_storage_gb: 5,
             max_units: 1,
         },
         features: [
             'ai_simple',
-            'video_google_meet',
-            'whatsapp_manual',
             'prontuario_basic',
+            'whatsapp_manual',
             'financeiro_basic',
             'relatorios_basic',
         ],
     },
+    AVANCADO: {
+        type: 'AVANCADO',
+        name: 'Avançado',
+        price_monthly: 299,
+        price_yearly: 2990,
+        tier: 2,
+        limits: {
+            max_doctors: 5,
+            max_appointments_month: 500,
+            max_patients: -1,
+            max_storage_gb: 20,
+            max_units: 1,
+        },
+        features: [
+            'ai_simple',
+            'video_google_meet',
+            'whatsapp_automation',
+            'prontuario_basic',
+            'financeiro_advanced',
+            'relatorios_advanced',
+            'crm',
+        ],
+    },
     PROFESSIONAL: {
         type: 'PROFESSIONAL',
-        name: 'Profissional',
-        price_monthly: 247,
-        price_yearly: 2470,
+        name: 'Professional',
+        price_monthly: 549,
+        price_yearly: 5490,
         tier: 3,
         limits: {
-            max_doctors: 10,
+            max_doctors: 30,
             max_appointments_month: -1,
             max_patients: -1,
-            max_storage_gb: 50,
-            max_units: 1,
+            max_storage_gb: 100,
+            max_units: 3,
         },
         features: [
             'ai_simple',
@@ -243,15 +247,15 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
     ENTERPRISE: {
         type: 'ENTERPRISE',
         name: 'Enterprise',
-        price_monthly: 497,
-        price_yearly: 4970,
+        price_monthly: 799,
+        price_yearly: 7990,
         tier: 4,
         limits: {
-            max_doctors: 30,
+            max_doctors: -1,
             max_appointments_month: -1,
             max_patients: -1,
-            max_storage_gb: 200,
-            max_units: 3,
+            max_storage_gb: 500,
+            max_units: -1,
         },
         features: [
             'ai_simple',
@@ -271,13 +275,14 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
             'datasus',
             'labs_rj',
             'api_dedicated',
+            'whitelabel',
         ],
     },
     NETWORK: {
         type: 'NETWORK',
-        name: 'Network',
-        price_monthly: 997,
-        price_yearly: 9970,
+        name: 'Network (Legacy)',
+        price_monthly: 999,
+        price_yearly: 9990,
         tier: 5,
         limits: {
             max_doctors: -1,
@@ -332,12 +337,22 @@ export function getPlanTier(planType: PlanType): number {
     return PLAN_DEFINITIONS[planType]?.tier ?? 1
 }
 
-// Legacy plan migration helper
+/**
+ * Legacy plan migration helper
+ * Converts old plan names to new nomenclature
+ */
 export function migrateLegacyPlan(legacyPlan: string): PlanType {
     const mapping: Record<string, PlanType> = {
-        'BASIC': 'BASIC',
+        // New names
+        'BASICO': 'BASICO',
+        'AVANCADO': 'AVANCADO',
+        'PROFESSIONAL': 'PROFESSIONAL',
+        'ENTERPRISE': 'ENTERPRISE',
+        // Legacy names
+        'STARTER': 'BASICO',
+        'BASIC': 'AVANCADO',
+        'NETWORK': 'ENTERPRISE',
         'PRO': 'PROFESSIONAL',
-        'ENTERPRISE': 'NETWORK',
     }
-    return mapping[legacyPlan] || 'STARTER'
+    return mapping[legacyPlan] || 'BASICO'
 }

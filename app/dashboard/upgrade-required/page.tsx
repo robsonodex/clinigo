@@ -34,12 +34,22 @@ const PLAN_FEATURES = {
     },
 }
 
+const DEFAULT_PLAN = {
+    name: 'PRO',
+    price: 'R$ 299/mês',
+    features: ['CRM Completo', 'Gestão de Estoque', 'Financeiro Avançado']
+}
+
 export default function UpgradePage() {
     const searchParams = useSearchParams()
     const feature = searchParams.get('feature') || 'recurso'
-    const requiredPlan = searchParams.get('plan') as 'PRO' | 'ENTERPRISE' || 'PRO'
+    const planParam = searchParams.get('plan') || 'PRO'
 
-    const planInfo = PLAN_FEATURES[requiredPlan]
+    // Map plan names to PLAN_FEATURES keys
+    const planKey = planParam === 'PROFESSIONAL' || planParam === 'PRO' ? 'PRO' :
+        planParam === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRO'
+
+    const planInfo = PLAN_FEATURES[planKey] || DEFAULT_PLAN
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -52,7 +62,7 @@ export default function UpgradePage() {
                     <CardDescription className="text-base mt-2">
                         O recurso <strong className="text-gray-900">{feature}</strong> requer o plano{' '}
                         <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-                            {requiredPlan}
+                            {planKey}
                         </Badge>
                     </CardDescription>
                 </CardHeader>
@@ -84,8 +94,7 @@ export default function UpgradePage() {
                     <div className="space-y-3">
                         <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
                             <Link href="/dashboard/configuracoes/plano">
-                                Fazer Upgrade Agora
-                                <ArrowRight className="w-4 h-4 ml-2" />
+                                <span className="flex items-center justify-center">Fazer Upgrade Agora<ArrowRight className="w-4 h-4 ml-2" /></span>
                             </Link>
                         </Button>
 

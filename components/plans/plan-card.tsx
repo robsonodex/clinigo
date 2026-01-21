@@ -40,6 +40,7 @@ export function PlanCard({
                     size: 'lg',
                 }),
                 'w-full transition-all duration-300',
+                'hover:bg-emerald-600 hover:text-white hover:border-emerald-600',
                 selected && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 scale-105'
             )}
         >
@@ -47,15 +48,19 @@ export function PlanCard({
         </Link>
     ) : (
         <Button
-            onClick={onSelect}
+            onClick={(e) => {
+                e.stopPropagation()
+                onSelect?.()
+            }}
             variant="outline"
             size="lg"
             className={cn(
                 'w-full transition-all duration-300',
+                'hover:bg-emerald-600 hover:text-white hover:border-emerald-600',
                 selected && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 scale-105'
             )}
         >
-            {ctaText || (selected ? '✓ Selecionado' : 'Escolher Plano')}
+            {selected ? '✓ Selecionado' : (ctaText || 'Escolher Plano')}
         </Button>
     )
 
@@ -163,13 +168,6 @@ export function PlanCard({
                         )
                     })}
                 </ul>
-
-                {/* Storage Info */}
-                <div className="pt-4 border-t mt-auto">
-                    <p className="text-xs text-muted-foreground text-center">
-                        {plan.limits.max_storage_gb}GB de armazenamento
-                    </p>
-                </div>
             </CardContent>
 
             {showCTA && (

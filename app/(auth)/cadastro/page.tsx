@@ -81,7 +81,7 @@ function CadastroContent() {
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [formData, setFormData] = useState<Partial<FormData>>({
-        plan_type: preselectedPlan || 'BASIC',
+        plan_type: preselectedPlan || undefined,
     })
 
     const {
@@ -181,10 +181,9 @@ function CadastroContent() {
                 <div className="container mx-auto px-4 py-4">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-xl font-bold text-primary"
+                        className="inline-flex items-center"
                     >
-                        <Stethoscope className="w-6 h-6" />
-                        CliniGo
+                        <img src="/logo-clinigo.png" alt="CliniGo" className="h-10 w-auto" />
                     </Link>
                 </div>
             </div>

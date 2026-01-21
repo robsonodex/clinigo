@@ -62,22 +62,19 @@ export default function PrivacyTab() {
                 <CardContent className="space-y-3">
                     <Button variant="outline" className="w-full justify-start" asChild>
                         <a href="/termos-de-uso" target="_blank">
-                            <FileText className="mr-2 h-4 w-4" />
-                            Termos de Uso
+                            <span className="flex items-center"><FileText className="mr-2 h-4 w-4" />Termos de Uso</span>
                         </a>
                     </Button>
 
                     <Button variant="outline" className="w-full justify-start" asChild>
                         <a href="/politica-de-privacidade" target="_blank">
-                            <Shield className="mr-2 h-4 w-4" />
-                            Política de Privacidade
+                            <span className="flex items-center"><Shield className="mr-2 h-4 w-4" />Política de Privacidade</span>
                         </a>
                     </Button>
 
                     <Button variant="outline" className="w-full justify-start" asChild>
                         <a href="/politica-de-cookies" target="_blank">
-                            <FileText className="mr-2 h-4 w-4" />
-                            Política de Cookies
+                            <span className="flex items-center"><FileText className="mr-2 h-4 w-4" />Política de Cookies</span>
                         </a>
                     </Button>
                 </CardContent>

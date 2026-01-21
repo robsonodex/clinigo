@@ -28,8 +28,7 @@ export default function ImportacoesPage() {
                 </div>
                 <Button asChild>
                     <Link href="/dashboard/importacao/novo">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nova Importação
+                        <span className="flex items-center"><Plus className="mr-2 h-4 w-4" />Nova Importação</span>
                     </Link>
                 </Button>
             </div>

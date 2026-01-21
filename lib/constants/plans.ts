@@ -1,10 +1,10 @@
 /**
  * Plan Definitions - CliniGo B2B
- * 4-Tier Structure: CliniGO Consultório, Clínica, Centro Clínico, Rede Enterprise
- * Maps to database: STARTER, BASIC, PROFESSIONAL, ENTERPRISE
+ * 4-Tier Structure: CliniGO Básico, Avançado, Professional, Enterprise
+ * Maps to database: BASICO, AVANCADO, PROFESSIONAL, ENTERPRISE
  */
 
-export type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
 
 export interface PlanFeature {
     name: string
@@ -36,8 +36,8 @@ export interface PlanConfig {
 }
 
 export const PLANS: Record<PlanType, PlanConfig> = {
-    STARTER: {
-        id: 'STARTER',
+    BASICO: {
+        id: 'BASICO',
         name: 'CliniGo Básico',
         tagline: 'Para consultórios com até 2 médicos',
         price: 149,
@@ -65,8 +65,8 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         color: 'blue',
         badgeColor: 'bg-blue-100 text-blue-800',
     },
-    BASIC: {
-        id: 'BASIC',
+    AVANCADO: {
+        id: 'AVANCADO',
         name: 'CliniGo Avançado',
         tagline: 'Para clínicas com até 5 médicos',
         price: 299,
@@ -75,7 +75,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         recommended: true,
         features: [
             { name: 'Até 5 médicos', included: true },
-            { name: 'Tudo do Consultório +', included: true },
+            { name: 'Tudo do Básico +', included: true },
             { name: 'Check-in avançado + Upload', included: true, tooltip: 'Upload de docs pré-consulta' },
             { name: 'Prontuário completo', included: true },
             { name: 'Teleconsulta WebRTC', included: true },
@@ -106,7 +106,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         features: [
             { name: 'Até 30 médicos', included: true },
             { name: 'Consultas ilimitadas', included: true },
-            { name: 'Tudo do Clínica +', included: true },
+            { name: 'Tudo do Avançado +', included: true },
             { name: 'Até 3 unidades', included: true },
             { name: 'Prontuário multi-unidade', included: true },
             { name: 'Faturamento TISS', included: true },
@@ -137,7 +137,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         billing: 'por mês',
         features: [
             { name: 'Médicos ilimitados', included: true, tooltip: 'Quantidade conforme contrato' },
-            { name: 'Tudo do Centro Clínico +', included: true },
+            { name: 'Tudo do Professional +', included: true },
             { name: 'Unidades ilimitadas', included: true },
             { name: 'SMTP próprio', included: true },
             { name: 'Migração dedicada', included: true, tooltip: 'Equipe exclusiva' },
@@ -183,28 +183,28 @@ export const PLANS: Record<PlanType, PlanConfig> = {
 
 // Plans shown in UI - only 4 active plans
 export const DISPLAY_PLANS: PlanConfig[] = [
-    PLANS.STARTER,
-    PLANS.BASIC,
+    PLANS.BASICO,
+    PLANS.AVANCADO,
     PLANS.PROFESSIONAL,
     PLANS.ENTERPRISE,
 ]
 
-export const PLAN_ORDER: PlanType[] = ['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE']
+export const PLAN_ORDER: PlanType[] = ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE']
 
 export const PLAN_LEVEL: Record<PlanType, number> = {
-    STARTER: 1,
-    BASIC: 2,
+    BASICO: 1,
+    AVANCADO: 2,
     PROFESSIONAL: 3,
     ENTERPRISE: 4,
     NETWORK: 5,
 }
 
 export function getPlanConfig(planType: PlanType): PlanConfig {
-    return PLANS[planType] || PLANS.STARTER
+    return PLANS[planType] || PLANS.BASICO
 }
 
 export function getRecommendedPlan(): PlanConfig {
-    return PLANS.BASIC
+    return PLANS.AVANCADO
 }
 
 export function isPlanAtLeast(currentPlan: PlanType, requiredPlan: PlanType): boolean {
@@ -215,16 +215,24 @@ export function canUpgradeTo(currentPlan: PlanType, targetPlan: PlanType): boole
     return PLAN_LEVEL[targetPlan] > PLAN_LEVEL[currentPlan]
 }
 
+/**
+ * Migration function to convert legacy plan names to new nomenclature
+ * STARTER → BASICO, BASIC → AVANCADO
+ */
 export function migrateLegacyPlan(legacyPlan: string): PlanType {
     const mapping: Record<string, PlanType> = {
-        'STARTER': 'STARTER',
-        'BASIC': 'BASIC',
+        // New names
+        'BASICO': 'BASICO',
+        'AVANCADO': 'AVANCADO',
         'PROFESSIONAL': 'PROFESSIONAL',
         'ENTERPRISE': 'ENTERPRISE',
-        'NETWORK': 'ENTERPRISE', // Migrate NETWORK to ENTERPRISE
+        // Legacy migration
+        'STARTER': 'BASICO',
+        'BASIC': 'AVANCADO',
+        'NETWORK': 'ENTERPRISE',
         'PRO': 'PROFESSIONAL',
     }
-    return mapping[legacyPlan] || 'STARTER'
+    return mapping[legacyPlan] || 'BASICO'
 }
 
 export const TRIAL_DAYS = 7

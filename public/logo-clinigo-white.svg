@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" fill="none">
+  <!-- Green medical cross with checkmark -->
+  <g>
+    <!-- Cross shape -->
+    <path d="M8 15h9v-9h8v9h9v8h-9v9h-8v-9h-9z" fill="#10B981"/>
+    <!-- White checkmark inside cross -->
+    <path d="M12 19l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  
+  <!-- Text "Clini" in WHITE -->
+  <text x="45" y="32" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="26" font-weight="700" fill="white">Clini</text>
+  
+  <!-- Text "Go" in green -->
+  <text x="120" y="32" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="26" font-weight="700" fill="#10B981">Go</text>
+</svg>

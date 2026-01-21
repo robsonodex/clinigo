@@ -1,5 +1,19 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { ClinicTheme, DEFAULT_THEME, PageTemplate, mergeWithDefaultTheme } from '@/types/clinic-theme'
+import {
+    GlassmorphismTemplate,
+    SwissMinimalTemplate,
+    AuroraNeonTemplate,
+    TemplateProps,
+    ClinicData,
+    Doctor,
+    Specialty,
+    Review
+} from '@/components/public/templates'
+
+// Legacy components for fallback
 import { ThemeProvider } from '@/components/public/ThemeProvider'
 import { DynamicHeader } from '@/components/public/DynamicHeader'
 import { HeroSection } from '@/components/public/HeroSection'
@@ -9,8 +23,6 @@ import { ReviewsSection } from '@/components/public/ReviewsSection'
 import { LocationMap } from '@/components/public/LocationMap'
 import { FAQSection } from '@/components/public/FAQSection'
 import { CustomFooter } from '@/components/public/CustomFooter'
-import { ClinicTheme, DEFAULT_THEME } from '@/types/clinic-theme'
-import { useRouter } from 'next/navigation'
 
 // =============================================================================
 // Helper: Deep sanitize to remove empty objects
@@ -51,55 +63,6 @@ function sanitizeTheme(theme: Partial<ClinicTheme> | null): Partial<ClinicTheme>
 // Types
 // =============================================================================
 
-interface Doctor {
-    id: string
-    full_name: string
-    specialty: string
-    crm: string
-    photo_url: string | null
-    consultation_price: number
-    is_featured: boolean
-    accepts_insurance: boolean
-}
-
-interface Specialty {
-    name: string
-    slug: string
-    doctorCount: number
-}
-
-interface Review {
-    id: string
-    reviewer_name: string
-    rating: number
-    comment: string
-    date: string
-    is_verified: boolean
-}
-
-interface ClinicData {
-    id: string
-    name: string
-    slug: string
-    email: string | null
-    phone: string | null
-    address: string | null
-    logo_url: string | null
-    plan_type: string
-    theme: Partial<ClinicTheme> | null
-    tagline: string | null
-    about: string | null
-    video_url: string | null
-    gallery: string[]
-    google_maps_url: string | null
-    whatsapp_number: string | null
-    instagram: string | null
-    facebook: string | null
-    linkedin: string | null
-    youtube: string | null
-    opening_hours: Record<string, string> | null
-}
-
 interface PageData {
     clinic: ClinicData
     doctors: Doctor[]
@@ -126,6 +89,82 @@ export function ClinicPublicPageClient({ data }: ClinicPublicPageClientProps) {
 
     // Sanitize theme to remove empty objects
     const sanitizedTheme = sanitizeTheme(clinic.theme)
+
+    // Merge with defaults to get complete theme
+    const fullTheme = mergeWithDefaultTheme(sanitizedTheme || {})
+
+    // Get template from theme (default to glassmorphism)
+    const selectedTemplate: PageTemplate = fullTheme.template || 'glassmorphism'
+
+    // ==========================================================================
+    // Handler Functions
+    // ==========================================================================
+
+    const handleSearch = (term: string) => {
+        router.push(`/${clinic.slug}/agendar?search=${encodeURIComponent(term)}`)
+    }
+
+    const handleBook = (doctorId?: string) => {
+        if (doctorId) {
+            router.push(`/${clinic.slug}/agendar?medico=${doctorId}`)
+        } else {
+            router.push(`/${clinic.slug}/agendar`)
+        }
+    }
+
+    const handleTeleconsulta = () => {
+        router.push(`/${clinic.slug}/agendar?tipo=teleconsulta`)
+    }
+
+    // ==========================================================================
+    // Template Props
+    // ==========================================================================
+
+    const templateProps: TemplateProps = {
+        clinic,
+        doctors,
+        specialties,
+        reviews,
+        stats,
+        onSearch: handleSearch,
+        onBook: handleBook,
+        onTeleconsulta: handleTeleconsulta
+    }
+
+    // ==========================================================================
+    // Render Selected Template
+    // ==========================================================================
+
+    // Render new templates
+    switch (selectedTemplate) {
+        case 'glassmorphism':
+            return <GlassmorphismTemplate {...templateProps} />
+
+        case 'swiss-minimal':
+            return <SwissMinimalTemplate {...templateProps} />
+
+        case 'aurora-neon':
+            return <AuroraNeonTemplate {...templateProps} />
+
+        default:
+            // Legacy fallback (original design) - this shouldn't happen normally
+            return <LegacyTemplate data={data} sanitizedTheme={sanitizedTheme} />
+    }
+}
+
+// =============================================================================
+// Legacy Template Component (fallback)
+// =============================================================================
+
+function LegacyTemplate({
+    data,
+    sanitizedTheme
+}: {
+    data: PageData
+    sanitizedTheme: Partial<ClinicTheme> | null
+}) {
+    const router = useRouter()
+    const { clinic, doctors, specialties, reviews, stats } = data
 
     const handleSearch = (term: string) => {
         router.push(`/${clinic.slug}/agendar?search=${encodeURIComponent(term)}`)

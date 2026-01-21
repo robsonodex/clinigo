@@ -20,7 +20,7 @@ const registerSchema = z.object({
         state: z.string().optional(),
         zip: z.string().optional(),
     }).optional(),
-    plan_type: z.enum(['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE']).optional(),
+    plan_type: z.enum(['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE']).optional(),
 })
 
 const EMAIL_ALREADY_EXISTS_ERROR = 'Este e-mail já está vinculado a uma clínica cadastrada. Por favor, use outro e-mail ou recupere sua senha.'
@@ -201,14 +201,14 @@ export async function POST(request: NextRequest) {
 
             await sendMail({
                 to: superAdminEmail,
-                subject: '🏥 Nova Clínica Aguardando Aprovação - CliniGo',
+                subject: 'Nova Clínica Aguardando Aprovação - CliniGo',
                 html: `
                     <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
                         <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 24px;">🏥 Nova Clínica Aguardando Aprovação</h1>
+                            <h1 style="color: white; margin: 0; font-size: 24px;">Nova Clínica Aguardando Aprovação</h1>
                         </div>
                         <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
-                            <h3 style="color: #1f2937; margin-top: 0;">📋 Dados do Cadastro:</h3>
+                            <h3 style="color: #1f2937; margin-top: 0;">Dados do Cadastro:</h3>
                             <table style="width: 100%; border-collapse: collapse;">
                                 <tr><td style="padding: 8px 0; color: #6b7280;">Clínica:</td><td style="padding: 8px 0; font-weight: bold;">${data.clinic_name}</td></tr>
                                 <tr><td style="padding: 8px 0; color: #6b7280;">CNPJ:</td><td style="padding: 8px 0;">${data.cnpj || 'Não informado'}</td></tr>
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
                             </table>
                             <div style="text-align: center; margin: 25px 0;">
                                 <a href="${approveLink}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">
-                                    👉 REVISAR E APROVAR
+                                    REVISAR E APROVAR
                                 </a>
                             </div>
                         </div>
@@ -235,18 +235,18 @@ export async function POST(request: NextRequest) {
         console.log('[Register] Sending welcome email to:', data.email)
         const welcomeEmailResult = await sendMail({
             to: data.email,
-            subject: '🎉 Bem-vindo ao CliniGo! Seu teste grátis começou',
+            subject: 'Bem-vindo ao CliniGo! Seu teste grátis começou',
             html: `
                 <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
                     <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-                        <h1 style="color: white; margin: 0; font-size: 24px;">🎉 Bem-vindo ao CliniGo!</h1>
+                        <h1 style="color: white; margin: 0; font-size: 24px;">Bem-vindo ao CliniGo!</h1>
                     </div>
                     <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
                         <p style="font-size: 18px; color: #1f2937;">Olá, <strong>${data.full_name}</strong>!</p>
                         <p style="color: #4b5563; line-height: 1.6;">Sua conta foi criada com sucesso! Você tem <strong>7 dias de teste grátis</strong> para explorar todas as funcionalidades.</p>
                         
                         <div style="background: #dbeafe; border-radius: 10px; padding: 20px; margin: 20px 0; border: 2px solid #3b82f6;">
-                            <h3 style="color: #1e40af; margin: 0 0 15px 0;">🔐 Seus dados de acesso:</h3>
+                            <h3 style="color: #1e40af; margin: 0 0 15px 0;">Seus dados de acesso:</h3>
                             <p style="margin: 5px 0; color: #1f2937;"><strong>E-mail:</strong> ${data.email}</p>
                             <p style="margin: 5px 0; color: #1f2937;"><strong>Senha:</strong> ${data.password}</p>
                             <p style="margin: 5px 0; color: #1f2937;"><strong>Clínica:</strong> ${data.clinic_name}</p>
@@ -254,13 +254,13 @@ export async function POST(request: NextRequest) {
                         
                         <div style="text-align: center; margin: 25px 0;">
                             <a href="${loginUrl}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; font-size: 16px;">
-                                🚀 ACESSAR MINHA CLÍNICA
+                                ACESSAR MINHA CLÍNICA
                             </a>
                         </div>
                         
                         <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
                             <p style="margin: 0; color: #92400e;">
-                                ⏰ <strong>Teste válido até:</strong> ${trialEndFormatted}
+                                <strong>Teste válido até:</strong> ${trialEndFormatted}
                             </p>
                             <p style="margin: 5px 0 0 0; color: #92400e; font-size: 14px;">
                                 Após esse prazo, escolha um plano para continuar usando.
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: '🎉 Conta criada com sucesso! Seu teste grátis de 7 dias começou. Verifique seu e-mail para os dados de acesso.',
+            message: 'Conta criada com sucesso! Seu teste grátis de 7 dias começou. Verifique seu e-mail para os dados de acesso.',
             redirectTo: '/login?trial=success'
         })
 

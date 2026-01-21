@@ -23,7 +23,7 @@ export interface Database {
           phone: string | null
           address: string | null
           logo_url: string | null
-          plan_type: 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+          plan_type: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
           plan_limits: Json
           is_active: boolean
           addons: Json | null
@@ -44,7 +44,7 @@ export interface Database {
           phone?: string | null
           address?: string | null
           logo_url?: string | null
-          plan_type?: 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+          plan_type?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
           plan_limits?: Json
           is_active?: boolean
           addons?: Json | null
@@ -598,7 +598,7 @@ export interface Database {
     },
     Enums: {
       user_role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF',
-      plan_type: 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK',
+      plan_type: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK',
       appointment_status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW',
       payment_status: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
     }
@@ -607,6 +607,6 @@ export interface Database {
 
 // Export type aliases for easier usage
 export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
-export type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
 export type AppointmentStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
 export type PaymentStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'

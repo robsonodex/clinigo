@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { Menu, X, Stethoscope, Building2, UserRound, Users, ChevronDown, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -46,13 +47,12 @@ export function LandingHeader() {
             <div className="container mx-auto px-4">
                 <div className="h-20 flex items-center justify-between">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${isScrolled ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20' : 'bg-white/20 backdrop-blur-sm'}`}>
-                            <Stethoscope className="h-5 w-5 text-white" />
-                        </div>
-                        <span className={`text-xl font-bold ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
-                            CliniGo
-                        </span>
+                    <Link href="/" className="flex items-center">
+                        <img
+                            src="/logo-clinigo-white.png"
+                            alt="CliniGo"
+                            className="h-12 w-auto"
+                        />
                     </Link>
 
                     {/* Desktop Nav */}

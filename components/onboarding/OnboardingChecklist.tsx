@@ -124,7 +124,7 @@ export default function OnboardingChecklist() {
                         </div>
                         <div>
                             <CardTitle className="flex items-center gap 2">
-                                🚀 Configuração Inicial
+                                Configuração Inicial
                                 {progressPercent === 100 && (
                                     <Badge className="ml-2 bg-green-500">
                                         <Award className="h-3 w-3 mr-1" />
@@ -228,7 +228,7 @@ export default function OnboardingChecklist() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-green-900 dark:text-green-100">
-                                        🎉 Parabéns! Configuração Concluída
+                                        Parabéns! Configuração Concluída
                                     </h3>
                                     <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                                         Seu CliniGo está pronto para uso. Agora você pode começar a agendar consultas e atender pacientes!

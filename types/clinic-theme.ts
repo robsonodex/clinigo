@@ -88,6 +88,30 @@ export interface ThemeSEO {
 }
 
 // =============================================================================
+// Page Template Types
+// =============================================================================
+
+export type PageTemplate = 'glassmorphism' | 'swiss-minimal' | 'aurora-neon'
+
+export const PAGE_TEMPLATES: { id: PageTemplate; name: string; description: string }[] = [
+    {
+        id: 'glassmorphism',
+        name: 'Glassmorphism',
+        description: 'Design escuro premium com efeitos de vidro e gradientes animados'
+    },
+    {
+        id: 'swiss-minimal',
+        name: 'Swiss Minimal',
+        description: 'Design editorial minimalista com tipografia bold e grid rígido'
+    },
+    {
+        id: 'aurora-neon',
+        name: 'Aurora Neon',
+        description: 'Design futurista com aurora boreal animada e gradientes neon'
+    }
+]
+
+// =============================================================================
 // Advanced Customization Types (Enterprise)
 // =============================================================================
 
@@ -103,6 +127,8 @@ export interface ThemeAdvanced {
 // =============================================================================
 
 export interface ClinicTheme {
+    /** Selected page template */
+    template: PageTemplate
     colors: ThemeColors
     typography: ThemeTypography
     hero: ThemeHero
@@ -186,6 +212,7 @@ export const TIER_FEATURES: Record<WhiteLabelTier, TierFeatures> = {
 // =============================================================================
 
 export const DEFAULT_THEME: ClinicTheme = {
+    template: 'glassmorphism',
     colors: {
         primary: '#0EA5E9',
         secondary: '#10B981',
@@ -259,6 +286,7 @@ export function mergeWithDefaultTheme(partialTheme: Partial<ClinicTheme>): Clini
     const advanced = filterEmptyValues(partialTheme?.advanced)
 
     return {
+        template: partialTheme?.template || DEFAULT_THEME.template,
         colors: { ...DEFAULT_THEME.colors, ...colors },
         typography: { ...DEFAULT_THEME.typography, ...typography },
         hero: { ...DEFAULT_THEME.hero, ...hero },

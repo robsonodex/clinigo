@@ -43,16 +43,16 @@ export function VisualLock({
     const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
     // Safety check for plan levels
-    const currentLevel = PLAN_LEVEL[currentPlan] || 0
-    const requiredLevel = PLAN_LEVEL[requiredPlan] || 0
+    const currentLevel = PLAN_LEVEL[currentPlan] ?? 0
+    const requiredLevel = PLAN_LEVEL[requiredPlan] ?? 0
     const hasAccess = currentLevel >= requiredLevel
 
     if (hasAccess) {
         return <>{children}</>
     }
 
-    // Safety check for plan config
-    const plan = PLANS[requiredPlan] || PLANS.STARTER
+    // Safety check for plan config - ensure plan exists
+    const plan = PLANS[requiredPlan] ?? PLANS.BASICO ?? { name: 'Profissional', badgeColor: '' }
 
     return (
         <>
@@ -107,13 +107,14 @@ function UpgradeModal({
     currentPlan,
     featureName,
 }: UpgradeModalProps) {
-    const plan = PLANS[requiredPlan] || PLANS.STARTER
-    const currentPlanInfo = PLANS[currentPlan] || PLANS.STARTER
+    // Safety check for plan config - ensure plans exist
+    const plan = PLANS[requiredPlan] ?? PLANS.BASICO ?? { name: 'Profissional', badgeColor: '' }
+    const currentPlanInfo = PLANS[currentPlan] ?? PLANS.BASICO ?? { name: 'Básico' }
 
     // Generate upgrade options (all plans above current)
-    const currentLevel = PLAN_LEVEL[currentPlan] || 0
-    const upgradeOptions = (['BASIC', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'] as PlanType[])
-        .filter(p => PLAN_LEVEL[p] > currentLevel)
+    const currentLevel = PLAN_LEVEL[currentPlan] ?? 0
+    const upgradeOptions = (['AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'] as PlanType[])
+        .filter(p => (PLAN_LEVEL[p] ?? 0) > currentLevel && PLANS[p])
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -140,6 +141,7 @@ function UpgradeModal({
                     <div className="grid gap-3">
                         {upgradeOptions.map((planKey) => {
                             const p = PLANS[planKey]
+                            if (!p) return null // Safety: skip undefined plans
                             const isMinRequired = planKey === requiredPlan
 
                             return (
@@ -189,7 +191,7 @@ function UpgradeModal({
                         <Button
                             className="flex-1"
                             onClick={() => {
-                                window.location.href = '/dashboard/planos'
+                                window.location.href = '/dashboard/configuracoes/plano'
                             }}
                         >
                             Ver Planos
@@ -209,7 +211,7 @@ function UpgradeModal({
  * Small badge to indicate a feature is locked
  */
 export function LockedBadge({ plan }: { plan: PlanType }) {
-    const planInfo = PLANS[plan] || PLANS.STARTER
+    const planInfo = PLANS[plan] || PLANS.BASICO
     return (
         <Badge variant="outline" className="text-xs gap-1 opacity-70">
             <Lock className="h-2.5 w-2.5" />

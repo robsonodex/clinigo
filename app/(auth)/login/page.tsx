@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { loginFormSchema, type LoginFormData } from '@/lib/validations'
 import { createClient } from '@/lib/supabase/client'
-import { Stethoscope, Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
     const router = useRouter()
@@ -74,10 +75,15 @@ export default function LoginPage() {
                 <div className="text-center mb-8">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-2xl font-bold text-primary"
+                        className="inline-flex items-center gap-2"
                     >
-                        <Stethoscope className="w-8 h-8" />
-                        CliniGo
+                        <Image
+                            src="/logo-clinigo.png"
+                            alt="CliniGo"
+                            width={200}
+                            height={52}
+                            className="h-14 w-auto"
+                        />
                     </Link>
                     <p className="text-muted-foreground mt-2">
                         Teleconsultoria médica

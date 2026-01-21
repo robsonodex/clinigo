@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useRole } from '@/lib/hooks/use-auth'
@@ -177,27 +178,32 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/financial/payroll',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'NOVO',
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'DRE',
                 href: '/dashboard/financial/dre',
                 icon: TrendingUp,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'NOVO',
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Auditoria',
                 href: '/dashboard/financial/audit',
                 icon: ShieldAlert,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'NOVO',
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Faturamento TISS',
                 href: '/dashboard/tiss',
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN'],
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Convênios',
@@ -268,16 +274,20 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/automacao',
                 icon: Bot,
                 roles: ['CLINIC_ADMIN'],
+                badge: 'PRO',
+                minPlan: 'PROFESSIONAL',
                 children: [
                     {
                         title: 'Painel',
                         href: '/dashboard/automacao',
                         icon: Bot,
+                        minPlan: 'PROFESSIONAL',
                     },
                     {
                         title: 'Configurações',
                         href: '/dashboard/automacao/configuracoes',
                         icon: Settings,
+                        minPlan: 'PROFESSIONAL',
                     }
                 ]
             },
@@ -474,36 +484,43 @@ function NavItemComponent({
         )
     }
 
+    // Check if user has access to this item's required plan
+    const PLAN_ORDER: Record<string, number> = {
+        'STARTER': 0, 'BASIC': 1, 'PROFESSIONAL': 2, 'ENTERPRISE': 3, 'NETWORK': 4
+    }
+    const currentLevel = PLAN_ORDER[currentPlan] || 0
+    const requiredLevel = PLAN_ORDER[item.minPlan || 'BASIC'] || 0
+    const isLocked = currentLevel < requiredLevel
+
     return (
-        <VisualLock
-            requiredPlan={item.minPlan || 'BASIC'}
-            currentPlan={currentPlan}
-            featureName={item.title}
-        >
-            <Link
-                href={item.href}
-                className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                    touchClass,
-                    isActive
-                        ? 'bg-primary text-primary-foreground'
+        <Link
+            href={item.href}
+            className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative',
+                touchClass,
+                isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : isLocked
+                        ? 'text-muted-foreground/50 hover:bg-muted/50'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
-                )}
-            >
-                <item.icon className="w-5 h-5" />
-                <span className="flex-1">{item.title}</span>
-                {item.badge && (
-                    <span className={cn(
-                        "px-1.5 py-0.5 text-[10px] font-bold rounded",
-                        item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
-                            item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
-                                "bg-gray-100 text-gray-700"
-                    )}>
-                        {item.badge}
-                    </span>
-                )}
-            </Link>
-        </VisualLock>
+            )}
+        >
+            <item.icon className="w-5 h-5" />
+            <span className="flex-1">{item.title}</span>
+            {isLocked && (
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+            {item.badge && !isLocked && (
+                <span className={cn(
+                    "px-1.5 py-0.5 text-[10px] font-bold rounded",
+                    item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
+                        item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
+                            "bg-gray-100 text-gray-700"
+                )}>
+                    {item.badge}
+                </span>
+            )}
+        </Link>
     )
 }
 
@@ -535,9 +552,14 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
         )}>
             {/* Logo */}
             <div className="flex items-center h-16 px-6 border-b shrink-0">
-                <Link href="/dashboard" className="flex items-center gap-2 font-bold text-primary">
-                    <Stethoscope className="w-6 h-6" />
-                    <span>CliniGo</span>
+                <Link href="/dashboard" className="flex items-center gap-2">
+                    <Image
+                        src="/logo-clinigo.png"
+                        alt="CliniGo"
+                        width={130}
+                        height={34}
+                        className="h-8 w-auto"
+                    />
                 </Link>
             </div>
 

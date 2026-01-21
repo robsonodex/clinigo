@@ -18,6 +18,10 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
 
     // === PROFESSIONAL Routes (R$247) - Full features ===
     '/dashboard/tiss': 'PROFESSIONAL',
+    '/dashboard/financial/payroll': 'PROFESSIONAL',
+    '/dashboard/financial/dre': 'PROFESSIONAL',
+    '/dashboard/financial/audit': 'PROFESSIONAL',
+    '/dashboard/automacao': 'PROFESSIONAL',
     '/dashboard/crm': 'PROFESSIONAL',
     '/dashboard/estoque': 'PROFESSIONAL',
     '/dashboard/whatsapp': 'PROFESSIONAL',
@@ -25,6 +29,7 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
     '/dashboard/marketplace': 'PROFESSIONAL',
     '/dashboard/triagem': 'PROFESSIONAL',
     '/api/tiss': 'PROFESSIONAL',
+    '/api/payroll': 'PROFESSIONAL',
     '/api/crm': 'PROFESSIONAL',
     '/api/inventory': 'PROFESSIONAL',
     '/api/whatsapp': 'PROFESSIONAL',
@@ -51,6 +56,10 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
 // Feature labels for UI display
 export const FEATURE_LABELS: Record<string, string> = {
     '/dashboard/tiss': 'TISS',
+    '/dashboard/financial/payroll': 'Repasse Médico',
+    '/dashboard/financial/dre': 'DRE Gerencial',
+    '/dashboard/financial/audit': 'Auditoria Financeira',
+    '/dashboard/automacao': 'Automação',
     '/dashboard/crm': 'CRM',
     '/dashboard/estoque': 'Estoque',
     '/dashboard/financeiro': 'Financeiro',

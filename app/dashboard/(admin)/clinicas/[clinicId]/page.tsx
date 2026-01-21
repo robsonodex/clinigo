@@ -38,12 +38,20 @@ interface Clinic {
     is_active: boolean
     custom_price: number | null
     custom_price_note: string | null
-    addons: {
+    addons?: {
         whatsapp: boolean
         prepaid_booking: boolean
         telemedicine: boolean
         extra_doctors: number
     }
+}
+
+// Default addons for new clinics or when addons is undefined
+const defaultAddons = {
+    whatsapp: false,
+    prepaid_booking: false,
+    telemedicine: false,
+    extra_doctors: 0
 }
 
 export default function ClinicDetailsPage() {
@@ -68,15 +76,19 @@ export default function ClinicDetailsPage() {
         }
     })
 
-    const handleToggleAddon = (addon: keyof Clinic['addons'], value: boolean | number) => {
+    // Get addons with defaults if undefined
+    const clinicAddons = clinic?.addons || defaultAddons
+
+    const handleToggleAddon = (addon: keyof typeof defaultAddons, value: boolean | number) => {
         if (!clinic) return
         updateMutation.mutate({
             addons: {
-                ...clinic.addons,
+                ...clinicAddons,
                 [addon]: value
             }
         })
     }
+
 
     if (isLoading) {
         return (
@@ -91,6 +103,11 @@ export default function ClinicDetailsPage() {
         return (
             <div className="text-center py-12">
                 <h2 className="text-xl font-semibold">Clínica não encontrada</h2>
+                {error && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg max-w-md mx-auto">
+                        <p className="text-sm text-red-600 font-mono">{(error as Error).message}</p>
+                    </div>
+                )}
                 <Link href="/dashboard/clinicas">
                     <Button variant="link">Voltar para listagem</Button>
                 </Link>
@@ -166,7 +183,7 @@ export default function ClinicDetailsPage() {
                                         <CardTitle>WhatsApp Oficial</CardTitle>
                                     </div>
                                     <Switch
-                                        checked={clinic.addons?.whatsapp || false}
+                                        checked={clinicAddons.whatsapp}
                                         onCheckedChange={(v) => handleToggleAddon('whatsapp', v)}
                                         disabled={updateMutation.isPending}
                                     />
@@ -188,7 +205,7 @@ export default function ClinicDetailsPage() {
                                         <CardTitle>Pagamento Antecipado</CardTitle>
                                     </div>
                                     <Switch
-                                        checked={clinic.addons?.prepaid_booking || false}
+                                        checked={clinicAddons.prepaid_booking}
                                         onCheckedChange={(v) => handleToggleAddon('prepaid_booking', v)}
                                         disabled={updateMutation.isPending}
                                     />
@@ -210,7 +227,7 @@ export default function ClinicDetailsPage() {
                                         <CardTitle>Teleconsulta Integrada</CardTitle>
                                     </div>
                                     <Switch
-                                        checked={clinic.addons?.telemedicine || false}
+                                        checked={clinicAddons.telemedicine}
                                         onCheckedChange={(v) => handleToggleAddon('telemedicine', v)}
                                         disabled={updateMutation.isPending}
                                     />
@@ -235,7 +252,7 @@ export default function ClinicDetailsPage() {
                                         <Input
                                             type="number"
                                             className="w-20"
-                                            value={clinic.addons?.extra_doctors || 0}
+                                            value={clinicAddons.extra_doctors}
                                             onChange={(e) => handleToggleAddon('extra_doctors', parseInt(e.target.value))}
                                             disabled={updateMutation.isPending}
                                         />

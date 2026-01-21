@@ -7,6 +7,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, ConflictError } from '@/lib/utils/errors'
 import { successResponse, paginatedResponse, parsePaginationParams, buildPaginatedData } from '@/lib/utils/responses'
 import { createClinicSchema, listClinicsQuerySchema } from '@/lib/validations/clinic'
+import { sendMail } from '@/lib/services/mail-service'
 
 export async function GET(request: NextRequest) {
     try {
@@ -198,6 +199,70 @@ export async function POST(request: NextRequest) {
                     role: 'CLINIC_ADMIN',
                     clinic_id: (clinic as any).id,
                 } as any) as any)
+
+                // Send welcome email with credentials
+                const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/login/clinica`
+                try {
+                    await sendMail({
+                        to: validatedData.admin_email,
+                        subject: `🏥 Bem-vindo ao CliniGo - ${validatedData.name}`,
+                        html: `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="utf-8">
+                                <style>
+                                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                                    .header { background: linear-gradient(135deg, #059669, #10b981); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                                    .header h1 { color: white; margin: 0; font-size: 28px; }
+                                    .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
+                                    .credentials { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin: 20px 0; }
+                                    .credentials p { margin: 8px 0; }
+                                    .credentials strong { color: #059669; }
+                                    .button { display: inline-block; background: #059669; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+                                    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h1>🏥 Bem-vindo ao CliniGo!</h1>
+                                    </div>
+                                    <div class="content">
+                                        <p>Olá, <strong>${validatedData.admin_name}</strong>!</p>
+                                        <p>Sua clínica <strong>${validatedData.name}</strong> foi cadastrada com sucesso no CliniGo.</p>
+                                        
+                                        <div class="credentials">
+                                            <h3>📧 Suas Credenciais de Acesso:</h3>
+                                            <p><strong>Email:</strong> ${validatedData.admin_email}</p>
+                                            <p><strong>Senha:</strong> ${validatedData.admin_password}</p>
+                                        </div>
+                                        
+                                        <p>Use as credenciais acima para acessar o painel da sua clínica:</p>
+                                        
+                                        <center>
+                                            <a href="${loginUrl}" class="button">Acessar Minha Clínica</a>
+                                        </center>
+                                        
+                                        <p style="color: #ef4444; font-size: 14px;">
+                                            ⚠️ <strong>Importante:</strong> Por segurança, recomendamos alterar sua senha após o primeiro acesso.
+                                        </p>
+                                    </div>
+                                    <div class="footer">
+                                        <p>Este é um email automático do CliniGo.</p>
+                                        <p>Em caso de dúvidas, entre em contato conosco.</p>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                        `
+                    })
+                    console.log(`[POST /api/clinics] Welcome email sent to: ${validatedData.admin_email}`)
+                } catch (emailError) {
+                    console.error('[POST /api/clinics] Failed to send welcome email:', emailError)
+                    // Don't fail the clinic creation if email fails
+                }
             }
         }
 

@@ -21,7 +21,7 @@ import {
 // Types
 // =============================================================================
 
-type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
 
 interface ClinicData {
     id: string
@@ -32,30 +32,30 @@ interface ClinicData {
 }
 
 const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: string[] }> = {
-    STARTER: {
+    BASICO: {
         name: 'CliniGo Básico',
         price: 149,
-        features: ['Até 2 médicos', '100 agendamentos/mês', 'Prontuário eletrônico'],
+        features: ['2 médicos', '100 agendamentos/mês', 'Check-in QR Code', 'Teleconsulta', 'Financeiro básico'],
     },
-    BASIC: {
+    AVANCADO: {
         name: 'CliniGo Avançado',
         price: 299,
-        features: ['Até 5 médicos', '500 agendamentos/mês', 'CRM e Estoque', 'Teleconsulta'],
+        features: ['5 médicos', '500 agendamentos/mês', 'Check-in QR Code', 'Teleconsulta', 'Financeiro completo'],
     },
     PROFESSIONAL: {
         name: 'CliniGo Professional',
         price: 549,
-        features: ['Até 30 médicos', 'Até 3 unidades', 'TISS completo', 'API dedicada'],
+        features: ['30 médicos', 'Consultas ilimitadas', 'TISS integrado', 'WhatsApp automação', 'CRM completo'],
     },
     ENTERPRISE: {
         name: 'CliniGo Enterprise',
         price: 799,
-        features: ['Médicos ilimitados', 'Unidades ilimitadas', 'Suporte dedicado'],
+        features: ['Médicos ilimitados', 'Multi-unidades', 'White-label', 'API dedicada', 'Gerente dedicado'],
     },
     NETWORK: {
-        name: 'CliniGo Network',
+        name: 'CliniGo Network (Legacy)',
         price: 999,
-        features: ['Multi-clínica', 'Dashboard consolidado', 'API completa'],
+        features: ['Médicos ilimitados', 'Unidades ilimitadas', 'White-label', 'Dashboard consolidado'],
     },
 }
 
@@ -115,7 +115,7 @@ export function PlanAndBilling() {
         )
     }
 
-    const planDetails = PLAN_DETAILS[clinic.plan_type] || PLAN_DETAILS.STARTER
+    const planDetails = PLAN_DETAILS[clinic.plan_type] || PLAN_DETAILS.BASICO
     const daysUntilExpiration = clinic.subscription_due_date
         ? Math.ceil((new Date(clinic.subscription_due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
         : null
@@ -224,8 +224,8 @@ export function PlanAndBilling() {
                             </Button>
                         )}
 
-                        {/* Plano Starter: informação sobre upgrade */}
-                        {clinic.plan_type === 'STARTER' && (
+                        {/* Plano Básico: informação sobre upgrade */}
+                        {clinic.plan_type === 'BASICO' && (
                             <p className="text-sm text-muted-foreground">
                                 Você está no plano gratuito. <a href="/planos" className="text-primary underline">Veja nossos planos</a> para fazer upgrade.
                             </p>

@@ -15,14 +15,16 @@ import {
     Eye,
     Loader2,
     ExternalLink,
-    RefreshCw
+    RefreshCw,
+    LayoutGrid
 } from 'lucide-react'
 import { ThemeEditor } from './components/ThemeEditor'
 import { ContentEditor } from './components/ContentEditor'
 import { DisplaySettings } from './components/DisplaySettings'
 import { SEOSettings } from './components/SEOSettings'
 import { PreviewModal } from './components/PreviewModal'
-import { ClinicTheme, DEFAULT_THEME, mergeWithDefaultTheme } from '@/types/clinic-theme'
+import { TemplateSelector } from './components/TemplateSelector'
+import { ClinicTheme, DEFAULT_THEME, mergeWithDefaultTheme, PageTemplate } from '@/types/clinic-theme'
 
 // =============================================================================
 // API Functions
@@ -210,8 +212,12 @@ export default function PublicPageConfigPage() {
             )}
 
             {/* Tabs */}
-            <Tabs defaultValue="visual" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+            <Tabs defaultValue="template" className="space-y-6">
+                <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
+                    <TabsTrigger value="template" className="gap-2">
+                        <LayoutGrid className="w-4 h-4 hidden sm:inline" />
+                        Template
+                    </TabsTrigger>
                     <TabsTrigger value="visual" className="gap-2">
                         <Palette className="w-4 h-4 hidden sm:inline" />
                         Visual
@@ -229,6 +235,13 @@ export default function PublicPageConfigPage() {
                         SEO
                     </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="template">
+                    <TemplateSelector
+                        selectedTemplate={localTheme.template}
+                        onSelect={(template: PageTemplate) => handleThemeChange({ template })}
+                    />
+                </TabsContent>
 
                 <TabsContent value="visual">
                     <ThemeEditor

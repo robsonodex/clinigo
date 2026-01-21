@@ -84,8 +84,7 @@ export function FeatureGate({
                 </span>
                 <Button asChild size="sm" variant="outline" className="shrink-0 border-amber-300 hover:bg-amber-100">
                     <Link href={upgradeUrl}>
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                        Fazer Upgrade
+                        <span className="flex items-center"><ArrowUpRight className="mr-1 h-3 w-3" />Fazer Upgrade</span>
                     </Link>
                 </Button>
             </AlertDescription>

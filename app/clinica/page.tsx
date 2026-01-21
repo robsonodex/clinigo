@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Stethoscope, Mail, Lock, Eye, EyeOff, Building2, Shield, CheckCircle, ArrowRight, Loader2 } from 'lucide-react'
+import Image from 'next/image'
+import { Mail, Lock, Eye, EyeOff, Building2, Shield, CheckCircle, ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ClinicaLoginPage() {
@@ -59,10 +60,13 @@ export default function ClinicaLoginPage() {
                 <div className="w-full max-w-md">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-3 mb-8 group">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
+                        <Image
+                            src="/logo-clinigo.png"
+                            alt="CliniGo"
+                            width={200}
+                            height={52}
+                            className="h-14 w-auto group-hover:scale-105 transition-transform"
+                        />
                     </Link>
 
                     {/* Header */}
