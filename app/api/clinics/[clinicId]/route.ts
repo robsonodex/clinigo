@@ -16,10 +16,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
-        console.log('[GET /api/clinics/[clinicId]] Debug:', { clinicId, userId, userRole })
+        console.log('[GET /api/clinics/[clinicId]] Debug:', {
+            clinicId,
+            userId,
+            userRole,
+            hasUserId: !!userId,
+            hasUserRole: !!userRole,
+            usingServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN')
+        })
 
         // Require authentication
         if (!userId) {
+            console.log('[GET /api/clinics/[clinicId]] Missing userId header')
             return NextResponse.json(
                 { success: false, error: { message: 'Não autorizado', code: 'UNAUTHORIZED' } },
                 { status: 401 }
@@ -31,6 +39,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             ? createServiceRoleClient()
             : await createClient()
 
+        console.log('[GET /api/clinics/[clinicId]] Attempting to fetch clinic...', {
+            clientType: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN') ? 'SERVICE_ROLE' : 'USER',
+            clinicId
+        })
+
         // Get clinic
         const { data: clinic, error } = await supabase
             .from('clinics')
@@ -41,10 +54,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         console.log('[GET /api/clinics/[clinicId]] Result:', {
             found: !!clinic,
             error: error?.message,
-            clinicName: (clinic as any)?.name
+            errorCode: error?.code,
+            errorDetails: error?.details,
+            clinicName: (clinic as any)?.name,
+            clinicId: (clinic as any)?.id
         })
 
         if (error || !clinic) {
+            console.error('[GET /api/clinics/[clinicId]] Clinic not found or error:', {
+                error,
+                clinicId,
+                userRole,
+                userId
+            })
             return NextResponse.json(
                 { success: false, error: { message: 'Clínica não encontrada', code: 'NOT_FOUND' } },
                 { status: 404 }
