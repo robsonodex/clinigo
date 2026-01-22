@@ -41,7 +41,7 @@ export default function NewClinicPage() {
             cnpj: '',
             email: '',
             phone: '',
-            plan_type: 'BASIC',
+            plan_type: 'BASICO',
             address: {},
             admin_name: '',
             admin_email: '',
@@ -175,9 +175,10 @@ export default function NewClinicPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="BASIC">Básico</SelectItem>
-                                                <SelectItem value="PRO">Profissional</SelectItem>
-                                                <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
+                                                <SelectItem value="BASICO">CliniGo Básico</SelectItem>
+                                                <SelectItem value="AVANCADO">CliniGo Avançado</SelectItem>
+                                                <SelectItem value="PROFESSIONAL">CliniGo Professional</SelectItem>
+                                                <SelectItem value="ENTERPRISE">CliniGo Enterprise</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormDescription>

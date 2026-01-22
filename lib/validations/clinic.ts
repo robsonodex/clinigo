@@ -3,7 +3,7 @@
  */
 import { z } from 'zod'
 
-const PLAN_TYPES = ['BASIC', 'PRO', 'ENTERPRISE'] as const
+const PLAN_TYPES = ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'] as const
 
 /**
  * Address schema
@@ -53,7 +53,7 @@ export const createClinicSchema = z.object({
     address: addressSchema.optional(),
     plan_type: z
         .enum(PLAN_TYPES)
-        .default('BASIC'),
+        .default('BASICO'),
     // Initial admin user
     admin_email: z
         .string()

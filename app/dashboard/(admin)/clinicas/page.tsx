@@ -43,7 +43,7 @@ interface Clinic {
     name: string
     slug: string
     email: string
-    plan_type: 'BASIC' | 'PRO' | 'ENTERPRISE'
+    plan_type: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
     is_active: boolean
     created_at: string
     logo_url?: string | null
@@ -151,14 +151,31 @@ export default function ClinicsPage() {
 
     const getPlanBadgeVariant = (plan: string) => {
         switch (plan) {
-            case 'BASIC':
+            case 'BASICO':
                 return 'outline'
-            case 'PRO':
+            case 'AVANCADO':
                 return 'default'
+            case 'PROFESSIONAL':
+                return 'secondary'
             case 'ENTERPRISE':
                 return 'destructive'
             default:
-                return 'secondary'
+                return 'outline'
+        }
+    }
+
+    const getPlanDisplayName = (plan: string) => {
+        switch (plan) {
+            case 'BASICO':
+                return 'Básico'
+            case 'AVANCADO':
+                return 'Avançado'
+            case 'PROFESSIONAL':
+                return 'Professional'
+            case 'ENTERPRISE':
+                return 'Enterprise'
+            default:
+                return plan
         }
     }
 
@@ -253,8 +270,9 @@ export default function ClinicsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os Planos</SelectItem>
-                                <SelectItem value="BASIC">Básico</SelectItem>
-                                <SelectItem value="PRO">Profissional</SelectItem>
+                                <SelectItem value="BASICO">Básico</SelectItem>
+                                <SelectItem value="AVANCADO">Avançado</SelectItem>
+                                <SelectItem value="PROFESSIONAL">Professional</SelectItem>
                                 <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
                             </SelectContent>
                         </Select>
@@ -382,7 +400,7 @@ export default function ClinicsPage() {
                                                         clinic.plan_type
                                                     ) as any}
                                                 >
-                                                    {clinic.plan_type}
+                                                    {getPlanDisplayName(clinic.plan_type)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>

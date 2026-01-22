@@ -81,14 +81,14 @@ export async function POST(
             )
         }
 
-        // Check if plan supports bulk import (PRO+ feature)
-        const planType = (clinicData.plan_type || 'BASIC') as PlanType
+        // Check if plan supports bulk import (AVANCADO+ feature)
+        const planType = (clinicData.plan_type || 'BASICO') as PlanType
         if (!hasFeature(planType, 'crm') && !isSuperAdmin) {
             return NextResponse.json(
                 {
-                    error: 'Importação em massa requer plano PRO ou superior',
+                    error: 'Importação em massa requer plano Avançado ou superior',
                     code: 'PLAN_REQUIRED',
-                    required_plan: 'PRO'
+                    required_plan: 'AVANCADO'
                 },
                 { status: 403 }
             )

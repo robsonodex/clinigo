@@ -172,7 +172,7 @@ export interface CreateClinicRequest {
         state?: string
         zip?: string
     }
-    plan_type?: 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+    plan_type?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
 }
 
 export interface UpdateClinicRequest {

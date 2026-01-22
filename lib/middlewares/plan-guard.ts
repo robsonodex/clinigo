@@ -18,7 +18,7 @@ export interface PlanGuardError {
     error: string
     current_plan: PlanType
     required_feature: string
-    upgrade_to: 'PRO' | 'ENTERPRISE'
+    upgrade_to: 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
 }
 
 /**
@@ -43,7 +43,7 @@ export async function validatePlanFeature(
 
     // Type-safe extraction with fallback
     const clinicData = clinic as { plan_type?: string } | null
-    const planType: PlanType = (clinicData?.plan_type as PlanType) || 'BASIC'
+    const planType: PlanType = (clinicData?.plan_type as PlanType) || 'BASICO'
 
     return {
         allowed: hasFeature(planType, feature),
@@ -58,11 +58,11 @@ export async function validatePlanFeature(
 export function createPlanError(
     currentPlan: PlanType,
     feature: string,
-    requiredPlan: 'PRO' | 'ENTERPRISE' = 'PRO'
+    requiredPlan: 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' = 'AVANCADO'
 ): NextResponse<PlanGuardError> {
     return NextResponse.json(
         {
-            error: `Recurso "${feature}" disponível apenas nos planos ${requiredPlan === 'PRO' ? 'PRO e ENTERPRISE' : 'ENTERPRISE'
+            error: `Recurso "${feature}" disponível apenas nos planos ${requiredPlan === 'AVANCADO' ? 'Avançado, Professional e Enterprise' : requiredPlan === 'PROFESSIONAL' ? 'Professional e Enterprise' : 'Enterprise'
                 }`,
             current_plan: currentPlan,
             required_feature: feature,
@@ -114,7 +114,7 @@ export async function getClinicPlan(clinicId: string): Promise<PlanType> {
 
     // Type-safe extraction
     const clinicData = clinic as { plan_type?: string } | null
-    return (clinicData?.plan_type as PlanType) || 'BASIC'
+    return (clinicData?.plan_type as PlanType) || 'BASICO'
 }
 
 /**
@@ -122,14 +122,16 @@ export async function getClinicPlan(clinicId: string): Promise<PlanType> {
  */
 export async function isMinimumPlan(
     clinicId: string,
-    minimumTier: 'BASIC' | 'PRO' | 'ENTERPRISE'
+    minimumTier: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
 ): Promise<boolean> {
     const planType = await getClinicPlan(clinicId)
 
     const tierOrder: Record<PlanType, number> = {
-        BASIC: 1,
-        PRO: 2,
-        ENTERPRISE: 3,
+        BASICO: 1,
+        AVANCADO: 2,
+        PROFESSIONAL: 3,
+        ENTERPRISE: 4,
+        NETWORK: 5,
     }
 
     return tierOrder[planType] >= tierOrder[minimumTier]
