@@ -80,8 +80,9 @@ function CadastroContent() {
 
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    // Não pré-seleciona o plano mesmo quando vem da URL - usuário precisa clicar
     const [formData, setFormData] = useState<Partial<FormData>>({
-        plan_type: preselectedPlan || undefined,
+        plan_type: undefined,
     })
 
     const {
