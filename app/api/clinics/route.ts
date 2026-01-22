@@ -202,60 +202,82 @@ export async function POST(request: NextRequest) {
 
                 // Send welcome email with credentials
                 const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/login/clinica`
+                const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/images/logo-clinigo.png`
                 try {
                     await sendMail({
                         to: validatedData.admin_email,
-                        subject: `🏥 Bem-vindo ao CliniGo - ${validatedData.name}`,
+                        subject: `Bem-vindo à CliniGo - ${validatedData.name}`,
                         html: `
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta charset="utf-8">
-                                <style>
-                                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                                    .header { background: linear-gradient(135deg, #059669, #10b981); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                                    .header h1 { color: white; margin: 0; font-size: 28px; }
-                                    .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
-                                    .credentials { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin: 20px 0; }
-                                    .credentials p { margin: 8px 0; }
-                                    .credentials strong { color: #059669; }
-                                    .button { display: inline-block; background: #059669; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-                                    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
-                                </style>
-                            </head>
-                            <body>
-                                <div class="container">
-                                    <div class="header">
-                                        <h1>🏥 Bem-vindo ao CliniGo!</h1>
-                                    </div>
-                                    <div class="content">
-                                        <p>Olá, <strong>${validatedData.admin_name}</strong>!</p>
-                                        <p>Sua clínica <strong>${validatedData.name}</strong> foi cadastrada com sucesso no CliniGo.</p>
-                                        
-                                        <div class="credentials">
-                                            <h3>📧 Suas Credenciais de Acesso:</h3>
-                                            <p><strong>Email:</strong> ${validatedData.admin_email}</p>
-                                            <p><strong>Senha:</strong> ${validatedData.admin_password}</p>
-                                        </div>
-                                        
-                                        <p>Use as credenciais acima para acessar o painel da sua clínica:</p>
-                                        
-                                        <center>
-                                            <a href="${loginUrl}" class="button">Acessar Minha Clínica</a>
-                                        </center>
-                                        
-                                        <p style="color: #ef4444; font-size: 14px;">
-                                            ⚠️ <strong>Importante:</strong> Por segurança, recomendamos alterar sua senha após o primeiro acesso.
-                                        </p>
-                                    </div>
-                                    <div class="footer">
-                                        <p>Este é um email automático do CliniGo.</p>
-                                        <p>Em caso de dúvidas, entre em contato conosco.</p>
-                                    </div>
-                                </div>
-                            </body>
-                            </html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo à CliniGo</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333333;">
+    <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div style="padding: 40px 20px; text-align: center;">
+            <img src="${logoUrl}" alt="CliniGo" width="150" style="display: block; margin: 0 auto;">
+        </div>
+
+        <div style="padding: 0 40px 40px 40px;">
+            <h1 style="font-size: 24px; font-weight: bold; color: #1a1a1a; margin-bottom: 10px;">Bem-vindo à CliniGo</h1>
+            <p style="font-size: 16px; color: #666666; margin-bottom: 30px;">O próximo passo da sua gestão começou.</p>
+
+            <p>Olá, <strong>${validatedData.admin_name}</strong>,</p>
+            <p>Sua clínica <strong>${validatedData.name}</strong> está pronta. Use as credenciais abaixo para configurar seu painel administrativo:</p>
+
+            <div style="background-color: #ffffff; border: 1px solid #eeeeee; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.03);">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #999999; margin-bottom: 5px;">E-mail de Acesso</div>
+                <div style="font-size: 16px; font-weight: 600; color: #2d3436; margin-bottom: 15px;">${validatedData.admin_email}</div>
+                
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #999999; margin-bottom: 5px;">Senha Temporária</div>
+                <div style="font-size: 16px; font-weight: 600; color: #2d3436; margin-bottom: 15px;">${validatedData.admin_password}</div>
+
+                <a href="${loginUrl}" style="display: inline-block; background-color: #007664; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 12px rgba(0, 118, 100, 0.2);">ACESSAR MEU PAINEL</a>
+            </div>
+
+            <p style="font-size: 13px; color: #999999; font-style: italic;">
+                * Por segurança, você deverá alterar sua senha no primeiro acesso.
+            </p>
+
+            <div style="border-top: 1px solid #eeeeee; padding-top: 30px; margin-top: 30px;">
+                <h3 style="font-size: 16px; margin-bottom: 20px;">Próximos passos recomendados:</h3>
+                
+                <div style="margin-bottom: 20px; display: flex; align-items: flex-start;">
+                    <div style="background-color: #e6f2f0; color: #007664; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0;">1</div>
+                    <div>
+                        <b style="color: #1a1a1a; display: block; margin-bottom: 4px;">Perfil da Clínica</b>
+                        <p style="margin: 0; font-size: 14px; color: #777777; line-height: 1.5;">Adicione seu logotipo e horários de funcionamento.</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; display: flex; align-items: flex-start;">
+                    <div style="background-color: #e6f2f0; color: #007664; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0;">2</div>
+                    <div>
+                        <b style="color: #1a1a1a; display: block; margin-bottom: 4px;">Equipe Médica</b>
+                        <p style="margin: 0; font-size: 14px; color: #777777; line-height: 1.5;">Cadastre os profissionais e configure as agendas.</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; display: flex; align-items: flex-start;">
+                    <div style="background-color: #e6f2f0; color: #007664; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0;">3</div>
+                    <div>
+                        <b style="color: #1a1a1a; display: block; margin-bottom: 4px;">Agendamento Online</b>
+                        <p style="margin: 0; font-size: 14px; color: #777777; line-height: 1.5;">Ative sua página exclusiva para marcação de consultas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #999999;">
+            <p style="margin: 0 0 10px 0;">&copy; 2026 CliniGo - Gestão Inteligente para Clínicas</p>
+            <p style="margin: 0;"><a href="https://clinigo.app/suporte" style="color: #999999;">Suporte Técnico</a> | <a href="https://clinigo.app/privacidade" style="color: #999999;">Política de Privacidade</a></p>
+        </div>
+    </div>
+</body>
+</html>
                         `
                     })
                     console.log(`[POST /api/clinics] Welcome email sent to: ${validatedData.admin_email}`)
