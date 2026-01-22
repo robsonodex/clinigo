@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic'
 // PATCH /api/reception/priority/:appointmentId
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
@@ -16,7 +17,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const appointmentId = params.id
+        const appointmentId = id
         const body = await request.json()
         const { priority_level } = body
 

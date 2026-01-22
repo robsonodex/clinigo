@@ -9,9 +9,10 @@ import type { TissBatch, TissBatchStats } from '@/types/tiss';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -37,7 +38,7 @@ export async function GET(
             );
         }
 
-        const batch_id = params.id;
+        const batch_id = id;
 
         // Buscar lote com relacionamentos
         const { data: batch, error: batchError } = await supabase
@@ -129,9 +130,10 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -165,7 +167,7 @@ export async function PUT(
             );
         }
 
-        const batch_id = params.id;
+        const batch_id = id;
         const body = await request.json();
 
         // Campos permitidos para atualização
@@ -223,9 +225,10 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -259,7 +262,7 @@ export async function DELETE(
             );
         }
 
-        const batch_id = params.id;
+        const batch_id = id;
 
         // Verificar se lote pode ser deletado (apenas DRAFT)
         const { data: batch } = await supabase

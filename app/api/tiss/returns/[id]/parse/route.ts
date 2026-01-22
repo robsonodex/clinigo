@@ -9,8 +9,9 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id: return_id } = await params
     try {
         const supabase = await createClient();
 
@@ -36,8 +37,6 @@ export async function POST(
                 { status: 403 }
             );
         }
-
-        const return_id = params.id;
 
         // Buscar registro de retorno
         const { data: returnRecord } = await supabase
@@ -246,7 +245,7 @@ export async function POST(
                 processing_status: 'ERROR',
                 processing_error: error.message,
             })
-            .eq('id', params.id);
+            .eq('id', return_id);
 
         return NextResponse.json(
             { success: false, error: 'Erro ao processar retorno', details: error.message },

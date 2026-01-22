@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic'
 // POST /api/reception/checkin/:appointmentId
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
@@ -16,7 +17,7 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const appointmentId = params.id
+        const appointmentId = id
 
         // Update appointment with check-in timestamp
         const { data: appointment, error } = await supabase

@@ -8,9 +8,10 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -36,7 +37,7 @@ export async function GET(
             );
         }
 
-        const return_id = params.id;
+        const return_id = id;
 
         // Buscar status do retorno
         const { data: returnRecord, error } = await supabase

@@ -26,9 +26,10 @@ const updateGuideSchema = z.object({
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -54,7 +55,7 @@ export async function GET(
             );
         }
 
-        const guide_id = params.id;
+        const guide_id = id;
 
         // Buscar guia
         const { data: guide, error: guideError } = await supabase
@@ -108,9 +109,10 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -144,7 +146,7 @@ export async function PUT(
             );
         }
 
-        const guide_id = params.id;
+        const guide_id = id;
 
         // Verificar se guia existe e pertence à clínica
         const { data: existingGuide } = await supabase
@@ -263,9 +265,10 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -299,7 +302,7 @@ export async function DELETE(
             );
         }
 
-        const guide_id = params.id;
+        const guide_id = id;
 
         // Verificar se guia pode ser deletada (apenas PENDING)
         const { data: guide } = await supabase
