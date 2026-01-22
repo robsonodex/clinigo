@@ -215,67 +215,101 @@ export async function POST(request: NextRequest) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bem-vindo à CliniGo</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333333;">
-    <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-        <div style="padding: 40px 20px; text-align: center;">
-            <img src="${logoUrl}" alt="CliniGo" width="150" style="display: block; margin: 0 auto;">
-        </div>
-
-        <div style="padding: 0 40px 40px 40px;">
-            <h1 style="font-size: 24px; font-weight: bold; color: #1a1a1a; margin-bottom: 10px;">Bem-vindo à CliniGo</h1>
-            <p style="font-size: 16px; color: #666666; margin-bottom: 30px;">O próximo passo da sua gestão começou.</p>
-
-            <p>Olá, <strong>${validatedData.admin_name}</strong>,</p>
-            <p>Sua clínica <strong>${validatedData.name}</strong> está pronta. Use as credenciais abaixo para configurar seu painel administrativo:</p>
-
-            <div style="background-color: #ffffff; border: 1px solid #eeeeee; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.03);">
-                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #999999; margin-bottom: 5px;">E-mail de Acesso</div>
-                <div style="font-size: 16px; font-weight: 600; color: #2d3436; margin-bottom: 15px;">${validatedData.admin_email}</div>
+<body style="margin: 0; padding: 0; background-color: #2d3436; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #2d3436; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <!-- CELULAR CONTAINER -->
+                <table cellpadding="0" cellspacing="0" border="0" style="width: 320px;">
+                    <tr>
+                        <td>
+                            <!-- Moldura do Celular -->
+                            <div style="background: linear-gradient(145deg, #1a1a1a, #3d3d3d); border-radius: 40px; padding: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);">
+                                <!-- Notch do celular -->
+                                <div style="background-color: #1a1a1a; width: 120px; height: 25px; border-radius: 15px; margin: 0 auto 8px auto;"></div>
+                                
+                                <!-- Tela do Celular -->
+                                <div style="background-color: #ffffff; border-radius: 28px; overflow: hidden; min-height: 550px;">
+                                    <!-- Header com Logo -->
+                                    <div style="padding: 25px 20px 15px 20px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                                        <img src="${logoUrl}" alt="CliniGo" width="100" style="display: block; margin: 0 auto;">
+                                    </div>
+                                    
+                                    <!-- Conteúdo -->
+                                    <div style="padding: 20px;">
+                                        <h1 style="font-size: 20px; font-weight: bold; color: #1a1a1a; margin: 0 0 5px 0; text-align: center;">Bem-vindo à CliniGo</h1>
+                                        <p style="font-size: 12px; color: #888888; margin: 0 0 20px 0; text-align: center;">O próximo passo da sua gestão começou</p>
+                                        
+                                        <p style="font-size: 13px; color: #555555; margin: 0 0 5px 0;">Olá, <strong>${validatedData.admin_name}</strong>,</p>
+                                        <p style="font-size: 12px; color: #777777; margin: 0 0 15px 0; line-height: 1.4;">Sua clínica está pronta para uso.</p>
+                                        
+                                        <!-- Card de Credenciais -->
+                                        <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #007664; font-weight: bold; margin-bottom: 10px; text-align: center;">Credenciais de Acesso</div>
+                                            
+                                            <div style="font-size: 10px; text-transform: uppercase; color: #aaaaaa; margin-bottom: 3px;">E-mail</div>
+                                            <div style="font-size: 13px; font-weight: 600; color: #2d3436; margin-bottom: 10px; word-break: break-all;">${validatedData.admin_email}</div>
+                                            
+                                            <div style="font-size: 10px; text-transform: uppercase; color: #aaaaaa; margin-bottom: 3px;">Senha Temporária</div>
+                                            <div style="font-size: 13px; font-weight: 600; color: #2d3436; margin-bottom: 12px;">${validatedData.admin_password}</div>
+                                            
+                                            <a href="${loginUrl}" style="display: block; background-color: #007664; color: #ffffff !important; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px; text-align: center;">ACESSAR MEU PAINEL</a>
+                                        </div>
+                                        
+                                        <p style="font-size: 10px; color: #999999; font-style: italic; text-align: center; margin: 0 0 15px 0;">
+                                            * Altere sua senha no primeiro acesso
+                                        </p>
+                                        
+                                        <!-- Passos -->
+                                        <div style="border-top: 1px solid #eeeeee; padding-top: 12px;">
+                                            <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 10px;">Próximos passos:</div>
+                                            
+                                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 8px;">
+                                                <tr>
+                                                    <td width="24" valign="top"><div style="background-color: #e6f2f0; color: #007664; width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; font-weight: bold; font-size: 11px;">1</div></td>
+                                                    <td style="padding-left: 8px;"><span style="font-size: 12px; color: #555;">Configure o perfil da clínica</span></td>
+                                                </tr>
+                                            </table>
+                                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 8px;">
+                                                <tr>
+                                                    <td width="24" valign="top"><div style="background-color: #e6f2f0; color: #007664; width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; font-weight: bold; font-size: 11px;">2</div></td>
+                                                    <td style="padding-left: 8px;"><span style="font-size: 12px; color: #555;">Cadastre sua equipe médica</span></td>
+                                                </tr>
+                                            </table>
+                                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                <tr>
+                                                    <td width="24" valign="top"><div style="background-color: #e6f2f0; color: #007664; width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; font-weight: bold; font-size: 11px;">3</div></td>
+                                                    <td style="padding-left: 8px;"><span style="font-size: 12px; color: #555;">Ative o agendamento online</span></td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Footer -->
+                                    <div style="background-color: #f8f9fa; padding: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+                                        <p style="margin: 0; font-size: 10px; color: #999999;">Equipe CliniGo</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Botão Home do celular -->
+                                <div style="width: 100px; height: 4px; background-color: #555; border-radius: 2px; margin: 10px auto 0 auto;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
                 
-                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #999999; margin-bottom: 5px;">Senha Temporária</div>
-                <div style="font-size: 16px; font-weight: 600; color: #2d3436; margin-bottom: 15px;">${validatedData.admin_password}</div>
-
-                <a href="${loginUrl}" style="display: inline-block; background-color: #007664; color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 12px rgba(0, 118, 100, 0.2);">ACESSAR MEU PAINEL</a>
-            </div>
-
-            <p style="font-size: 13px; color: #999999; font-style: italic;">
-                * Por segurança, você deverá alterar sua senha no primeiro acesso.
-            </p>
-
-            <div style="border-top: 1px solid #eeeeee; padding-top: 30px; margin-top: 30px;">
-                <h3 style="font-size: 16px; margin-bottom: 20px;">Próximos passos recomendados:</h3>
-                
-                <div style="margin-bottom: 20px; display: flex; align-items: flex-start;">
-                    <div style="background-color: #e6f2f0; color: #007664; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0;">1</div>
-                    <div>
-                        <b style="color: #1a1a1a; display: block; margin-bottom: 4px;">Perfil da Clínica</b>
-                        <p style="margin: 0; font-size: 14px; color: #777777; line-height: 1.5;">Adicione seu logotipo e horários de funcionamento.</p>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px; display: flex; align-items: flex-start;">
-                    <div style="background-color: #e6f2f0; color: #007664; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0;">2</div>
-                    <div>
-                        <b style="color: #1a1a1a; display: block; margin-bottom: 4px;">Equipe Médica</b>
-                        <p style="margin: 0; font-size: 14px; color: #777777; line-height: 1.5;">Cadastre os profissionais e configure as agendas.</p>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px; display: flex; align-items: flex-start;">
-                    <div style="background-color: #e6f2f0; color: #007664; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0;">3</div>
-                    <div>
-                        <b style="color: #1a1a1a; display: block; margin-bottom: 4px;">Agendamento Online</b>
-                        <p style="margin: 0; font-size: 14px; color: #777777; line-height: 1.5;">Ative sua página exclusiva para marcação de consultas.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div style="background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #999999;">
-            <p style="margin: 0 0 10px 0;">&copy; 2026 CliniGo - Gestão Inteligente para Clínicas</p>
-            <p style="margin: 0;"><a href="https://clinigo.app/suporte" style="color: #999999;">Suporte Técnico</a> | <a href="https://clinigo.app/privacidade" style="color: #999999;">Política de Privacidade</a></p>
-        </div>
-    </div>
+                <!-- Footer externo -->
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 30px;">
+                    <tr>
+                        <td align="center">
+                            <p style="margin: 0 0 5px 0; font-size: 12px; color: #888888;">&copy; 2026 CliniGo - Gestão Inteligente para Clínicas</p>
+                            <p style="margin: 0; font-size: 11px;"><a href="https://clinigo.app/suporte" style="color: #888888;">Suporte</a> &nbsp;|&nbsp; <a href="https://clinigo.app/privacidade" style="color: #888888;">Privacidade</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
                         `
