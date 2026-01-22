@@ -6,6 +6,8 @@ import * as crypto from 'crypto'
 // Force Node.js runtime for crypto support
 export const runtime = 'nodejs'
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
 
 // MFA configuration constants
 const MFA_ISSUER = 'CliniGo'
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
             .eq('user_id', user.id)
             .single()
 
-        const settings = mfaSettings as any || {}
+        const settings = mfaSettings ?? {}
 
         const backupCodesRemaining = settings.backup_codes_generated_at
             ? await getBackupCodesRemaining(supabase, user.id)
@@ -118,10 +120,10 @@ export async function POST(request: NextRequest) {
 
         switch (action) {
             case 'setup':
-                return await handleSetup(supabase, user.id, (userData as any).email)
+                return await handleSetup(supabase, user.id, userData.email ?? '')
 
             case 'verify':
-                return await handleVerify(supabase, user.id, (userData as any).email, code)
+                return await handleVerify(supabase, user.id, userData.email ?? '', code)
 
             case 'generate_backup_codes':
                 return await handleGenerateBackupCodes(supabase, user.id)
@@ -158,7 +160,7 @@ export async function DELETE(request: NextRequest) {
             .eq('user_id', user.id)
             .single()
 
-        if (!(mfaSettings as any)?.totp_secret) {
+        if (!mfaSettings?.totp_secret) {
             return NextResponse.json({ error: 'MFA não está habilitado' }, { status: 400 })
         }
 
@@ -168,7 +170,8 @@ export async function DELETE(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        const totp = createTOTP((mfaSettings as any).totp_secret, (userData as any)?.email || '')
+        const totpSecret = mfaSettings.totp_secret as string
+        const totp = createTOTP(totpSecret, userData?.email ?? '')
 
         if (totp.validate({ token: code, window: 1 }) === null) {
             // Log failed attempt
@@ -199,7 +202,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper functions
-async function handleSetup(supabase: any, userId: string, userEmail: string) {
+async function handleSetup(supabase: SupabaseClient, userId: string, userEmail: string) {
     const secret = generateTOTPSecret()
     const totp = createTOTP(secret, userEmail)
 
@@ -219,7 +222,7 @@ async function handleSetup(supabase: any, userId: string, userEmail: string) {
     })
 }
 
-async function handleVerify(supabase: any, userId: string, userEmail: string, code: string) {
+async function handleVerify(supabase: SupabaseClient, userId: string, userEmail: string, code: string) {
     const { data: mfaSettings } = await supabase
         .from('user_mfa_settings')
         .select('totp_secret')
@@ -257,7 +260,7 @@ async function handleVerify(supabase: any, userId: string, userEmail: string, co
     })
 }
 
-async function handleGenerateBackupCodes(supabase: any, userId: string) {
+async function handleGenerateBackupCodes(supabase: SupabaseClient, userId: string) {
     const { data: mfaSettings } = await supabase
         .from('user_mfa_settings')
         .select('totp_enabled')
@@ -284,7 +287,7 @@ async function handleGenerateBackupCodes(supabase: any, userId: string) {
     })
 }
 
-async function handleSetRecoveryEmail(supabase: any, userId: string, email: string) {
+async function handleSetRecoveryEmail(supabase: SupabaseClient, userId: string, email: string) {
     if (!email || !email.includes('@')) {
         return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
     }
@@ -305,7 +308,7 @@ async function handleSetRecoveryEmail(supabase: any, userId: string, email: stri
     })
 }
 
-async function getBackupCodesRemaining(supabase: any, userId: string): Promise<number> {
+async function getBackupCodesRemaining(supabase: SupabaseClient, userId: string): Promise<number> {
     const { data } = await supabase
         .from('user_mfa_settings')
         .select('backup_codes')
@@ -314,11 +317,11 @@ async function getBackupCodesRemaining(supabase: any, userId: string): Promise<n
 
     if (!data?.backup_codes) return 0
 
-    return data.backup_codes.filter((c: any) => c.used_at === null).length
+    return (data.backup_codes as Array<{ used_at: string | null }>).filter(c => c.used_at === null).length
 }
 
 async function logSessionEvent(
-    supabase: any,
+    supabase: SupabaseClient,
     userId: string,
     eventType: string,
     request: NextRequest

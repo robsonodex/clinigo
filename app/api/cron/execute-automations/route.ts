@@ -18,18 +18,52 @@ interface AutomationRule {
     clinic_id: string
     name: string
     trigger: string
-    trigger_filters: Record<string, any>
+    trigger_filters: Record<string, unknown>
     actions: Array<{
         type: string
-        config: Record<string, any>
+        config: ActionConfig
     }>
     is_active: boolean
 }
 
+interface ActionConfig {
+    subject?: string
+    body?: string
+    message?: string
+    title?: string
+    description?: string
+    due_days?: number
+    priority?: string
+    tag?: string
+    days?: number
+    type?: string
+    notes?: string
+}
+
+interface Patient {
+    id: string
+    full_name?: string
+    nome?: string
+    email?: string
+    phone?: string
+    tags?: string[]
+}
+
+interface Appointment {
+    id: string
+    scheduled_at?: string
+    patients?: Patient
+}
+
+interface Consultation {
+    id: string
+    appointments?: Appointment
+}
+
 interface TriggerContext {
-    appointment?: any
-    patient?: any
-    consultation?: any
+    appointment?: Appointment
+    patient?: Patient
+    consultation?: Consultation
 }
 
 export async function POST(request: NextRequest) {
@@ -99,8 +133,8 @@ export async function POST(request: NextRequest) {
     }
 }
 
-async function processRule(supabase: any, rule: AutomationRule): Promise<any[]> {
-    const triggeredItems: any[] = []
+async function processRule(supabase: ReturnType<typeof createServiceRoleClient>, rule: AutomationRule): Promise<unknown[]> {
+    const triggeredItems: unknown[] = []
 
     switch (rule.trigger) {
         case 'APPOINTMENT_CREATED':
@@ -250,7 +284,7 @@ async function processRule(supabase: any, rule: AutomationRule): Promise<any[]> 
     return triggeredItems
 }
 
-function matchesFilters(item: any, filters: Record<string, any>): boolean {
+function matchesFilters(item: Record<string, unknown>, filters: Record<string, unknown>): boolean {
     if (!filters || Object.keys(filters).length === 0) {
         return true
     }
@@ -264,7 +298,7 @@ function matchesFilters(item: any, filters: Record<string, any>): boolean {
     return true
 }
 
-async function executeActions(supabase: any, rule: AutomationRule, context: TriggerContext) {
+async function executeActions(supabase: ReturnType<typeof createServiceRoleClient>, rule: AutomationRule, context: TriggerContext) {
     for (const action of rule.actions) {
         try {
             switch (action.type) {
@@ -307,7 +341,7 @@ async function executeActions(supabase: any, rule: AutomationRule, context: Trig
     })
 }
 
-async function executeEmailAction(supabase: any, clinicId: string, config: any, context: TriggerContext) {
+async function executeEmailAction(supabase: ReturnType<typeof createServiceRoleClient>, clinicId: string, config: ActionConfig, context: TriggerContext) {
     const patient = context.patient
     if (!patient?.email) return
 
@@ -330,7 +364,7 @@ async function executeEmailAction(supabase: any, clinicId: string, config: any, 
     })
 }
 
-async function executeWhatsAppAction(clinicId: string, config: any, context: TriggerContext) {
+async function executeWhatsAppAction(clinicId: string, config: ActionConfig, context: TriggerContext) {
     const patient = context.patient
     if (!patient?.phone) return
 
@@ -338,7 +372,7 @@ async function executeWhatsAppAction(clinicId: string, config: any, context: Tri
     console.log(`[CRM Automation] WhatsApp action for ${patient.phone}: ${config.message}`)
 }
 
-async function executeCreateTaskAction(supabase: any, clinicId: string, config: any, context: TriggerContext) {
+async function executeCreateTaskAction(supabase: ReturnType<typeof createServiceRoleClient>, clinicId: string, config: ActionConfig, context: TriggerContext) {
     await supabase.from('crm_tasks').insert({
         clinic_id: clinicId,
         patient_id: context.patient?.id,
@@ -352,7 +386,7 @@ async function executeCreateTaskAction(supabase: any, clinicId: string, config: 
     })
 }
 
-async function executeUpdateTagAction(supabase: any, config: any, context: TriggerContext) {
+async function executeUpdateTagAction(supabase: ReturnType<typeof createServiceRoleClient>, config: ActionConfig, context: TriggerContext) {
     if (!context.patient?.id || !config.tag) return
 
     const currentTags = context.patient.tags || []
@@ -364,7 +398,7 @@ async function executeUpdateTagAction(supabase: any, config: any, context: Trigg
     }
 }
 
-async function executeCreateFollowupAction(supabase: any, clinicId: string, config: any, context: TriggerContext) {
+async function executeCreateFollowupAction(supabase: ReturnType<typeof createServiceRoleClient>, clinicId: string, config: ActionConfig, context: TriggerContext) {
     if (!context.patient?.id) return
 
     const followupDate = new Date()
