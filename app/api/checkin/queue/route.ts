@@ -5,6 +5,15 @@ import { successResponse } from '@/lib/utils/responses'
 
 export const runtime = 'nodejs'
 
+interface QueueItem {
+    id: string
+    status: string
+    entered_queue_at: string
+    wait_time_minutes?: number
+    position_in_queue?: number
+    [key: string]: unknown
+}
+
 /**
  * GET /api/checkin/queue
  * Get queue for a doctor or clinic
@@ -55,21 +64,21 @@ export async function GET(request: NextRequest) {
         if (error) throw error
 
         // Calculate wait times
-        const queueWithWaitTime = (data || []).map((item: any, index: number) => ({
+        const queueWithWaitTime = (data || []).map((item, index) => ({
             ...item,
             wait_time_minutes: Math.floor(
-                (Date.now() - new Date(item.entered_queue_at).getTime()) / 60000
+                (Date.now() - new Date(item.entered_queue_at as string).getTime()) / 60000
             ),
             position_in_queue: index + 1,
-        }))
+        })) as QueueItem[]
 
         // Get stats
         const stats = {
-            total_waiting: queueWithWaitTime.filter((q: any) => q.status === 'waiting').length,
-            total_called: queueWithWaitTime.filter((q: any) => q.status === 'called').length,
-            total_in_consultation: queueWithWaitTime.filter((q: any) => q.status === 'in_consultation').length,
+            total_waiting: queueWithWaitTime.filter(q => q.status === 'waiting').length,
+            total_called: queueWithWaitTime.filter(q => q.status === 'called').length,
+            total_in_consultation: queueWithWaitTime.filter(q => q.status === 'in_consultation').length,
             avg_wait_time: queueWithWaitTime.length > 0
-                ? Math.round(queueWithWaitTime.reduce((acc: number, q: any) => acc + q.wait_time_minutes, 0) / queueWithWaitTime.length)
+                ? Math.round(queueWithWaitTime.reduce((acc, q) => acc + (q.wait_time_minutes || 0), 0) / queueWithWaitTime.length)
                 : 0,
         }
 

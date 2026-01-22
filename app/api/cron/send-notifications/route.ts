@@ -31,11 +31,11 @@ interface NotificationItem {
     recipient_email: string | null
     recipient_name: string | null
     template_id: string | null
-    template_data: any
+    template_data: Record<string, string | undefined>
     message_content: string | null
     appointment_id: string | null
     clinic_id: string
-    metadata?: any
+    metadata?: Record<string, string | undefined>
 }
 
 export async function GET(request: NextRequest) {
@@ -140,11 +140,12 @@ export async function GET(request: NextRequest) {
                     await handleFailure(supabase, item.id, 'Send returned false')
                     results.failed++
                 }
-            } catch (error: any) {
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error'
                 console.error(`[Cron] Error sending notification ${item.id}:`, error)
-                await handleFailure(supabase, item.id, error.message)
+                await handleFailure(supabase, item.id, errorMessage)
                 results.failed++
-                results.errors.push(`${item.id}: ${error.message}`)
+                results.errors.push(`${item.id}: ${errorMessage}`)
             }
         }
 
@@ -155,11 +156,12 @@ export async function GET(request: NextRequest) {
             message: 'Notifications processed',
             ...results,
         })
-    } catch (error: any) {
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error('[Cron] Fatal error:', error)
         return NextResponse.json({
             error: 'Internal server error',
-            details: error.message,
+            details: errorMessage,
             ...results,
             duration_ms: Date.now() - startTime,
         }, { status: 500 })
@@ -167,7 +169,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper: Handle notification failure with retry logic
-async function handleFailure(supabase: any, notificationId: string, errorMessage: string) {
+async function handleFailure(supabase: ReturnType<typeof createServiceRoleClient>, notificationId: string, errorMessage: string) {
     const { data: notification } = await supabase
         .from('notification_queue')
         .select('retry_count, max_retries')
@@ -237,7 +239,7 @@ async function sendEmailNotification(item: NotificationItem, checkinUrl?: string
 
         // Simulate success - TODO: implement actual email sending
         return true
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Email] Error:', error)
         return false
     }
