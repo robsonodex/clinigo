@@ -121,6 +121,15 @@ function createSupabaseClient(request: NextRequest) {
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
+    // DEBUG: Log all /api/clinics requests to diagnose 404 issue
+    if (pathname.startsWith('/api/clinics/') && !pathname.includes('by-slug')) {
+        console.log('[MIDDLEWARE DEBUG] /api/clinics request:', {
+            pathname,
+            method: request.method,
+            url: request.url,
+        })
+    }
+
     // Skip static assets
     if (
         pathname.startsWith('/_next') ||
