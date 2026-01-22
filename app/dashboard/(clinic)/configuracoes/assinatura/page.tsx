@@ -247,7 +247,7 @@ export default function AssinaturaPage() {
                                     <ul className="space-y-2 text-sm">
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-green-600" />
-                                            Até {planConfig?.limits?.max_doctors || 3} médicos
+                                            {planConfig?.limits?.max_doctors === -1 ? 'Médicos ilimitados' : `Até ${planConfig?.limits?.max_doctors || 3} médicos`}
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <Check className="w-4 h-4 text-green-600" />
