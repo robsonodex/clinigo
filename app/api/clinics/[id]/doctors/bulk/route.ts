@@ -18,12 +18,12 @@ const bulkDoctorDeleteSchema = z.object({
 })
 
 interface RouteParams {
-    params: Promise<{ clinicId: string }>
+    params: Promise<{ id: string }>
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
-        const { clinicId } = await params
+        const { id: clinicId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -65,7 +65,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
-        const { clinicId } = await params
+        const { id: clinicId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 

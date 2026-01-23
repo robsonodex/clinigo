@@ -7,12 +7,19 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 interface RouteParams {
-    params: Promise<{ clinicId: string }>
+    params: Promise<{ id: string }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const { clinicId } = await params
+        console.log('[GET /api/clinics/[clinicId]] HIT - Start of handler')
+
+        const resolvedParams = await params
+        const clinicId = resolvedParams.id
+
+        console.log('[GET /api/clinics/[clinicId]] resolvedParams:', resolvedParams)
+        console.log('[GET /api/clinics/[clinicId]] clinicId:', clinicId)
+
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -68,7 +75,28 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 userId
             })
             return NextResponse.json(
-                { success: false, error: { message: 'Clínica não encontrada', code: 'NOT_FOUND' } },
+                {
+                    success: false,
+                    error: {
+                        message: 'Clínica não encontrada',
+                        code: 'NOT_FOUND',
+                        // EXPOSE DEBUG INFO FOR SUPER ADMINS IN PROD
+                        ...(userRole === 'SUPER_ADMIN' ? {
+                            debug: {
+                                dbError: error,
+                                dbErrorCode: error?.code,
+                                dbErrorDetails: error?.details,
+                                dbErrorMessage: error?.message,
+                                resolvedParams,
+                                clinicId,
+                                requestHeaders: {
+                                    'x-user-id': userId,
+                                    'x-user-role': userRole
+                                }
+                            }
+                        } : {})
+                    }
+                },
                 { status: 404 }
             )
         }
@@ -108,7 +136,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
-        const { clinicId } = await params
+        const { id: clinicId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -175,7 +203,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
-        const { clinicId } = await params
+        const { id: clinicId } = await params
         const userRole = request.headers.get('x-user-role')
         const { searchParams } = new URL(request.url)
         const hardDelete = searchParams.get('hard') === 'true'

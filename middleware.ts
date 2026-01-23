@@ -119,7 +119,16 @@ function createSupabaseClient(request: NextRequest) {
 // ============================================
 
 export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl
+    const { pathname, hostname } = request.nextUrl
+
+    // ----------------------------------------
+    // WWW REDIRECT (Fix CORS)
+    // ----------------------------------------
+    if (hostname.startsWith('www.')) {
+        const newUrl = new URL(request.url)
+        newUrl.hostname = hostname.replace('www.', '')
+        return NextResponse.redirect(newUrl)
+    }
 
     // DEBUG: Log all /api/clinics requests to diagnose 404 issue
     if (pathname.startsWith('/api/clinics/') && !pathname.includes('by-slug')) {
@@ -424,6 +433,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|webmanifest)$).*)',
     ],
 }

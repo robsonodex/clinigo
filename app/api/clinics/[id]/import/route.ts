@@ -15,10 +15,10 @@ import { type PlanType } from '@/lib/constants/plans'
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ clinicId: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { clinicId } = await params
+        const { id: clinicId } = await params
         const supabase = await createClient()
 
         // Verify authentication

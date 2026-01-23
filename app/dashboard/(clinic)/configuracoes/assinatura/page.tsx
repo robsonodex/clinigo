@@ -253,10 +253,7 @@ export default function AssinaturaPage() {
                                             <Check className="w-4 h-4 text-green-600" />
                                             {planConfig?.limits?.max_appointments_month === -1 ? 'Consultas ilimitadas' : `Até ${planConfig?.limits?.max_appointments_month} consultas/mês`}
                                         </li>
-                                        <li className="flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-green-600" />
-                                            {planConfig?.limits?.max_storage_gb || 5}GB de armazenamento
-                                        </li>
+
                                     </ul>
                                 </div>
                             </div>
