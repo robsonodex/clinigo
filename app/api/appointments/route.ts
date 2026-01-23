@@ -51,11 +51,11 @@ export async function GET(request: NextRequest) {
             .from('appointments')
             .select(`
         *,
-        doctor:doctors(
+        doctor:doctors!appointments_doctor_id_fkey(
           id, crm, specialty, consultation_price,
           user:users(full_name, email, avatar_url)
         ),
-        patient:patients(id, full_name, email, phone, cpf),
+        patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
         payment:payments(id, status, amount, payment_method)
       `, { count: 'exact' })
 

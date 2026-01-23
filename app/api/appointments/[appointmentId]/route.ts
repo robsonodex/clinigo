@@ -25,14 +25,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .from('appointments')
             .select(`
         *,
-        doctor:doctors(
+        doctor:doctors!appointments_doctor_id_fkey(
           id, crm, crm_state, specialty, consultation_price, bio,
           user:users(full_name, email, avatar_url)
         ),
-        patient:patients(id, full_name, email, phone, cpf, date_of_birth),
+        patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf, date_of_birth),
         payment:payments(id, status, amount, payment_method, paid_at),
         consultation:consultations(id, started_at, ended_at, notes),
-        clinic:clinics(id, name, slug, email, phone)
+        clinic:clinics!appointments_clinic_id_fkey(id, name, slug, email, phone)
       `)
             .eq('id', appointmentId)
             .single()
@@ -134,8 +134,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .eq('id', appointmentId)
             .select(`
         *,
-        doctor:doctors(user:users(full_name)),
-        patient:patients(full_name, email)
+        doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
+        patient:patients!appointments_patient_id_fkey(full_name, email)
       `)
             .single()
 
