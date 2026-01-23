@@ -173,6 +173,16 @@ export default function LoginPage() {
                     </CardContent>
                 </Card>
 
+                {/* Notice for clinic users */}
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                    <p className="text-sm text-amber-800">
+                        <strong>Usuário de clínica?</strong>{' '}
+                        <Link href="/clinica" className="text-amber-900 underline font-medium hover:text-amber-700">
+                            Acesse aqui
+                        </Link>
+                    </p>
+                </div>
+
                 {/* Back link */}
                 <div className="text-center mt-6">
                     <Link

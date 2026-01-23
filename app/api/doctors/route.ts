@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
             .select(`
         *,
         user:users(email, full_name, avatar_url, phone, is_active),
-        clinic:clinics(name, slug)
+        clinic:clinics!doctors_clinic_id_fkey(name, slug)
       `, { count: 'exact' })
 
         // Apply filters
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
 
         // Usar limites do banco, ou fallback para configuração do plans.ts
         const planType = (clinic as any).plan_type as PlanType
-        const planConfig = PLANS[planType] || PLANS.STARTER
+        const planConfig = PLANS[planType] || PLANS.BASICO
         const dbMaxDoctors = ((clinic as any)?.plan_limits as { max_doctors?: number })?.max_doctors
         const baseMaxDoctors = dbMaxDoctors !== undefined && dbMaxDoctors !== null ? dbMaxDoctors : planConfig.limits.max_doctors
         const extraDoctors = ((clinic as any)?.addons as { extra_doctors?: number })?.extra_doctors || 0

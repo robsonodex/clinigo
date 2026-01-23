@@ -13,7 +13,9 @@ export default function DebugToolsPage() {
         setResult(null)
         setHeaders(null)
         try {
-            const res = await fetch(url)
+            // Append timestamp to bypass cache
+            const cacheBustedUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`
+            const res = await fetch(cacheBustedUrl)
 
             const headerObj: any = {}
             res.headers.forEach((val, key) => { headerObj[key] = val })
@@ -79,6 +81,20 @@ export default function DebugToolsPage() {
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:opacity-90 disabled:opacity-50"
                     >
                         GET /api/clinics (List)
+                    </button>
+                    <button
+                        onClick={() => testEndpoint(`/api/debug-clinic/${clinicId}`)}
+                        disabled={loading}
+                        className="px-4 py-2 bg-yellow-600 text-white rounded hover:opacity-90 disabled:opacity-50"
+                    >
+                        GET /api/debug-clinic/[id]
+                    </button>
+                    <button
+                        onClick={() => testEndpoint(`/api/clinics-detail?id=${clinicId}`)}
+                        disabled={loading}
+                        className="px-4 py-2 bg-purple-600 text-white rounded hover:opacity-90 disabled:opacity-50"
+                    >
+                        GET /api/clinics-detail (Static)
                     </button>
                 </div>
             </div>

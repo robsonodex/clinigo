@@ -111,6 +111,47 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    const handleDeleteClinic = async (clinicId: string, clinicName: string) => {
+        const confirmed = confirm(
+            `ATENÇÃO: Você está prestes a deletar a clínica "${clinicName}".\n\n` +
+            `Isso irá remover PERMANENTEMENTE:\n` +
+            `- Todos os usuários\n` +
+            `- Todos os pacientes\n` +
+            `- Todas as consultas\n` +
+            `- Todos os dados financeiros\n` +
+            `- Todos os documentos\n\n` +
+            `Esta ação NÃO PODE SER DESFEITA!\n\n` +
+            `Digite OK para confirmar.`
+        )
+
+        if (!confirmed) return
+
+        const doubleConfirm = confirm(
+            `ÚLTIMA CONFIRMAÇÃO!\n\n` +
+            `Deletar clínica: ${clinicName}\n\n` +
+            `Tem ABSOLUTA CERTEZA?`
+        )
+
+        if (!doubleConfirm) return
+
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'DELETE',
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Failed to delete clinic')
+            }
+
+            alert(`Clínica "${clinicName}" deletada com sucesso!`)
+            loadDashboard() // Reload data
+        } catch (error) {
+            console.error('Delete error:', error)
+            alert(`Erro ao deletar clínica: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+    }
+
     const getPlanBadge = (plan: string) => {
         const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
             BASIC: 'secondary',
@@ -145,15 +186,15 @@ export default function SuperAdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white">
+        <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+            <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <Shield className="h-8 w-8 text-red-500" />
+                        <Shield className="h-8 w-8 text-blue-600" />
                         <div>
-                            <h1 className="text-xl font-bold">System Master Hub</h1>
-                            <p className="text-xs text-gray-400">CliniGo Control Center</p>
+                            <h1 className="text-xl font-bold text-gray-900">System Master Hub</h1>
+                            <p className="text-xs text-gray-500">CliniGo Control Center</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -172,9 +213,9 @@ export default function SuperAdminDashboard() {
             <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
                 {/* Metrics Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="bg-gray-800 border-gray-700">
+                    <Card className="bg-white border-gray-200">
                         <CardHeader className="pb-2">
-                            <CardDescription className="text-gray-400">Clínicas Ativas</CardDescription>
+                            <CardDescription className="text-gray-600">Clínicas Ativas</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
@@ -187,9 +228,9 @@ export default function SuperAdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gray-800 border-gray-700">
+                    <Card className="bg-white border-gray-200">
                         <CardHeader className="pb-2">
-                            <CardDescription className="text-gray-400">MRR (Receita Mensal)</CardDescription>
+                            <CardDescription className="text-gray-600">MRR (Receita Mensal)</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
@@ -204,9 +245,9 @@ export default function SuperAdminDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gray-800 border-gray-700">
+                    <Card className="bg-white border-gray-200">
                         <CardHeader className="pb-2">
-                            <CardDescription className="text-gray-400">Churn Rate</CardDescription>
+                            <CardDescription className="text-gray-600">Churn Rate</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
@@ -220,57 +261,39 @@ export default function SuperAdminDashboard() {
                             </p>
                         </CardContent>
                     </Card>
-
-                    <Card className="bg-gray-800 border-gray-700">
-                        <CardHeader className="pb-2">
-                            <CardDescription className="text-gray-400">Custo IA (Mês)</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold text-purple-500">
-                                    R$ {data.metrics.aiCostBRL.toFixed(2)}
-                                </span>
-                                <Brain className="h-8 w-8 text-purple-500" />
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                {data.metrics.aiTokensUsed.toLocaleString()} tokens
-                            </p>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 {/* Tabs */}
                 <Tabs defaultValue="clinics" className="space-y-4">
-                    <TabsList className="bg-gray-800">
+                    <TabsList className="bg-white border border-gray-200">
                         <TabsTrigger value="clinics">Gestão de Clínicas</TabsTrigger>
-                        <TabsTrigger value="ai-costs">Monitor de IA</TabsTrigger>
                         <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
                     </TabsList>
 
                     {/* Clinics Tab */}
                     <TabsContent value="clinics">
-                        <Card className="bg-gray-800 border-gray-700">
+                        <Card className="bg-white border-gray-200">
                             <CardHeader>
-                                <CardTitle>Todas as Clínicas</CardTitle>
-                                <CardDescription className="text-gray-400">
+                                <CardTitle className="text-gray-900">Todas as Clínicas</CardTitle>
+                                <CardDescription className="text-gray-600">
                                     Gerencie e monitore todas as clínicas
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="border-gray-700">
-                                            <TableHead className="text-gray-400">Clínica</TableHead>
-                                            <TableHead className="text-gray-400">Plano</TableHead>
-                                            <TableHead className="text-gray-400">Status</TableHead>
-                                            <TableHead className="text-gray-400">Faturamento</TableHead>
-                                            <TableHead className="text-gray-400">Renovação</TableHead>
-                                            <TableHead className="text-gray-400">Ações</TableHead>
+                                        <TableRow className="border-gray-200">
+                                            <TableHead className="text-gray-600">Clínica</TableHead>
+                                            <TableHead className="text-gray-600">Plano</TableHead>
+                                            <TableHead className="text-gray-600">Status</TableHead>
+                                            <TableHead className="text-gray-600">Faturamento</TableHead>
+                                            <TableHead className="text-gray-600">Renovação</TableHead>
+                                            <TableHead className="text-gray-600">Ações</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {data.clinics.map((clinic) => (
-                                            <TableRow key={clinic.id} className="border-gray-700">
+                                            <TableRow key={clinic.id} className="border-gray-200 hover:bg-gray-50">
                                                 <TableCell className="font-medium">{clinic.name}</TableCell>
                                                 <TableCell>{getPlanBadge(clinic.planType)}</TableCell>
                                                 <TableCell>
@@ -285,15 +308,35 @@ export default function SuperAdminDashboard() {
                                                     {format(new Date(clinic.renewalDate), 'dd/MM/yyyy', { locale: ptBR })}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleImpersonate(clinic.id, clinic.name)}
-                                                        className="text-blue-400 hover:text-blue-300"
-                                                    >
-                                                        <Eye className="h-4 w-4 mr-1" />
-                                                        Visualizar
-                                                    </Button>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleImpersonate(clinic.id, clinic.name)}
+                                                            className="text-blue-400 hover:text-blue-300"
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-1" />
+                                                            Ver
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/system-master-hub/clinics/${clinic.id}/permissions`)}
+                                                            className="text-purple-400 hover:text-purple-300"
+                                                        >
+                                                            <Shield className="h-4 w-4 mr-1" />
+                                                            Permissões
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteClinic(clinic.id, clinic.name)}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <AlertTriangle className="h-4 w-4 mr-1" />
+                                                            Deletar
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -303,88 +346,28 @@ export default function SuperAdminDashboard() {
                         </Card>
                     </TabsContent>
 
-                    {/* AI Costs Tab */}
-                    <TabsContent value="ai-costs">
-                        <Card className="bg-gray-800 border-gray-700">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Brain className="h-5 w-5 text-purple-500" />
-                                    Consumo de IA por Clínica
-                                </CardTitle>
-                                <CardDescription className="text-gray-400">
-                                    Monitore tokens e custos em tempo real
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="border-gray-700">
-                                            <TableHead className="text-gray-400">Clínica</TableHead>
-                                            <TableHead className="text-gray-400">Tokens</TableHead>
-                                            <TableHead className="text-gray-400">Custo</TableHead>
-                                            <TableHead className="text-gray-400">Limite</TableHead>
-                                            <TableHead className="text-gray-400">Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {data.clinics.map((clinic) => {
-                                            const limit = clinic.planType === 'ENTERPRISE' ? Infinity : 100000
-                                            const usage = (clinic.aiTokensUsed / limit) * 100
-                                            const isAbusing = usage > 80
-
-                                            return (
-                                                <TableRow key={clinic.id} className="border-gray-700">
-                                                    <TableCell className="font-medium">{clinic.name}</TableCell>
-                                                    <TableCell>
-                                                        {clinic.aiTokensUsed.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        R$ {(clinic.aiTokensUsed * 0.00002).toFixed(2)}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {limit === Infinity ? '∞' : limit.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {isAbusing ? (
-                                                            <Badge variant="destructive" className="flex items-center gap-1 w-fit">
-                                                                <AlertTriangle className="h-3 w-3" />
-                                                                Alto uso
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="outline">Normal</Badge>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            )
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
                     {/* Logs Tab */}
                     <TabsContent value="logs">
-                        <Card className="bg-gray-800 border-gray-700">
+                        <Card className="bg-white border-gray-200">
                             <CardHeader>
-                                <CardTitle>Logs do Sistema</CardTitle>
-                                <CardDescription className="text-gray-400">
+                                <CardTitle className="text-gray-900">Logs do Sistema</CardTitle>
+                                <CardDescription className="text-gray-600">
                                     Últimas ações do Super Admin
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="border-gray-700">
-                                            <TableHead className="text-gray-400">Ação</TableHead>
-                                            <TableHead className="text-gray-400">Descrição</TableHead>
-                                            <TableHead className="text-gray-400">Clínica</TableHead>
-                                            <TableHead className="text-gray-400">Data/Hora</TableHead>
+                                        <TableRow className="border-gray-200">
+                                            <TableHead className="text-gray-600">Ação</TableHead>
+                                            <TableHead className="text-gray-600">Descrição</TableHead>
+                                            <TableHead className="text-gray-600">Clínica</TableHead>
+                                            <TableHead className="text-gray-600">Data/Hora</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {data.recentLogs.map((log) => (
-                                            <TableRow key={log.id} className="border-gray-700">
+                                            <TableRow key={log.id} className="border-gray-200 hover:bg-gray-50">
                                                 <TableCell>
                                                     <Badge variant="outline">{log.actionType}</Badge>
                                                 </TableCell>

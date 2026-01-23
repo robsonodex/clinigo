@@ -82,7 +82,7 @@ export default function ClinicsPage() {
 
     const updateStatusMutation = useMutation({
         mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
-            api.patch(`/clinics/${id}`, { is_active }),
+            api.patch(`/clinics-detail?id=${id}`, { is_active }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-clinics'] })
             toast.success('Status da clínica atualizado')
@@ -120,7 +120,7 @@ export default function ClinicsPage() {
 
     const deleteMutation = useMutation({
         mutationFn: (id: string) =>
-            api.delete(`/clinics/${id}?hard=true`),
+            api.delete(`/clinics-detail?id=${id}&hard=true`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-clinics'] })
             toast.success('Clínica excluída permanentemente')

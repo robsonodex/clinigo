@@ -62,11 +62,11 @@ export default function ClinicDetailsPage() {
 
     const { data: clinic, isLoading, error } = useQuery<Clinic>({
         queryKey: ['admin-clinic', clinicId],
-        queryFn: () => api.get(`/clinics/${clinicId}`),
+        queryFn: () => api.get(`/clinics-detail?id=${clinicId}`),
     })
 
     const updateMutation = useMutation({
-        mutationFn: (data: Partial<Clinic>) => api.patch(`/clinics/${clinicId}`, data),
+        mutationFn: (data: Partial<Clinic>) => api.patch(`/clinics-detail?id=${clinicId}`, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-clinic', clinicId] })
             toast.success('Clínica atualizada com sucesso')

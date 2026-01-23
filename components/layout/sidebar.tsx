@@ -352,6 +352,13 @@ const navigationSections: NavSection[] = [
         title: 'Administração',
         items: [
             {
+                title: 'Master Hub',
+                href: '/system-master-hub',
+                icon: Shield,
+                roles: ['SUPER_ADMIN'],
+                badge: 'ADMIN',
+            },
+            {
                 title: 'Clínicas',
                 href: '/dashboard/clinicas',
                 icon: Building2,
@@ -391,12 +398,6 @@ const navigationSections: NavSection[] = [
                 title: 'Auditoria',
                 href: '/dashboard/auditoria',
                 icon: Shield,
-                roles: ['SUPER_ADMIN'],
-            },
-            {
-                title: 'Sistema',
-                href: '/dashboard/sistema',
-                icon: Settings,
                 roles: ['SUPER_ADMIN'],
             },
             {

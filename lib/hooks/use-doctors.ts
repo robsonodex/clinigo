@@ -48,7 +48,8 @@ export function useCreateDoctor() {
     return useMutation({
         mutationFn: (data: CreateDoctorData) => api.post<{ doctor_id: string }>('/doctors', data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['doctors'] })
+            // Use partial match to invalidate ALL doctor queries regardless of params
+            queryClient.invalidateQueries({ queryKey: ['doctors'], exact: false })
             toast.success('Médico cadastrado com sucesso!')
         },
         onError: (error: Error) => {
@@ -67,7 +68,7 @@ export function useUpdateDoctor() {
         mutationFn: ({ doctorId, data }: { doctorId: string; data: Partial<Doctor> }) =>
             api.patch<Doctor>(`/doctors/${doctorId}`, data),
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['doctors'] })
+            queryClient.invalidateQueries({ queryKey: ['doctors'], exact: false })
             queryClient.invalidateQueries({ queryKey: ['doctor', variables.doctorId] })
             toast.success('Dados atualizados!')
         },

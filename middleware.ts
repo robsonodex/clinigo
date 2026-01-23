@@ -20,7 +20,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 // Super Admin email whitelist from env
 const SUPER_ADMIN_EMAILS = (
-    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com'
+    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
 ).split(',').map(e => e.trim().toLowerCase())
 
 // Legacy single email support
@@ -419,6 +419,11 @@ export async function middleware(request: NextRequest) {
                 headers: requestHeaders,
             },
         })
+
+        // DEBUG: Expose middleware path to client response
+        finalResponse.headers.set('x-debug-mw-path', pathname)
+        finalResponse.headers.set('x-debug-mw-matched', 'true')
+        finalResponse.headers.set('x-debug-mw-ts', Date.now().toString())
 
         // Copy cookies from Supabase response to maintain session
         response.cookies.getAll().forEach((cookie: { name: string; value: string }) => {
