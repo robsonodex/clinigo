@@ -222,7 +222,7 @@ export function ManualAppointmentModal({
         },
         onSuccess: () => {
             toast.success(isEditing ? 'Agendamento atualizado!' : 'Agendamento criado com sucesso!')
-            queryClient.invalidateQueries({ queryKey: ['appointments'] })
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
             handleClose()
         },
         onError: (error: Error) => {

@@ -140,7 +140,7 @@ export default function AgendaPage() {
             })
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['appointments'] })
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
             setCancellingId(null)
             setCancelReason('')
             toast.success('Agendamento cancelado')
@@ -161,7 +161,7 @@ export default function AgendaPage() {
             })
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['appointments'] })
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
             setRescheduleConfirmOpen(false)
             setDraggedAppointment(null)
             setDropTarget(null)
