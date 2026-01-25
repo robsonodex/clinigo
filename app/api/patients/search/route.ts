@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
 
         // Get user profile to check permissions and clinic
         const { data: profile } = await supabase
-            .from('profiles')
+            .from('users')
             .select('role, clinic_id')
-            .eq('user_id', user.id)
+            .eq('id', user.id)
             .single()
 
         if (!profile) {

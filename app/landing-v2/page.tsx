@@ -223,7 +223,7 @@ function Navbar() {
             <div style={styles.navContainer}>
                 <Link href="/" style={styles.logo}>
                     <Image
-                        src="/logo-clinigo.png"
+                        src="/logo_black.svg"
                         alt="CliniGo"
                         width={280}
                         height={80}

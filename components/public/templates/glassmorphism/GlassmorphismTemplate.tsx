@@ -157,21 +157,7 @@ export function GlassmorphismTemplate({
                             </div>
                         </div>
 
-                        <div className="glass-floating-badge glass-floating-badge-1">
-                            <div className="glass-badge-icon glass-badge-green">✓</div>
-                            <div className="glass-badge-text">
-                                <span>CRM Verificado</span>
-                                <small>100% dos médicos</small>
-                            </div>
-                        </div>
 
-                        <div className="glass-floating-badge glass-floating-badge-2">
-                            <div className="glass-badge-icon glass-badge-blue">🔒</div>
-                            <div className="glass-badge-text">
-                                <span>100% Seguro</span>
-                                <small>LGPD Compliant</small>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </section>

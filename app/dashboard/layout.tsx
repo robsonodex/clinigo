@@ -1,4 +1,5 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DemoBanner } from '@/components/demo/demo-banner'
@@ -34,9 +35,12 @@ export default async function DashboardRootLayout({
     }
 
     return (
-        <DashboardLayout>
-            <DemoBanner isDemo={isDemo} />
-            {children}
-        </DashboardLayout>
+        <>
+            <DashboardLayout>
+                <DemoBanner isDemo={isDemo} />
+                {children}
+            </DashboardLayout>
+            <MobileBottomNav />
+        </>
     )
 }

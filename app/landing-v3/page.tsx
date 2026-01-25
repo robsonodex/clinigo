@@ -151,7 +151,7 @@ function Navbar() {
             <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
                 <Link href="/" className="flex items-center">
                     <Image
-                        src="/logo-clinigo.png"
+                        src="/logo_black.svg"
                         alt="CliniGo"
                         width={280}
                         height={80}
@@ -487,7 +487,7 @@ function Footer() {
                     <div className="col-span-2 md:col-span-1">
                         <Link href="/" className="flex items-center">
                             <Image
-                                src="/logo-clinigo.png"
+                                src="/logo_black.svg"
                                 alt="CliniGo"
                                 width={280}
                                 height={80}

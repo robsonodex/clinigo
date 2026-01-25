@@ -126,14 +126,6 @@ export function HeroSection({
 
                     {/* Trust Badges */}
                     <div className="flex flex-wrap gap-3">
-                        <Badge
-                            variant="secondary"
-                            className="px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm hover:bg-white/30"
-                        >
-                            <Award className="w-4 h-4 mr-2" />
-                            CRM Verificado
-                        </Badge>
-
                         {(rating ?? 0) > 0 && (
                             <Badge
                                 variant="secondary"
@@ -154,13 +146,7 @@ export function HeroSection({
                             </Badge>
                         )}
 
-                        <Badge
-                            variant="secondary"
-                            className="px-4 py-2 bg-white/20 text-white border-white/30 backdrop-blur-sm"
-                        >
-                            <Shield className="w-4 h-4 mr-2" />
-                            100% Seguro
-                        </Badge>
+
                     </div>
 
                     {/* Search Bar */}

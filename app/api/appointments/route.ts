@@ -291,6 +291,7 @@ export async function POST(request: NextRequest) {
                 appointment_time: validatedData.appointment_time,
                 status: initialStatus,
                 payment_type: validatedData.payment_type || 'PRIVATE',
+                type: validatedData.type || 'IN_PERSON', // TELEMEDICINA or IN_PERSON
                 health_insurance_plan_id: validatedData.health_insurance_plan_id || null,
                 insurance_card_number: validatedData.insurance_card_number || null,
                 insurance_card_validity: validatedData.insurance_card_validity || null,
@@ -315,6 +316,33 @@ export async function POST(request: NextRequest) {
                 )
             }
             throw appointmentError
+        }
+
+        // 6.1 Auto-create video_room for TELEMEDICINA appointments
+        let videoRoom = null
+        if (validatedData.type === 'TELEMEDICINA') {
+            const roomId = `room_${appointment.id.substring(0, 8)}_${Date.now()}`
+            const patientToken = `patient_${Math.random().toString(36).substring(2, 15)}`
+            const doctorToken = `doctor_${Math.random().toString(36).substring(2, 15)}`
+
+            const { data: createdRoom, error: roomError } = await supabase
+                .from('video_rooms')
+                .insert({
+                    appointment_id: appointment.id,
+                    room_id: roomId,
+                    patient_token: patientToken,
+                    doctor_token: doctorToken,
+                    status: 'WAITING',
+                })
+                .select()
+                .single()
+
+            if (roomError) {
+                console.error('[VIDEO_ROOM] Error creating room:', roomError)
+                // Don't fail the appointment creation, just log the error
+            } else {
+                videoRoom = createdRoom
+            }
         }
 
         // 7. Handle Payment Registration (Gateway-Agnostic)

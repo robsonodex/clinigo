@@ -154,3 +154,55 @@ export function buildPaginatedData<T>(
     }
 }
 
+/**
+ * Custom Error Classes
+ */
+export class BadRequestError extends Error {
+    constructor(message: string, public details?: unknown) {
+        super(message)
+        this.name = 'BadRequestError'
+    }
+}
+
+export class ForbiddenError extends Error {
+    constructor(message: string, public details?: unknown) {
+        super(message)
+        this.name = 'ForbiddenError'
+    }
+}
+
+/**
+ * Handle API Error
+ * Converts errors to appropriate responses
+ */
+export function handleApiError(error: unknown): NextResponse {
+    console.error('API Error:', error)
+
+    if (error instanceof BadRequestError) {
+        return errorResponse(error.message, {
+            status: 400,
+            code: 'BAD_REQUEST',
+            details: error.details,
+        })
+    }
+
+    if (error instanceof ForbiddenError) {
+        return errorResponse(error.message, {
+            status: 403,
+            code: 'FORBIDDEN',
+            details: error.details,
+        })
+    }
+
+    if (error instanceof Error) {
+        return errorResponse(error.message, {
+            status: 500,
+            code: 'INTERNAL_ERROR',
+        })
+    }
+
+    return errorResponse('An unexpected error occurred', {
+        status: 500,
+        code: 'UNKNOWN_ERROR',
+    })
+}

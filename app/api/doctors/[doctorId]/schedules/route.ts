@@ -38,13 +38,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
         const { doctorId } = await params
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
+
+        const supabase = await createClient()
+
+        // Get current user from Supabase auth
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return handleApiError(new ForbiddenError('Não autorizado'))
+        }
+
+        // Get user profile
+        const { data: userProfile } = await supabase
+            .from('users')
+            .select('id, role, clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        if (!userProfile) {
+            return handleApiError(new ForbiddenError('Perfil não encontrado'))
+        }
+
+        const userId = userProfile.id
+        const userRole = userProfile.role
 
         const body = await request.json()
         const validatedData = updateSchedulesSchema.parse(body)
-
-        const supabase = await createClient()
 
         // Get doctor to check authorization
         const { data: doctor, error: fetchError } = await supabase
@@ -65,13 +84,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             }
         } else if (userRole === 'CLINIC_ADMIN') {
             // Clinic admins can only update doctors in their clinic
-            const { data: currentUser } = await supabase
-                .from('users')
-                .select('clinic_id')
-                .eq('id', userId)
-                .single()
-
-            if (currentUser?.clinic_id !== doctor.clinic_id) {
+            if (userProfile.clinic_id !== doctor.clinic_id) {
                 throw new ForbiddenError('Acesso negado')
             }
         } else if (userRole !== 'SUPER_ADMIN') {

@@ -9,7 +9,7 @@ export default function NotFound() {
             <div className="max-w-md w-full text-center">
                 {/* Logo */}
                 <Link href="/" className="inline-block mb-8">
-                    <img src="/logo-clinigo-white.png" alt="CliniGo" className="h-12 mx-auto" />
+                    <img src="/logo_white.svg" alt="CliniGo" className="h-12 mx-auto" />
                 </Link>
 
                 {/* 404 Number */}

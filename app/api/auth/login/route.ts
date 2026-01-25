@@ -20,12 +20,14 @@ export async function POST(request: NextRequest) {
 
         const supabase = await createClient() as any
 
+        // Authenticate user ONLY - no profile fetch to avoid timeout
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         })
 
         if (error) {
+            console.error('[LOGIN] Auth error:', error)
             return NextResponse.json(
                 {
                     success: false,
@@ -38,20 +40,27 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Get user profile
-        const { data: profile } = await supabase
-            .from('users')
-            .select('*, clinic:clinics(id, name, slug)')
-            .eq('id', data.user.id)
-            .single()
+        if (!data.user || !data.session) {
+            console.error('[LOGIN] No user or session returned')
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: 'Erro ao criar sessão',
+                        code: 'NO_SESSION',
+                    },
+                },
+                { status: 500 }
+            )
+        }
 
+        // Return minimal user data - frontend will fetch full profile separately
         return successResponse({
             user: {
                 id: data.user.id,
                 email: data.user.email,
-                role: profile?.role,
-                full_name: profile?.full_name,
-                clinic: profile?.clinic,
+                role: data.user.user_metadata?.role || null,
+                full_name: data.user.user_metadata?.full_name || null,
             },
             session: {
                 access_token: data.session.access_token,
@@ -60,6 +69,7 @@ export async function POST(request: NextRequest) {
             },
         })
     } catch (error) {
+        console.error('[LOGIN] Unexpected error:', error)
         return handleApiError(error)
     }
 }

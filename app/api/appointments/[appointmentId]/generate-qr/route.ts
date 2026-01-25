@@ -34,9 +34,9 @@ export async function POST(
                 doctor_id,
                 clinic_id,
                 scheduled_at,
-                patient:patients(id, full_name, email, phone),
-                doctor:doctors(id, full_name),
-                clinic:clinics(id, name, slug, email, phone)
+                patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
+                doctor:doctors!appointments_doctor_id_fkey(id, full_name),
+                clinic:clinics!appointments_clinic_id_fkey(id, name, slug, email, phone)
             `)
             .eq('id', appointmentId)
             .single()
@@ -69,8 +69,8 @@ export async function POST(
             const preRegistrationUrl = `${baseUrl}/pre-cadastro/${qrToken}`
             const checkinUrl = generateCheckinUrl(baseUrl, appointmentId)
 
-            // Generate QR code image
-            const qrCodeDataUrl = await QRCode.toDataURL(preRegistrationUrl, {
+            // Generate QR code image (using check-in URL with appointment ID)
+            const qrCodeDataUrl = await QRCode.toDataURL(checkinUrl, {
                 width: 300,
                 margin: 2,
                 color: {

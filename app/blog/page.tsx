@@ -74,7 +74,7 @@ export default function BlogPage() {
             <header className="bg-white border-b sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo-clinigo.png" alt="CliniGo" className="h-10 w-auto" />
+                        <img src="/logo_black.svg" alt="CliniGo" className="h-10 w-auto" />
                     </Link>
                     <Link
                         href="/"

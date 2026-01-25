@@ -42,6 +42,8 @@ import {
 import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearchCombobox'
 import { QuickPatientForm } from './QuickPatientForm'
 import { PaymentMethodSelector, type ManualPaymentType } from './PaymentMethodSelector'
+import { AppointmentSuccessModal } from '@/components/dashboard/AppointmentSuccessModal'
+import { NoShowPatientBadge } from '@/components/patients/NoShowPatientBadge'
 import { formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api-client'
 
@@ -102,6 +104,9 @@ export function ManualAppointmentModal({
     const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null)
     const [quickRegistration, setQuickRegistration] = useState<any>(null)
     const [showScheduleWarning, setShowScheduleWarning] = useState(false)
+    const [showSuccessModal, setShowSuccessModal] = useState(false)
+    const [createdAppointment, setCreatedAppointment] = useState<any>(null)
+    const [patientNoShowCount, setPatientNoShowCount] = useState(0)
 
     // Check if we are in edit mode
     const isEditing = !!appointmentToEdit
@@ -220,10 +225,20 @@ export function ManualAppointmentModal({
 
             return response.json()
         },
-        onSuccess: () => {
-            toast.success(isEditing ? 'Agendamento atualizado!' : 'Agendamento criado com sucesso!')
+        onSuccess: (data) => {
+            if (isEditing) {
+                toast.success('Agendamento atualizado!')
+            } else {
+                // Store appointment data and show success modal
+                setCreatedAppointment(data.appointment)
+                setShowSuccessModal(true)
+                toast.success('Agendamento criado com sucesso!')
+            }
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
-            handleClose()
+            // Only close if editing (success modal handles closing for new appointments)
+            if (isEditing) {
+                handleClose()
+            }
         },
         onError: (error: Error) => {
             toast.error(error.message)
@@ -236,6 +251,17 @@ export function ManualAppointmentModal({
         setQuickRegistration(null)
         if (patient) {
             setStep('form')
+            // Fetch patient no-show stats
+            fetch(`/api/patients/${patient.id}/noshow-stats`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.total_no_shows) {
+                        setPatientNoShowCount(data.total_no_shows)
+                    }
+                })
+                .catch(err => console.error('Error fetching patient stats:', err))
+        } else {
+            setPatientNoShowCount(0)
         }
     }
 
@@ -257,6 +283,8 @@ export function ManualAppointmentModal({
         setStep('search')
         setSelectedPatient(null)
         setQuickRegistration(null)
+        setShowSuccessModal(false)
+        setCreatedAppointment(null)
         form.reset()
         onOpenChange(false)
     }
@@ -280,289 +308,305 @@ export function ManualAppointmentModal({
     ).flat()
 
     return (
-        <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Novo Agendamento Manual
-                    </DialogTitle>
-                </DialogHeader>
+        <>
+            <Dialog open={open} onOpenChange={handleClose}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5" />
+                            Novo Agendamento Manual
+                        </DialogTitle>
+                    </DialogHeader>
 
-                {/* Step: Patient Search */}
-                {step === 'search' && (
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                                <User className="h-4 w-4" />
-                                Paciente
-                            </Label>
-                            <PatientSearchCombobox
-                                onSelect={handlePatientSelect}
-                                onCreateNew={handleCreateNewPatient}
-                            />
-                        </div>
-
-                        {selectedPatient && (
-                            <div className="p-4 bg-green-50 rounded-lg">
-                                <p className="font-medium text-green-800">{selectedPatient.full_name}</p>
-                                <p className="text-sm text-green-600">
-                                    {selectedPatient.cpf || selectedPatient.phone}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Step: Quick Registration */}
-                {step === 'register' && (
-                    <QuickPatientForm
-                        onSubmit={handleQuickRegister}
-                        onBack={handleBackToSearch}
-                    />
-                )}
-
-                {/* Step: Appointment Form */}
-                {step === 'form' && (
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        {/* Patient Info */}
-                        <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">
-                                    {selectedPatient?.full_name || quickRegistration?.full_name}
-                                </span>
-                                {quickRegistration && (
-                                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                                        Novo cadastro
-                                    </span>
-                                )}
-                            </div>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleBackToSearch}
-                            >
-                                Trocar
-                            </Button>
-                        </div>
-
-                        <Separator />
-
-                        {/* Doctor Selection */}
-                        <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                                <Stethoscope className="h-4 w-4" />
-                                Médico
-                            </Label>
-                            <Controller
-                                name="doctor_id"
-                                control={form.control}
-                                render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <SelectTrigger className={errors.doctor_id ? 'border-destructive' : ''}>
-                                            <SelectValue placeholder="Selecione o médico" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {doctorsLoading && (
-                                                <div className="p-2 text-center">
-                                                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                                                </div>
-                                            )}
-                                            {doctors?.map((doctor) => (
-                                                <SelectItem key={doctor.id} value={doctor.id}>
-                                                    {doctor.user.full_name} - {doctor.specialty}
-                                                    {doctor.consultation_price > 0 && (
-                                                        <span className="text-muted-foreground ml-2">
-                                                            ({formatCurrency(doctor.consultation_price)})
-                                                        </span>
-                                                    )}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
-                            {errors.doctor_id && (
-                                <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
-                            )}
-                        </div>
-
-                        {/* Date and Time */}
-                        <div className="grid grid-cols-2 gap-4">
+                    {/* Step: Patient Search */}
+                    {step === 'search' && (
+                        <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    Data
+                                    <User className="h-4 w-4" />
+                                    Paciente
                                 </Label>
-                                <Input
-                                    type="date"
-                                    {...form.register('appointment_date')}
-                                    className={errors.appointment_date ? 'border-destructive' : ''}
+                                <PatientSearchCombobox
+                                    onSelect={handlePatientSelect}
+                                    onCreateNew={handleCreateNewPatient}
                                 />
                             </div>
+
+                            {selectedPatient && (
+                                <div className="p-4 bg-green-50 rounded-lg">
+                                    <p className="font-medium text-green-800">{selectedPatient.full_name}</p>
+                                    <p className="text-sm text-green-600">
+                                        {selectedPatient.cpf || selectedPatient.phone}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Step: Quick Registration */}
+                    {step === 'register' && (
+                        <QuickPatientForm
+                            onSubmit={handleQuickRegister}
+                            onBack={handleBackToSearch}
+                        />
+                    )}
+
+                    {/* Step: Appointment Form */}
+                    {step === 'form' && (
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            {/* Patient Info */}
+                            <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">
+                                        {selectedPatient?.full_name || quickRegistration?.full_name}
+                                    </span>
+                                    {quickRegistration && (
+                                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                                            Novo cadastro
+                                        </span>
+                                    )}
+                                    {patientNoShowCount >= 3 && (
+                                        <NoShowPatientBadge noShowCount={patientNoShowCount} />
+                                    )}
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleBackToSearch}
+                                >
+                                    Trocar
+                                </Button>
+                            </div>
+
+                            <Separator />
+
+                            {/* Doctor Selection */}
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
-                                    Horário
+                                    <Stethoscope className="h-4 w-4" />
+                                    Médico
                                 </Label>
                                 <Controller
-                                    name="appointment_time"
+                                    name="doctor_id"
                                     control={form.control}
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger className={errors.appointment_time ? 'border-destructive' : ''}>
-                                                <SelectValue placeholder="Selecione" />
+                                            <SelectTrigger className={errors.doctor_id ? 'border-destructive' : ''}>
+                                                <SelectValue placeholder="Selecione o médico" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {timeSlots.map((time) => (
-                                                    <SelectItem key={time} value={time}>
-                                                        {time}
+                                                {doctorsLoading && (
+                                                    <div className="p-2 text-center">
+                                                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                                                    </div>
+                                                )}
+                                                {doctors?.map((doctor) => (
+                                                    <SelectItem key={doctor.id} value={doctor.id}>
+                                                        {doctor.user.full_name} - {doctor.specialty}
+                                                        {doctor.consultation_price > 0 && (
+                                                            <span className="text-muted-foreground ml-2">
+                                                                ({formatCurrency(doctor.consultation_price)})
+                                                            </span>
+                                                        )}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
                                     )}
                                 />
+                                {errors.doctor_id && (
+                                    <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
+                                )}
                             </div>
-                        </div>
 
-                        {/* Schedule Override Warning */}
-                        {showScheduleWarning && (
-                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <div className="flex items-start gap-2">
-                                    <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="font-medium text-yellow-800">
-                                            Atenção: Horário fora do expediente
-                                        </p>
-                                        <p className="text-sm text-yellow-700">
-                                            Este horário está fora do expediente padrão do médico.
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <Checkbox
-                                                id="override"
-                                                checked={form.watch('ignore_schedule_constraints')}
-                                                onCheckedChange={(checked) =>
-                                                    setValue('ignore_schedule_constraints', checked as boolean)
-                                                }
-                                            />
-                                            <Label htmlFor="override" className="text-sm cursor-pointer">
-                                                Sim, é um encaixe autorizado
-                                            </Label>
+                            {/* Date and Time */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        Data
+                                    </Label>
+                                    <Input
+                                        type="date"
+                                        {...form.register('appointment_date')}
+                                        className={errors.appointment_date ? 'border-destructive' : ''}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4" />
+                                        Horário
+                                    </Label>
+                                    <Controller
+                                        name="appointment_time"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger className={errors.appointment_time ? 'border-destructive' : ''}>
+                                                    <SelectValue placeholder="Selecione" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {timeSlots.map((time) => (
+                                                        <SelectItem key={time} value={time}>
+                                                            {time}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Schedule Override Warning */}
+                            {showScheduleWarning && (
+                                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <div className="flex items-start gap-2">
+                                        <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-medium text-yellow-800">
+                                                Atenção: Horário fora do expediente
+                                            </p>
+                                            <p className="text-sm text-yellow-700">
+                                                Este horário está fora do expediente padrão do médico.
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <Checkbox
+                                                    id="override"
+                                                    checked={form.watch('ignore_schedule_constraints')}
+                                                    onCheckedChange={(checked) =>
+                                                        setValue('ignore_schedule_constraints', checked as boolean)
+                                                    }
+                                                />
+                                                <Label htmlFor="override" className="text-sm cursor-pointer">
+                                                    Sim, é um encaixe autorizado
+                                                </Label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                            )}
+
+                            <Separator />
+
+                            {/* Appointment Type */}
+                            <div className="space-y-2">
+                                <Label>Tipo de Consulta</Label>
+                                <Controller
+                                    name="type"
+                                    control={form.control}
+                                    render={({ field }) => (
+                                        <RadioGroup
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            className="flex gap-4"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <RadioGroupItem value="presencial" id="presencial" />
+                                                <Label htmlFor="presencial" className="flex items-center gap-1 cursor-pointer">
+                                                    <Building2 className="h-4 w-4" />
+                                                    Presencial
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <RadioGroupItem value="telemedicina" id="telemedicina" />
+                                                <Label htmlFor="telemedicina" className="flex items-center gap-1 cursor-pointer">
+                                                    <Video className="h-4 w-4" />
+                                                    Telemedicina
+                                                </Label>
+                                            </div>
+                                        </RadioGroup>
+                                    )}
+                                />
                             </div>
-                        )}
 
-                        <Separator />
+                            <Separator />
 
-                        {/* Appointment Type */}
-                        <div className="space-y-2">
-                            <Label>Tipo de Consulta</Label>
-                            <Controller
-                                name="type"
-                                control={form.control}
-                                render={({ field }) => (
-                                    <RadioGroup
-                                        value={field.value}
-                                        onValueChange={field.onChange}
-                                        className="flex gap-4"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <RadioGroupItem value="presencial" id="presencial" />
-                                            <Label htmlFor="presencial" className="flex items-center gap-1 cursor-pointer">
-                                                <Building2 className="h-4 w-4" />
-                                                Presencial
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <RadioGroupItem value="telemedicina" id="telemedicina" />
-                                            <Label htmlFor="telemedicina" className="flex items-center gap-1 cursor-pointer">
-                                                <Video className="h-4 w-4" />
-                                                Telemedicina
-                                            </Label>
-                                        </div>
-                                    </RadioGroup>
-                                )}
-                            />
-                        </div>
+                            {/* Payment Method */}
+                            <div className="space-y-2">
+                                <Label>Forma de Pagamento</Label>
+                                <PaymentMethodSelector
+                                    price={price}
+                                    selectedType={paymentType}
+                                    onTypeChange={(type) => setValue('payment_type', type)}
+                                    selectedInsuranceId={watch('health_insurance_id')}
+                                    onInsuranceChange={(id) => setValue('health_insurance_id', id)}
+                                    insuranceCardNumber={watch('insurance_card_number')}
+                                    onCardNumberChange={(val) => setValue('insurance_card_number', val)}
+                                />
+                            </div>
 
-                        <Separator />
+                            <Separator />
 
-                        {/* Payment Method */}
-                        <div className="space-y-2">
-                            <Label>Forma de Pagamento</Label>
-                            <PaymentMethodSelector
-                                price={price}
-                                selectedType={paymentType}
-                                onTypeChange={(type) => setValue('payment_type', type)}
-                                selectedInsuranceId={watch('health_insurance_id')}
-                                onInsuranceChange={(id) => setValue('health_insurance_id', id)}
-                                insuranceCardNumber={watch('insurance_card_number')}
-                                onCardNumberChange={(val) => setValue('insurance_card_number', val)}
-                            />
-                        </div>
+                            {/* Notes */}
+                            <div className="space-y-2">
+                                <Label>Observações (opcional)</Label>
+                                <Textarea
+                                    placeholder="Motivo da consulta, observações importantes..."
+                                    {...form.register('notes')}
+                                    rows={3}
+                                />
+                            </div>
 
-                        <Separator />
-
-                        {/* Notes */}
-                        <div className="space-y-2">
-                            <Label>Observações (opcional)</Label>
-                            <Textarea
-                                placeholder="Motivo da consulta, observações importantes..."
-                                {...form.register('notes')}
-                                rows={3}
-                            />
-                        </div>
-
-                        {/* Notifications */}
-                        <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                                <Bell className="h-4 w-4" />
-                                Notificações
-                            </Label>
-                            <div className="flex flex-wrap gap-4">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="send_whatsapp"
-                                        checked={form.watch('send_whatsapp')}
-                                        onCheckedChange={(checked) => setValue('send_whatsapp', checked as boolean)}
-                                    />
-                                    <Label htmlFor="send_whatsapp" className="cursor-pointer">
-                                        Compartilhar no WhatsApp
-                                    </Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="send_email"
-                                        checked={form.watch('send_email')}
-                                        onCheckedChange={(checked) => setValue('send_email', checked as boolean)}
-                                    />
-                                    <Label htmlFor="send_email" className="cursor-pointer">
-                                        Enviar Email
-                                    </Label>
+                            {/* Notifications */}
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2">
+                                    <Bell className="h-4 w-4" />
+                                    Notificações
+                                </Label>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="send_whatsapp"
+                                            checked={form.watch('send_whatsapp')}
+                                            onCheckedChange={(checked) => setValue('send_whatsapp', checked as boolean)}
+                                        />
+                                        <Label htmlFor="send_whatsapp" className="cursor-pointer">
+                                            Compartilhar no WhatsApp
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="send_email"
+                                            checked={form.watch('send_email')}
+                                            onCheckedChange={(checked) => setValue('send_email', checked as boolean)}
+                                        />
+                                        <Label htmlFor="send_email" className="cursor-pointer">
+                                            Enviar Email
+                                        </Label>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <Separator />
+                            <Separator />
 
-                        {/* Actions */}
-                        <div className="flex justify-end gap-3">
-                            <Button type="button" variant="outline" onClick={handleClose}>
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isPending}>
-                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Confirmar Agendamento
-                            </Button>
-                        </div>
-                    </form>
-                )}
-            </DialogContent>
-        </Dialog>
+                            {/* Actions */}
+                            <div className="flex justify-end gap-3">
+                                <Button type="button" variant="outline" onClick={handleClose}>
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" disabled={isPending}>
+                                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Confirmar Agendamento
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Success Modal with QR Code */}
+            <AppointmentSuccessModal
+                isOpen={showSuccessModal}
+                onClose={() => {
+                    setShowSuccessModal(false)
+                    setCreatedAppointment(null)
+                    handleClose()
+                }}
+                appointment={createdAppointment}
+            />
+        </>
     )
 }

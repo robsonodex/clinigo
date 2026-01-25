@@ -79,7 +79,7 @@ export default function PacienteLoginPage() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-3 mb-8 group">
                         <Image
-                            src="/logo-clinigo.png"
+                            src="/logo_black.svg"
                             alt="CliniGo"
                             width={200}
                             height={52}

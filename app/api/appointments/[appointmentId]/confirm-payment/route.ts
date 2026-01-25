@@ -95,11 +95,11 @@ export async function PATCH(
             .from('appointments')
             .select(`
                 *,
-                patient:patients(full_name, email, phone),
-                doctor:doctors(
+                patient:patients!appointments_patient_id_fkey(full_name, email, phone),
+                doctor:doctors!appointments_doctor_id_fkey(
                     user:users(full_name, email)
                 ),
-                clinic:clinics(name, email)
+                clinic:clinics!appointments_clinic_id_fkey(name, email)
             `)
             .eq('id', appointmentId)
             .single()

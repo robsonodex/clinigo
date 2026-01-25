@@ -286,7 +286,7 @@ function Header() {
             <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2">
                     <img
-                        src={scrolled ? "/logo-clinigo.png" : "/logo-clinigo-white.png"}
+                        src={scrolled ? "/logo_black.svg" : "/logo_white.svg"}
                         alt="CliniGo"
                         className="h-12 w-auto"
                     />
@@ -792,7 +792,7 @@ function Footer() {
                     <div>
                         <Link href="/" className="flex items-center gap-2 mb-4">
                             <Image
-                                src="/logo-clinigo-white.png"
+                                src="/logo_white.svg"
                                 alt="CliniGo"
                                 width={140}
                                 height={36}

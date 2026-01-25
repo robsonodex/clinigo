@@ -141,7 +141,7 @@ export default function ContatoPage() {
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">
                         <img
-                            src="/logo-clinigo-white.png"
+                            src="/logo_white.svg"
                             alt="CliniGo"
                             className="h-10 w-auto"
                         />

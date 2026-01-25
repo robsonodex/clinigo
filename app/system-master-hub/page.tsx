@@ -86,7 +86,11 @@ export default function SuperAdminDashboard() {
                 throw new Error('Failed to load dashboard')
             }
             const result = await res.json()
-            setData(result)
+            if (result.data) {
+                setData(result.data)
+            } else {
+                setData(result)
+            }
         } catch (error) {
             console.error('Error loading dashboard:', error)
         } finally {
@@ -135,7 +139,7 @@ export default function SuperAdminDashboard() {
         if (!doubleConfirm) return
 
         try {
-            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+            const res = await fetch(`/api/super-admin/clinics/delete?id=${clinicId}`, {
                 method: 'DELETE',
             })
 

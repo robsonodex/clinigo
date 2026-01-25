@@ -36,13 +36,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .from('appointments')
             .select(`
         *,
-        doctor:doctors(
+        doctor:doctors!appointments_doctor_id_fkey(
           id, clinic_id,
           user:users(id, full_name)
         ),
-        patient:patients(id, full_name, email, phone),
-        payment:payments(id, status, mercadopago_payment_id, amount),
-        clinic:clinics(id, name, mercadopago_access_token)
+        patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
+        payment:payments!payments_appointment_id_fkey(id, status, mercadopago_payment_id, amount),
+        clinic:clinics!appointments_clinic_id_fkey(id, name, mercadopago_access_token)
       `)
             .eq('id', appointmentId)
             .single()

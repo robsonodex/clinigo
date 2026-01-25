@@ -12,9 +12,27 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
+export async function GET(request: NextRequest) {
+    return NextResponse.json({ message: 'Route exists. Use DELETE to remove checking.' })
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, {
+        status: 200,
+        headers: {
+            'Allow': 'DELETE, GET, OPTIONS',
+            'Access-Control-Allow-Methods': 'DELETE, GET, OPTIONS',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-user-role, x-clinic-id, x-plan-type'
+        },
+    })
+}
+
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    console.log('[DELETE /api/super-admin/clinics/[id]] HIT')
     try {
         const { id: clinicId } = await params
+        console.log('[DELETE /api/super-admin/clinics/[id]] clinicId:', clinicId)
 
         // Check SUPER_ADMIN access
         const supabase = await createClient()
@@ -35,7 +53,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('id', user.id)
             .single()
 
-        if (!userData || userData?.role !== 'SUPER_ADMIN') {
+        if (!userData || (userData as { role: string }).role !== 'SUPER_ADMIN') {
             return NextResponse.json(
                 { error: 'Forbidden - Super Admin only' },
                 { status: 403 }
@@ -49,17 +67,47 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .eq('id', clinicId)
             .single()
 
-        if (!clinic) {
+        const clinicData = clinic as { name: string } | null
+        if (!clinicData) {
             return NextResponse.json(
                 { error: 'Clinic not found' },
                 { status: 404 }
             )
         }
 
-        // Use service role client to delete (bypasses RLS)
+        // Use service role client to delete (bypasses RLS)  
         const serviceSupabase = createServiceRoleClient()
 
-        // Delete clinic (CASCADE will handle related records)
+        // STEP 1: Get all user IDs from this clinic
+        const { data: clinicUsers, error: usersError } = await serviceSupabase
+            .from('users')
+            .select('id')
+            .eq('clinic_id', clinicId)
+
+        if (usersError) {
+            console.error('Error fetching clinic users:', usersError)
+        }
+
+        // STEP 2: Delete users from auth.users (using Admin API)
+        // This frees up the emails for re-registration
+        if (clinicUsers && clinicUsers.length > 0) {
+            for (const clinicUser of clinicUsers) {
+                try {
+                    // Delete from auth.users using the service role client
+                    const { error: authDeleteError } = await serviceSupabase.auth.admin.deleteUser(
+                        clinicUser.id
+                    )
+
+                    if (authDeleteError) {
+                        console.error(`Failed to delete auth user ${clinicUser.id}:`, authDeleteError)
+                    }
+                } catch (err) {
+                    console.error(`Error deleting auth user ${clinicUser.id}:`, err)
+                }
+            }
+        }
+
+        // STEP 3: Delete clinic (CASCADE will handle related records in public schema)
         const { error: deleteError } = await serviceSupabase
             .from('clinics')
             .delete()
@@ -80,7 +128,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             resource_type: 'CLINIC',
             resource_id: clinicId,
             metadata: {
-                clinic_name: clinic.name,
+                clinic_name: clinicData.name,
                 deleted_at: new Date().toISOString(),
             },
             created_at: new Date().toISOString(),
@@ -88,7 +136,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({
             success: true,
-            message: `Clínica "${clinic.name}" deletada com sucesso`,
+            message: `Clínica "${clinicData.name}" deletada com sucesso`,
         })
     } catch (error) {
         console.error('Error deleting clinic:', error)

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/lib/providers'
 import { Toaster } from '@/components/ui/toaster'
+import { PWAInitializer } from '@/components/pwa-initializer'
 
 
 const inter = Inter({ subsets: ['latin'] })
@@ -64,6 +65,7 @@ export default function RootLayout({
                 <meta name="msapplication-tap-highlight" content="no" />
             </head>
             <body className={inter.className} suppressHydrationWarning>
+                <PWAInitializer />
                 <Providers>
                     {children}
                 </Providers>

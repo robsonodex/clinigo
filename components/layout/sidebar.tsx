@@ -579,7 +579,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
             <div className="flex items-center h-16 px-6 border-b shrink-0">
                 <Link href="/dashboard" className="flex items-center gap-2">
                     <Image
-                        src="/logo-clinigo.png"
+                        src="/logo_black.svg"
                         alt="CliniGo"
                         width={130}
                         height={34}

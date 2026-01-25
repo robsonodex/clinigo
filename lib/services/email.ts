@@ -46,28 +46,30 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
 }
 
 /**
- * Specifically for new clinic registrations
+ * Send professional welcome email to new clinic registrations
  */
-export async function sendRegistrationWelcomeEmail(email: string, fullName: string, clinicName: string) {
-  const html = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #10b981;">Bem-vindo ao CliniGo!</h2>
-            <p>Olá <strong>${fullName}</strong>,</p>
-            <p>Sua conta para a clínica <strong>${clinicName}</strong> foi criada com sucesso.</p>
-            <p>Você já pode acessar o painel e começar a configurar seus horários e médicos.</p>
-            <div style="margin-top: 30px;">
-                <a href="http://localhost:3000/dashboard" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Acessar Dashboard</a>
-            </div>
-            <p style="margin-top: 30px; font-size: 0.8em; color: #666;">
-                Se você não solicitou este cadastro, por favor ignore este e-mail.
-            </p>
-        </div>
-    `
-  return await sendMail({
-    to: email,
-    subject: 'Bem-vindo ao CliniGo - Sua conta foi criada!',
-    html
-  })
+export interface ClinicWelcomeEmailData {
+  email: string
+  fullName: string
+  clinicName: string
+  loginUrl?: string
+}
+
+export async function sendClinicWelcomeEmail(data: ClinicWelcomeEmailData) {
+  const loginUrl = data.loginUrl || 'https://clinigo.app/clinica'
+
+  const { ClinicWelcomeEmail } = await import('@/emails/clinic-welcome')
+
+  return await sendWithReactEmail(
+    data.email,
+    'Bem-vindo ao CliniGo - Sistema de Gestão Médica',
+    ClinicWelcomeEmail({
+      fullName: data.fullName,
+      clinicName: data.clinicName,
+      email: data.email,
+      loginUrl
+    })
+  )
 }
 
 // ... existing interfaces ...

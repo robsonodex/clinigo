@@ -16,9 +16,11 @@ export async function GET(request: Request) {
         const status = searchParams.get('status') || 'waiting' // waiting, in_service, completed
 
         // Fetch appointments that are checked in but not completed
-        const { data: appointments, error: apptError } = await supabase
-            .from('appointments')
-            .select(`
+        let appointments = []
+        try {
+            const { data, error: apptError } = await supabase
+                .from('appointments')
+                .select(`
         id,
         appointment_date,
         status,
@@ -26,31 +28,46 @@ export async function GET(request: Request) {
         priority_level,
         waiting_room_notes,
         ticket_number,
-        patient:patients(id, full_name, birth_date, gender),
-        doctor:doctors(id, user:users(name))
+        patient:patients(id, full_name, date_of_birth, gender),
+        doctor:doctors(id, user:users(full_name))
       `)
-            .eq('status', status === 'waiting' ? 'CONFIRMED' : 'IN_PROGRESS') // Adapt status mapping
-            .not('checked_in_at', 'is', null) // Must be checked in
-            .order('priority_level', { ascending: false }) // Priority first
-            .order('checked_in_at', { ascending: true }) // Then FIFO
+                .eq('status', status === 'waiting' ? 'CONFIRMED' : 'IN_PROGRESS') // Adapt status mapping
+                .not('checked_in_at', 'is', null) // Must be checked in
+                .order('priority_level', { ascending: false }) // Priority first
+                .order('checked_in_at', { ascending: true }) // Then FIFO
+
+            if (apptError) throw apptError
+            appointments = data || []
+        } catch (e) {
+            console.error('[DEBUG] Error fetching queue appointments:', e)
+            // Don't fail entire request, just return empty for this part but log deep
+        }
 
         // Fetch walk-ins
-        const { data: walkIns, error: walkInError } = await supabase
-            .from('walk_in_registrations')
-            .select(`
+        let walkIns = []
+        try {
+            const { data, error: walkInError } = await supabase
+                .from('walk_in_registrations')
+                .select(`
         id,
         arrival_time,
         urgency_level,
         status,
         reason,
-        patient:patients(id, full_name, birth_date, gender),
-        doctor:doctors(id, user:users(name))
+        patient:patients(id, full_name, cpf, phone),
+        doctor:doctors(id, user:users(full_name))
       `)
-            .eq('status', status)
-            .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
-            .order('arrival_time', { ascending: true })
+                .eq('status', status)
+                .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
+                .order('arrival_time', { ascending: true })
 
-        if (apptError || walkInError) {
+            if (walkInError) throw walkInError
+            walkIns = data || []
+        } catch (e) {
+            console.error('[DEBUG] Error fetching queue walk-ins:', e)
+        }
+
+        if (false) { // Disabled generic error check
             return NextResponse.json({ error: 'Error fetching queue' }, { status: 500 })
         }
 

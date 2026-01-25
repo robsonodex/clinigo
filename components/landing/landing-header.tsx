@@ -49,7 +49,7 @@ export function LandingHeader() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center">
                         <img
-                            src="/logo-clinigo-white.png"
+                            src={isScrolled ? "/logo_black.svg" : "/logo_white.svg"}
                             alt="CliniGo"
                             className="h-12 w-auto"
                         />

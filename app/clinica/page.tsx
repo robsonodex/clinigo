@@ -28,14 +28,21 @@ export default function ClinicaLoginPage() {
         setIsLoading(true)
 
         try {
+            // Add timeout to prevent infinite loading in production
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: formData.email,
                     password: formData.password
-                })
+                }),
+                signal: controller.signal
             })
+
+            clearTimeout(timeoutId)
 
             const data = await response.json()
 
@@ -47,7 +54,11 @@ export default function ClinicaLoginPage() {
             router.push('/dashboard')
 
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Erro ao fazer login')
+            if (error instanceof Error && error.name === 'AbortError') {
+                toast.error('Tempo limite excedido. Verifique sua conexão e tente novamente.')
+            } else {
+                toast.error(error instanceof Error ? error.message : 'Erro ao fazer login')
+            }
         } finally {
             setIsLoading(false)
         }
@@ -61,7 +72,7 @@ export default function ClinicaLoginPage() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-3 mb-8 group">
                         <Image
-                            src="/logo-clinigo.png"
+                            src="/logo_black.svg"
                             alt="CliniGo"
                             width={200}
                             height={52}

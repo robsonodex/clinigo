@@ -29,6 +29,7 @@ const MASTER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0]
 // Public routes that don't require any authentication
 const PUBLIC_ROUTES = [
     '/api/appointments',
+    '/api/appointments/', // Allow dynamic appointment routes
     '/api/appointments/available-slots',
     '/api/payments/webhook',
     '/api/auth/login',
@@ -39,6 +40,7 @@ const PUBLIC_ROUTES = [
     '/api/marketplace',
     '/api/aia/triage',
     '/api/plans', // New public plans API
+    '/api/debug/', // DEBUG ROUTES
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
@@ -128,6 +130,22 @@ export async function middleware(request: NextRequest) {
         const newUrl = new URL(request.url)
         newUrl.hostname = hostname.replace('www.', '')
         return NextResponse.redirect(newUrl)
+    }
+
+    // ----------------------------------------
+    // OPTIMIZATION: BYPASS AUTH ROUTES
+    // ----------------------------------------
+    // prevents middleware from blocking/timing out on login APIs due to getUser() calls
+    const AUTH_API_ROUTES = [
+        '/api/auth/login',
+        '/api/auth/signup',
+        '/api/auth/register',
+        '/api/auth/reset-password',
+        '/api/auth/callback'
+    ]
+
+    if (AUTH_API_ROUTES.some(route => pathname.startsWith(route))) {
+        return NextResponse.next()
     }
 
     // DEBUG: Log all /api/clinics requests to diagnose 404 issue
@@ -233,6 +251,8 @@ export async function middleware(request: NextRequest) {
     const isPublicPage =
         pathname === '/' ||
         pathname === '/login' ||
+        pathname === '/clinica' ||
+        pathname === '/medico' ||
         pathname === '/cadastro' ||
         pathname === '/planos' ||
         pathname.startsWith('/paciente/entrar') ||

@@ -5,6 +5,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
+import QRCode from 'qrcode'
+import { generateQRToken } from '@/lib/utils/qr-code'
 
 // Types
 interface QuickPatientRegistration {
@@ -406,6 +408,80 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Generate QR Code automatically
+        let qrCodeData = null
+        try {
+            const qrToken = generateQRToken(appointmentId)
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+            const checkinUrl = `${baseUrl}/checkin/${appointmentId}`
+
+            // Generate QR code image as base64 data URL
+            const qrImageDataUrl = await QRCode.toDataURL(checkinUrl, {
+                width: 400,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                },
+                errorCorrectionLevel: 'M'
+            })
+
+            // Build QR data payload
+            const qrData = {
+                appointmentId,
+                patientId,
+                doctorId: body.doctor_id,
+                clinicId,
+                scheduledDate: appointmentDate,
+                scheduledTime: appointmentTime,
+                checkinUrl,
+                qrCodeImage: qrImageDataUrl
+            }
+
+            // Save QR code to database
+            const scheduledDateTime = new Date(`${appointmentDate}T${appointmentTime}`)
+            const { data: qrRecord, error: qrError } = await supabase
+                .from('appointment_qr_codes')
+                .insert({
+                    appointment_id: appointmentId,
+                    clinic_id: clinicId,
+                    qr_token: qrToken,
+                    qr_data: qrData,
+                    expires_at: scheduledDateTime.toISOString() // Expires at appointment time
+                } as any)
+                .select()
+                .single()
+
+            if (!qrError && qrRecord) {
+                const qr = qrRecord as any
+                qrCodeData = {
+                    id: qr.id,
+                    token: qrToken,
+                    image: qrImageDataUrl,
+                    url: checkinUrl,
+                    expires_at: qr.expires_at
+                }
+            } else {
+                console.warn('Non-critical: Failed to create QR code', qrError)
+            }
+        } catch (qrGenerationError) {
+            console.warn('Non-critical: QR code generation failed', qrGenerationError)
+        }
+
+        // Fetch complete appointment data with relations for the response
+        const { data: fullAppointment } = await supabase
+            .from('appointments')
+            .select(`
+                *,
+                patient:patients(id, full_name, email, phone),
+                doctor:doctors(id, user:users(full_name)),
+                clinic:clinics(id, name)
+            `)
+            .eq('id', appointmentId)
+            .single()
+
+        const appointmentWithRelations = fullAppointment as any
+
         // TODO: Send notifications if enabled
         // if (body.notifications?.send_sms) { ... }
         // if (body.notifications?.send_whatsapp) { ... }
@@ -419,7 +495,11 @@ export async function POST(request: NextRequest) {
                 doctor_id: body.doctor_id,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
-                status: 'CONFIRMED'
+                status: 'CONFIRMED',
+                patient: appointmentWithRelations?.patient || { full_name: (patient as any).full_name },
+                doctor: appointmentWithRelations?.doctor || { user: { full_name: (doctor as any).user.full_name } },
+                clinic: appointmentWithRelations?.clinic,
+                qr_code: qrCodeData
             },
             message: 'Agendamento criado com sucesso',
         })

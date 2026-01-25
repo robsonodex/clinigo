@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
         // Get clinic_id from user metadata or profile
         const { data: profile } = await supabase
-            .from('profiles')
+            .from('users')
             .select('clinic_id')
             .eq('id', user.id)
             .single()

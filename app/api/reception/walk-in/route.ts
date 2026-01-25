@@ -57,7 +57,7 @@ export async function POST(request: Request) {
             .select(`
         *,
         patient:patients(id, full_name, cpf, phone),
-        doctor:doctors(id, user:users(name))
+        doctor:doctors(id, user:users(full_name))
       `)
             .single()
 
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
         const whatsappLink = generateWhatsAppShareUrl({
             clinicName: 'CliniGo', // Ideal: Fetch clinic name
-            doctorName: (walkIn as any).doctor?.user?.name || 'Clínico Geral',
+            doctorName: (walkIn as any).doctor?.user?.full_name || 'Clínico Geral',
             appointmentDate: new Date().toISOString(),
             appointmentTime: new Date().toLocaleTimeString(),
             appointmentId: walkIn.id,

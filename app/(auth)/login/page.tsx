@@ -78,7 +78,7 @@ export default function LoginPage() {
                         className="inline-flex items-center gap-2"
                     >
                         <Image
-                            src="/logo-clinigo.png"
+                            src="/logo_black.svg"
                             alt="CliniGo"
                             width={200}
                             height={52}

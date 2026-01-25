@@ -184,7 +184,7 @@ function CadastroContent() {
                         href="/"
                         className="inline-flex items-center"
                     >
-                        <img src="/logo-clinigo.png" alt="CliniGo" className="h-10 w-auto" />
+                        <img src="/logo_black.svg" alt="CliniGo" className="h-10 w-auto" />
                     </Link>
                 </div>
             </div>

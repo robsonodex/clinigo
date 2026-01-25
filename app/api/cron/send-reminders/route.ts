@@ -1,89 +1,167 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { sendReminderEmail } from '@/lib/services/email'
-// WhatsApp API removida - usar compartilhamento manual via WhatsAppShareButton
-import { formatDate } from '@/lib/utils'
+/**
+ * Cron Job: Send Appointment Reminders via WhatsApp
+ * Sends automated WhatsApp reminders 24h and 1h before appointments
+ */
 
-// Force Node.js runtime for nodemailer support
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { WhatsAppBusinessService } from '@/lib/services/whatsapp-business'
+import { sendReminderEmail } from '@/lib/services/email'
+
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // 60 seconds timeout
 export const runtime = 'nodejs'
 
+export async function GET(request: NextRequest) {
+    try {
+        // Security: Validate secret key
+        const authHeader = request.headers.get('authorization')
+        const expectedAuth = `Bearer ${process.env.CRON_SECRET_KEY || process.env.CRON_SECRET}`
 
-// Roda a cada hora
-export async function GET(request: Request) {
-    // Validar que request vem do Vercel Cron
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+        if (authHeader !== expectedAuth) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
 
-    const supabase = await createClient() // createClient in recent Next.js helpers might be async
-    const now = new Date()
-    const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+        const supabase = await createClient()
+        const whatsapp = WhatsAppBusinessService.getInstance()
+        const now = new Date()
 
-    // Lembretes de 24h - Apenas e-mail (WhatsApp agora é compartilhamento manual)
-    const { data: appointments24h } = await supabase
-        .from('appointments')
-        .select('*, doctor:doctors(*), patient:patients(*)')
-        .eq('status', 'CONFIRMED')
-        .gte('appointment_date', in24Hours.toISOString().split('T')[0])
-        .lte('appointment_date', in24Hours.toISOString().split('T')[0]) // Simplified logic for exact date match. Ideal is range.
-        .is('reminder_24h_sent', null)
+        // Initialize WhatsApp if not ready
+        if (!whatsapp.ready) {
+            console.log('⚠️ WhatsApp not ready, initializing...')
+            try {
+                await whatsapp.initialize()
+            } catch (error) {
+                console.error('Failed to initialize WhatsApp:', error)
+                // Continue with email fallback
+            }
+        }
 
-    for (const appointment of appointments24h || []) {
-        // Enviar apenas e-mail - WhatsApp requer compartilhamento manual pelo staff
-        await sendReminderEmail(appointment, 24)
+        // 1. Reminders 24h before
+        const tomorrow = new Date(now)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-        // Log para referência: staff pode compartilhar manualmente via WhatsApp
-        console.log(`[Reminder] E-mail de lembrete 24h enviado para ${appointment.patient?.email}. WhatsApp pode ser compartilhado manualmente.`)
-
-        await supabase
+        const { data: appointments24h, error: error24h } = await supabase
             .from('appointments')
-            .update({ reminder_24h_sent: true })
-            .eq('id', appointment.id)
+            .select(`
+        *,
+        patient:patients(*),
+        doctor:doctors(*, user:users(*)),
+        clinic:clinics(*)
+      `)
+            .in('status', ['SCHEDULED', 'CONFIRMED'])
+            .eq('lembrete_24h_enviado', false)
+            .eq('appointment_date', tomorrowStr)
+
+        if (error24h) {
+            console.error('Error fetching 24h appointments:', error24h)
+        }
+
+        let sent24h = 0
+        let failed24h = 0
+
+        for (const apt of appointments24h || []) {
+            try {
+                // Try WhatsApp first
+                if (whatsapp.ready && apt.patient?.phone) {
+                    await whatsapp.sendLembrete24h(apt as any)
+                    sent24h++
+                } else {
+                    // Fallback to email
+                    await sendReminderEmail(apt, 24)
+                    sent24h++
+                }
+            } catch (error) {
+                console.error(`Error sending 24h reminder for ${apt.id}:`, error)
+                failed24h++
+
+                // Try email fallback if WhatsApp fails
+                try {
+                    await sendReminderEmail(apt, 24)
+                    sent24h++
+                } catch (emailError) {
+                    console.error(`Email fallback also failed for ${apt.id}:`, emailError)
+                }
+            }
+        }
+
+        // 2. Reminders 1h before
+        const todayStr = now.toISOString().split('T')[0]
+
+        const { data: appointmentsToday, error: errorToday } = await supabase
+            .from('appointments')
+            .select(`
+        *,
+        patient:patients(*),
+        doctor:doctors(*, user:users(*)),
+        clinic:clinics(*)
+      `)
+            .eq('status', 'CONFIRMED')
+            .eq('lembrete_1h_enviado', false)
+            .eq('appointment_date', todayStr)
+
+        if (errorToday) {
+            console.error('Error fetching today appointments:', errorToday)
+        }
+
+        let sent1h = 0
+        let failed1h = 0
+
+        // Filter appointments within 30-90 minutes window
+        const appointmentsInWindow = (appointmentsToday || []).filter((apt) => {
+            try {
+                const [hours, minutes] = apt.appointment_time.split(':').map(Number)
+                const aptDateTime = new Date(apt.appointment_date)
+                aptDateTime.setHours(hours, minutes, 0, 0)
+
+                const diffInMinutes = (aptDateTime.getTime() - now.getTime()) / (1000 * 60)
+                return diffInMinutes >= 30 && diffInMinutes <= 90
+            } catch {
+                return false
+            }
+        })
+
+        for (const apt of appointmentsInWindow) {
+            try {
+                // Try WhatsApp first
+                if (whatsapp.ready && apt.patient?.phone) {
+                    await whatsapp.sendLembrete1h(apt as any)
+                    sent1h++
+                } else {
+                    // Fallback to email
+                    await sendReminderEmail(apt, 1)
+                    sent1h++
+                }
+            } catch (error) {
+                console.error(`Error sending 1h reminder for ${apt.id}:`, error)
+                failed1h++
+
+                // Try email fallback
+                try {
+                    await sendReminderEmail(apt, 1)
+                    sent1h++
+                } catch (emailError) {
+                    console.error(`Email fallback also failed for ${apt.id}:`, emailError)
+                }
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            whatsapp_ready: whatsapp.ready,
+            sent_24h: sent24h,
+            failed_24h: failed24h,
+            sent_1h: sent1h,
+            failed_1h: failed1h,
+            timestamp: now.toISOString(),
+        })
+    } catch (error: any) {
+        console.error('Cron error:', error)
+        return NextResponse.json(
+            { error: 'Internal server error', details: error?.message },
+            { status: 500 }
+        )
     }
-
-    // Lembretes de 1h
-    const { data: appointments1h } = await supabase
-        .from('appointments')
-        .select('*, doctor:doctors(*), patient:patients(*)')
-        .eq('status', 'CONFIRMED')
-        .gte('appointment_date', now.toISOString().split('T')[0]) // Just basic check, logic in prompt is more specific with datetime
-        // Using prompt logic for 1h:
-        // .gte('appointment_datetime', in1Hour.toISOString())
-        // .lte('appointment_datetime', new Date(in1Hour.getTime() + 10 * 60 * 1000).toISOString())
-        // Since I don't know if 'appointment_datetime' column exists (prompt uses appointment_date and appointment_time), I'll stick to what I see.
-        // If appointment_datetime doesn't exist, this logic is flawed. 
-        // Assuming appointment_date is YYYY-MM-DD and appointment_time is HH:MM.
-        // Validating against time is harder with separate columns without concatenation.
-        // I'll stick to the prompt's implied logic but adapting if I suspect column mismatch.
-        // Prompt code uses `appointment_datetime`, but SQL prompt 1 usually separates them.
-        // I'll assume `appointment_datetime` exists or I need to construct it.
-        // Let's assume separated for now and just check date. For strict 1h check I'd need to combine.
-        // But since I don't have DB schema here, I'll trust the prompt code might correspond to a schema where `appointment_datetime` exists 
-        // OR create a computed column logic? No, Supabase filter won't work on computed easily.
-        // I'll stick to prompt code for 1h part but replace `appointment_datetime` with existing cols if it fails?
-        // Let's try to be safe. I'll comment out the strict datetime filter and use a broader one or try to replicate the prompt's intent.
-        // Actually, I'll modify it to use `appointment_date` + `appointment_time` manually if needed, but that's complex in query.
-        // Let's assume the prompt implies `appointment_datetime` is a thing or was created.
-        // Checking `database.sql` would be good but I don't want to read it all.
-        // I'll assume `appointment_datetime` is NOT there if schema separated them.
-        // I'll just skip detailed 1h logic or make it simple: check matching date and time ~1 hour away?
-        // Let's leave the prompt logic but commented with a TODO check, or better, implement a best-effort check.
-        .is('reminder_1h_sent', null)
-
-    // NOTE: The above query for 1h is incomplete because of the date/time separation issue.
-    // I will write the code assuming the user Prompt 4 logic is correct that `appointment_datetime` exists.
-    // If not, it will fail at runtime and they'll see in logs.
-
-    // However, looking at `sendAppointmentConfirmation` in prompt 4, it uses `appointment_date` and `appointment_time`.
-    // So `appointment_datetime` likely DOES NOT exist. 
-    // I should probably fix this. 
-    // I'll iterate through confirmed appointments of TODAY, and check time in JS.
-
-    return NextResponse.json({
-        success: true,
-        sent_24h: appointments24h?.length || 0,
-        sent_1h: 0 // appointments1h?.length || 0
-    })
 }
 
