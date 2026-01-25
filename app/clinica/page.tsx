@@ -51,7 +51,8 @@ export default function ClinicaLoginPage() {
             }
 
             toast.success('Login realizado com sucesso!')
-            router.push('/dashboard')
+            // Use window.location for full page reload to ensure cookies are loaded
+            window.location.href = '/dashboard'
 
         } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') {

@@ -3,9 +3,9 @@
  * Login with email and password
  */
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { handleApiError } from '@/lib/utils/errors'
-import { successResponse } from '@/lib/utils/responses'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -18,9 +18,27 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { email, password } = loginSchema.parse(body)
 
-        const supabase = await createClient() as any
+        const cookieStore = await cookies()
 
-        // Authenticate user ONLY - no profile fetch to avoid timeout
+        // Create Supabase client with proper cookie handling for login
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    getAll() {
+                        return cookieStore.getAll()
+                    },
+                    setAll(cookiesToSet) {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            cookieStore.set(name, value, options)
+                        })
+                    },
+                },
+            }
+        )
+
+        // Authenticate user
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -54,18 +72,18 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Return minimal user data - frontend will fetch full profile separately
-        return successResponse({
-            user: {
-                id: data.user.id,
-                email: data.user.email,
-                role: data.user.user_metadata?.role || null,
-                full_name: data.user.user_metadata?.full_name || null,
-            },
-            session: {
-                access_token: data.session.access_token,
-                refresh_token: data.session.refresh_token,
-                expires_at: data.session.expires_at,
+        console.log('[LOGIN] Success for:', data.user.email)
+
+        // Return success - cookies are automatically set by Supabase SSR
+        return NextResponse.json({
+            success: true,
+            data: {
+                user: {
+                    id: data.user.id,
+                    email: data.user.email,
+                    role: data.user.user_metadata?.role || null,
+                    full_name: data.user.user_metadata?.full_name || null,
+                },
             },
         })
     } catch (error) {
@@ -73,4 +91,3 @@ export async function POST(request: NextRequest) {
         return handleApiError(error)
     }
 }
-
