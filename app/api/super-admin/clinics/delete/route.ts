@@ -65,7 +65,17 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Use service role client to delete (bypasses RLS)  
+        console.log('[DELETE CLINIC] Checking service role key...')
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            console.error('[DELETE CLINIC] SUPABASE_SERVICE_ROLE_KEY is missing!')
+            return NextResponse.json(
+                { error: 'Server configuration error - missing service role key' },
+                { status: 500 }
+            )
+        }
+
         const serviceSupabase = createServiceRoleClient()
+        console.log('[DELETE CLINIC] Service role client created')
 
         // STEP 1: Get all user IDs from this clinic
         const { data: clinicUsers, error: usersError } = await serviceSupabase
@@ -101,9 +111,14 @@ export async function DELETE(request: NextRequest) {
             .eq('id', clinicId)
 
         if (deleteError) {
-            console.error('Error deleting clinic:', deleteError)
+            console.error('Error deleting clinic:', JSON.stringify(deleteError, null, 2))
             return NextResponse.json(
-                { error: 'Failed to delete clinic' },
+                {
+                    error: 'Failed to delete clinic',
+                    details: deleteError.message,
+                    code: deleteError.code,
+                    hint: deleteError.hint
+                },
                 { status: 500 }
             )
         }
