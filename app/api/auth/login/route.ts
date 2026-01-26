@@ -1,6 +1,7 @@
 /**
  * POST /api/auth/login
  * Login with email and password
+ * Clears old session cookies before new login to prevent stale token errors
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
@@ -20,7 +21,15 @@ export async function POST(request: NextRequest) {
 
         const cookieStore = await cookies()
 
-        // Create Supabase client with proper cookie handling for login
+        // STEP 1: Clear any stale Supabase cookies before login
+        const allCookies = cookieStore.getAll()
+        for (const cookie of allCookies) {
+            if (cookie.name.startsWith('sb-')) {
+                cookieStore.delete(cookie.name)
+            }
+        }
+
+        // Create Supabase client with proper cookie handling
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -38,7 +47,10 @@ export async function POST(request: NextRequest) {
             }
         )
 
-        // Authenticate user
+        // STEP 2: Sign out any existing session first (ignore errors)
+        await supabase.auth.signOut().catch(() => { })
+
+        // STEP 3: Authenticate user with fresh session
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
