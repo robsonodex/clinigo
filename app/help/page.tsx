@@ -113,11 +113,11 @@ export default function HelpPage() {
                                 Nossa equipe de suporte está pronta para ajudar com qualquer
                                 dúvida sobre o CliniGo.
                             </p>
-                            <a href="mailto:suporte@clinigo.app">
+                            <Link href="/contato">
                                 <Button variant="outline" className="w-full">
                                     Contatar Suporte →
                                 </Button>
-                            </a>
+                            </Link>
                         </CardContent>
                     </Card>
                 </div>
