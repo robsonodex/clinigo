@@ -157,15 +157,6 @@ export async function middleware(request: NextRequest) {
         })
     }
 
-    // DEBUG: Log all /api/doctors dynamic routes to diagnose 404 issue
-    if (pathname.match(/^\/api\/doctors\/[^/]+/)) {
-        console.log('[MIDDLEWARE DEBUG] /api/doctors dynamic route:', {
-            pathname,
-            method: request.method,
-            url: request.url,
-        })
-    }
-
     // Skip static assets
     if (
         pathname.startsWith('/_next') ||
