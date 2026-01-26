@@ -35,14 +35,29 @@ export function OverdueAppointmentsList({ clinicId }: OverdueAppointmentsListPro
                 : '/api/appointments/overdue'
 
             const response = await fetch(url)
-            const data = await response.json()
 
-            if (data.success) {
-                setAppointments(data.appointments)
+            // Check if response is OK
+            if (!response.ok) {
+                console.error('Overdue API error:', response.status, response.statusText)
+                setAppointments([])
+                setLoading(false)
+                return
+            }
+
+            const data = await response.json()
+            console.log('[DEBUG] Overdue response:', data)
+
+            // ✅ successResponse() returns { success: true, data: { overdue_count, appointments } }
+            if (data.success && data.data && Array.isArray(data.data.appointments)) {
+                setAppointments(data.data.appointments)
                 setLastRefresh(new Date())
+            } else {
+                console.warn('[DEBUG] Unexpected response format:', data)
+                setAppointments([])
             }
         } catch (error) {
             console.error('Error fetching overdue appointments:', error)
+            setAppointments([])
         } finally {
             setLoading(false)
         }

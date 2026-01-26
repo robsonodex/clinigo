@@ -115,6 +115,7 @@ export default function AgendaPage() {
             api.get<Appointment[]>('/appointments', {
                 date_from: view === 'week' ? format(weekStart, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
                 date_to: view === 'week' ? format(weekEnd, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
+                pageSize: 1000, // Ensure we get all appointments for the period
             }),
         staleTime: 60 * 1000, // 1 minute cache
         refetchOnWindowFocus: false,
@@ -122,12 +123,12 @@ export default function AgendaPage() {
 
     // Group appointments by date and time
     const getAppointment = (date: Date, time: string) => {
-        if (!appointments) return null
+        if (!appointments || !Array.isArray(appointments)) return null
         const dateStr = format(date, 'yyyy-MM-dd')
         return appointments.find(
             (a) =>
                 a.appointment_date === dateStr &&
-                a.appointment_time.substring(0, 5) === time
+                a.appointment_time?.substring(0, 5) === time
         )
     }
 
@@ -485,6 +486,10 @@ export default function AgendaPage() {
                 }}
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}
+                onSuccess={(appointmentDate) => {
+                    // ✅ Navigate agenda to created appointment date so it appears immediately
+                    setSelectedDate(parseISO(appointmentDate))
+                }}
             />
 
             <AppointmentDetailsDrawer

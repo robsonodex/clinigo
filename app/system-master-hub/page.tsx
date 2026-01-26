@@ -55,6 +55,15 @@ interface DashboardData {
         renewalDate: string
         aiTokensUsed: number
     }>
+    users: Array<{
+        id: string
+        email: string
+        displayName: string
+        role: string
+        clinicName: string
+        clinicId: string | null
+        createdAt: string
+    }>
     recentLogs: Array<{
         id: string
         actionType: string
@@ -69,9 +78,12 @@ export default function SuperAdminDashboard() {
     const [data, setData] = useState<DashboardData | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isImpersonating, setIsImpersonating] = useState<string | null>(null)
+    const [users, setUsers] = useState<DashboardData['users']>([])
+    const [loadingUsers, setLoadingUsers] = useState(false)
 
     useEffect(() => {
         loadDashboard()
+        loadUsers()
     }, [])
 
     const loadDashboard = async () => {
@@ -95,6 +107,21 @@ export default function SuperAdminDashboard() {
             console.error('Error loading dashboard:', error)
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const loadUsers = async () => {
+        setLoadingUsers(true)
+        try {
+            const res = await fetch('/api/super-admin/users')
+            if (res.ok) {
+                const result = await res.json()
+                setUsers(result.data || [])
+            }
+        } catch (error) {
+            console.error('Error loading users:', error)
+        } finally {
+            setLoadingUsers(false)
         }
     }
 
@@ -153,6 +180,37 @@ export default function SuperAdminDashboard() {
         } catch (error) {
             console.error('Delete error:', error)
             alert(`Erro ao deletar clínica: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+    }
+
+    const handleDeleteUser = async (userId: string, userName: string, deleteClinic: boolean = false) => {
+        const confirmed = confirm(
+            `ATENÇÃO: Você está prestes a deletar o usuário "${userName}".\n\n` +
+            `Isso irá remover PERMANENTEMENTE:\n` +
+            `- O usuário do sistema\n` +
+            `- Liberar o email para reuso\n` +
+            (deleteClinic ? `- A clínica associada e TODOS os dados\n` : '') +
+            `\nEsta ação NÃO PODE SER DESFEITA!`
+        )
+
+        if (!confirmed) return
+
+        try {
+            const res = await fetch(`/api/super-admin/users?id=${userId}&deleteClinic=${deleteClinic}`, {
+                method: 'DELETE',
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Failed to delete user')
+            }
+
+            alert(`Usuário "${userName}" deletado com sucesso!`)
+            loadUsers() // Reload users
+            if (deleteClinic) loadDashboard() // Reload dashboard if clinic was deleted
+        } catch (error) {
+            console.error('Delete error:', error)
+            alert(`Erro ao deletar usuário: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }
 
@@ -271,6 +329,7 @@ export default function SuperAdminDashboard() {
                 <Tabs defaultValue="clinics" className="space-y-4">
                     <TabsList className="bg-white border border-gray-200">
                         <TabsTrigger value="clinics">Gestão de Clínicas</TabsTrigger>
+                        <TabsTrigger value="users">Usuários</TabsTrigger>
                         <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
                     </TabsList>
 
@@ -346,6 +405,76 @@ export default function SuperAdminDashboard() {
                                         ))}
                                     </TableBody>
                                 </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Users Tab */}
+                    <TabsContent value="users">
+                        <Card className="bg-white border-gray-200">
+                            <CardHeader>
+                                <CardTitle className="text-gray-900">Todos os Usuários</CardTitle>
+                                <CardDescription className="text-gray-600">
+                                    Gerencie todos os usuários do sistema
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingUsers ? (
+                                    <div className="text-center py-8">
+                                        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
+                                        <p className="text-gray-500 mt-2">Carregando usuários...</p>
+                                    </div>
+                                ) : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="border-gray-200">
+                                                <TableHead className="text-gray-600">UID</TableHead>
+                                                <TableHead className="text-gray-600">Display name</TableHead>
+                                                <TableHead className="text-gray-600">Email</TableHead>
+                                                <TableHead className="text-gray-600">Role</TableHead>
+                                                <TableHead className="text-gray-600">Clínica</TableHead>
+                                                <TableHead className="text-gray-600">Ações</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {users.map((user) => (
+                                                <TableRow key={user.id} className="border-gray-200 hover:bg-gray-50">
+                                                    <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                                                    <TableCell className="font-medium">{user.displayName}</TableCell>
+                                                    <TableCell>{user.email}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline">{user.role}</Badge>
+                                                    </TableCell>
+                                                    <TableCell>{user.clinicName}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteUser(user.id, user.displayName, false)}
+                                                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                            >
+                                                                <AlertTriangle className="h-4 w-4 mr-1" />
+                                                                Deletar Usuário
+                                                            </Button>
+                                                            {user.clinicId && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteUser(user.id, user.displayName, true)}
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <AlertTriangle className="h-4 w-4 mr-1" />
+                                                                    Deletar + Clínica
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

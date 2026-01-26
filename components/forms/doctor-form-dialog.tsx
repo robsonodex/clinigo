@@ -299,7 +299,13 @@ export function DoctorFormDialog({
                             <Label htmlFor="specialty">Especialidade</Label>
                             <Select
                                 value={watch('specialty')}
-                                onValueChange={(val) => setValue('specialty', val)}
+                                onValueChange={(val) => {
+                                    if (val === '__custom__') {
+                                        // Don't set value, will use input below
+                                        return
+                                    }
+                                    setValue('specialty', val)
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecione..." />
@@ -310,8 +316,31 @@ export function DoctorFormDialog({
                                             {s}
                                         </SelectItem>
                                     ))}
+                                    <SelectItem value="__custom__" className="text-primary font-medium">
+                                        ➕ Cadastrar Nova Especialidade
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
+
+                            {/* Custom Specialty Input */}
+                            {!SPECIALTIES.includes(watch('specialty') || '') && watch('specialty') && (
+                                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <Label htmlFor="custom_specialty" className="text-blue-900">
+                                        Nova Especialidade (personalizada)
+                                    </Label>
+                                    <Input
+                                        id="custom_specialty"
+                                        value={watch('specialty')}
+                                        onChange={(e) => setValue('specialty', e.target.value)}
+                                        placeholder="Digite a especialidade..."
+                                        className="mt-2"
+                                    />
+                                    <p className="text-xs text-blue-700 mt-1">
+                                        Esta especialidade será salva e poderá ser usada para outros médicos.
+                                    </p>
+                                </div>
+                            )}
+
                             {errors.specialty && (
                                 <p className="text-xs text-destructive">
                                     {errors.specialty.message}

@@ -211,11 +211,11 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
                         <CheckCircle2 className="h-6 w-6" />
                         Agendamento Confirmado!
                     </DialogTitle>
-                    <DialogDescription className="space-y-1 text-left">
+                    <div className="space-y-1 text-left text-sm text-muted-foreground">
                         <p><strong>Paciente:</strong> {appointment.patient.full_name}</p>
                         <p><strong>Data:</strong> {formattedDate}</p>
                         <p><strong>Médico:</strong> Dr(a). {doctorName}</p>
-                    </DialogDescription>
+                    </div>
                 </DialogHeader>
 
                 {/* QR CODE - HIGHLIGHT */}

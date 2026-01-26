@@ -45,6 +45,17 @@ export function MarkNoShowButton({
                 })
             })
 
+            // ✅ Check if response is JSON before parsing
+            const contentType = response.headers.get('content-type')
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('Server returned non-JSON response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType,
+                })
+                throw new Error(`Erro no servidor (${response.status}). Verifique os logs.`)
+            }
+
             const data = await response.json()
 
             if (!response.ok) {

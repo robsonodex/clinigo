@@ -181,8 +181,49 @@ export function PlanAndBilling() {
                     </div>
 
                     {/* Payment/Upgrade Section */}
-                    <div className="pt-4 border-t">
-                        {/* Plano ativo e válido: mostrar mensagem de tudo OK */}
+                    <div className="pt-4 border-t space-y-4">
+                        {/* BOTÃO PAGAR AGORA - Sempre visível para planos pagos */}
+                        {planDetails.price > 0 && (
+                            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-semibold text-green-900">Pagamento Mensal</h4>
+                                        <p className="text-sm text-green-700">
+                                            Valor: <span className="font-bold text-lg">R$ {planDetails.price},00</span>/mês
+                                        </p>
+                                        {clinic.subscription_due_date && (
+                                            <p className="text-xs text-green-600 mt-1">
+                                                Próximo vencimento: {new Date(clinic.subscription_due_date).toLocaleDateString('pt-BR')}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        onClick={handlePayment}
+                                        disabled={generatePayment.isPending}
+                                        size="lg"
+                                        className="bg-green-600 hover:bg-green-700"
+                                    >
+                                        {generatePayment.isPending ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Gerando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CreditCard className="w-4 h-4 mr-2" />
+                                                Pagar Agora
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
+                                    <ExternalLink className="w-3 h-3" />
+                                    Você será redirecionado para o Mercado Pago
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Status messages */}
                         {clinic.payment_status === 'ACTIVE' && daysUntilExpiration !== null && daysUntilExpiration > 7 && (
                             <p className="text-sm text-green-600 flex items-center gap-2">
                                 <Check className="w-4 h-4" />
@@ -190,45 +231,16 @@ export function PlanAndBilling() {
                             </p>
                         )}
 
-                        {/* Plano vencendo em breve: botão de renovar */}
-                        {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && planDetails.price > 0 && (
-                            <Button onClick={handlePayment} disabled={generatePayment.isPending} className="w-full md:w-auto">
-                                {generatePayment.isPending ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Gerando pagamento...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Clock className="w-4 h-4 mr-2" />
-                                        Renovar Assinatura (R$ {planDetails.price})
-                                    </>
-                                )}
-                            </Button>
-                        )}
-
-                        {/* Plano vencido: botão de reativar */}
-                        {(daysUntilExpiration === null || daysUntilExpiration <= 0) && clinic.payment_status !== 'ACTIVE' && planDetails.price > 0 && (
-                            <Button onClick={handlePayment} disabled={generatePayment.isPending} variant="destructive" className="w-full md:w-auto">
-                                {generatePayment.isPending ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Gerando pagamento...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CreditCard className="w-4 h-4 mr-2" />
-                                        Reativar Assinatura (R$ {planDetails.price})
-                                    </>
-                                )}
-                            </Button>
-                        )}
-
                         {/* Plano Básico: informação sobre upgrade */}
                         {clinic.plan_type === 'BASICO' && (
-                            <p className="text-sm text-muted-foreground">
-                                Você está no plano gratuito. <a href="/planos" className="text-primary underline">Veja nossos planos</a> para fazer upgrade.
-                            </p>
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-sm text-blue-900">
+                                    💡 Você está no plano <strong>Básico</strong>.
+                                    <a href="/planos" className="text-blue-600 underline ml-1">
+                                        Veja nossos planos pagos
+                                    </a> para desbloquear mais recursos.
+                                </p>
+                            </div>
                         )}
                     </div>
                 </CardContent>

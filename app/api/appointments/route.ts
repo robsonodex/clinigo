@@ -26,7 +26,15 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url)
         const query = listAppointmentsQuerySchema.parse(Object.fromEntries(searchParams))
-        const { page, pageSize, offset } = parsePaginationParams(searchParams)
+        let { page, pageSize, offset } = parsePaginationParams(searchParams)
+
+        // Allow larger page size for agenda/calendar views if explicitly requested
+        // This is necessary to show all appointments in a week/month view without pagination UI
+        const requestedPageSize = parseInt(searchParams.get('pageSize') || '0', 10)
+        if (requestedPageSize > 100) {
+            pageSize = requestedPageSize
+            offset = (page - 1) * pageSize
+        }
 
         const supabase = await createClient() as any
 

@@ -74,6 +74,7 @@ class ApiClient {
 
     async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
         const response = await this.getFull<T>(endpoint, params)
+        // Return data as T (can be null/undefined)
         return response.data as T
     }
 

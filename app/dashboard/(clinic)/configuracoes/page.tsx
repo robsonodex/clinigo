@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -17,6 +17,7 @@ import { uploadClinicLogo } from '@/app/actions/white-label'
 import { Sparkles } from 'lucide-react'
 import { PlanAndBilling } from './components/PlanAndBilling'
 import { SMTPSettings } from './components/SMTPSettings'
+import { createClient } from '@/lib/supabase/client'
 
 // ... existing code ...
 
@@ -41,45 +42,113 @@ export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState('general')
     const [uploadingLogo, setUploadingLogo] = useState(false)
     const [previewLogo, setPreviewLogo] = useState<string | null>(null)
+    const [clinicId, setClinicId] = useState<string | null>(null)
+    const [loading, setLoading] = useState(true)
 
     const {
         register,
         handleSubmit,
         watch,
         setValue,
+        reset,
         formState: { errors, isDirty },
     } = useForm<ClinicSettingsData>({
         resolver: zodResolver(clinicSettingsSchema),
         defaultValues: {
-            name: 'CliniGo Matriz',
-            email: 'contato@clinigo.com.br',
-            phone: '(11) 99999-9999',
-            address: 'Av. Paulista, 1000 - São Paulo, SP',
+            name: '',
+            email: '',
+            phone: '',
+            address: '',
             primary_color: '#3b82f6',
             whatsapp_number: '',
+            logo_url: null,
         },
     })
 
     const activeColor = watch('primary_color')
 
+    // Load clinic data from database
+    useEffect(() => {
+        async function loadClinicData() {
+            try {
+                const supabase = createClient()
+
+                // Get current user
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) {
+                    toast.error('Usuário não autenticado')
+                    return
+                }
+
+                // Get user's clinic
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('clinic_id')
+                    .eq('id', user.id)
+                    .single()
+
+                if (!userData?.clinic_id) {
+                    toast.error('Clínica não encontrada')
+                    return
+                }
+
+                setClinicId(userData.clinic_id)
+
+                // Fetch clinic data
+                const { data: clinicData, error } = await supabase
+                    .from('clinics')
+                    .select('name, email, phone, address, primary_color, logo_url, whatsapp_number')
+                    .eq('id', userData.clinic_id)
+                    .single()
+
+                if (error) {
+                    console.error('Error loading clinic:', error)
+                    toast.error('Erro ao carregar dados da clínica')
+                    return
+                }
+
+                if (clinicData) {
+                    // Update form with real data
+                    reset({
+                        name: clinicData.name || '',
+                        email: clinicData.email || '',
+                        phone: clinicData.phone || '',
+                        address: clinicData.address || '',
+                        primary_color: clinicData.primary_color || '#3b82f6',
+                        whatsapp_number: clinicData.whatsapp_number || '',
+                        logo_url: clinicData.logo_url || null,
+                    })
+
+                    // Set logo preview if exists
+                    if (clinicData.logo_url) {
+                        setPreviewLogo(clinicData.logo_url)
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error)
+                toast.error('Erro ao carregar configurações')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadClinicData()
+    }, [reset])
+
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        if (!clinicId) {
+            toast.error('ID da clínica não encontrado')
+            return
+        }
 
         try {
             setUploadingLogo(true)
             const formData = new FormData()
             formData.append('file', file)
-            // TODO: Get real Clinic ID from session or context. 
-            // For now assuming we are in a clinic context component, but we need the ID.
-            // Since this is a client component, we might need to pass it or fetch it.
-            // Let's assume a hardcoded ID for now or fetch from user session if available in a hook.
-            // Actually, server action takes clinicId. We need to pass it.
-            // TEMPORARY FIX: using a placeholder ID, but this needs to come from the page load data.
-            formData.append('clinicId', 'current-clinic-id-placeholder')
-
-            // Wait, we can't upload without ID. 
-            // In a real scenario, this page should receive initialData including ID.
+            formData.append('clinicId', clinicId)
 
             const result = await uploadClinicLogo(formData)
 
@@ -97,9 +166,51 @@ export default function SettingsPage() {
         }
     }
 
-    const onSubmit = (data: ClinicSettingsData) => {
-        toast.success('Configurações salvas com sucesso!')
-        console.log(data)
+    const onSubmit = async (data: ClinicSettingsData) => {
+        if (!clinicId) {
+            toast.error('ID da clínica não encontrado')
+            return
+        }
+
+        try {
+            const supabase = createClient()
+
+            const { error } = await supabase
+                .from('clinics')
+                .update({
+                    name: data.name,
+                    email: data.email,
+                    phone: data.phone,
+                    address: data.address,
+                    primary_color: data.primary_color,
+                    whatsapp_number: data.whatsapp_number,
+                    logo_url: data.logo_url,
+                })
+                .eq('id', clinicId)
+
+            if (error) {
+                console.error('Error updating clinic:', error)
+                toast.error('Erro ao salvar configurações')
+                return
+            }
+
+            toast.success('Configurações salvas com sucesso!')
+            reset(data) // Reset form with new values to clear dirty state
+        } catch (error) {
+            console.error('Error:', error)
+            toast.error('Erro ao salvar configurações')
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="space-y-6 max-w-4xl">
+                <div>
+                    <h1 className="text-2xl font-bold">Configurações da Clínica</h1>
+                    <p className="text-muted-foreground">Carregando...</p>
+                </div>
+            </div>
+        )
     }
 
     return (

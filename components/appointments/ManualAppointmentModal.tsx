@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
@@ -89,6 +90,7 @@ interface ManualAppointmentModalProps {
     preselectedTime?: string
     preselectedDoctorId?: string
     appointmentToEdit?: any // Typed as any to avoid circular deps for now, but should be Appointment
+    onSuccess?: (appointmentDate: string) => void // ✅ Callback to navigate agenda to created appointment
 }
 
 export function ManualAppointmentModal({
@@ -98,6 +100,7 @@ export function ManualAppointmentModal({
     preselectedTime,
     preselectedDoctorId,
     appointmentToEdit,
+    onSuccess,
 }: ManualAppointmentModalProps) {
     const queryClient = useQueryClient()
     const [step, setStep] = useState<'search' | 'register' | 'form'>('search')
@@ -233,6 +236,8 @@ export function ManualAppointmentModal({
                 setCreatedAppointment(data.appointment)
                 setShowSuccessModal(true)
                 toast.success('Agendamento criado com sucesso!')
+                // ✅ Notify parent to navigate agenda to created appointment date
+                onSuccess?.(data.appointment.appointment_date)
             }
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
             // Only close if editing (success modal handles closing for new appointments)
@@ -316,6 +321,9 @@ export function ManualAppointmentModal({
                             <Calendar className="h-5 w-5" />
                             Novo Agendamento Manual
                         </DialogTitle>
+                        <DialogDescription>
+                            Crie um agendamento manual selecionando o paciente, médico e horário desejado
+                        </DialogDescription>
                     </DialogHeader>
 
                     {/* Step: Patient Search */}

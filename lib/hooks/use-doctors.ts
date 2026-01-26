@@ -96,7 +96,22 @@ export function useUpdateSchedules() {
             api.post(`/doctors/${doctorId}/schedules`, { schedules }),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['doctor', variables.doctorId] })
-            toast.success('Horários salvos!')
+            queryClient.invalidateQueries({ queryKey: ['schedules', variables.doctorId] })
+
+            // ✅ Show detailed success message with days configured
+            const days = variables.schedules.map(s => {
+                const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+                return dayNames[s.day_of_week]
+            }).join(', ')
+
+            if (variables.schedules.length > 0) {
+                toast.success(
+                    `✅ Horários salvos com sucesso!\n\n📅 Dias configurados: ${days}\n\nOs horários já estão disponíveis para agendamento.`,
+                    { duration: 5000 }
+                )
+            } else {
+                toast.success('Horários limpos! Nenhum dia de atendimento configurado.', { duration: 5000 })
+            }
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Erro ao salvar horários')

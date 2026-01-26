@@ -7,7 +7,8 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, BadRequestError } from '@/lib/utils/errors'
 import { successResponse, paginatedResponse, parsePaginationParams, buildPaginatedData } from '@/lib/utils/responses'
 import { createDoctorSchema, listDoctorsQuerySchema } from '@/lib/validations/doctor'
-import { sendWelcomeEmail, isEmailConfigured } from '@/lib/services/email'
+// ⚠️ TEMPORARY: Disabled email service due to Turbopack error with @react-email
+// import { sendWelcomeEmail, isEmailConfigured } from '@/lib/services/email'
 import { PLANS, type PlanType } from '@/lib/constants/plans'
 
 // Force Node.js runtime for nodemailer support
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
         // Use Service Role for CLINIC_ADMIN to bypass RLS issues (Trust inputs & filtering)
         const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN')
-            ? createServiceRoleClient()
+            ? createServiceRoleClient() as any
             : await createClient()
 
         console.log('[GET /api/doctors] Debug:', {
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
         const validatedData = createDoctorSchema.parse(body)
 
         const supabase = await createClient()
-        const adminClient = createServiceRoleClient()
+        const adminClient = createServiceRoleClient() as any
 
         // Get clinic_id
         let clinicId: string | null = null
@@ -292,7 +293,10 @@ export async function POST(request: NextRequest) {
             throw new BadRequestError(doctorError.message)
         }
 
+        // ⚠️ TEMPORARY: Email disabled due to Turbopack error with @react-email
         // Send welcome email
+        console.warn('[EMAIL] Welcome email functionality temporarily disabled - react-email not installed')
+        /*
         if (isEmailConfigured()) {
             try {
                 await sendWelcomeEmail({
@@ -304,6 +308,7 @@ export async function POST(request: NextRequest) {
                 console.error('Failed to send welcome email:', emailError)
             }
         }
+        */
 
         return successResponse(
             {

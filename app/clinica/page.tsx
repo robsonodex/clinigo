@@ -51,17 +51,24 @@ export default function ClinicaLoginPage() {
             }
 
             toast.success('Login realizado com sucesso!')
-            // Use window.location for full page reload to ensure cookies are loaded
-            window.location.href = '/dashboard'
+
+            // Force redirection and DO NOT stop loading state
+            // This prevents react re-renders from cancelling the navigation
+            console.log('[LOGIN] Redirecting to dashboard...')
+            window.location.replace('/dashboard')
+
+            // Return early to ensure verify finally block logic
+            return
 
         } catch (error) {
+            // Only stop loading if there was an error
+            setIsLoading(false)
+
             if (error instanceof Error && error.name === 'AbortError') {
                 toast.error('Tempo limite excedido. Verifique sua conexão e tente novamente.')
             } else {
                 toast.error(error instanceof Error ? error.message : 'Erro ao fazer login')
             }
-        } finally {
-            setIsLoading(false)
         }
     }
 

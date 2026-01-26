@@ -200,8 +200,7 @@ export async function POST(request: NextRequest) {
                     clinic_id: (clinic as any).id,
                 } as any) as any)
 
-                // Send professional welcome email
-                // Send professional welcome email
+                // Send professional welcome email (uses stub if @react-email not installed)
                 const loginUrl = 'https://clinigo.app/clinica'
                 try {
                     await sendClinicWelcomeEmail({

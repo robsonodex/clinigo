@@ -34,7 +34,7 @@ import {
     CheckCircle2,
 } from 'lucide-react'
 import Link from 'next/link'
-import { OnboardingChecklist } from '@/components/onboarding'
+import { InitialSetup } from '@/components/dashboard/InitialSetup'
 
 const statusColors: Record<string, string> = {
     PENDING_PAYMENT: 'warning',
@@ -126,10 +126,10 @@ export default function DashboardPage() {
                 </Badge>
             </div >
 
-            {/* Onboarding Checklist - Only for Clinic Admins */}
+            {/* Initial Setup - Only for Clinic Admins */}
             {
                 isClinicAdmin && (
-                    <OnboardingChecklist />
+                    <InitialSetup />
                 )
             }
 

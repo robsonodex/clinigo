@@ -26,6 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
+import { SavedSchedulesList } from '@/components/doctors/SavedSchedulesList'
 
 const DAYS_OF_WEEK = [
     { value: 0, label: 'Domingo' },
@@ -172,10 +173,15 @@ export default function SchedulePage() {
                 </CardContent>
             </Card>
 
+            {/* ✅ SHOW SAVED SCHEDULES IMMEDIATELY */}
+            {selectedDoctorId && (
+                <SavedSchedulesList doctorId={selectedDoctorId} />
+            )}
+
             {selectedDoctorId && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Agenda Semanal</CardTitle>
+                        <CardTitle>Configurar Agenda Semanal</CardTitle>
                         <CardDescription>
                             Marque os dias de atendimento e horários
                         </CardDescription>
