@@ -8,48 +8,61 @@ import { Lock, ArrowRight, Sparkles, Shield, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 const PLAN_FEATURES = {
-    PRO: {
-        name: 'PRO',
+    AVANCADO: {
+        name: 'Avançado',
         price: 'R$ 299/mês',
         features: [
             'CRM Completo',
-            'Gestão de Estoque',
-            'Financeiro Avançado',
-            'TISS - Convênios',
+            'WhatsApp Automação',
+            'Repasse Médico',
+            'DRE Gerencial',
+            'Importação de Dados',
+            'Integrações',
+        ],
+    },
+    PROFESSIONAL: {
+        name: 'Professional',
+        price: 'R$ 549/mês',
+        features: [
+            'Tudo do Avançado +',
+            'Faturamento TISS',
+            'Multi-Unidades (até 3)',
             'Marketplace',
-            'WhatsApp Automatizado',
+            'IA Avançada',
+            'API Dedicada',
         ],
     },
     ENTERPRISE: {
-        name: 'ENTERPRISE',
-        price: 'R$ 599/mês',
+        name: 'Enterprise',
+        price: 'R$ 799/mês',
         features: [
-            'Tudo do PRO +',
-            'Multi-Unidades',
-            'IA Preditiva',
-            'API Access',
-            'Relatórios BI',
-            'White Label',
+            'Tudo do Professional +',
+            'Unidades Ilimitadas',
+            'BI Multi-Filiais',
+            'DataSUS',
+            'White-Label',
+            'Gerente Dedicado',
         ],
     },
 }
 
 const DEFAULT_PLAN = {
-    name: 'PRO',
+    name: 'Avançado',
     price: 'R$ 299/mês',
-    features: ['CRM Completo', 'Gestão de Estoque', 'Financeiro Avançado']
+    features: ['CRM Completo', 'WhatsApp Automação', 'Repasse Médico']
 }
 
 export default function UpgradePage() {
     const searchParams = useSearchParams()
     const feature = searchParams.get('feature') || 'recurso'
-    const planParam = searchParams.get('plan') || 'PRO'
+    const planParam = searchParams.get('plan') || 'AVANCADO'
 
-    // Map plan names to PLAN_FEATURES keys
-    const planKey = planParam === 'PROFESSIONAL' || planParam === 'PRO' ? 'PRO' :
-        planParam === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRO'
+    // Map plan names to PLAN_FEATURES keys (handle legacy names too)
+    const planKey = (planParam === 'AVANCADO' || planParam === 'PRO' || planParam === 'BASIC') ? 'AVANCADO' :
+        planParam === 'PROFESSIONAL' ? 'PROFESSIONAL' :
+            planParam === 'ENTERPRISE' ? 'ENTERPRISE' : 'AVANCADO'
 
-    const planInfo = PLAN_FEATURES[planKey] || DEFAULT_PLAN
+    const planInfo = PLAN_FEATURES[planKey as keyof typeof PLAN_FEATURES] || DEFAULT_PLAN
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">

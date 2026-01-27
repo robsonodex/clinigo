@@ -1,75 +1,71 @@
 /**
- * Route to Feature Mapping - 5-Tier System
+ * Route to Feature Mapping - 4-Tier System
  * Maps routes to minimum required plan level
+ * Plans: BASICO (R$149), AVANCADO (R$299), PROFESSIONAL (R$549), ENTERPRISE (R$799)
  */
 
 import { type PlanType } from './plans'
 
 // Route to minimum required plan mapping
+// Using 4-Tier Plan System: BASICO, AVANCADO, PROFESSIONAL, ENTERPRISE
 export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
-    // === STARTER Routes (R$47) - Basic scheduling only ===
-    // All public and basic auth routes
+    // === BASICO Routes (R$149) - Core features ===
+    // Dashboard, Agenda, Prontuários básico, Financeiro básico, Relatórios básicos
+    // These are NOT restricted by default (no entry needed = all plans have access)
 
-    // === BASIC Routes (R$87) - Includes financeiro básico ===
-    '/dashboard/financeiro': 'BASIC',
-    '/dashboard/relatorios': 'BASIC',
-    '/api/financial/entries': 'BASIC',
-    '/api/reports': 'BASIC',
+    // === AVANÇADO Routes (R$299) - Advanced features ===
+    '/dashboard/financial/payroll': 'AVANCADO',
+    '/dashboard/financial/dre': 'AVANCADO',
+    '/dashboard/financial/audit': 'AVANCADO',
+    '/dashboard/crm': 'AVANCADO',
+    '/dashboard/whatsapp': 'AVANCADO',
+    '/dashboard/automacao': 'AVANCADO',
+    '/dashboard/importacao': 'AVANCADO',
+    '/dashboard/integracoes': 'AVANCADO',
+    '/api/payroll': 'AVANCADO',
+    '/api/crm': 'AVANCADO',
+    '/api/whatsapp': 'AVANCADO',
 
-    // === PROFESSIONAL Routes (R$247) - Full features ===
+    // === PROFESSIONAL Routes (R$549) - Enterprise-lite features ===
     '/dashboard/tiss': 'PROFESSIONAL',
-    '/dashboard/financial/payroll': 'PROFESSIONAL',
-    '/dashboard/financial/dre': 'PROFESSIONAL',
-    '/dashboard/financial/audit': 'PROFESSIONAL',
-    '/dashboard/automacao': 'PROFESSIONAL',
-    '/dashboard/crm': 'PROFESSIONAL',
-    '/dashboard/estoque': 'PROFESSIONAL',
-    '/dashboard/whatsapp': 'PROFESSIONAL',
-    '/dashboard/prontuarios': 'PROFESSIONAL',
     '/dashboard/marketplace': 'PROFESSIONAL',
-    '/dashboard/triagem': 'PROFESSIONAL',
+    '/dashboard/grupos': 'PROFESSIONAL',
     '/api/tiss': 'PROFESSIONAL',
-    '/api/payroll': 'PROFESSIONAL',
-    '/api/crm': 'PROFESSIONAL',
-    '/api/inventory': 'PROFESSIONAL',
-    '/api/whatsapp': 'PROFESSIONAL',
-    '/api/medical-records': 'PROFESSIONAL',
     '/api/marketplace': 'PROFESSIONAL',
     '/api/aia': 'PROFESSIONAL',
 
-    // === ENTERPRISE Routes (R$497) - Multi-unit + Labs ===
-    '/dashboard/grupos': 'ENTERPRISE',
-    '/dashboard/integracoes': 'ENTERPRISE',
+    // === ENTERPRISE Routes (R$799) - Full enterprise ===
     '/dashboard/relatorios-globais': 'ENTERPRISE',
     '/api/groups': 'ENTERPRISE',
     '/api/integrations': 'ENTERPRISE',
     '/api/datasus': 'ENTERPRISE',
     '/api/labs-rj': 'ENTERPRISE',
 
-    // === NETWORK Routes (R$997) - White-label + API ===
-    '/dashboard/api-keys': 'NETWORK',
-    '/dashboard/white-label': 'NETWORK',
-    '/api/api-keys': 'NETWORK',
-    '/api/white-label': 'NETWORK',
+    // === NETWORK Routes (legacy - maps to ENTERPRISE) ===
+    '/dashboard/api-keys': 'ENTERPRISE',
+    '/dashboard/white-label': 'ENTERPRISE',
+    '/api/api-keys': 'ENTERPRISE',
+    '/api/white-label': 'ENTERPRISE',
 }
 
 // Feature labels for UI display
 export const FEATURE_LABELS: Record<string, string> = {
-    '/dashboard/tiss': 'TISS',
+    // AVANÇADO Features
     '/dashboard/financial/payroll': 'Repasse Médico',
     '/dashboard/financial/dre': 'DRE Gerencial',
     '/dashboard/financial/audit': 'Auditoria Financeira',
     '/dashboard/automacao': 'Automação',
     '/dashboard/crm': 'CRM',
-    '/dashboard/estoque': 'Estoque',
-    '/dashboard/financeiro': 'Financeiro',
     '/dashboard/whatsapp': 'WhatsApp Automação',
-    '/dashboard/prontuarios': 'Prontuário Avançado',
-    '/dashboard/grupos': 'Multi-Unidade',
+    '/dashboard/importacao': 'Importação de Dados',
     '/dashboard/integracoes': 'Integrações',
+    // PROFESSIONAL Features
+    '/dashboard/tiss': 'TISS',
+    '/dashboard/marketplace': 'Marketplace',
+    '/dashboard/grupos': 'Multi-Unidade',
+    // ENTERPRISE Features
     '/dashboard/relatorios-globais': 'BI Multi-Filiais',
     '/dashboard/api-keys': 'API Dedicada',
-    '/dashboard/marketplace': 'Marketplace',
     '/dashboard/white-label': 'White-Label',
 }
 
