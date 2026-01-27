@@ -124,13 +124,18 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Log deletion in audit_logs
+        // NOTE: Do NOT include clinic_id here since the clinic was already deleted
+        // The FK constraint would fail if we try to reference the deleted clinic
         await serviceSupabase.from('audit_logs').insert({
             user_id: user.id,
             action: 'CLINIC_DELETED',
-            resource_type: 'CLINIC',
-            resource_id: clinicId,
+            entity_type: 'clinics',
+            entity_id: clinicId,
+            severity: 'CRITICAL',
+            // clinic_id is intentionally NOT set - clinic was deleted
             metadata: {
                 clinic_name: clinicData.name,
+                clinic_id: clinicId, // Store in metadata for reference
                 deleted_at: new Date().toISOString(),
             },
             created_at: new Date().toISOString(),
