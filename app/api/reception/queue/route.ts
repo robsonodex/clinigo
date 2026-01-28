@@ -81,7 +81,8 @@ export async function GET(request: Request) {
                 arrivalTime: a.checked_in_at,
                 isPriority: a.priority_level > 0,
                 status: a.status,
-                notes: a.waiting_room_notes
+                notes: a.waiting_room_notes,
+                checkedInAt: a.checked_in_at // 🔥 Add this field
             })),
             ...walkIns.map(w => ({
                 id: w.id,

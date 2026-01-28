@@ -99,12 +99,12 @@ export async function POST(request: NextRequest) {
         }
 
         // ============================================
-        // CREATE AUTH USER (without password yet - will set on activation)
+        // CREATE AUTH USER (auto-confirmed for trial access)
         // ============================================
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: data.email,
             password: data.password,
-            email_confirm: false, // Will confirm on activation
+            email_confirm: true, // Auto-confirm for trial - user can login immediately
             user_metadata: { full_name: data.full_name }
         })
 

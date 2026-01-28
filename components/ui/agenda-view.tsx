@@ -58,7 +58,6 @@ import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
 import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
-import { OverdueAppointmentsList } from '@/components/dashboard/OverdueAppointmentsList'
 import { AlertTriangle } from 'lucide-react'
 import {
     Tooltip,
@@ -67,11 +66,36 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-const TIME_SLOTS = Array.from({ length: 19 }, (_, i) => {
-    const hour = Math.floor(i / 2) + 9 // Start at 09:00
+const TIME_SLOTS = Array.from({ length: 33 }, (_, i) => {
+    const hour = Math.floor(i / 2) + 7 // Start at 07:00
     const minute = i % 2 === 0 ? '00' : '30'
     return `${String(hour).padStart(2, '0')}:${minute}`
 })
+
+// Doctor color palette for visual distinction
+const DOCTOR_COLORS = [
+    { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-800', accent: 'bg-emerald-500' },
+    { bg: 'bg-sky-100', border: 'border-sky-400', text: 'text-sky-800', accent: 'bg-sky-500' },
+    { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-800', accent: 'bg-amber-500' },
+    { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-800', accent: 'bg-rose-500' },
+    { bg: 'bg-violet-100', border: 'border-violet-400', text: 'text-violet-800', accent: 'bg-violet-500' },
+    { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-800', accent: 'bg-orange-500' },
+    { bg: 'bg-cyan-100', border: 'border-cyan-400', text: 'text-cyan-800', accent: 'bg-cyan-500' },
+    { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800', accent: 'bg-pink-500' },
+]
+
+// Map doctor IDs to colors (cached per render)
+const doctorColorMap = new Map<string, typeof DOCTOR_COLORS[0]>()
+let colorIndex = 0
+
+function getDoctorColor(doctorId: string) {
+    if (!doctorColorMap.has(doctorId)) {
+        doctorColorMap.set(doctorId, DOCTOR_COLORS[colorIndex % DOCTOR_COLORS.length])
+        colorIndex++
+    }
+    return doctorColorMap.get(doctorId)!
+}
+
 
 export default function AgendaPage() {
     const router = useRouter()
@@ -276,9 +300,6 @@ export default function AgendaPage() {
                 </div>
             </div>
 
-            {/* Overdue Appointments Alert (NEW - No-Show System) */}
-            <OverdueAppointmentsList />
-
             {/* Calendar Grid */}
             <Card className="flex-1 overflow-auto">
                 <div className="min-w-[800px]">
@@ -354,60 +375,78 @@ export default function AgendaPage() {
                                                 <TooltipProvider>
                                                     <Tooltip delayDuration={200}>
                                                         <TooltipTrigger asChild>
-                                                            <div
-                                                                draggable={appointment.status !== 'CANCELLED' && appointment.status !== 'COMPLETED'}
-                                                                onDragStart={(e) => handleDragStart(e, appointment)}
-                                                                className={cn(
-                                                                    'w-full h-full rounded-md border p-2 text-xs flex flex-col justify-between shadow-sm cursor-pointer hover:shadow-md transition-shadow',
-                                                                    appointment.status === 'CONFIRMED'
-                                                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                                                        : appointment.status === 'PENDING_PAYMENT'
-                                                                            ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                                                                            : 'bg-gray-50 border-gray-200 text-gray-500', // Completed/Cancelled
-                                                                    draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
-                                                                )}
-                                                                onClick={() => {
-                                                                    setSelectedAppointmentId(appointment.id)
-                                                                    setDetailsDrawerOpen(true)
-                                                                }}
-                                                            >
-                                                                <div>
-                                                                    <div className="font-semibold truncate">
-                                                                        {appointment.patient.full_name}
-                                                                    </div>
-                                                                    <div className="text-[10px] opacity-80 mt-1 capitalize">
-                                                                        {isDoctor ? appointment.status.replace('_', ' ').toLowerCase() : `Dr. ${appointment.doctor.user.full_name}`}
-                                                                    </div>
-                                                                </div>
+                                                            {(() => {
+                                                                const doctorColor = getDoctorColor(appointment.doctor.id)
+                                                                const isOnline = (appointment as any).appointment_type === 'online'
+                                                                const isCancelled = appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'
 
-                                                                <div className="flex items-center justify-end mt-2">
-                                                                    <DropdownMenu>
-                                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                                            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1 hover:bg-black/10">
-                                                                                <MoreVertical className="w-3 h-3" />
-                                                                            </Button>
-                                                                        </DropdownMenuTrigger>
-                                                                        <DropdownMenuContent align="end">
-                                                                            <DropdownMenuItem onClick={() => {
-                                                                                setSelectedAppointmentId(appointment.id)
-                                                                                setDetailsDrawerOpen(true)
-                                                                            }}>
-                                                                                <User className="w-4 h-4 mr-2" />
-                                                                                Ver Detalhes
-                                                                            </DropdownMenuItem>
-                                                                            {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
-                                                                                <DropdownMenuItem
-                                                                                    className="text-destructive focus:text-destructive"
-                                                                                    onClick={() => setCancellingId(appointment.id)}
-                                                                                >
-                                                                                    <X className="w-4 h-4 mr-2" />
-                                                                                    Cancelar
-                                                                                </DropdownMenuItem>
+                                                                return (
+                                                                    <div
+                                                                        draggable={!isCancelled}
+                                                                        onDragStart={(e) => handleDragStart(e, appointment)}
+                                                                        className={cn(
+                                                                            'w-full h-full rounded-lg border-l-4 p-2 text-xs flex flex-col shadow-sm cursor-pointer hover:shadow-lg transition-all',
+                                                                            isCancelled
+                                                                                ? 'bg-gray-100 border-l-gray-400 text-gray-500 opacity-60'
+                                                                                : `${doctorColor.bg} ${doctorColor.text}`,
+                                                                            !isCancelled && doctorColor.border.replace('border-', 'border-l-'),
+                                                                            isOnline && !isCancelled && 'ring-2 ring-green-400 ring-offset-1',
+                                                                            draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
+                                                                        )}
+                                                                        onClick={() => {
+                                                                            setSelectedAppointmentId(appointment.id)
+                                                                            setDetailsDrawerOpen(true)
+                                                                        }}
+                                                                    >
+                                                                        {/* Patient Name */}
+                                                                        <div className="font-bold truncate text-sm leading-tight">
+                                                                            {appointment.patient.full_name}
+                                                                        </div>
+
+                                                                        {/* Time + Video Icon */}
+                                                                        <div className="flex items-center gap-1 mt-1 text-[11px] font-medium opacity-90">
+                                                                            <Clock className="h-3 w-3" />
+                                                                            {appointment.appointment_time.substring(0, 5)}
+                                                                            {isOnline && (
+                                                                                <Video className="h-3 w-3 ml-1 text-green-600" />
                                                                             )}
-                                                                        </DropdownMenuContent>
-                                                                    </DropdownMenu>
-                                                                </div>
-                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Doctor Name */}
+                                                                        <div className="text-[10px] font-medium mt-1 truncate opacity-80">
+                                                                            Dr. {appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
+                                                                        </div>
+
+                                                                        <div className="flex items-center justify-end mt-2">
+                                                                            <DropdownMenu>
+                                                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1 hover:bg-black/10">
+                                                                                        <MoreVertical className="w-3 h-3" />
+                                                                                    </Button>
+                                                                                </DropdownMenuTrigger>
+                                                                                <DropdownMenuContent align="end">
+                                                                                    <DropdownMenuItem onClick={() => {
+                                                                                        setSelectedAppointmentId(appointment.id)
+                                                                                        setDetailsDrawerOpen(true)
+                                                                                    }}>
+                                                                                        <User className="w-4 h-4 mr-2" />
+                                                                                        Ver Detalhes
+                                                                                    </DropdownMenuItem>
+                                                                                    {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
+                                                                                        <DropdownMenuItem
+                                                                                            className="text-destructive focus:text-destructive"
+                                                                                            onClick={() => setCancellingId(appointment.id)}
+                                                                                        >
+                                                                                            <X className="w-4 h-4 mr-2" />
+                                                                                            Cancelar
+                                                                                        </DropdownMenuItem>
+                                                                                    )}
+                                                                                </DropdownMenuContent>
+                                                                            </DropdownMenu>
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            })()}
                                                         </TooltipTrigger>
                                                         <TooltipContent side="right" className="max-w-xs">
                                                             <div className="space-y-2">

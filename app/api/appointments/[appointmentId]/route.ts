@@ -90,7 +90,8 @@ export async function GET(
                     id,
                     user:users(full_name)
                 ),
-                clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
+                clinic:clinics!appointments_clinic_id_fkey(id, name, slug),
+                video_room:video_rooms!video_rooms_appointment_id_fkey(room_id, patient_token, doctor_token)
             `)
             .eq('id', appointmentId)
             .single()

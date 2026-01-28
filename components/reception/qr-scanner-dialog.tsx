@@ -33,19 +33,22 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
     const [cameraError, setCameraError] = useState<string | null>(null)
 
     const videoRef = useRef<HTMLVideoElement>(null)
-    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const scannerRef = useRef<any>(null) // Html5Qrcode instance
     const streamRef = useRef<MediaStream | null>(null)
-    const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     // Cleanup function
-    const stopCamera = useCallback(() => {
-        if (scanIntervalRef.current) {
-            clearInterval(scanIntervalRef.current)
-            scanIntervalRef.current = null
-        }
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop())
-            streamRef.current = null
+    const stopCamera = useCallback(async () => {
+        try {
+            if (scannerRef.current) {
+                await scannerRef.current.stop().catch(() => { })
+                scannerRef.current = null
+            }
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop())
+                streamRef.current = null
+            }
+        } catch (error) {
+            console.error('Error stopping camera:', error)
         }
         setScanning(false)
     }, [])
@@ -55,63 +58,44 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
         try {
             setCameraError(null)
             setResult(null)
+            setScanning(true)
 
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
+            // Import QR scanner library
+            const { Html5Qrcode } = await import('html5-qrcode')
+
+            // Wait for element to render
+            await new Promise(resolve => setTimeout(resolve, 100))
+
+            // Create scanner instance
+            const scanner = new Html5Qrcode('qr-reader')
+
+            scannerRef.current = scanner
+
+            // Start scanning with camera
+            await scanner.start(
+                { facingMode: 'environment' }, // Use back camera on mobile
+                {
+                    fps: 10, // Scans per second
+                    qrbox: { width: 250, height: 250 }, // Scanning area
+                    aspectRatio: 1.0
+                },
+                (decodedText) => {
+                    // Success callback - QR code detected!
+                    console.log('[QR SCANNER] Detected:', decodedText)
+                    handleQRDetected(decodedText)
+                },
+                (errorMessage) => {
+                    // Error callback - just means no QR detected in this frame, ignore
+                    // console.log('[QR SCANNER] No QR in frame')
                 }
-            })
+            )
 
-            streamRef.current = stream
+            console.log('[QR SCANNER] Started successfully')
 
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream
-                await videoRef.current.play()
-                setScanning(true)
-
-                // Import QR scanner dynamically
-                const { Html5Qrcode } = await import('html5-qrcode')
-
-                // Start scanning loop
-                scanIntervalRef.current = setInterval(async () => {
-                    if (!videoRef.current || !canvasRef.current || processing) return
-
-                    const video = videoRef.current
-                    const canvas = canvasRef.current
-                    const ctx = canvas.getContext('2d')
-
-                    if (!ctx || video.videoWidth === 0) return
-
-                    canvas.width = video.videoWidth
-                    canvas.height = video.videoHeight
-                    ctx.drawImage(video, 0, 0)
-
-                    // Convert to image data for scanning
-                    const imageData = canvas.toDataURL('image/png')
-
-                    try {
-                        // Use Html5Qrcode to decode
-                        const html5QrCode = new Html5Qrcode('qr-reader-hidden')
-                        const decodedText = await html5QrCode.scanFile(
-                            await (await fetch(imageData)).blob() as any,
-                            false
-                        ).catch(() => null)
-
-                        if (decodedText) {
-                            handleQRDetected(decodedText)
-                        }
-
-                        html5QrCode.clear()
-                    } catch {
-                        // QR not detected, continue scanning
-                    }
-                }, 500)
-            }
         } catch (err) {
             console.error('Camera error:', err)
             setCameraError('Não foi possível acessar a câmera. Verifique as permissões.')
+            setScanning(false)
         }
     }, [processing])
 
@@ -177,7 +161,7 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
     // Cleanup on close
     useEffect(() => {
         if (!open) {
-            stopCamera()
+            stopCamera() // No need to await, it's fire-and-forget cleanup
             setResult(null)
             setCameraError(null)
         }
@@ -185,7 +169,9 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
 
     // Cleanup on unmount
     useEffect(() => {
-        return () => stopCamera()
+        return () => {
+            stopCamera() // Synchronous wrapper for async cleanup
+        }
     }, [stopCamera])
 
     return (
@@ -205,8 +191,6 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    {/* Hidden element for html5-qrcode */}
-                    <div id="qr-reader-hidden" style={{ display: 'none' }} />
 
                     {/* Result display */}
                     {result && (
@@ -249,7 +233,7 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
                         </Card>
                     )}
 
-                    {/* Camera view */}
+                    {/* Camera view - Html5Qrcode renders here */}
                     {!result && (
                         <div className="relative aspect-square bg-black rounded-lg overflow-hidden">
                             {cameraError ? (
@@ -266,13 +250,8 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
                                 </div>
                             ) : scanning ? (
                                 <>
-                                    <video
-                                        ref={videoRef}
-                                        className="w-full h-full object-cover"
-                                        playsInline
-                                        muted
-                                    />
-                                    <canvas ref={canvasRef} className="hidden" />
+                                    {/* Html5Qrcode renders camera video and overlay here */}
+                                    <div id="qr-reader" className="w-full h-full" />
                                     {/* Scan overlay */}
                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                         <div className="w-48 h-48 border-4 border-white rounded-lg opacity-75">

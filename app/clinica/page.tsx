@@ -47,6 +47,11 @@ export default function ClinicaLoginPage() {
             const data = await response.json()
 
             if (!response.ok) {
+                // Log debug info if available
+                if (data.error?.debug) {
+                    console.error('[LOGIN] Supabase error:', data.error.debug.supabaseError)
+                    console.error('[LOGIN] Supabase code:', data.error.debug.supabaseCode)
+                }
                 throw new Error(data.error?.message || 'Email ou senha incorretos')
             }
 
@@ -67,7 +72,9 @@ export default function ClinicaLoginPage() {
             if (error instanceof Error && error.name === 'AbortError') {
                 toast.error('Tempo limite excedido. Verifique sua conexão e tente novamente.')
             } else {
-                toast.error(error instanceof Error ? error.message : 'Erro ao fazer login')
+                const errorMessage = error instanceof Error ? error.message : 'Erro ao fazer login'
+                toast.error(errorMessage)
+                console.error('[LOGIN FRONTEND] Error details:', error)
             }
         }
     }

@@ -137,66 +137,74 @@ export default function DashboardPage() {
             {
                 (isClinicAdmin || isDoctor) && (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-blue-900">
-                                    Consultas Hoje
-                                </CardTitle>
-                                <Calendar className="h-4 w-4 text-blue-600" />
-                            </CardHeader>
-                            <CardContent>
-                                {statsLoading ? (
-                                    <Skeleton className="h-8 w-16" />
-                                ) : (
-                                    <div className="text-2xl font-bold text-blue-900">{stats?.todayCount || 0}</div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <Link href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
+                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-blue-900">
+                                        Consultas Hoje
+                                    </CardTitle>
+                                    <Calendar className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent>
+                                    {statsLoading ? (
+                                        <Skeleton className="h-8 w-16" />
+                                    ) : (
+                                        <div className="text-2xl font-bold text-blue-900">{stats?.todayCount || 0}</div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Link>
 
-                        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-green-900">Confirmadas</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-green-600" />
-                            </CardHeader>
-                            <CardContent>
-                                {statsLoading ? (
-                                    <Skeleton className="h-8 w-16" />
-                                ) : (
-                                    <div className="text-2xl font-bold text-green-900">
-                                        {stats?.confirmedCount || 0}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <Link href={isDoctor ? '/dashboard/minha-agenda?status=CONFIRMED' : '/dashboard/agenda'}>
+                            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all cursor-pointer group">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-green-900">Confirmadas</CardTitle>
+                                    <TrendingUp className="h-4 w-4 text-green-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent>
+                                    {statsLoading ? (
+                                        <Skeleton className="h-8 w-16" />
+                                    ) : (
+                                        <div className="text-2xl font-bold text-green-900">
+                                            {stats?.confirmedCount || 0}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Link>
 
-                        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-amber-900">
-                                    Aguardando Pagamento
-                                </CardTitle>
-                                <Clock className="h-4 w-4 text-amber-600" />
-                            </CardHeader>
-                            <CardContent>
-                                {statsLoading ? (
-                                    <Skeleton className="h-8 w-16" />
-                                ) : (
-                                    <div className="text-2xl font-bold text-amber-900">
-                                        {stats?.pendingCount || 0}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <Link href="/dashboard/pagamentos?status=PENDING">
+                            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all cursor-pointer group">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-amber-900">
+                                        Aguardando Pagamento
+                                    </CardTitle>
+                                    <Clock className="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent>
+                                    {statsLoading ? (
+                                        <Skeleton className="h-8 w-16" />
+                                    ) : (
+                                        <div className="text-2xl font-bold text-amber-900">
+                                            {stats?.pendingCount || 0}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Link>
 
-                        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-purple-900">Faturamento</CardTitle>
-                                <DollarSign className="h-4 w-4 text-purple-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-purple-900">R$ 0</div>
-                                <p className="text-xs text-purple-700">Este mês</p>
-                            </CardContent>
-                        </Card>
+                        <Link href="/dashboard/pagamentos">
+                            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all cursor-pointer group">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-purple-900">Faturamento</CardTitle>
+                                    <DollarSign className="h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-purple-900">R$ 0</div>
+                                    <p className="text-xs text-purple-700">Este mês</p>
+                                </CardContent>
+                            </Card>
+                        </Link>
                     </div>
                 )
             }

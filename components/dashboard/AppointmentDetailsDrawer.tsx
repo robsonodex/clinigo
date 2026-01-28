@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Share2, Printer, Copy, Download, Loader2, Check } from 'lucide-react'
+import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle } from 'lucide-react'
 
 interface AppointmentDetailsDrawerProps {
     appointmentId: string | null
@@ -29,8 +29,10 @@ export function AppointmentDetailsDrawer({
 }: AppointmentDetailsDrawerProps) {
     const [appointment, setAppointment] = useState<any>(null)
     const [qrCode, setQrCode] = useState<any>(null)
+    const [videoRoom, setVideoRoom] = useState<any>(null)
     const [loading, setLoading] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [teleconsultaCopied, setTeleconsultaCopied] = useState(false)
 
     useEffect(() => {
         if (appointmentId && isOpen) {
@@ -104,6 +106,11 @@ export function AppointmentDetailsDrawer({
             } else {
                 console.log('[DEBUG] QR code already exists')
                 setQrCode(data.qr_code)
+            }
+
+            // Load video room for teleconsulta
+            if (data.appointment?.appointment_type === 'online') {
+                setVideoRoom(data.appointment.video_room)
             }
         } catch (error) {
             console.error('[ERROR] Error loading appointment:', error)
@@ -188,6 +195,36 @@ export function AppointmentDetailsDrawer({
         }
     }
 
+    // Teleconsulta sharing functions
+    async function handleCopyTeleconsultaLink() {
+        if (!videoRoom) return
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+        const link = `${baseUrl}/video/${videoRoom.room_id}?role=patient&token=${videoRoom.patient_token}`
+        try {
+            await navigator.clipboard.writeText(link)
+            setTeleconsultaCopied(true)
+            toast.success('Link da teleconsulta copiado!')
+            setTimeout(() => setTeleconsultaCopied(false), 2000)
+        } catch (error) {
+            toast.error('Erro ao copiar link')
+        }
+    }
+
+    function handleTeleconsultaWhatsApp() {
+        if (!appointment || !videoRoom) return
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+        const link = `${baseUrl}/video/${videoRoom.room_id}?role=patient&token=${videoRoom.patient_token}`
+        const patientName = appointment.patient?.full_name || 'Paciente'
+        const message =
+            `Olá ${patientName}! 👋\n\n` +
+            `Seu link de teleconsulta está pronto:\n\n` +
+            `🔗 ${link}\n\n` +
+            `📅 Data: ${formattedDate}\n` +
+            `👨‍⚕️ Médico(a): Dr(a). ${doctorName}\n\n` +
+            `Clique no link no horário da consulta para entrar na sala de vídeo.`
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
+    }
+
     function handleDownloadQR() {
         if (!appointment || !qrCode) return
         try {
@@ -248,6 +285,34 @@ export function AppointmentDetailsDrawer({
                                 <Badge>{appointment.status}</Badge>
                             </div>
                         </div>
+
+                        {/* TELECONSULTA LINK SECTION */}
+                        {appointment.appointment_type === 'online' && videoRoom && (
+                            <>
+                                <Separator />
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Video className="h-5 w-5 text-green-600" />
+                                        <Label className="text-base font-medium">Link da Teleconsulta</Label>
+                                    </div>
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                                        <p className="text-sm text-green-800">
+                                            Compartilhe este link com o paciente para acessar a teleconsulta:
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button onClick={handleCopyTeleconsultaLink} size="sm" variant="outline" className="w-full">
+                                                {teleconsultaCopied ? <Check className="h-3 w-3 mr-1 text-green-600" /> : <Copy className="h-3 w-3 mr-1" />}
+                                                {teleconsultaCopied ? 'Copiado!' : 'Copiar Link'}
+                                            </Button>
+                                            <Button onClick={handleTeleconsultaWhatsApp} size="sm" variant="outline" className="w-full">
+                                                <MessageCircle className="h-3 w-3 mr-1" />
+                                                WhatsApp
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         <Separator />
 

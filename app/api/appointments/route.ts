@@ -353,6 +353,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
+
         // 7. Handle Payment Registration (Gateway-Agnostic)
         // Agora apenas registramos que pagamento é necessário, sem gateway integrado
         if (isPrepaid) {
@@ -390,6 +391,21 @@ export async function POST(request: NextRequest) {
                 baseUrl,
             })
 
+            // 🔥 FIX: Save QR code token to database
+            const { error: qrError } = await supabase
+                .from('appointment_qr_codes')
+                .insert({
+                    appointment_id: appointment.id,
+                    clinic_id: clinic.id,
+                    qr_token: qrToken,
+                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+                })
+
+            if (qrError) {
+                console.error('[QR_CODE] Error saving QR token:', qrError)
+                // Don't fail appointment creation, just log
+            }
+
             // Gateway-Agnostic: Retornar instruções de pagamento em vez de URL do gateway
             return successResponse(
                 {
@@ -417,6 +433,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
+
+
         // 10. Generate QR Code and return response for non-prepaid (confirmed directly)
         const qrToken = generateQRToken(appointment.id)
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
@@ -431,6 +449,21 @@ export async function POST(request: NextRequest) {
             baseUrl,
         })
 
+        // 🔥 FIX: Save QR code token to database
+        const { error: qrError } = await supabase
+            .from('appointment_qr_codes')
+            .insert({
+                appointment_id: appointment.id,
+                clinic_id: clinic.id,
+                qr_token: qrToken,
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+            })
+
+        if (qrError) {
+            console.error('[QR_CODE] Error saving QR token:', qrError)
+            // Don't fail appointment creation, just log
+        }
+
         return successResponse(
             {
                 appointment_id: appointment.id,
@@ -443,6 +476,7 @@ export async function POST(request: NextRequest) {
             },
             { status: 201 }
         )
+
     } catch (error) {
         return handleApiError(error)
     }

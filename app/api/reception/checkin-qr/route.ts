@@ -35,14 +35,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Token QR obrigatório' }, { status: 400 })
         }
 
+        console.log('[CHECKIN-QR] Looking for QR token:', qr_token)
+        console.log('[CHECKIN-QR] User clinic_id:', userProfile.clinic_id)
+
         // Find QR code record
+        // 🔥 FIX: Search by qr_token OR appointment_id
+        // The scanner extracts appointment ID from URL, so we support both
         const { data: qrData, error: qrError } = await (supabase
             .from('appointment_qr_codes') as any)
             .select(`
                 *,
                 appointments:appointment_id (
                     id,
-                    scheduled_at,
+                    appointment_date,
+                    appointment_time,
                     status,
                     patients:patient_id (
                         id,
@@ -58,11 +64,32 @@ export async function POST(request: NextRequest) {
                     )
                 )
             `)
-            .eq('qr_token', qr_token)
+            .or(`qr_token.eq.${qr_token},appointment_id.eq.${qr_token}`)
             .eq('clinic_id', userProfile.clinic_id)
             .single()
 
+        console.log('[CHECKIN-QR] QR query error:', qrError)
+        console.log('[CHECKIN-QR] QR data found:', qrData ? 'YES' : 'NO')
+        if (qrData) {
+            console.log('[CHECKIN-QR] QR clinic_id:', qrData.clinic_id)
+            console.log('[CHECKIN-QR] Appointment ID:', qrData.appointment_id)
+        }
+
         if (qrError || !qrData) {
+            // Try to find QR without clinic filter to debug
+            const { data: debugQR } = await (supabase
+                .from('appointment_qr_codes') as any)
+                .select('id, clinic_id, qr_token, appointment_id')
+                .or(`qr_token.eq.${qr_token},appointment_id.eq.${qr_token}`)
+                .single()
+
+            console.log('[CHECKIN-QR DEBUG] QR exists?', debugQR ? 'YES' : 'NO')
+            if (debugQR) {
+                console.log('[CHECKIN-QR DEBUG] QR clinic_id:', debugQR.clinic_id)
+                console.log('[CHECKIN-QR DEBUG] Expected clinic_id:', userProfile.clinic_id)
+                console.log('[CHECKIN-QR DEBUG] Match?', debugQR.clinic_id === userProfile.clinic_id)
+            }
+
             return NextResponse.json({
                 success: false,
                 error: 'QR Code inválido ou não pertence a esta clínica'
@@ -79,24 +106,32 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
-        // Check if expired
-        if (new Date(qrData.expires_at) < new Date()) {
+        // Check if expired (48h total: 24h base + 24h grace period)
+        const expirationDate = new Date(qrData.expires_at)
+        const currentTime = new Date()
+        const hoursSinceExpiration = (currentTime.getTime() - expirationDate.getTime()) / (1000 * 60 * 60)
+
+        if (hoursSinceExpiration > 24) { // Allow 24h after expires_at (48h total)
             return NextResponse.json({
                 success: false,
-                error: 'QR Code expirado'
+                error: 'QR Code expirado. Por favor, solicite um novo QR code.'
             }, { status: 400 })
         }
 
-        // Check if appointment is for today
-        const appointmentDate = new Date(qrData.appointments.scheduled_at)
+        // Check if appointment is within ±1 day (to handle timezone issues)
+        // 🔥 FIX: Allow D-1, D, D+1 to handle UTC vs local time differences
+        const appointmentDate = new Date(qrData.appointments.appointment_date)
         const today = new Date()
-        const isToday = appointmentDate.toDateString() === today.toDateString()
+        today.setHours(0, 0, 0, 0)
+        appointmentDate.setHours(0, 0, 0, 0)
 
-        if (!isToday) {
+        const dayDiff = Math.abs((appointmentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+        if (dayDiff > 1) {
             const formattedDate = appointmentDate.toLocaleDateString('pt-BR')
             return NextResponse.json({
                 success: false,
-                error: `Agendamento não é para hoje. Data: ${formattedDate}`,
+                error: `Este QR code não é válido para check-in hoje. Data do agendamento: ${formattedDate}`,
                 appointment: qrData.appointments
             }, { status: 400 })
         }

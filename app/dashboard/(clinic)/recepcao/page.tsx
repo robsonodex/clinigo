@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle, XCircle, AlertTriangle,
-    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle
+    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle, Settings
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -36,6 +36,7 @@ interface QueueItem {
     isPriority: boolean
     status: string
     notes?: string
+    checkedInAt?: string // 🔥 NEW: Check-in timestamp
 }
 
 interface Stats {
@@ -59,6 +60,14 @@ export default function RecepcaoPage() {
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
     const [urgency, setUrgency] = useState<string>('normal')
     const [reason, setReason] = useState('')
+    const [refreshInterval, setRefreshInterval] = useState<number>(() => {
+        // Load from localStorage or default to 60s
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('reception-refresh-interval')
+            return saved ? Math.min(Number(saved), 300) : 60
+        }
+        return 60
+    })
 
     const [isCreatingPatient, setIsCreatingPatient] = useState(false)
     const [isSubmittingPatient, setIsSubmittingPatient] = useState(false)
@@ -66,10 +75,10 @@ export default function RecepcaoPage() {
 
     useEffect(() => {
         loadData()
-        // Poll every 30s
-        const interval = setInterval(loadData, 30000)
+        // Auto-refresh with configurable interval (in seconds)
+        const interval = setInterval(loadData, refreshInterval * 1000)
         return () => clearInterval(interval)
-    }, [])
+    }, [refreshInterval]) // Re-create interval when refreshInterval changes
 
     async function loadData() {
         setLoading(true)
@@ -227,6 +236,51 @@ export default function RecepcaoPage() {
                 <div className="flex gap-2">
                     {/* QR Scanner Button */}
                     <QRScannerDialog onCheckIn={loadData} />
+
+                    {/* Auto-refresh Settings */}
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="icon" title="Configurar atualização automática">
+                                <Settings className="w-4 h-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Configurações de Atualização</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Intervalo de Atualização Automática</Label>
+                                    <Select
+                                        value={refreshInterval.toString()}
+                                        onValueChange={(value) => {
+                                            const interval = Number(value)
+                                            setRefreshInterval(interval)
+                                            localStorage.setItem('reception-refresh-interval', interval.toString())
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="30">30 segundos</SelectItem>
+                                            <SelectItem value="60">1 minuto (recomendado)</SelectItem>
+                                            <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
+                                            <SelectItem value="120">2 minutos</SelectItem>
+                                            <SelectItem value="180">3 minutos</SelectItem>
+                                            <SelectItem value="240">4 minutos</SelectItem>
+                                            <SelectItem value="300">5 minutos (máximo)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        A fila será atualizada automaticamente a cada {refreshInterval >= 60
+                                            ? `${Math.floor(refreshInterval / 60)} minuto${Math.floor(refreshInterval / 60) > 1 ? 's' : ''}${refreshInterval % 60 ? ` e ${refreshInterval % 60} segundos` : ''}`
+                                            : `${refreshInterval} segundos`}
+                                    </p>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
 
                     <Dialog open={showWalkInDialog} onOpenChange={(open) => {
                         setShowWalkInDialog(open)
@@ -396,9 +450,17 @@ export default function RecepcaoPage() {
                                                             Prioridade
                                                         </Badge>
                                                     )}
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {item.type === 'appointment' ? 'Agendado' : 'Walk-in'}
-                                                    </Badge>
+                                                    {/* 🔥 UPDATED: Show different badge based on check-in status */}
+                                                    {item.type === 'appointment' && item.checkedInAt ? (
+                                                        <Badge variant="default" className="text-xs bg-green-600">
+                                                            <CheckCircle className="w-3 h-3 mr-1" />
+                                                            Check-in Realizado
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {item.type === 'appointment' ? 'Agendado' : 'Walk-in'}
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                                     <span className="flex items-center gap-1">
@@ -420,7 +482,8 @@ export default function RecepcaoPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && (
+                                            {/* 🔥 UPDATED: Only show check-in button if NOT yet checked in */}
+                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -430,9 +493,6 @@ export default function RecepcaoPage() {
                                                     Check-in
                                                 </Button>
                                             )}
-                                            <Button size="sm">
-                                                Chamar Paciente
-                                            </Button>
                                         </div>
                                     </div>
                                 </div>

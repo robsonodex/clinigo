@@ -20,12 +20,12 @@ export async function POST(
         const appointmentId = id
 
         // Update appointment with check-in timestamp
-        const { data: appointment, error } = await supabase
-            .from('appointments')
+        const { data: appointment, error } = await (supabase
+            .from('appointments') as any)
             .update({
                 checked_in_at: new Date().toISOString(),
                 checked_in_by: user.id,
-                status: 'CONFIRMED' // Ensure status is confirmed
+                status: 'CONFIRMED'
             })
             .eq('id', appointmentId)
             .select()

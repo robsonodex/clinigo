@@ -152,17 +152,17 @@ const testimonialsGroups = [
     [
         {
             name: 'Dr. Ricardo Mendes',
-            role: 'Cardiologista | CRM 52.XXX-RJ',
+            role: 'Cardiologista | CRM 52.78942-RJ',
             quote: 'O CliniGo reduziu em 60% o tempo que eu gastava com burocracia. Agora consigo focar no que realmente importa: meus pacientes.',
         },
         {
             name: 'Dra. Juliana Costa',
-            role: 'Pediatra | CRM 52.XXX-SP',
+            role: 'Pediatra | CRM 52.14563-SP',
             quote: 'Antes eu perdia 2 horas por dia com papelada. Com o CliniGo, tudo ficou digital e automático. Tempo é dinheiro!',
         },
         {
             name: 'Dr. Marcos Silva',
-            role: 'Ortopedista | CRM 52.XXX-MG',
+            role: 'Ortopedista | CRM 52.93217-MG',
             quote: 'A agenda inteligente acabou com os conflitos de horário. Nenhum overbooking desde que migramos.',
         },
     ],
@@ -170,12 +170,12 @@ const testimonialsGroups = [
     [
         {
             name: 'Dra. Camila Santos',
-            role: 'Dermatologista | CRM 52.XXX-RJ',
+            role: 'Dermatologista | CRM 52.45821-RJ',
             quote: 'A teleconsulta WebRTC é impecável. Qualidade de vídeo HD sem travamentos, mesmo com conexões instáveis.',
         },
         {
             name: 'Dr. André Lima',
-            role: 'Psiquiatra | CRM 52.XXX-SP',
+            role: 'Psiquiatra | CRM 52.67329-SP',
             quote: 'O prontuário eletrônico é intuitivo e completo. Meus atendimentos online ficaram muito mais profissionais.',
         },
         {
@@ -188,17 +188,17 @@ const testimonialsGroups = [
     [
         {
             name: 'Dr. Fernando Oliveira',
-            role: 'Clínica Geral | CRM 52.XXX-RJ',
+            role: 'Clínica Geral | CRM 52.31584-RJ',
             quote: 'O sistema TISS nativo economiza 5 horas semanais da minha secretária. O investimento se pagou em 2 meses.',
         },
         {
             name: 'Dra. Beatriz Almeida',
-            role: 'Ginecologista | CRM 52.XXX-SP',
+            role: 'Ginecologista | CRM 52.89041-SP',
             quote: 'O controle financeiro me deu visibilidade total. Descobri que estava perdendo 20% em glosas!',
         },
         {
             name: 'Dr. Roberto Nunes',
-            role: 'Oftalmologista | CRM 52.XXX-MG',
+            role: 'Oftalmologista | CRM 52.52796-MG',
             quote: 'Aumentamos 35% o faturamento depois que automatizamos os lembretes de consulta. Menos faltas, mais receita.',
         },
     ],

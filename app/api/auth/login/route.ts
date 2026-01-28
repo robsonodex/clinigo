@@ -58,12 +58,19 @@ export async function POST(request: NextRequest) {
 
         if (error) {
             console.error('[LOGIN] Auth error:', error)
+            console.error('[LOGIN] Email attempted:', email)
+            console.error('[LOGIN] Error code:', error.code)
+            console.error('[LOGIN] Error status:', error.status)
             return NextResponse.json(
                 {
                     success: false,
                     error: {
                         message: 'Email ou senha incorretos',
                         code: 'INVALID_CREDENTIALS',
+                        debug: {
+                            supabaseError: error.message,
+                            supabaseCode: error.code
+                        }
                     },
                 },
                 { status: 401 }
