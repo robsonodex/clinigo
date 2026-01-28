@@ -48,7 +48,18 @@ export function AppointmentDetailsDrawer({
 
             if (!response.ok) {
                 // 🔍 Enhanced debugging - capture full error details
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                let errorData: any = {};
+                const rawText = await response.text();
+                try {
+                    errorData = JSON.parse(rawText);
+                } catch (e) {
+                    console.error('[FATAL] API returned non-JSON:', rawText.substring(0, 200));
+                    errorData = {
+                        error: 'Erro de conexão ou rota não encontrada',
+                        code: 'API_ERROR_HTML',
+                        details: rawText.substring(0, 100)
+                    };
+                }
 
                 console.error('[DEBUG] Failed to load appointment:', {
                     status: response.status,
@@ -108,9 +119,16 @@ export function AppointmentDetailsDrawer({
                 setQrCode(data.qr_code)
             }
 
-            // Load video room for teleconsulta
-            if (data.appointment?.appointment_type === 'online') {
-                setVideoRoom(data.appointment.video_room)
+            // Load video room from API response (if exists)
+            console.log('[DEBUG] Full API response:', data)
+            console.log('[DEBUG] Appointment type:', data.appointment?.type || data.appointment?.appointment_type)
+            console.log('[DEBUG] Video room from API:', data.video_room)
+
+            if (data.video_room) {
+                console.log('[DEBUG] ✅ Video room found:', data.video_room)
+                setVideoRoom(data.video_room)
+            } else {
+                console.log('[DEBUG] ❌ No video room in API response')
             }
         } catch (error) {
             console.error('[ERROR] Error loading appointment:', error)
@@ -287,7 +305,7 @@ export function AppointmentDetailsDrawer({
                         </div>
 
                         {/* TELECONSULTA LINK SECTION */}
-                        {appointment.appointment_type === 'online' && videoRoom && (
+                        {(appointment.type === 'TELEMEDICINA' || appointment.type === 'online' || appointment.appointment_type === 'online') && videoRoom && (
                             <>
                                 <Separator />
                                 <div className="space-y-3">

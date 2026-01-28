@@ -33,6 +33,8 @@ interface AppointmentData {
     appointment_time?: string
     doctor: { full_name?: string; user?: { full_name: string } }
     qr_code: QRCodeData | null
+    appointment_type?: string // 'online' | 'telemedicina' | 'presencial'
+    type?: string // fallback field
 }
 
 interface AppointmentSuccessModalProps {
@@ -304,7 +306,7 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
                         appointmentTime={format(new Date(scheduledDate), 'HH:mm', { locale: ptBR })}
                         doctorName={doctorName}
                         qrCodeImage={appointment.qr_code.image}
-                        appointmentType="presencial"
+                        appointmentType={(appointment as any).appointment_type || (appointment as any).type || 'presencial'}
                     />
                 </div>
             )}

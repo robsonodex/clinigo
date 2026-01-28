@@ -28,8 +28,8 @@ const MASTER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0]
 
 // Public routes that don't require any authentication
 const PUBLIC_ROUTES = [
-    '/api/appointments',
-    '/api/appointments/', // Allow dynamic appointment routes
+    '/api/appointments-list', // Moved list/create endpoint (POST public, GET auth)
+    '/api/appointments/', // Allow dynamic appointment routes like /api/appointments/[id]
     '/api/appointments/available-slots',
     '/api/payments/webhook',
     '/api/auth/login',
@@ -235,14 +235,14 @@ export async function middleware(request: NextRequest) {
     // Now get user (session is refreshed)
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Public routes - no auth needed
+    // Public routes that don't require any authentication
     const isPublicRoute = PUBLIC_ROUTES.some((route) => {
-        if (route === '/api/appointments' && pathname === '/api/appointments') {
+        if (route === '/api/appointments-list' && pathname === '/api/appointments-list') {
             return request.method === 'POST'
         }
         if (route === '/api/doctors') {
-            // GET is public, but if user is logged in, we still want to pass headers
-            return pathname.startsWith(route) && request.method === 'GET'
+            // Only GET /api/doctors (list) is public, NOT /api/doctors/[id]
+            return pathname === '/api/doctors' && request.method === 'GET'
         }
         return pathname.startsWith(route)
     })
@@ -259,6 +259,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/registro') ||
         pathname.match(/^\/[^/]+\/agendar/)
 
+    // Public routes/pages without user = allow
     if ((isPublicPage || isPublicRoute) && !user) {
         return response
     }

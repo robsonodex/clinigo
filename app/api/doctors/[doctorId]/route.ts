@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .select(`
         *,
         user:users(email, full_name, avatar_url, phone, is_active),
-        clinic:clinics(id, name, slug),
+        clinic:clinics!doctors_clinic_id_fkey(id, name, slug),
         schedules(*)
       `)
             .eq('id', doctorId)

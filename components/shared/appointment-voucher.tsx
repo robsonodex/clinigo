@@ -69,7 +69,7 @@ export const AppointmentVoucher = React.forwardRef<HTMLDivElement, AppointmentVo
                         <div>
                             <p className="text-sm text-gray-600 font-medium">Tipo:</p>
                             <p className="text-base font-semibold text-gray-900">
-                                {appointmentType === 'presencial' ? 'Presencial' : 'Telemedicina'}
+                                {appointmentType === 'presencial' || appointmentType === 'IN_PERSON' ? 'Presencial' : 'Telemedicina'}
                             </p>
                         </div>
                     )}

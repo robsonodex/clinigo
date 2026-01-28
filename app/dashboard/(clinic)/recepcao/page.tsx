@@ -443,7 +443,7 @@ export default function RecepcaoPage() {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <h4 className="font-semibold">{item.patient.full_name}</h4>
+                                                    <h4 className="font-semibold">{item.patient?.full_name || 'Paciente não identificado'}</h4>
                                                     {item.isPriority && (
                                                         <Badge variant="destructive" className="text-xs">
                                                             <AlertTriangle className="w-3 h-3 mr-1" />

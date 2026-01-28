@@ -50,7 +50,7 @@ export const createAppointmentSchema = z
             .regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:MM'),
         patient: patientSchema,
         payment_type: z.enum(['PRIVATE', 'HEALTH_INSURANCE']).default('PRIVATE'),
-        type: z.enum(['IN_PERSON', 'TELEMEDICINA']).default('IN_PERSON').optional(),
+        type: z.enum(['IN_PERSON', 'TELEMEDICINA', 'online']).default('IN_PERSON').optional(),
         health_insurance_plan_id: z.string().uuid().optional().nullable(),
         insurance_card_number: z.string().optional().nullable(),
         insurance_card_validity: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional().nullable(),

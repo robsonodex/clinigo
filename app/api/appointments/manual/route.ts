@@ -331,6 +331,7 @@ export async function POST(request: NextRequest) {
             appointment_time: appointmentTime,
             status: 'CONFIRMED',
             payment_type: body.payment.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR',
+            appointment_type: body.type === 'telemedicina' ? 'online' : 'presencial',
         }
 
         // Generate video link for telemedicine appointments
@@ -359,6 +360,33 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 500 }
             )
+        }
+
+        // Create video_room for telemedicine appointments (CRITICAL: needed for drawer display)
+        let videoRoom = null
+        if (body.type === 'telemedicina') {
+            const roomId = `room_${appointmentId.substring(0, 8)}_${Date.now()}`
+            const patientToken = `patient_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+            const doctorToken = `doctor_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+
+            const { data: createdRoom, error: roomError } = await supabase
+                .from('video_rooms')
+                .insert({
+                    appointment_id: appointmentId,
+                    room_id: roomId,
+                    patient_token: patientToken,
+                    doctor_token: doctorToken,
+                })
+                .select()
+                .single()
+
+            if (roomError) {
+                console.error('[VIDEO_ROOM] Error creating room:', roomError)
+                // Don't fail the appointment creation, just log the error
+            } else {
+                videoRoom = createdRoom
+                console.log('[VIDEO_ROOM] Created video room for telemedicina appointment:', roomId)
+            }
         }
 
         // Create financial entry if payment was made at counter
@@ -496,6 +524,7 @@ export async function POST(request: NextRequest) {
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',
+                appointment_type: body.type === 'telemedicina' ? 'telemedicina' : 'presencial',
                 patient: appointmentWithRelations?.patient || { full_name: (patient as any).full_name },
                 doctor: appointmentWithRelations?.doctor || { user: { full_name: (doctor as any).user.full_name } },
                 clinic: appointmentWithRelations?.clinic,

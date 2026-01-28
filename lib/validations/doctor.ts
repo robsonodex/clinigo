@@ -128,10 +128,12 @@ export const scheduleEntrySchema = z.object({
         .max(6, 'Dia da semana deve ser entre 0 (Domingo) e 6 (Sábado)'),
     start_time: z
         .string()
-        .regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:MM'),
+        .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Hora deve estar no formato HH:MM ou HH:MM:SS')
+        .transform(val => val.substring(0, 5)), // Normalize to HH:MM
     end_time: z
         .string()
-        .regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:MM'),
+        .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Hora deve estar no formato HH:MM ou HH:MM:SS')
+        .transform(val => val.substring(0, 5)), // Normalize to HH:MM
     slot_duration_minutes: z
         .number()
         .int()

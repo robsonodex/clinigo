@@ -5,19 +5,21 @@ import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
 
 interface RouteParams {
-    params: Promise<{ appointmentId: string }>
+    params: Promise<{ id: string }>
 }
 
 /**
- * GET /api/appointments/[appointmentId]?include=qr_code
+ * GET /api/appointments/[id]?include=qr_code
  * Fetch a single appointment with optional QR code
  */
+export const dynamic = 'force-dynamic'
+
 export async function GET(
     request: NextRequest,
     { params }: RouteParams
 ) {
     try {
-        const { appointmentId } = await params
+        const { id: appointmentId } = await params
         const url = new URL(request.url)
         const includeQRCode = url.searchParams.get('include') === 'qr_code'
 
@@ -51,7 +53,7 @@ export async function GET(
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
             `)
             .eq('id', appointmentId)
-            .maybeSingle()
+            .single()
 
         console.log('[DEBUG] Full Query result:', {
             hasData: !!appointment,
@@ -105,9 +107,26 @@ export async function GET(
             }
         }
 
+        // Fetch video_room for teleconsulta (same pattern as QR code)
+        let videoRoom = null
+        const appointmentType = (appointment as any).type || (appointment as any).appointment_type
+
+        if (appointmentType === 'TELEMEDICINA' || appointmentType === 'online') {
+            const { data: roomData } = await supabase
+                .from('video_rooms')
+                .select('room_id, patient_token, doctor_token')
+                .eq('appointment_id', appointmentId)
+                .maybeSingle()
+
+            if (roomData) {
+                videoRoom = roomData
+            }
+        }
+
         return NextResponse.json({
             appointment,
-            qr_code: qrCode
+            qr_code: qrCode,
+            video_room: videoRoom
         })
 
     } catch (error) {
@@ -121,7 +140,7 @@ export async function GET(
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
-        const { appointmentId } = await params
+        const { id: appointmentId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
