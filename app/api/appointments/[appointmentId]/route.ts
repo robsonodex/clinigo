@@ -29,59 +29,17 @@ export async function GET(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        // Check if appointment exists (debug mode)
-        // Try with service role to confirm existence independent of RLS
-        const adminDb = createServiceRoleClient()
-        const { data: adminCheck, error: adminError } = await adminDb
-            .from('appointments')
-            .select('id, clinic_id')
-            .eq('id', appointmentId)
-            .single()
-
-        console.log(`[DEBUG] Appointment ${appointmentId} admin check:`, {
-            found: adminCheck ? 'Found' : 'Not Found',
-            adminCheckData: adminCheck,
-            adminError: adminError?.message || null,
-            adminErrorCode: adminError?.code || null
-        })
-
-        // Get user role and clinic for authorization
-        const { data: currentUser } = await adminDb
-            .from('users')
-            .select('id, role, clinic_id')
-            .eq('id', user.id)
-            .single()
-
-        console.log('[DEBUG] Current user:', {
-            userId: user.id,
-            role: currentUser?.role,
-            clinicId: currentUser?.clinic_id
-        })
-
-        // Check if user has access to this appointment
-        const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN'
-        const sameClinic = currentUser?.clinic_id === adminCheck?.clinic_id
-
-        if (!adminCheck) {
-            return NextResponse.json(
-                { error: 'Agendamento não encontrado', code: 'NOT_FOUND', id: appointmentId },
-                { status: 404 }
-            )
-        }
-
-        if (!isSuperAdmin && !sameClinic) {
-            console.log('[DEBUG] Access denied - not SUPER_ADMIN and different clinic')
-            return NextResponse.json(
-                { error: 'Você não tem permissão para visualizar este agendamento', code: 'FORBIDDEN' },
-                { status: 403 }
-            )
-        }
+        // Authorization is handled by RLS when using standard client
+        // But we can check role for extra safety if needed
+        const isSuperAdmin = false // We can get this from token if needed, or rely on RLS
 
         // Fetch appointment with full details using service role (bypasses RLS)
         console.log('[DEBUG] Fetching appointment with ID:', appointmentId)
-        console.log('[DEBUG] Using adminDb (service role):', !!adminDb)
+        // console.log('[DEBUG] Using adminDb (service role):', !!adminDb) // Removed
 
-        const { data: appointment, error } = await adminDb
+        // Use standard supabase client (with user session) to respect RLS
+        // This avoids issues if Service Role Key is misconfigured in Prod
+        const { data: appointment, error } = await supabase
             .from('appointments')
             .select(`
                 *,
@@ -90,20 +48,23 @@ export async function GET(
                     id,
                     user:users(full_name)
                 ),
-                clinic:clinics!appointments_clinic_id_fkey(id, name, slug),
-                video_room:video_rooms!video_rooms_appointment_id_fkey(room_id, patient_token, doctor_token)
+                clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
             `)
             .eq('id', appointmentId)
-            .single()
+            .maybeSingle()
 
-        console.log('[DEBUG] Query result - error:', error)
-        console.log('[DEBUG] Query result - has data:', !!appointment)
+        console.log('[DEBUG] Full Query result:', {
+            hasData: !!appointment,
+            hasError: !!error,
+            errorMessage: error?.message,
+            errorCode: error?.code
+        })
 
         if (error) {
             console.error('[ERROR] Supabase error details:', JSON.stringify(error))
             return NextResponse.json(
                 {
-                    error: 'Erro ao buscar agendamento',
+                    error: 'Erro ao buscar agendamento (Query Falhou)',
                     details: error.message,
                     code: error.code,
                     hint: error.hint
@@ -113,9 +74,9 @@ export async function GET(
         }
 
         if (!appointment) {
-            console.error('[ERROR] Appointment not found in database:', appointmentId)
+            console.error('[ERROR] Appointment not found in database (Check 2):', appointmentId)
             return NextResponse.json(
-                { error: 'Agendamento não encontrado', code: 'NOT_FOUND', id: appointmentId },
+                { error: 'Agendamento não encontrado (Check 2)', code: 'NOT_FOUND', id: appointmentId },
                 { status: 404 }
             )
         }
