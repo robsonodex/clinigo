@@ -459,6 +459,14 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|webmanifest)$).*)',
+        /*
+         * Match all request paths except for:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)  
+         * - favicon.ico (favicon file)
+         * - icons/* (PWA icons)
+         * - public static files (svg, png, jpg, etc)
+         */
+        '/((?!_next/static|_next/image|favicon\\.ico|icons/|public/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|webmanifest|js|css|woff|woff2|ttf|eot)$).*)',
     ],
 }
