@@ -397,11 +397,12 @@ export class TissXMLGeneratorV2 {
 
     /**
      * Generate SHA-256 hash for document integrity (v4.02.00 only)
+     * Uses proper cryptographic hashing for TISS compliance
      */
     private generateHash(batchData: TissBatchData): string {
-        // Simplified hash for now - in production use crypto.subtle.digest
+        const crypto = require('crypto');
         const content = JSON.stringify(batchData);
-        return Buffer.from(content).toString('base64').slice(0, 32);
+        return crypto.createHash('sha256').update(content).digest('hex');
     }
 }
 

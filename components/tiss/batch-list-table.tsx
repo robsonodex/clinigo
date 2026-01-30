@@ -13,6 +13,9 @@ import {
     XCircle,
     Clock,
     AlertCircle,
+    ShieldCheck,
+    PenTool,
+    Loader2,
 } from 'lucide-react';
 import {
     Table,
@@ -118,6 +121,92 @@ interface BatchListTableProps {
 export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTableProps) {
     const router = useRouter();
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [validatingId, setValidatingId] = useState<string | null>(null);
+    const [signingId, setSigningId] = useState<string | null>(null);
+
+    // Validar XML do lote
+    const handleValidateXSD = async (batch: TissBatch) => {
+        if (!batch.id) {
+            toast.error('Lote inválido');
+            return;
+        }
+
+        setValidatingId(batch.id);
+
+        try {
+            const response = await fetch('/api/tiss/validate-xsd', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ batch_id: batch.id }),
+            });
+
+            const result = await response.json();
+
+            if (result.valid) {
+                toast.success('XML válido! Pronto para assinatura.', {
+                    description: `Schema ${result.schemaVersion}`,
+                });
+            } else {
+                toast.error(`Erros de validação: ${result.errors.length}`, {
+                    description: result.errors[0]?.message || 'Verifique o XML',
+                });
+            }
+        } catch (error: any) {
+            toast.error('Erro ao validar XML');
+        } finally {
+            setValidatingId(null);
+        }
+    };
+
+    // Assinar lote digitalmente
+    const handleSign = async (batch: TissBatch) => {
+        // Abrir dialog para upload de certificado
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.pfx,.p12';
+        fileInput.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+
+            const password = prompt('Digite a senha do certificado:');
+            if (!password) return;
+
+            setSigningId(batch.id);
+
+            try {
+                // Converter arquivo para base64
+                const buffer = await file.arrayBuffer();
+                const base64 = btoa(
+                    new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                );
+
+                const response = await fetch(`/api/tiss/batches/${batch.id}/sign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ certificate: base64, password }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    toast.success('Lote assinado com sucesso!', {
+                        description: `Certificado: ${result.certificateInfo.commonName}`,
+                    });
+                    onRefresh();
+                } else {
+                    toast.error(result.error || 'Erro ao assinar', {
+                        description: result.details || '',
+                    });
+                }
+            } catch (error: any) {
+                toast.error('Erro ao assinar lote');
+            } finally {
+                setSigningId(null);
+            }
+        };
+
+        fileInput.click();
+    };
 
     // Deletar lote
     const handleDelete = async (batch: TissBatch) => {
@@ -282,6 +371,32 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                                     Baixar XML
                                                 </DropdownMenuItem>
                                             )}
+
+                                            {/* Validação XSD */}
+                                            <DropdownMenuItem
+                                                onClick={() => handleValidateXSD(batch)}
+                                                disabled={validatingId === batch.id}
+                                            >
+                                                {validatingId === batch.id ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                                )}
+                                                {validatingId === batch.id ? 'Validando...' : 'Validar XSD'}
+                                            </DropdownMenuItem>
+
+                                            {/* Assinatura Digital */}
+                                            <DropdownMenuItem
+                                                onClick={() => handleSign(batch)}
+                                                disabled={signingId === batch.id || batch.status === 'SENT'}
+                                            >
+                                                {signingId === batch.id ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <PenTool className="mr-2 h-4 w-4" />
+                                                )}
+                                                {signingId === batch.id ? 'Assinando...' : 'Assinar Digitalmente'}
+                                            </DropdownMenuItem>
 
                                             {batch.status === 'DRAFT' && (
                                                 <>
