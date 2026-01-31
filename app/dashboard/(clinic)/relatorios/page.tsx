@@ -136,10 +136,18 @@ export default function ReportsPage() {
     const handleExport = async (format: 'csv' | 'pdf') => {
         setExporting(true)
         try {
-            // TODO: Implement export to CSV/PDF
-            toast.success(`Exportação ${format.toUpperCase()} iniciada`)
-        } catch (error) {
-            toast.error('Erro ao exportar relatório')
+            if (format === 'csv') {
+                const { exportToCSV, formatReportData } = await import('@/lib/utils/export')
+                const data = formatReportData(kpis, revenueByDoctor, dateRange)
+                exportToCSV(data, 'relatorio-clinigo')
+                toast.success('Relatório CSV exportado com sucesso')
+            } else {
+                const { exportToPDF } = await import('@/lib/utils/export')
+                await exportToPDF('report-content', 'relatorio-clinigo')
+                toast.success('Relatório PDF exportado com sucesso')
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao exportar relatório')
         } finally {
             setExporting(false)
         }
@@ -154,7 +162,7 @@ export default function ReportsPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 space-y-8">
+        <div id="report-content" className="container mx-auto py-8 px-4 space-y-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -184,6 +192,11 @@ export default function ReportsPage() {
                     <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting}>
                         <Download className="h-4 w-4 mr-2" />
                         CSV
+                    </Button>
+
+                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting}>
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
                     </Button>
                 </div>
             </div>

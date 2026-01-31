@@ -20,48 +20,43 @@ import {
 const packages = [
     {
         name: 'Site Essencial',
-        price: 'R$ 1.500',
-        description: 'Perfeito para começar sua presença online',
+        price: 'R$ 790',
+        description: 'Para começar sem dor no bolso',
         features: [
             'Landing page moderna e responsiva',
-            'Até 5 seções personalizadas',
-            'Integração com WhatsApp',
-            'Formulário de contato',
+            'Até 4 seções estratégicas',
+            'Botão WhatsApp + Formulário',
             'SEO básico otimizado',
             'Certificado SSL incluso',
-            'Entrega em até 7 dias',
+            'Entrega rápida em até 5 dias',
         ],
         highlight: false,
     },
     {
         name: 'Site Profissional',
-        price: 'R$ 3.500',
-        description: 'O mais escolhido por clínicas em crescimento',
+        price: 'R$ 1.990',
+        description: 'O que mais gera retorno financeiro',
         features: [
             'Tudo do Essencial +',
-            'Até 10 páginas',
-            'Blog integrado',
-            'Galeria de fotos e equipe',
-            'Mapa de localização',
-            'Integração com CliniGo',
-            'Painel admin simples',
-            'Entrega em até 14 dias',
+            'Até 8 páginas completas',
+            'Integração total CliniGo',
+            'Painel administrativo fácil',
+            'Entrega em até 10 dias',
         ],
         highlight: true,
     },
     {
         name: 'Site Premium',
-        price: 'R$ 6.500',
-        description: 'Para clínicas que querem se destacar',
+        price: 'R$ 3.900',
+        description: 'Para clínicas consolidadas',
         features: [
             'Tudo do Profissional +',
             'Design 100% exclusivo',
             'Páginas ilimitadas',
-            'Agendamento online integrado',
-            'Área do paciente',
+            'Agendamento online avançado',
+            'Área exclusiva do paciente',
             'Chat ao vivo',
-            'SEO avançado',
-            'Suporte prioritário 6 meses',
+            'Suporte prioritário 3 meses',
             'Entrega em até 21 dias',
         ],
         highlight: false,
@@ -179,17 +174,17 @@ export default function SitePage() {
                             </p>
                         </div>
 
-                        <div className="grid md:grid-cols-3 gap-8">
+                        <div className="grid md:grid-cols-3 gap-8 mb-12">
                             {packages.map((pkg, i) => (
                                 <div
                                     key={i}
-                                    className={`relative bg-white rounded-2xl p-8 shadow-sm border-2 ${pkg.highlight
-                                        ? 'border-emerald-500 shadow-lg'
-                                        : 'border-gray-200'
+                                    className={`relative bg-white rounded-2xl p-8 shadow-sm border-2 flex flex-col ${pkg.highlight
+                                        ? 'border-emerald-500 shadow-xl scale-105 z-10'
+                                        : 'border-gray-200 hover:border-emerald-200 transition-colors'
                                         }`}
                                 >
                                     {pkg.highlight && (
-                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-sm font-medium px-4 py-1 rounded-full">
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold px-4 py-1 rounded-full shadow-lg">
                                             Mais Popular
                                         </div>
                                     )}
@@ -198,21 +193,23 @@ export default function SitePage() {
                                         <h3 className="text-xl font-bold text-gray-900 mb-2">
                                             {pkg.name}
                                         </h3>
-                                        <p className="text-sm text-gray-600 mb-4">
+                                        <div className="inline-block px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-500 mb-4">
                                             {pkg.description}
-                                        </p>
-                                        <div className="text-3xl font-bold text-emerald-600">
+                                        </div>
+                                        <div className="text-4xl font-bold text-gray-900">
                                             {pkg.price}
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <p className="text-xs text-gray-400 mt-2 font-medium uppercase tracking-wider">
                                             pagamento único
                                         </p>
                                     </div>
 
-                                    <ul className="space-y-3 mb-8">
+                                    <ul className="space-y-4 mb-8 flex-1">
                                         {pkg.features.map((feature, j) => (
-                                            <li key={j} className="flex items-start gap-2 text-sm text-gray-700">
-                                                <Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                            <li key={j} className="flex items-start gap-3 text-[15px] text-gray-600">
+                                                <div className={`mt-1 p-0.5 rounded-full flex-shrink-0 ${pkg.highlight ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                                                    <Check className="w-3 h-3" />
+                                                </div>
                                                 {feature}
                                             </li>
                                         ))}
@@ -222,18 +219,76 @@ export default function SitePage() {
                                         href={`https://wa.me/5521965532247?text=Olá!%20Tenho%20interesse%20no%20pacote%20${encodeURIComponent(pkg.name)}%20para%20desenvolvimento%20de%20site`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="block w-full py-3 rounded-xl font-semibold text-center transition-colors bg-gray-100 text-gray-900 hover:bg-emerald-600 hover:text-white"
+                                        className={`block w-full py-4 rounded-xl font-bold text-center transition-all transform hover:-translate-y-1 ${pkg.highlight
+                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
+                                            : 'bg-gray-900 text-white hover:bg-gray-800'
+                                            }`}
                                     >
-                                        Solicitar Orçamento
+                                        Quero este site
                                     </a>
                                 </div>
                             ))}
                         </div>
 
-                        <p className="text-center text-sm text-gray-500 mt-8">
-                            * A aquisição do domínio e a mensalidade de hospedagem são de responsabilidade do contratante.<br />
-                            Consulte condições de parcelamento.
-                        </p>
+                        {/* Bundle Section */}
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-8 md:p-12 relative overflow-hidden text-center md:text-left">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
+                            <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
+
+                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
+                                <div className="flex-1">
+                                    <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-4 py-1.5 rounded-full text-sm font-bold mb-6 border border-emerald-500/30">
+                                        <Zap className="w-4 h-4" />
+                                        OPORTUNIDADE ÚNICA
+                                    </div>
+                                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                                        Leve o <span className="text-emerald-400">Site Profissional</span> + Software CliniGo
+                                    </h3>
+                                    <p className="text-lg text-slate-300 mb-8 max-w-xl">
+                                        A combinação perfeita: um site que atrai pacientes e um sistema que fideliza.
+                                        Contratando o bundle, você ganha a <strong>implantação do sistema (R$ 497) GRÁTIS</strong>.
+                                    </p>
+                                    <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                                        <a
+                                            href="https://wa.me/5521965532247?text=Olá!%20Quero%20aproveitar%20o%20Bundle%20Site%20Profissional%20+%20CliniGo"
+                                            className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
+                                        >
+                                            Quero o Bundle Promocional
+                                        </a>
+                                        <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-xl text-slate-300 text-sm flex items-center gap-3">
+                                            <Shield className="w-5 h-5 text-emerald-400" />
+                                            Manutenção site a partir de R$ 149/mês
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Visual do Bundle */}
+                                <div className="relative w-full max-w-sm">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl rotate-6 opacity-20 blur-sm transform scale-95" />
+                                    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 relative shadow-2xl">
+
+                                        <ul className="space-y-4 pt-2">
+                                            <li className="flex items-center gap-3 text-white">
+                                                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs">✓</div>
+                                                Site Profissional Completo
+                                            </li>
+                                            <li className="flex items-center gap-3 text-white">
+                                                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs">✓</div>
+                                                Licença CliniGo (mensal)
+                                            </li>
+                                            <li className="flex items-center gap-3 text-white font-medium">
+                                                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-slate-900 text-xs">★</div>
+                                                Implantação GRÁTIS
+                                            </li>
+                                            <li className="flex items-center gap-3 text-white font-medium">
+                                                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-slate-900 text-xs">★</div>
+                                                Treinamento da Equipe
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -314,7 +369,7 @@ export default function SitePage() {
                                 },
                                 {
                                     q: 'Vocês fazem manutenção do site?',
-                                    a: 'Sim! Oferecemos planos de manutenção mensal a partir de R$ 150/mês com atualizações, backup e suporte.'
+                                    a: 'Sim! Oferecemos planos de manutenção mensal a partir de R$ 149/mês com atualizações, backup e suporte.'
                                 },
                             ].map((faq, i) => (
                                 <div key={i} className="bg-white rounded-xl p-6 border">

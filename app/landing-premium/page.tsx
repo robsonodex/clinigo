@@ -20,12 +20,14 @@ import {
     CreditCard,
     Headphones,
     ChevronRight,
-    Play,
     Users,
     TrendingUp,
     Clock,
     Settings,
-    Globe
+    Globe,
+    ScanFace,
+    Fingerprint,
+    Sparkles
 } from 'lucide-react'
 import './premium-landing.css'
 
@@ -62,7 +64,7 @@ const bentoFeatures = [
         large: false,
     },
     {
-        id: 'checkin',
+        id: 'checkin-qr',
         icon: QrCode,
         title: 'Check-in QR Code',
         description: 'Redução de 40% na fila com pré-cadastro e chegada autônoma.',
@@ -83,6 +85,43 @@ const bentoFeatures = [
         large: true,
     },
 ]
+
+// FEATURES PREMIUM EXCLUSIVAS
+const premiumExclusiveFeatures = [
+    {
+        id: 'face-checkin',
+        icon: ScanFace,
+        title: 'Check-in por Reconhecimento Facial',
+        description: 'Paciente olha para a câmera e é reconhecido instantaneamente. Primeiro no Brasil!',
+        badge: 'EXCLUSIVO',
+        highlight: true,
+    },
+    {
+        id: 'tiss-signature',
+        icon: Fingerprint,
+        title: 'Assinatura Digital TISS',
+        description: 'Assine lotes TISS com certificado A1/A3 diretamente no navegador. Sem software adicional.',
+        badge: 'NOVO',
+        highlight: false,
+    },
+    {
+        id: 'lgpd-biometric',
+        icon: Shield,
+        title: 'Biometria Criptografada LGPD',
+        description: 'Dados faciais criptografados com AES-256. 100% seguro.',
+        badge: 'SEGURO',
+        highlight: false,
+    },
+    {
+        id: 'smart-reports',
+        icon: Sparkles,
+        title: 'Relatórios com Export Instantâneo',
+        description: 'Gere PDF e CSV de qualquer relatório com 1 clique. Dados sempre atualizados.',
+        badge: 'PRO',
+        highlight: false,
+    },
+]
+
 
 const plans = [
     {
@@ -469,53 +508,97 @@ function TrustBar() {
 }
 
 function BentoGridSection() {
-    const cardRef = useRef<HTMLDivElement>(null)
-
-    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        const card = e.currentTarget
-        const rect = card.getBoundingClientRect()
-        const x = e.clientX - rect.left
-        const y = e.clientY - rect.top
-        const centerX = rect.width / 2
-        const centerY = rect.height / 2
-        const rotateX = (y - centerY) / 20
-        const rotateY = (centerX - x) / 20
-
-        card.style.setProperty('--rotateX', `${-rotateX}deg`)
-        card.style.setProperty('--rotateY', `${rotateY}deg`)
-    }, [])
-
-    const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        e.currentTarget.style.setProperty('--rotateX', '0deg')
-        e.currentTarget.style.setProperty('--rotateY', '0deg')
-    }, [])
-
     return (
-        <section id="funcionalidades" className="bento-section">
-            <div className="max-w-[1200px] mx-auto">
+        <section id="funcionalidades" className="py-24 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+            {/* Background glow effects */}
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl" />
+
+            <div className="max-w-[1200px] mx-auto px-6 relative z-10">
+                {/* Section Header */}
                 <div className="text-center mb-16">
-                    <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Tudo que sua clínica precisa
+                    <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full px-4 py-2 mb-6">
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        <span className="text-sm text-emerald-300 font-medium">Plataforma Completa</span>
+                    </div>
+                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                        Tudo que sua clínica{' '}
+                        <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                            precisa em um só lugar
+                        </span>
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                        Funcionalidades premium desenhadas para clínicas que querem crescer com eficiência.
+                    <p className="text-lg text-white/60 max-w-2xl mx-auto">
+                        Funcionalidades premium para clínicas que querem crescer com eficiência.
                     </p>
                 </div>
 
-                <div className="bento-grid" ref={cardRef}>
+                {/* HERO FEATURE - Check-in Facial */}
+                <div className="mb-12">
+                    <div className="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-3xl p-8 md:p-12 backdrop-blur-sm relative overflow-hidden group hover:border-emerald-400/50 transition-all duration-500">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                            <div className="flex-shrink-0">
+                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+                                    <ScanFace className="w-12 h-12 md:w-16 md:h-16 text-white" />
+                                </div>
+                            </div>
+                            <div className="text-center md:text-left flex-1">
+                                <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-3 py-1 mb-4">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Primeiro no Brasil</span>
+                                </div>
+                                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                                    Check-in por Reconhecimento Facial
+                                </h3>
+                                <p className="text-lg text-white/70 mb-6 max-w-xl">
+                                    Elimine filas e papelada. O paciente olha para a câmera e é reconhecido instantaneamente.
+                                    Segurança de nível bancário com criptografia AES-256, 100% compatível com LGPD.
+                                </p>
+                                <div className="flex flex-wrap gap-3 justify-center">
+                                    <span className="bg-white/10 text-white/80 px-3 py-1 rounded-full text-sm">LGPD Compliant</span>
+                                    <span className="bg-white/10 text-white/80 px-3 py-1 rounded-full text-sm">Criptografia AES-256</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Features Grid - 6 core features */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                     {bentoFeatures.map((feature, i) => (
                         <div
                             key={feature.id}
-                            className={`bento-card tilt-card ${feature.large ? 'large' : ''}`}
-                            onMouseMove={handleMouseMove}
-                            onMouseLeave={handleMouseLeave}
-                            style={{ animationDelay: `${i * 100}ms` }}
+                            className={`bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm hover:border-emerald-500/30 hover:bg-white/10 transition-all duration-300 group ${feature.large ? 'md:col-span-2 lg:col-span-1' : ''}`}
                         >
-                            <div className="bento-icon">
-                                <feature.icon className="w-7 h-7" />
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <feature.icon className="w-6 h-6 text-emerald-400" />
+                                </div>
                             </div>
-                            <h3 className="bento-title">{feature.title}</h3>
-                            <p className="bento-description">{feature.description}</p>
+                            <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+                            <p className="text-sm text-white/60">{feature.description}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Premium Features Grid - Exclusive features (same style) */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {premiumExclusiveFeatures.filter(f => f.id !== 'face-checkin').map((feature, i) => (
+                        <div
+                            key={feature.id}
+                            className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm hover:border-emerald-500/30 hover:bg-white/10 transition-all duration-300 group"
+                        >
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <feature.icon className="w-6 h-6 text-emerald-400" />
+                                </div>
+                                <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                                    {feature.badge}
+                                </span>
+                            </div>
+                            <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+                            <p className="text-sm text-white/60">{feature.description}</p>
                         </div>
                     ))}
                 </div>
@@ -523,6 +606,8 @@ function BentoGridSection() {
         </section>
     )
 }
+
+
 
 function PricingSection() {
     return (
@@ -669,50 +754,7 @@ function TestimonialsSection() {
 }
 
 
-function DifferentiatorsSection() {
-    return (
-        <section className="py-24 bg-white">
-            <div className="max-w-[1200px] mx-auto px-6">
-                <div className="grid md:grid-cols-2 gap-16 items-center">
-                    {/* Video Mockup */}
-                    <div className="relative aspect-video bg-gradient-to-br from-[#0A3F3F] to-[#14B8A6] rounded-2xl overflow-hidden shadow-2xl">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <button className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-all hover:scale-110">
-                                <Play className="w-8 h-8 text-white ml-1" />
-                            </button>
-                        </div>
-                        <div className="absolute bottom-4 left-4 right-4 flex justify-between text-white/80 text-sm">
-                            <span>Demo CliniGo</span>
-                            <span>2:45</span>
-                        </div>
-                    </div>
 
-                    {/* Differentiators List */}
-                    <div>
-                        <h2 className="text-4xl font-bold text-gray-900 mb-8">
-                            Por que escolher CliniGo?
-                        </h2>
-
-                        <div className="space-y-6">
-                            {differentiators.map((item, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-4 reveal"
-                                    style={{ animationDelay: `${i * 100}ms` }}
-                                >
-                                    <div className="w-12 h-12 rounded-xl bg-[#14B8A6]/10 flex items-center justify-center">
-                                        <item.icon className="w-6 h-6 text-[#14B8A6]" />
-                                    </div>
-                                    <span className="text-lg text-gray-700">{item.text}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    )
-}
 
 function FAQSection() {
     const [openIndex, setOpenIndex] = useState<number | null>(null)
@@ -866,6 +908,29 @@ function Footer() {
                     </div>
                 </div>
 
+                {/* Certification Badges */}
+                <div className="border-t border-gray-800 pt-8 pb-6">
+                    <div className="flex flex-col items-center gap-4">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Certificações</p>
+                        <div className="flex items-center justify-center gap-6 flex-wrap">
+                            <Image
+                                src="/images/selo-tiss.png"
+                                alt="Selo Conformidade TISS - ANS"
+                                width={120}
+                                height={120}
+                                className="rounded-xl"
+                            />
+                            <Image
+                                src="/images/selo-clinigo-digital.jpg"
+                                alt="Selo CliniGo Clínica Digital"
+                                width={120}
+                                height={120}
+                                className="rounded-xl"
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
                     <p className="text-sm">
                         © 2026 CliniGo. Todos os direitos reservados.
@@ -924,7 +989,7 @@ export default function PremiumLandingPage() {
             <PricingSection />
             <WebsiteBanner />
             <TestimonialsSection />
-            <DifferentiatorsSection />
+
             <FAQSection />
             <FinalCTASection />
             <Footer />

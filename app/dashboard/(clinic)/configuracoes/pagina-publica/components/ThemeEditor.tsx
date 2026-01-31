@@ -95,6 +95,12 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
         const file = e.target.files?.[0]
         if (!file) return
 
+        // Validar tamanho (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo 2MB.')
+            return
+        }
+
         // Create preview
         const reader = new FileReader()
         reader.onload = () => {
@@ -102,8 +108,49 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
         }
         reader.readAsDataURL(file)
 
-        // TODO: Upload to Supabase Storage and get URL
-        // For now, just show preview
+        // Upload to Supabase Storage
+        try {
+            const { createClient } = await import('@/lib/supabase/client')
+            const supabase = createClient()
+
+            // Get clinic ID from user profile
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Usuário não autenticado')
+
+            const { data: userData } = await supabase
+                .from('users')
+                .select('clinic_id')
+                .eq('id', user.id)
+                .single()
+
+            if (!userData?.clinic_id) throw new Error('Clínica não encontrada')
+
+            const fileExt = file.name.split('.').pop()
+            const filePath = `${userData.clinic_id}/logo.${fileExt}`
+
+            const { error: uploadError } = await supabase
+                .storage
+                .from('clinic-assets')
+                .upload(filePath, file, { upsert: true })
+
+            if (uploadError) throw uploadError
+
+            const { data: urlData } = supabase
+                .storage
+                .from('clinic-assets')
+                .getPublicUrl(filePath)
+
+            // Update clinic with logo URL
+            await supabase
+                .from('clinics')
+                .update({ logo_url: urlData.publicUrl })
+                .eq('id', userData.clinic_id)
+
+            onChange({ logo_url: urlData.publicUrl })
+        } catch (error: any) {
+            console.error('Logo upload error:', error)
+            // Keep preview even if upload fails
+        }
     }
 
     return (

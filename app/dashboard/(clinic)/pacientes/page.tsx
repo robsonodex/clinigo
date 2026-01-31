@@ -52,6 +52,7 @@ import {
     Loader2,
     Plus,
     Calendar,
+    Camera,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -348,12 +349,13 @@ export default function PacientesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => {
-                                                        setSelectedPatient(patient)
-                                                        setShowDetailsDialog(true)
-                                                    }}>
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)}>
                                                         <Eye className="w-4 h-4 mr-2" />
                                                         Ver detalhes
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=biometria`)}>
+                                                        <Camera className="w-4 h-4 mr-2" />
+                                                        Biometria Facial
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}>
                                                         <FileText className="w-4 h-4 mr-2" />

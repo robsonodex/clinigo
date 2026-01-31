@@ -47,11 +47,22 @@ export function TISSPreAuditDashboard() {
             // Parse uploaded file (XML ou JSON)
             const text = await file.text()
 
-            // TODO: Implement actual parser based on file type
+            // Auto-detect file type based on content
+            const detectFileType = (content: string): 'GUIA' | 'LOTE' | 'RETORNO' | 'UNKNOWN' => {
+                if (content.includes('<guiaConsulta>') || content.includes('<guiaSP_SADT>')) return 'GUIA'
+                if (content.includes('<loteGuias>')) return 'LOTE'
+                if (content.includes('<mensagemTISS>') && content.includes('tipoTransacao="ENVIO"')) return 'RETORNO'
+                return 'UNKNOWN'
+            }
+
+            const fileType = detectFileType(text)
+
             toast({
                 title: 'Arquivo carregado',
-                description: `${file.name} - processamento em desenvolvimento`,
+                description: `${file.name} - Tipo detectado: ${fileType}`,
             })
+
+            // TODO: Parse actual content and populate guides array
         } catch (error) {
             toast({
                 title: 'Erro ao carregar arquivo',
