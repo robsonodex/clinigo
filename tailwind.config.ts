@@ -52,11 +52,50 @@ const config: Config = {
                     DEFAULT: 'hsl(var(--card))',
                     foreground: 'hsl(var(--card-foreground))',
                 },
+
+                // --- NOVAS CORES (ELEGANT SAAS) ---
+                'navy-deep': {
+                    DEFAULT: '#0B1120', // Fundo principal escuro
+                    light: '#151E32',   // Fundo dos cards
+                    lighter: '#1E293B',
+                },
+                'teal-vibrant': {
+                    DEFAULT: '#14B8A6', // Teal principal
+                    dark: '#0F766E',
+                    light: '#2DD4BF',
+                    glow: '#4FD1C5',
+                },
+                'green-gradient': {
+                    start: '#10B981',
+                    end: '#14B8A6',
+                },
+
+                // Mantendo compatibilidade com Brutalism (opcional)
+                'medical-dark': '#0A4D3C',
+                'medical-teal': '#14B8A6',
+                'medical-emerald': '#10B981',
+                'slate-deep': '#0F172A',
+            },
+            fontFamily: {
+                'display': ['var(--font-satoshi)', 'Inter', 'system-ui', 'sans-serif'],
+                'sans': ['var(--font-general-sans)', 'Inter', 'system-ui', 'sans-serif'],
+                'body': ['var(--font-cabinet-grotesk)', 'Inter', 'system-ui', 'sans-serif'],
             },
             borderRadius: {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)',
+                // --- NOVOS RADIUS (ELEGANT) ---
+                'xl': '1rem',
+                '2xl': '1.5rem',
+                '3xl': '2rem', // Usado nos cards features
+                'full': '9999px',
+                'brutal': '2px', // Mantido legado
+            },
+            boxShadow: {
+                // Sombras refinadas para o tema dark
+                'premium': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                'glow-teal': '0 0 20px rgba(20, 184, 166, 0.3), 0 0 40px rgba(20, 184, 166, 0.1)',
             },
             keyframes: {
                 'accordion-down': {

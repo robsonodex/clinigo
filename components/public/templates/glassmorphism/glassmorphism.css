@@ -577,3 +577,259 @@
         display: none;
     }
 }
+
+/* Sections */
+.glass-section {
+    position: relative;
+    z-index: 1;
+    padding: 100px 40px;
+}
+
+.glass-section-alt {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.glass-section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.glass-section-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 16px;
+    color: white;
+}
+
+.glass-section-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    margin-bottom: 48px;
+}
+
+/* Specialties Grid */
+.glass-specialties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+.glass-specialty-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.glass-specialty-card:hover {
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+.glass-specialty-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+}
+
+.glass-specialty-card h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.glass-specialty-card p {
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 16px 0;
+}
+
+.glass-btn-small {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+}
+
+/* Doctors Grid */
+.glass-doctors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.glass-doctor-card-large {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.glass-doctor-card-large:hover {
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.glass-doctor-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    overflow: hidden;
+}
+
+.glass-doctor-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.glass-avatar-placeholder {
+    color: white;
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+.glass-doctor-details h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.glass-doctor-specialty {
+    color: #06b6d4;
+    font-weight: 500;
+    margin: 0 0 4px 0;
+}
+
+.glass-doctor-crm {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin: 0 0 16px 0;
+}
+
+/* About Section */
+.glass-about-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.glass-about-text {
+    text-align: center;
+}
+
+.glass-about-text p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.15rem;
+    line-height: 1.8;
+    margin-bottom: 32px;
+}
+
+.glass-about-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.glass-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 16px 20px;
+    border-radius: 12px;
+}
+
+.glass-feature-icon {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.glass-feature span:last-child {
+    color: white;
+    font-weight: 500;
+}
+
+/* Contact Section */
+.glass-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+.glass-contact-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.glass-contact-card:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.glass-contact-icon {
+    font-size: 2rem;
+    margin-bottom: 16px;
+}
+
+.glass-contact-card h3 {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.glass-contact-card p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+.glass-contact-cta {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+.glass-contact-cta .glass-btn {
+    margin-top: 16px;
+}
+
+/* Responsive for new sections */
+@media (max-width: 768px) {
+    .glass-section {
+        padding: 60px 20px;
+    }
+
+    .glass-section-title {
+        font-size: 1.8rem;
+    }
+
+    .glass-about-features {
+        grid-template-columns: 1fr;
+    }
+}

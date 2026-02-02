@@ -76,10 +76,45 @@ export default function PublicPageConfigPage() {
     // Save mutation
     const saveMutation = useMutation({
         mutationFn: updateClinicTheme,
-        onSuccess: () => {
-            toast.success('Configurações salvas com sucesso!')
+        onSuccess: async () => {
             setHasChanges(false)
             queryClient.invalidateQueries({ queryKey: ['clinic-theme'] })
+
+            // Fetch the updated slug directly to ensure we have the latest value
+            try {
+                const res = await fetch('/api/settings/theme', { credentials: 'include' })
+                if (res.ok) {
+                    const updatedData = await res.json()
+                    console.log('[PublicPage] API response:', updatedData)
+
+                    // Handle different response formats
+                    // successResponse wraps data in { success: true, data: { ... } }
+                    const responseData = updatedData?.data || updatedData
+                    const slug = responseData?.slug
+
+                    console.log('[PublicPage] Extracted slug:', slug)
+
+                    if (slug && typeof slug === 'string' && slug.trim().length > 0) {
+                        const publicUrl = `https://clinigo.app/${slug.trim()}`
+                        toast.success('Página publicada com sucesso!', {
+                            description: `Abrindo: ${publicUrl}`
+                        })
+                        // Open immediately after user action to avoid popup blocker
+                        window.open(publicUrl, '_blank', 'noopener,noreferrer')
+                    } else {
+                        console.warn('[PublicPage] Slug not found in response:', responseData)
+                        toast.warning('Página salva, mas o slug não está configurado', {
+                            description: 'Configure um slug para sua clínica em Configurações > Minha Clínica'
+                        })
+                    }
+                } else {
+                    console.error('[PublicPage] API error:', res.status)
+                    toast.success('Configurações salvas com sucesso!')
+                }
+            } catch (err) {
+                console.error('[PublicPage] Fetch error:', err)
+                toast.success('Configurações salvas com sucesso!')
+            }
         },
         onError: () => {
             toast.error('Erro ao salvar configurações')
@@ -188,17 +223,18 @@ export default function PublicPageConfigPage() {
                         Padrão
                     </Button>
 
-                    {/* Save */}
+                    {/* Save and Publish */}
                     <Button
                         onClick={handleSave}
                         disabled={!hasChanges || saveMutation.isPending}
+                        className="bg-emerald-600 hover:bg-emerald-700"
                     >
                         {saveMutation.isPending ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
                             <Save className="w-4 h-4 mr-2" />
                         )}
-                        Salvar
+                        Salvar e Publicar
                     </Button>
                 </div>
             </div>

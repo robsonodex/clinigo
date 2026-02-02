@@ -8,7 +8,8 @@ import {
     Sheet,
     SheetContent,
     SheetHeader,
-    SheetTitle
+    SheetTitle,
+    SheetDescription
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,7 +45,7 @@ export function AppointmentDetailsDrawer({
         setLoading(true)
         try {
             // Fetch appointment with QR code
-            const response = await fetch(`/api/appointments/${appointmentId}?include=qr_code`)
+            const response = await fetch(`/api-v2/appointments/${appointmentId}?include=qr_code`)
 
             if (!response.ok) {
                 // 🔍 Enhanced debugging - capture full error details
@@ -274,6 +275,9 @@ export function AppointmentDetailsDrawer({
             <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
                 <SheetHeader>
                     <SheetTitle>Detalhes do Agendamento</SheetTitle>
+                    <SheetDescription>
+                        Visualize os detalhes do agendamento, QR Code e links de acesso.
+                    </SheetDescription>
                 </SheetHeader>
 
                 {loading && (

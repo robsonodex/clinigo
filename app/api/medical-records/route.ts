@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
             return errorResponse('Unauthorized', { status: 401 })
         }
 
-        // Build query
+        // Build query - Filter by clinic_id for security
         let query = supabase
             .from('medical_records')
             .select(`
                 id,
                 created_at,
                 chief_complaint,
-                diagnoses,
+                diagnosis,
                 treatment_plan,
                 patient:patients!inner(
                     id,
@@ -47,10 +47,17 @@ export async function GET(request: NextRequest) {
                     appointment_time
                 )
             `)
+            .eq('clinic_id', clinicId)
             .order('created_at', { ascending: false })
             .limit(100)
 
         const { data: records, error } = await query
+
+        // DEBUG: Log query results
+        console.log('[DEBUG medical-records] clinicId:', clinicId)
+        console.log('[DEBUG medical-records] userId:', userId)
+        console.log('[DEBUG medical-records] records count:', records?.length || 0)
+        console.log('[DEBUG medical-records] error:', error)
 
         if (error) {
             console.error('Error fetching medical records:', error)
@@ -137,7 +144,7 @@ export async function POST(request: NextRequest) {
                 chief_complaint,
                 present_illness: history, // Mapping history to present_illness
                 physical_exam,
-                diagnoses: diagnosis, // Mapping input 'diagnosis' to DB 'diagnoses'
+                diagnosis: diagnosis, // Correct column name in DB
                 treatment_plan: prescription, // Mapping prescription to treatment_plan
                 // notes field might need to go somewhere? medical_records usually has notes or observations.
                 // If the table strictly follows [id]/medical-records route fields:

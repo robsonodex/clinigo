@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TemplateProps } from '../index'
+import { mergeWithDefaultTheme } from '@/types/clinic-theme'
 import './swiss-minimal.css'
 
 export function SwissMinimalTemplate({
@@ -15,6 +16,11 @@ export function SwissMinimalTemplate({
     onTeleconsulta
 }: TemplateProps) {
     const router = useRouter()
+
+    // Merge theme with defaults to get all values
+    const theme = mergeWithDefaultTheme(clinic.theme || {})
+    const content = theme.content
+    const hero = theme.hero
 
     const handleBook = () => {
         onBook()
@@ -34,7 +40,7 @@ export function SwissMinimalTemplate({
                         <li><a href="#contato">Contato</a></li>
                     </ul>
                     <button onClick={handleBook} className="swiss-btn swiss-btn-dark">
-                        Agendar Consulta
+                        {hero.cta_text || 'Agendar Consulta'}
                     </button>
                 </nav>
             </header>
@@ -42,12 +48,12 @@ export function SwissMinimalTemplate({
             {/* Hero Section */}
             <section id="inicio" className="swiss-hero">
                 <div className="swiss-hero-left">
-                    <span className="swiss-hero-tag">Saúde Digital</span>
-                    <h1>Medicina do<br />futuro, hoje.</h1>
-                    <p>{clinic.tagline || 'Conectamos você aos melhores especialistas. Agendamento simples, atendimento humanizado, tecnologia de ponta.'}</p>
+                    <span className="swiss-hero-tag">{content.hero_tag || 'Saúde Digital'}</span>
+                    <h1>{hero.title || 'Medicina do'}<br />{hero.title ? '' : 'futuro, hoje.'}</h1>
+                    <p>{hero.subtitle || clinic.tagline || 'Conectamos você aos melhores especialistas. Agendamento simples, atendimento humanizado, tecnologia de ponta.'}</p>
                     <div className="swiss-hero-cta">
                         <button onClick={handleBook} className="swiss-btn swiss-btn-dark">
-                            Agendar Consulta
+                            {hero.cta_text || 'Agendar Consulta'}
                         </button>
                         <a href="#especialidades" className="swiss-btn swiss-btn-outline">
                             Ver Especialidades
@@ -56,15 +62,15 @@ export function SwissMinimalTemplate({
                     <div className="swiss-stats-row">
                         <div className="swiss-stat-item">
                             <div className="swiss-stat-value">{stats.total_doctors}+</div>
-                            <div className="swiss-stat-label">Médicos Parceiros</div>
+                            <div className="swiss-stat-label">{content.stat1_label || 'Médicos Parceiros'}</div>
                         </div>
                         <div className="swiss-stat-item">
                             <div className="swiss-stat-value">{specialties.length}</div>
-                            <div className="swiss-stat-label">Especialidades</div>
+                            <div className="swiss-stat-label">{content.stat2_label || 'Especialidades'}</div>
                         </div>
                         <div className="swiss-stat-item">
                             <div className="swiss-stat-value">98%</div>
-                            <div className="swiss-stat-label">Satisfação</div>
+                            <div className="swiss-stat-label">{content.stat3_label || 'Satisfação'}</div>
                         </div>
                     </div>
                 </div>
@@ -73,26 +79,26 @@ export function SwissMinimalTemplate({
                         <div className="swiss-feature-card" onClick={() => router.push(`/${clinic.slug}/agendar`)}>
                             <div className="swiss-feature-number">01</div>
                             <div className="swiss-feature-icon">🩺</div>
-                            <h3>Consultas Presenciais</h3>
-                            <p>Atendimento tradicional com os melhores profissionais</p>
+                            <h3>{content.feature1_title || 'Consultas Presenciais'}</h3>
+                            <p>{content.feature1_description || 'Atendimento tradicional com os melhores profissionais'}</p>
                         </div>
                         <div className="swiss-feature-card" onClick={onTeleconsulta}>
                             <div className="swiss-feature-number">02</div>
                             <div className="swiss-feature-icon">💻</div>
-                            <h3>Teleconsulta 24h</h3>
-                            <p>Atendimento online de qualquer lugar</p>
+                            <h3>{content.feature2_title || 'Teleconsulta 24h'}</h3>
+                            <p>{content.feature2_description || 'Atendimento online de qualquer lugar'}</p>
                         </div>
                         <div className="swiss-feature-card" onClick={() => router.push(`/${clinic.slug}/agendar`)}>
                             <div className="swiss-feature-number">03</div>
                             <div className="swiss-feature-icon">📋</div>
-                            <h3>Prontuário Digital</h3>
-                            <p>Seu histórico médico sempre acessível</p>
+                            <h3>{content.feature3_title || 'Prontuário Digital'}</h3>
+                            <p>{content.feature3_description || 'Seu histórico médico sempre acessível'}</p>
                         </div>
                         <div className="swiss-feature-card" onClick={() => router.push(`/${clinic.slug}/agendar`)}>
                             <div className="swiss-feature-number">04</div>
                             <div className="swiss-feature-icon">🔔</div>
-                            <h3>Lembretes Inteligentes</h3>
-                            <p>Nunca perca uma consulta importante</p>
+                            <h3>{content.feature4_title || 'Lembretes Inteligentes'}</h3>
+                            <p>{content.feature4_description || 'Nunca perca uma consulta importante'}</p>
                         </div>
                     </div>
                     <div className="swiss-vertical-text">Saúde • Tecnologia • Confiança</div>
@@ -115,7 +121,7 @@ export function SwissMinimalTemplate({
                     </div>
                     <div className="swiss-footer-cta">
                         <button onClick={handleBook} className="swiss-btn swiss-btn-dark">
-                            Agendar Consulta
+                            {hero.cta_text || 'Agendar Consulta'}
                         </button>
                     </div>
                 </div>
@@ -126,3 +132,4 @@ export function SwissMinimalTemplate({
         </div>
     )
 }
+

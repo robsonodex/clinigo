@@ -1,11 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useDropzone } from 'react-dropzone'; // Assuming react-dropzone is installed or I should use input
-// If react-dropzone is not in package.json, I should fallback to simple input.
-// User didn't specify packages, but "Drag & Drop" implies it.
-// I'll check if I can use simple input first to avoid dep issues, or just a simple UI.
-import { CloudUpload, Loader2, FileSpreadsheet } from 'lucide-react';
+import { CloudUpload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
@@ -43,12 +39,14 @@ export function FileUploadZone({ importType, onUploadComplete }: FileUploadZoneP
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erro no upload');
+                console.error('[FileUploadZone] Upload failed:', data);
+                throw new Error(data.details || data.error || 'Erro no upload');
             }
 
             onUploadComplete(data.jobId);
-        } catch (error) {
-            alert('Erro ao enviar arquivo');
+        } catch (error: any) {
+            console.error('[FileUploadZone] Error:', error);
+            alert(`Erro ao enviar arquivo: ${error.message}`);
             setIsUploading(false);
             setUploadProgress(0);
         }

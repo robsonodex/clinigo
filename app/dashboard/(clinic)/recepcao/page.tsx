@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle, XCircle, AlertTriangle,
-    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle, Settings
+    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle, Settings, Camera
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -234,6 +235,14 @@ export default function RecepcaoPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    {/* Check-in Fácil (Face Recognition) Button */}
+                    <Link href="/dashboard/recepcao/face-checkin">
+                        <Button variant="outline" className="gap-2">
+                            <Camera className="w-4 h-4" />
+                            Check-in Fácil
+                        </Button>
+                    </Link>
+
                     {/* QR Scanner Button */}
                     <QRScannerDialog onCheckIn={loadData} />
 

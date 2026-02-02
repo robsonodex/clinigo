@@ -34,13 +34,7 @@ export async function GET(request: NextRequest) {
 
         let query = supabase
             .from('tiss_guides')
-            .select(`
-        *,
-        operator:insurance_operators(id, name, ans_code),
-        patient:patients(id, full_name, cpf),
-        doctor:doctors(id, users(full_name), crm),
-        procedures:tiss_guide_procedures(*)
-      `, { count: 'exact' })
+            .select('*', { count: 'exact' })
             .eq('clinic_id', clinicId)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)

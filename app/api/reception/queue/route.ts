@@ -12,13 +12,26 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        // 🔒 SECURITY FIX: Get user's clinic_id to ensure data isolation
+        const { data: currentUser } = await (supabase as any)
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        if (!currentUser?.clinic_id) {
+            return NextResponse.json({ error: 'Clinic not found for user' }, { status: 403 })
+        }
+
+        const clinicId = currentUser.clinic_id
+
         const { searchParams } = new URL(request.url)
         const status = searchParams.get('status') || 'waiting' // waiting, in_service, completed
 
         // Fetch appointments that are checked in but not completed
         let appointments = []
         try {
-            const { data, error: apptError } = await supabase
+            const { data, error: apptError } = await (supabase as any)
                 .from('appointments')
                 .select(`
         id,
@@ -31,6 +44,7 @@ export async function GET(request: Request) {
         patient:patients(id, full_name, date_of_birth, gender),
         doctor:doctors(id, user:users(full_name))
       `)
+                .eq('clinic_id', clinicId) // 🔒 SECURITY: Filter by clinic
                 .eq('status', status === 'waiting' ? 'CONFIRMED' : 'IN_PROGRESS') // Adapt status mapping
                 .not('checked_in_at', 'is', null) // Must be checked in
                 .order('priority_level', { ascending: false }) // Priority first
@@ -46,7 +60,7 @@ export async function GET(request: Request) {
         // Fetch walk-ins
         let walkIns = []
         try {
-            const { data, error: walkInError } = await supabase
+            const { data, error: walkInError } = await (supabase as any)
                 .from('walk_in_registrations')
                 .select(`
         id,
@@ -57,6 +71,7 @@ export async function GET(request: Request) {
         patient:patients(id, full_name, cpf, phone),
         doctor:doctors(id, user:users(full_name))
       `)
+                .eq('clinic_id', clinicId) // 🔒 SECURITY: Filter by clinic
                 .eq('status', status)
                 .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
                 .order('arrival_time', { ascending: true })

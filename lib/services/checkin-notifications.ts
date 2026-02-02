@@ -32,7 +32,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo-saas.vercel.
  * Generate unique check-in URL for a patient
  */
 export function generateCheckinUrl(appointmentId: string, clinicId: string): string {
-    return `${APP_URL}/public/checkin/${appointmentId}?clinic=${clinicId}`
+    return `${APP_URL}/checkin/${appointmentId}?clinic=${clinicId}`
 }
 
 /**

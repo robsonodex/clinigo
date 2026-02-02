@@ -190,7 +190,7 @@ export interface CreateAppointmentData {
     doctor_id: string
     appointment_date: string
     appointment_time: string
-    payment_type?: 'PRIVATE' | 'HEALTH_INSURANCE'
+    payment_type?: 'PARTICULAR' | 'CONVENIO'
     health_insurance_plan_id?: string
     insurance_card_number?: string
     insurance_card_validity?: string

@@ -153,13 +153,118 @@ export default function TermosPage() {
             </div>
 
             <Tabs defaultValue="documents" className="space-y-4">
-                {/* ... Tabs content ... */}
-                {/* I'll let the user fill in the tab content logic from the previous replacement, 
-                   checking valid context to keep file integrity. 
-                   Actually I need to make sure I don't doubly replace or break structure.
-                   The previous replacement handled the middle part. 
-                   This replacement handles the top part + adding the dialog at the bottom.
-               */}
+                <TabsList>
+                    <TabsTrigger value="documents">Documentos</TabsTrigger>
+                    <TabsTrigger value="settings">Configurações</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="documents" className="space-y-4">
+                    {isLoading ? (
+                        <Card>
+                            <CardContent className="py-8 text-center">
+                                <Clock className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                                <p className="mt-2 text-muted-foreground">Carregando documentos...</p>
+                            </CardContent>
+                        </Card>
+                    ) : terms.length === 0 ? (
+                        <Card>
+                            <CardContent className="py-12 text-center">
+                                <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                                <h3 className="text-lg font-medium mb-2">Nenhum documento cadastrado</h3>
+                                <p className="text-muted-foreground mb-4">
+                                    Crie termos de uso, políticas de privacidade e outros documentos legais para sua clínica.
+                                </p>
+                                <Button onClick={handleNew}>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Criar Primeiro Documento
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="grid gap-4">
+                            {terms.map((term) => (
+                                <Card key={term.id}>
+                                    <CardContent className="py-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-start gap-4">
+                                                <div className="p-2 bg-gray-100 rounded-lg">
+                                                    <FileText className="w-5 h-5 text-gray-600" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-medium">{term.title}</h4>
+                                                        <Badge variant={term.status === 'published' ? 'success' : 'secondary'}>
+                                                            {term.status === 'published' ? 'Publicado' : 'Rascunho'}
+                                                        </Badge>
+                                                        {term.is_required && (
+                                                            <Badge variant="outline">Obrigatório</Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground mt-1">
+                                                        {term.description}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        Tipo: {term.type} • Atualizado em: {new Date(term.updated_at).toLocaleDateString('pt-BR')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(term)}>
+                                                    <Eye className="w-4 h-4 mr-1" />
+                                                    Visualizar
+                                                </Button>
+                                                <Button variant="outline" size="sm" onClick={() => handleEdit(term)}>
+                                                    <Edit className="w-4 h-4 mr-1" />
+                                                    Editar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="settings" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Configurações de Consentimento</CardTitle>
+                            <CardDescription>
+                                Configure como os pacientes devem aceitar os termos
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between py-3 border-b">
+                                <div>
+                                    <p className="font-medium">Exigir aceite no cadastro</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Pacientes devem aceitar os termos ao se cadastrar
+                                    </p>
+                                </div>
+                                <Switch defaultChecked />
+                            </div>
+                            <div className="flex items-center justify-between py-3 border-b">
+                                <div>
+                                    <p className="font-medium">Exigir re-aceite em atualizações</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Solicitar novo aceite quando os termos forem atualizados
+                                    </p>
+                                </div>
+                                <Switch defaultChecked />
+                            </div>
+                            <div className="flex items-center justify-between py-3">
+                                <div>
+                                    <p className="font-medium">Registrar IP e data do aceite</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Guardar informações de auditoria do consentimento
+                                    </p>
+                                </div>
+                                <Switch defaultChecked />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
             </Tabs>
 
             <EditTermDialog

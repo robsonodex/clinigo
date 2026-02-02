@@ -30,12 +30,20 @@ const MASTER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0]
 const PUBLIC_ROUTES = [
     '/api/appointments-list', // Moved list/create endpoint (POST public, GET auth)
     '/api/appointments/', // Allow dynamic appointment routes like /api/appointments/[id]
+    '/api/appointments/details/', // Temporary fix for 404 issue in production
     '/api/appointments/available-slots',
+    '/api/debug-appt', // Temporary debug route
+    '/api-v2/appointments/', // V2 routing fix
+    '/apitest', // Root level test
     '/api/payments/webhook',
+    '/api/billing/webhook', // Mercado Pago webhook - CRITICAL for payment confirmation
+    '/api/billing/create-preference', // Create payment preference
+    '/api/billing/create-subscription', // Create subscription
     '/api/auth/login',
     '/api/auth/signup',
     '/api/auth/register',
     '/api/doctors',
+    '/api/clinics/by-slug/', // Public clinic lookup by slug for booking pages
     '/api/patient/auth',
     '/api/marketplace',
     '/api/aia/triage',
@@ -157,6 +165,15 @@ export async function middleware(request: NextRequest) {
         })
     }
 
+    // DEBUG: Log /api/appointments requests for 404 diagnosis
+    if (pathname.startsWith('/api/appointments')) {
+        console.log('[MIDDLEWARE DEBUG] /api/appointments request:', {
+            pathname,
+            method: request.method,
+            url: request.url,
+        })
+    }
+
     // Skip static assets
     if (
         pathname.startsWith('/_next') ||
@@ -241,8 +258,14 @@ export async function middleware(request: NextRequest) {
             return request.method === 'POST'
         }
         if (route === '/api/doctors') {
-            // Only GET /api/doctors (list) is public, NOT /api/doctors/[id]
-            return pathname === '/api/doctors' && request.method === 'GET'
+            // GET /api/doctors (list) and GET /api/doctors/[id] are public for marketplace
+            // Also allow /api/doctors/[id]/health-insurances for public booking
+            if (request.method === 'GET') {
+                return pathname === '/api/doctors' ||
+                    pathname.match(/^\/api\/doctors\/[a-f0-9-]+$/) ||
+                    pathname.match(/^\/api\/doctors\/[a-f0-9-]+\/health-insurances$/)
+            }
+            return false
         }
         return pathname.startsWith(route)
     })
@@ -255,6 +278,9 @@ export async function middleware(request: NextRequest) {
         pathname === '/medico' ||
         pathname === '/cadastro' ||
         pathname === '/planos' ||
+        pathname === '/pagamento-pendente' ||
+        pathname === '/pagamento-expirado' ||
+        pathname.startsWith('/pagamento/') ||
         pathname.startsWith('/paciente/entrar') ||
         pathname.startsWith('/paciente/registro') ||
         pathname.match(/^\/[^/]+\/agendar/)
@@ -312,7 +338,7 @@ export async function middleware(request: NextRequest) {
         if (userRole !== 'SUPER_ADMIN' && userClinicId) {
             const { data: clinic } = await supabase
                 .from('clinics')
-                .select('is_active, plan_type')
+                .select('is_active, plan_type, payment_confirmed, is_demo')
                 .eq('id', userClinicId)
                 .single()
 
@@ -326,6 +352,27 @@ export async function middleware(request: NextRequest) {
                         )
                     }
                     return NextResponse.redirect(new URL('/login?error=clinic_inactive', request.url))
+                }
+
+                // PAYMENT REQUIRED CHECK (v3.3.0)
+                // Block access if payment is not confirmed
+                // EXCEPTION: Demo accounts bypass payment verification
+                if (clinic.payment_confirmed === false && !clinic.is_demo) {
+                    // Allow billing-related API routes
+                    if (pathname.startsWith('/api/billing')) {
+                        // Allow through for payment processing
+                    } else if (pathname.startsWith('/api')) {
+                        return NextResponse.json(
+                            {
+                                error: 'Pagamento pendente',
+                                code: 'PAYMENT_REQUIRED',
+                                redirect_url: '/pagamento-pendente'
+                            },
+                            { status: 402 }
+                        )
+                    } else if (pathname.startsWith('/dashboard')) {
+                        return NextResponse.redirect(new URL('/pagamento-pendente', request.url))
+                    }
                 }
 
                 // Capture plan type (with legacy migration)

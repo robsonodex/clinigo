@@ -120,18 +120,6 @@ export default function BookingPage({ params }: PageProps) {
 
                     {/* Left Filters - Sticky */}
                     <aside className="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-24 space-y-6">
-                        {/* Map Preview (Static for now) */}
-                        <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 h-40 relative group cursor-pointer hidden lg:block">
-                            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                                <MapPin className="w-6 h-6 text-gray-400" />
-                            </div>
-                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                                <span className="text-white text-xs font-semibold flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> Ver no mapa
-                                </span>
-                            </div>
-                        </div>
-
                         {/* Filters */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -238,25 +226,7 @@ export default function BookingPage({ params }: PageProps) {
                             ))}
                         </div>
 
-                        {/* Footer info block */}
-                        <div className="mt-12 bg-blue-50 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div>
-                                <h3 className="font-bold text-xl text-blue-900 mb-2">CliniGo Enterprise</h3>
-                                <p className="text-blue-700 max-w-md">
-                                    Tecnologia de ponta para cuidar da sua saúde. Agendamento simples, rápido e seguro.
-                                </p>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="flex flex-col items-center">
-                                    <Shield className="w-6 h-6 text-blue-600 mb-1" />
-                                    <span className="text-xs font-semibold text-blue-800">100% Seguro</span>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <Star className="w-6 h-6 text-blue-600 mb-1" />
-                                    <span className="text-xs font-semibold text-blue-800">Avaliações Reais</span>
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </main>

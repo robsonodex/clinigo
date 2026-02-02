@@ -3,7 +3,7 @@
  * Create a manual appointment (walk-in booking by receptionist)
  */
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
 import QRCode from 'qrcode'
 import { generateQRToken } from '@/lib/utils/qr-code'
@@ -369,7 +369,9 @@ export async function POST(request: NextRequest) {
             const patientToken = `patient_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
             const doctorToken = `doctor_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
 
-            const { data: createdRoom, error: roomError } = await supabase
+            // Use service role for video room creation to bypass RLS (authenticated users only have SELECT permission)
+            const serviceClient = createServiceRoleClient()
+            const { data: createdRoom, error: roomError } = await serviceClient
                 .from('video_rooms')
                 .insert({
                     appointment_id: appointmentId,

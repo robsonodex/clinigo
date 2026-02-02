@@ -50,12 +50,12 @@ export const patientFormSchema = z.object({
     terms: z.boolean().refine((val) => val === true, {
         message: 'Você deve aceitar os termos',
     }),
-    payment_type: z.enum(['PRIVATE', 'HEALTH_INSURANCE']).default('PRIVATE'),
+    payment_type: z.enum(['PARTICULAR', 'CONVENIO']).default('PARTICULAR'),
     health_insurance_plan_id: z.string().optional(),
     insurance_card_number: z.string().optional(),
     insurance_card_validity: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
-    if (data.payment_type === 'HEALTH_INSURANCE') {
+    if (data.payment_type === 'CONVENIO') {
         if (!data.health_insurance_plan_id) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,

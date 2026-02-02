@@ -46,6 +46,7 @@ const STEPS = [
     { id: 3, title: 'Endereço', description: 'Localização (opcional)' },
     { id: 4, title: 'Admin', description: 'Seus dados' },
     { id: 5, title: 'Revisão', description: 'Confirme os dados' },
+    { id: 6, title: 'Pagamento', description: 'Finalize sua assinatura' },
 ]
 
 type FormData = {
@@ -104,6 +105,17 @@ function CadastroContent() {
         }
     }, [clinicName, currentStep, setValue])
 
+    // Prevent skipping steps via stepper
+    const handleStepClick = (stepId: number) => {
+        // Allow going back to any previous step
+        if (stepId < currentStep) {
+            setCurrentStep(stepId)
+            return
+        }
+        // Prevent clicking future steps directly
+        // Only allow clicking the immediate next step if current logic allows (e.g. valid form) - but simpler to just disable future jumps for now
+    }
+
     const nextStep = () => {
         if (currentStep < STEPS.length) {
             setCurrentStep(prev => prev + 1)
@@ -119,8 +131,9 @@ function CadastroContent() {
     const onSubmitStep = async (data: Partial<FormData>) => {
         setFormData(prev => ({ ...prev, ...data }))
 
-        if (currentStep === STEPS.length) {
-            // Final submission
+        // Step 5 is Revisão - this is where we redirect to payment
+        if (currentStep === 5) {
+            // Final submission - go to payment
             await handleFinalSubmit({ ...formData, ...data } as FormData)
         } else {
             nextStep()
@@ -129,27 +142,54 @@ function CadastroContent() {
 
     const handleFinalSubmit = async (data: FormData) => {
         setIsSubmitting(true)
+
+        // Merge all form data
+        const allData = { ...formData, ...data }
+
+        console.log('📝 [CADASTRO] Submitting with data:', {
+            plan_type: allData.plan_type,
+            clinic_name: allData.clinic_name,
+            email: allData.email,
+            admin_email: allData.admin_email,
+            admin_name: allData.admin_name,
+        })
+
         try {
-            const response = await fetch('/api/auth/register', {
+            // Validate required fields before sending
+            if (!allData.plan_type) {
+                throw new Error('Selecione um plano antes de continuar')
+            }
+            if (!allData.clinic_name) {
+                throw new Error('Nome da clínica é obrigatório')
+            }
+            if (!allData.admin_email) {
+                throw new Error('Email do administrador é obrigatório')
+            }
+            if (!allData.password) {
+                throw new Error('Senha é obrigatória')
+            }
+
+            // Step 1: Pre-register the clinic and get preference URL
+            const response = await fetch('/api/auth/pre-register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: data.admin_email,
-                    password: data.password,
-                    full_name: data.admin_name,
-                    clinic_name: data.clinic_name,
-                    cnpj: cleanCNPJ(data.cnpj),
-                    phone: data.phone,
-                    responsible_phone: data.phone,
-                    plan_type: data.plan_type,
+                    email: allData.admin_email,
+                    password: allData.password,
+                    full_name: allData.admin_name,
+                    clinic_name: allData.clinic_name,
+                    cnpj: allData.cnpj ? cleanCNPJ(allData.cnpj) : null,
+                    phone: allData.phone,
+                    responsible_phone: allData.phone,
+                    plan_type: allData.plan_type,
                     address: {
-                        street: data.street,
-                        number: data.number,
-                        complement: data.complement,
-                        neighborhood: data.neighborhood,
-                        city: data.city,
-                        state: data.state,
-                        zip: data.zip,
+                        street: allData.street,
+                        number: allData.number,
+                        complement: allData.complement,
+                        neighborhood: allData.neighborhood,
+                        city: allData.city,
+                        state: allData.state,
+                        zip: allData.zip,
                     },
                 }),
             })
@@ -157,18 +197,19 @@ function CadastroContent() {
             const result = await response.json()
 
             if (!response.ok) {
-                throw new Error(result.error?.message || 'Erro ao criar clínica')
+                throw new Error(result.error?.message || result.error || 'Erro ao criar pré-cadastro')
             }
 
-            toast.success('🎉 Conta criada! Seu teste de 7 dias começou. Verifique seu e-mail!')
-
-            // Redirect to clinic login
-            setTimeout(() => {
-                router.push('/clinica')
-            }, 1500)
+            // Step 2: Redirect to Mercado Pago checkout
+            if (result.checkout_url) {
+                toast.success('Redirecionando para o pagamento...')
+                window.location.href = result.checkout_url
+            } else {
+                throw new Error('URL de pagamento não recebida')
+            }
         } catch (error) {
             console.error('Registration error:', error)
-            toast.error(error instanceof Error ? error.message : 'Erro ao criar clínica')
+            toast.error(error instanceof Error ? error.message : 'Erro ao processar cadastro')
         } finally {
             setIsSubmitting(false)
         }
@@ -194,7 +235,7 @@ function CadastroContent() {
                 <RegistrationStepper
                     steps={STEPS}
                     currentStep={currentStep}
-                    onStepClick={setCurrentStep}
+                    onStepClick={handleStepClick}
                     loading={isSubmitting}
                 />
 
@@ -219,7 +260,11 @@ function CadastroContent() {
                                                 key={plan.id}
                                                 plan={plan}
                                                 selected={formData.plan_type === plan.id}
-                                                onSelect={() => setFormData(prev => ({ ...prev, plan_type: plan.id }))}
+                                                onSelect={() => {
+                                                    // Update both formData state AND react-hook-form
+                                                    setFormData(prev => ({ ...prev, plan_type: plan.id }))
+                                                    setValue('plan_type', plan.id)
+                                                }}
                                             />
                                         )
                                     })}
@@ -515,13 +560,13 @@ function CadastroContent() {
                                         <div className="p-4 bg-muted rounded-lg">
                                             <div className="flex justify-between items-center">
                                                 <div>
-                                                    <p className="font-medium">{PLANS[formData.plan_type!].name}</p>
+                                                    <p className="font-medium">{formData.plan_type ? PLANS[formData.plan_type]?.name : 'Nenhum plano selecionado'}</p>
                                                     <p className="text-sm text-muted-foreground">
-                                                        {PLANS[formData.plan_type!].tagline}
+                                                        {formData.plan_type ? PLANS[formData.plan_type]?.tagline : 'Volte e selecione um plano'}
                                                     </p>
                                                 </div>
                                                 <p className="text-2xl font-bold">
-                                                    {PLANS[formData.plan_type!].priceLabel}
+                                                    {formData.plan_type ? PLANS[formData.plan_type]?.priceLabel : '-'}
                                                 </p>
                                             </div>
                                         </div>
@@ -553,16 +598,21 @@ function CadastroContent() {
                                             <ArrowLeft className="mr-2 w-4 h-4" />
                                             Voltar
                                         </Button>
-                                        <Button type="submit" size="lg" disabled={isSubmitting}>
+                                        <Button
+                                            type="submit"
+                                            size="lg"
+                                            disabled={isSubmitting}
+                                            className="bg-emerald-600 hover:bg-emerald-700"
+                                        >
                                             {isSubmitting ? (
                                                 <>
                                                     <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                                                    Criando...
+                                                    Processando...
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Check className="mr-2 w-4 h-4" />
-                                                    Criar Minha Clínica
+                                                    <ArrowRight className="mr-2 w-4 h-4" />
+                                                    Ir para Pagamento
                                                 </>
                                             )}
                                         </Button>

@@ -151,7 +151,9 @@ export function PreviewModal({ open, onClose, theme, clinicSlug }: PreviewModalP
         mobile: 'w-[375px]',
     }
 
-    const previewUrl = `/${clinicSlug}?preview=true`
+    // Validate slug - prevent redirect to root
+    const hasValidSlug = clinicSlug && clinicSlug.trim().length > 0
+    const previewUrl = hasValidSlug ? `/${clinicSlug}?preview=true` : null
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -189,13 +191,20 @@ export function PreviewModal({ open, onClose, theme, clinicSlug }: PreviewModalP
                                 </Button>
                             </div>
 
-                            {/* Open in New Tab */}
-                            <a href={previewUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm">
+                            {/* Open in New Tab - Only if slug is valid */}
+                            {previewUrl ? (
+                                <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="outline" size="sm">
+                                        <ExternalLink className="w-4 h-4 mr-2" />
+                                        Abrir
+                                    </Button>
+                                </a>
+                            ) : (
+                                <Button variant="outline" size="sm" disabled title="Slug não configurado">
                                     <ExternalLink className="w-4 h-4 mr-2" />
                                     Abrir
                                 </Button>
-                            </a>
+                            )}
                         </div>
                     </div>
                 </DialogHeader>
@@ -216,8 +225,11 @@ export function PreviewModal({ open, onClose, theme, clinicSlug }: PreviewModalP
                                 <div className="w-3 h-3 rounded-full bg-yellow-400" />
                                 <div className="w-3 h-3 rounded-full bg-green-400" />
                             </div>
-                            <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-gray-500 truncate">
-                                clinigo.app/{clinicSlug}
+                            <div className={cn(
+                                "flex-1 bg-white rounded-md px-3 py-1 text-xs truncate",
+                                hasValidSlug ? "text-gray-500" : "text-amber-600"
+                            )}>
+                                {hasValidSlug ? `clinigo.app/${clinicSlug}` : 'Slug não configurado'}
                             </div>
                         </div>
 

@@ -70,7 +70,7 @@ export function ValidationReport({ jobId, onValidationComplete }: ValidationRepo
                 </Alert>
             )}
 
-            {report.errors.length > 0 && (
+            {report.errors && report.errors.length > 0 && (
                 <div className="border rounded-lg">
                     <div className="p-4 bg-muted/50 border-b font-medium flex justify-between items-center">
                         <span>Relatório de Problemas</span>

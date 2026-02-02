@@ -135,7 +135,7 @@ export default function ContatoPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-emerald-900/20 to-slate-900">
+        <div className="min-h-screen bg-navy-deep">
             {/* Header */}
             <header className="py-6 px-4">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">

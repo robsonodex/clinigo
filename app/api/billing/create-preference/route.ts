@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
         // Create preference
         const result = await preference.create({
             body: {
+                metadata: {
+                    clinic_id: data.clinic_id,
+                    plan_type: data.plan_type,
+                    billing_cycle: data.billing_cycle,
+                },
                 items: [{
                     id: data.clinic_id,
                     title: `CliniGo - ${planLabel}`,
@@ -106,7 +111,7 @@ export async function POST(request: NextRequest) {
                     } : undefined,
                 },
                 external_reference: `clinic_${data.clinic_id}`,
-                notification_url: `${appUrl}/api/webhooks/mercadopago`,
+                notification_url: `${appUrl}/api/billing/webhook`,
                 back_urls: {
                     success: `${appUrl}/pagamento/sucesso?clinic_id=${data.clinic_id}`,
                     failure: `${appUrl}/pagamento/erro?clinic_id=${data.clinic_id}`,

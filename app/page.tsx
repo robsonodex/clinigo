@@ -1,4 +1,5 @@
-'use client'
+import LandingPremium from './(marketing)/landing-premium/page'
 
-// Re-export the landing-premium page as the main page
-export { default } from './landing-premium/page'
+export default function Home() {
+    return <LandingPremium />
+}

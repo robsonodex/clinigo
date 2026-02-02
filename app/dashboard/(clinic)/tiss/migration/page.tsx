@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -23,18 +23,39 @@ import { createClient } from '@/lib/supabase/client';
 export default function TissMigrationDashboard() {
     const supabase = createClient();
 
+    // Buscar clinic_id do usuário atual
+    const { data: userClinicData } = useQuery({
+        queryKey: ['user-clinic'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+
+            const { data } = await supabase
+                .from('users')
+                .select('clinic_id')
+                .eq('id', user.id)
+                .single();
+
+            return data?.clinic_id;
+        },
+    });
+
     // Buscar dados de adoção
     const { data: adoptionData, isLoading: loadingAdoption } = useQuery({
-        queryKey: ['tiss-adoption'],
+        queryKey: ['tiss-adoption', userClinicData],
         queryFn: async () => {
+            if (!userClinicData) return null;
+
             const { data, error } = await supabase
                 .from('vw_tiss_version_adoption')
                 .select('*')
-                .single();
+                .eq('clinic_id', userClinicData)
+                .maybeSingle();
 
             if (error) throw error;
             return data;
         },
+        enabled: !!userClinicData,
     });
 
     // Buscar histórico de migração

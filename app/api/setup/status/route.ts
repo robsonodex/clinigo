@@ -49,11 +49,11 @@ export async function GET() {
         // Verificar SMTP e plano da clínica
         const { data: clinic } = await supabase
             .from('clinics')
-            .select('smtp_config, plan_type')
+            .select('smtp_enabled, plan_type')
             .eq('id', clinicId)
             .single()
 
-        const hasSmtp = !!(clinic?.smtp_config)
+        const hasSmtp = !!(clinic?.smtp_enabled)
         const planType = clinic?.plan_type ?? 'BASIC'
 
         return NextResponse.json({

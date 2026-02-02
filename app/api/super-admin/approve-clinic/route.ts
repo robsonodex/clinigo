@@ -79,13 +79,13 @@ export async function POST(request: NextRequest) {
         if (adminUser) {
             const activationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/ativar-conta/${activationToken}`
 
-            try {
-                const { sendMail } = await import('@/lib/services/mail-service')
+            const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
 
-                await sendMail({
-                    to: adminUser.email,
-                    subject: '🎉 Bem-vindo ao CliniGo! Seu acesso está liberado',
-                    html: `
+            const emailResult = await sendEmailMultiTenant({
+                clinicId: clinic.id,
+                to: adminUser.email,
+                subject: '🎉 Bem-vindo ao CliniGo! Seu acesso está liberado',
+                html: `
                         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc;">
                             <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
                                 <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Cadastro Aprovado!</h1>
@@ -130,9 +130,10 @@ export async function POST(request: NextRequest) {
                             </div>
                         </div>
                     `
-                })
+            })
 
-                // Log email
+            if (emailResult.success) {
+                // Log email success
                 await supabase
                     .from('email_logs')
                     .insert({
@@ -144,9 +145,8 @@ export async function POST(request: NextRequest) {
                         clinic_id: clinic.id,
                         user_id: adminUser.id
                     })
-
-            } catch (emailError) {
-                console.error('[ApproveClinic] Email error:', emailError)
+            } else {
+                console.error('[ApproveClinic] Email error:', emailResult.error)
                 // Log failed email
                 await supabase
                     .from('email_logs')
@@ -155,8 +155,9 @@ export async function POST(request: NextRequest) {
                         subject: 'Cadastro Aprovado - CliniGo',
                         template_used: 'CLINIC_APPROVED',
                         status: 'failed',
-                        error_message: emailError instanceof Error ? emailError.message : 'Unknown error',
-                        clinic_id: clinic.id
+                        error_message: emailResult.error || 'Unknown error',
+                        clinic_id: clinic.id,
+                        user_id: adminUser.id
                     })
             }
         }

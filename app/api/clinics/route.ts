@@ -7,7 +7,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, ConflictError } from '@/lib/utils/errors'
 import { successResponse, paginatedResponse, parsePaginationParams, buildPaginatedData } from '@/lib/utils/responses'
 import { createClinicSchema, listClinicsQuerySchema } from '@/lib/validations/clinic'
-import { sendClinicWelcomeEmail } from '@/lib/services/email'
+// import { sendClinicWelcomeEmail } from '@/lib/services/email'
 
 export async function GET(request: NextRequest) {
     try {
@@ -202,17 +202,84 @@ export async function POST(request: NextRequest) {
 
                 // Send professional welcome email (uses stub if @react-email not installed)
                 const loginUrl = 'https://clinigo.app/clinica'
+
                 try {
-                    await sendClinicWelcomeEmail({
-                        email: validatedData.admin_email,
-                        fullName: validatedData.admin_name,
-                        clinicName: validatedData.name,
-                        loginUrl
+                    const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+
+                    const emailResult = await sendEmailMultiTenant({
+                        clinicId: (clinic as any).id,
+                        to: validatedData.admin_email,
+                        subject: '🎉 Bem-vindo ao CliniGo! Sua clínica foi criada',
+                        html: `
+                            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc;">
+                                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Clínica Criada com Sucesso!</h1>
+                                </div>
+                                <div style="background: white; padding: 40px 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <p style="font-size: 18px; color: #1f2937; margin-bottom: 10px;">Olá, <strong>${validatedData.admin_name}</strong>!</p>
+                                    <p style="color: #4b5563; line-height: 1.6;">A clínica <strong>${validatedData.name}</strong> foi cadastrada com sucesso no sistema CliniGo.</p>
+                                    
+                                    <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin: 25px 0;">
+                                        <h3 style="color: #166534; margin: 0 0 15px 0;">🔐 Dados de Acesso:</h3>
+                                        <p style="margin: 5px 0; color: #374151;"><strong>Portal:</strong> ${loginUrl}</p>
+                                        <p style="margin: 5px 0; color: #374151;"><strong>E-mail:</strong> ${validatedData.admin_email}</p>
+                                        <p style="margin: 5px 0; color: #374151;"><strong>Senha:</strong> <em>A senha definida no cadastro</em></p>
+                                    </div>
+                                    
+                                    <div style="text-align: center; margin: 30px 0;">
+                                        <a href="${loginUrl}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 50px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+                                            👉 ACESSAR SISTEMA
+                                        </a>
+                                    </div>
+                                    
+                                    <div style="background: #eff6ff; border-radius: 12px; padding: 20px; margin-top: 25px;">
+                                        <h4 style="color: #1e40af; margin: 0 0 10px 0;">🚀 Próximos Passos:</h4>
+                                        <ul style="color: #374151; margin: 0; padding-left: 20px; line-height: 1.8;">
+                                            <li>Configure as agendas dos médicos</li>
+                                            <li>Personalize o prontuário</li>
+                                            <li>Cadastre os primeiros pacientes</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                                    <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                                        Precisa de ajuda? Responda este e-mail ou fale conosco no WhatsApp.
+                                    </p>
+                                </div>
+                            </div>
+                        `
                     })
-                    console.log(`[POST /api/clinics] Professional welcome email sent to: ${validatedData.admin_email}`)
+
+                    if (emailResult.success) {
+                        console.log(`[POST /api/clinics] Welcome email sent successfully to: ${validatedData.admin_email}`)
+                        // Log success in db
+                        await (supabase as any)
+                            .from('email_logs')
+                            .insert({
+                                recipient: validatedData.admin_email,
+                                subject: 'Bem-vindo ao CliniGo',
+                                template_used: 'CLINIC_WELCOME',
+                                status: 'sent',
+                                sent_at: new Date().toISOString(),
+                                clinic_id: (clinic as any).id,
+                                user_id: authData.user.id
+                            })
+                    } else {
+                        console.error('[POST /api/clinics] Welcome email failed:', emailResult.error)
+                        await (supabase as any)
+                            .from('email_logs')
+                            .insert({
+                                recipient: validatedData.admin_email,
+                                subject: 'Bem-vindo ao CliniGo',
+                                template_used: 'CLINIC_WELCOME',
+                                status: 'failed',
+                                error_message: emailResult.error || 'Unknown error',
+                                clinic_id: (clinic as any).id,
+                                user_id: authData.user.id
+                            })
+                    }
                 } catch (emailError) {
                     console.error('[POST /api/clinics] Failed to send welcome email:', emailError)
-                    // Don't fail the clinic creation if email fails
                 }
             }
         }

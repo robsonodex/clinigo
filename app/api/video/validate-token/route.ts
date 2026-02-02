@@ -31,7 +31,7 @@ export async function POST(request: Request) {
                 patient_token,
                 doctor_token,
                 status,
-                appointments (
+                appointment:appointments (
                     id,
                     appointment_date,
                     appointment_time,
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
                         name,
                         specialty
                     ),
-                    clinic:clinics (
+                    clinic:clinics!appointments_clinic_id_fkey (
                         id,
                         name,
                         slug
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         }
 
         // Check if appointment is for telemedicine
-        const appointment = videoRoom.appointments
+        const appointment = videoRoom.appointment
         if (!appointment) {
             return NextResponse.json(
                 { error: 'Consulta não encontrada' },

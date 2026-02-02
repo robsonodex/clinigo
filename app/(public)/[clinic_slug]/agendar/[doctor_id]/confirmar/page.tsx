@@ -88,7 +88,7 @@ function ConfirmBookingContent({ params }: PageProps) {
         resolver: zodResolver(patientFormSchema),
         defaultValues: {
             terms: false,
-            payment_type: 'PRIVATE'
+            payment_type: 'PARTICULAR'
         },
     })
 
@@ -100,7 +100,7 @@ function ConfirmBookingContent({ params }: PageProps) {
 
     useEffect(() => {
         if (doctor) {
-            if (paymentType === 'PRIVATE') {
+            if (paymentType === 'PARTICULAR') {
                 setCurrentPrice(doctor.consultation_price)
             } else if (selectedPlanId) {
                 const insurance = insurances.find(i => i.health_insurance_plan_id === selectedPlanId)
@@ -285,42 +285,49 @@ function ConfirmBookingContent({ params }: PageProps) {
                                     <CardTitle>Forma de Pagamento</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
-                                    <RadioGroup
-                                        defaultValue="PRIVATE"
-                                        className="grid grid-cols-2 gap-4"
-                                        onValueChange={(val) => setValue('payment_type', val as 'PRIVATE' | 'HEALTH_INSURANCE')}
-                                    >
-                                        <div>
-                                            <RadioGroupItem value="PRIVATE" id="private" className="peer sr-only" />
-                                            <Label
-                                                htmlFor="private"
-                                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
+                                    <Controller
+                                        name="payment_type"
+                                        control={control}
+                                        defaultValue="PARTICULAR"
+                                        render={({ field }) => (
+                                            <RadioGroup
+                                                value={field.value}
+                                                onValueChange={field.onChange}
+                                                className="grid grid-cols-2 gap-4"
                                             >
-                                                <CreditCard className="mb-3 h-6 w-6" />
-                                                <span className="font-semibold px-1 text-center">Particular</span>
-                                                {doctor && (
-                                                    <span className="text-sm text-muted-foreground mt-1">
-                                                        {formatCurrency(doctor.consultation_price)}
-                                                    </span>
-                                                )}
-                                            </Label>
-                                        </div>
-                                        <div>
-                                            <RadioGroupItem value="HEALTH_INSURANCE" id="insurance" className="peer sr-only" />
-                                            <Label
-                                                htmlFor="insurance"
-                                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
-                                            >
-                                                <Shield className="mb-3 h-6 w-6" />
-                                                <span className="font-semibold px-1 text-center">Convênio</span>
-                                                <span className="text-sm text-muted-foreground mt-1">
-                                                    {insurances.length} opções
-                                                </span>
-                                            </Label>
-                                        </div>
-                                    </RadioGroup>
+                                                <div>
+                                                    <RadioGroupItem value="PARTICULAR" id="private" className="peer sr-only" />
+                                                    <Label
+                                                        htmlFor="private"
+                                                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
+                                                    >
+                                                        <CreditCard className="mb-3 h-6 w-6" />
+                                                        <span className="font-semibold px-1 text-center">Particular</span>
+                                                        {doctor && (
+                                                            <span className="text-sm text-muted-foreground mt-1">
+                                                                {formatCurrency(doctor.consultation_price)}
+                                                            </span>
+                                                        )}
+                                                    </Label>
+                                                </div>
+                                                <div>
+                                                    <RadioGroupItem value="CONVENIO" id="insurance" className="peer sr-only" />
+                                                    <Label
+                                                        htmlFor="insurance"
+                                                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer h-full"
+                                                    >
+                                                        <Shield className="mb-3 h-6 w-6" />
+                                                        <span className="font-semibold px-1 text-center">Convênio</span>
+                                                        <span className="text-sm text-muted-foreground mt-1">
+                                                            {insurances.length} opções
+                                                        </span>
+                                                    </Label>
+                                                </div>
+                                            </RadioGroup>
+                                        )}
+                                    />
 
-                                    {paymentType === 'HEALTH_INSURANCE' && (
+                                    {paymentType === 'CONVENIO' && (
                                         <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
                                             <div className="space-y-2">
                                                 <Label>Plano de Convênio *</Label>
@@ -380,50 +387,52 @@ function ConfirmBookingContent({ params }: PageProps) {
 
                             <Card>
                                 <CardContent className="pt-6 space-y-6">
-                                    <div
-                                        className="flex items-start gap-3 cursor-pointer"
-                                        onClick={() => {
-                                            const currentValue = watch('terms')
-                                            setValue('terms', !currentValue, { shouldValidate: true })
-                                        }}
-                                    >
-                                        <Checkbox
-                                            id="terms"
-                                            checked={watch('terms')}
-                                            onCheckedChange={(checked) => {
-                                                setValue('terms', checked as boolean, { shouldValidate: true })
-                                            }}
-                                            className="mt-1"
-                                        />
-                                        <div className="grid gap-1.5 leading-none select-none">
-                                            <span className="text-sm font-medium">
-                                                Concordo com os termos de uso
-                                            </span>
-                                            <p className="text-xs text-muted-foreground">
-                                                Ao prosseguir, você concorda com os{' '}
-                                                <a
-                                                    href="/termos"
-                                                    target="_blank"
-                                                    className="text-primary underline hover:text-primary/80"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    termos de uso
-                                                </a>{' '}
-                                                e{' '}
-                                                <a
-                                                    href="/privacidade"
-                                                    target="_blank"
-                                                    className="text-primary underline hover:text-primary/80"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    política de privacidade
-                                                </a>.
-                                            </p>
-                                            {errors.terms && (
-                                                <p className="text-xs text-destructive mt-1 font-medium">{errors.terms.message}</p>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <Controller
+                                        name="terms"
+                                        control={control}
+                                        defaultValue={false}
+                                        render={({ field }) => (
+                                            <label
+                                                htmlFor="terms"
+                                                className="flex items-start gap-3 cursor-pointer"
+                                            >
+                                                <Checkbox
+                                                    id="terms"
+                                                    checked={field.value}
+                                                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                                                    className="mt-1"
+                                                />
+                                                <div className="grid gap-1.5 leading-none select-none">
+                                                    <span className="text-sm font-medium">
+                                                        Concordo com os termos de uso
+                                                    </span>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Ao prosseguir, você concorda com os{' '}
+                                                        <a
+                                                            href="/termos"
+                                                            target="_blank"
+                                                            className="text-primary underline hover:text-primary/80"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            termos de uso
+                                                        </a>{' '}
+                                                        e{' '}
+                                                        <a
+                                                            href="/privacidade"
+                                                            target="_blank"
+                                                            className="text-primary underline hover:text-primary/80"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            política de privacidade
+                                                        </a>.
+                                                    </p>
+                                                    {errors.terms && (
+                                                        <p className="text-xs text-destructive mt-1 font-medium">{errors.terms.message}</p>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        )}
+                                    />
 
                                     <Button
                                         type="submit"
@@ -436,15 +445,10 @@ function ConfirmBookingContent({ params }: PageProps) {
                                                 <Loader2 className="animate-spin mr-2" />
                                                 Processando...
                                             </>
-                                        ) : paymentType === 'HEALTH_INSURANCE' ? (
-                                            <>
-                                                <CheckCircle2 className="w-5 h-5 mr-2" />
-                                                Confirmar Agendamento
-                                            </>
                                         ) : (
                                             <>
-                                                <CreditCard className="w-5 h-5 mr-2" />
-                                                Ir para pagamento
+                                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                                                Agendar Consulta
                                             </>
                                         )}
                                     </Button>
@@ -496,19 +500,14 @@ function ConfirmBookingContent({ params }: PageProps) {
 
                                             <div className="py-3 border-t">
                                                 <p className="text-sm text-muted-foreground">
-                                                    Valor da consulta{paymentType === 'HEALTH_INSURANCE' && ' (Convênio)'}
+                                                    Valor da consulta{paymentType === 'CONVENIO' && ' (Convênio)'}
                                                 </p>
                                                 <p className="text-3xl font-bold text-primary">
                                                     {currentPrice > 0 ? formatCurrency(currentPrice) : 'Sob Consulta'}
                                                 </p>
                                             </div>
 
-                                            {paymentType === 'PRIVATE' && (
-                                                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
-                                                    <Shield className="w-4 h-4" />
-                                                    <span className="text-xs">Pagamento seguro via Mercado Pago</span>
-                                                </div>
-                                            )}
+
                                         </>
                                     ) : null}
                                 </CardContent>

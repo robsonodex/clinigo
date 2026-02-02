@@ -35,6 +35,13 @@ export interface Database {
           subscription_due_date?: string | null
           last_payment_date?: string | null
           payment_status?: string | null
+          payment_confirmed?: boolean
+          payment_method?: string | null
+          payment_confirmed_at?: string | null
+          mercadopago_payment_id?: string | null
+          mercadopago_subscription_id?: string | null
+          payment_expiration_date?: string | null
+          is_demo?: boolean | null
         }
         Insert: {
           id?: string
@@ -56,6 +63,12 @@ export interface Database {
           subscription_due_date?: string | null
           last_payment_date?: string | null
           payment_status?: string | null
+          payment_confirmed?: boolean
+          payment_method?: string | null
+          payment_confirmed_at?: string | null
+          mercadopago_payment_id?: string | null
+          mercadopago_subscription_id?: string | null
+          payment_expiration_date?: string | null
         }
         Update: Partial<Database['public']['Tables']['clinics']['Insert']>
       }

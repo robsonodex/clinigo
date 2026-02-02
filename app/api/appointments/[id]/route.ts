@@ -14,12 +14,16 @@ interface RouteParams {
  */
 export const dynamic = 'force-dynamic'
 
+console.log('[DEBUG] Loading appointments/[id]/route.ts module')
+
 export async function GET(
     request: NextRequest,
     { params }: RouteParams
 ) {
     try {
+        console.log('[DEBUG] Handling GET /api/appointments/[id]')
         const { id: appointmentId } = await params
+        console.log('[DEBUG] Params resolved, ID:', appointmentId)
         const url = new URL(request.url)
         const includeQRCode = url.searchParams.get('include') === 'qr_code'
 
@@ -141,17 +145,34 @@ export async function GET(
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: appointmentId } = await params
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
 
         const body = await request.json()
         const validatedData = updateAppointmentSchema.parse(body)
 
-        // Use Service Role to bypass RLS, checking permissions manually below
-        const supabase = createServiceRoleClient() as any
+        // First get the authenticated user from session
+        const supabaseClient = await createClient()
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        }
+
+        // Get user role and clinic from database
+        const { data: currentUser } = await supabaseClient
+            .from('users')
+            .select('id, role, clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        if (!currentUser) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 })
+        }
+
+        // Use Service Role to bypass RLS for the update
+        const adminDb = createServiceRoleClient() as any
 
         // Get appointment
-        const { data: appointment, error: fetchError } = await supabase
+        const { data: appointment, error: fetchError } = await adminDb
             .from('appointments')
             .select('clinic_id, doctor_id, status')
             .eq('id', appointmentId)
@@ -162,23 +183,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // Check authorization
-        if (userRole !== 'SUPER_ADMIN') {
-            const { data: currentUser } = await supabase
-                .from('users')
-                .select('clinic_id')
-                .eq('id', userId)
-                .single()
-
-            if (currentUser?.clinic_id !== appointment.clinic_id) {
+        if (currentUser.role !== 'SUPER_ADMIN') {
+            if (currentUser.clinic_id !== appointment.clinic_id) {
                 throw new ForbiddenError('Acesso negado')
             }
 
             // Doctors can only update their own appointments
-            if (userRole === 'DOCTOR') {
-                const { data: doctor } = await supabase
+            if (currentUser.role === 'DOCTOR') {
+                const { data: doctor } = await adminDb
                     .from('doctors')
                     .select('id')
-                    .eq('user_id', userId)
+                    .eq('user_id', currentUser.id)
                     .single()
 
                 if (doctor?.id !== appointment.doctor_id) {
@@ -188,15 +203,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // Update appointment
-        const { data: updatedAppointment, error: updateError } = await supabase
+        const { data: updatedAppointment, error: updateError } = await adminDb
             .from('appointments')
             .update(validatedData)
             .eq('id', appointmentId)
             .select(`
-        *,
-        doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
-        patient:patients!appointments_patient_id_fkey(full_name, email)
-      `)
+                *,
+                doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
+                patient:patients!appointments_patient_id_fkey(full_name, email)
+            `)
             .single()
 
         if (updateError) throw updateError

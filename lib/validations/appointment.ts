@@ -26,7 +26,8 @@ export const patientSchema = z.object({
     date_of_birth: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato YYYY-MM-DD')
-        .optional(),
+        .optional()
+        .or(z.literal('')),
 })
 
 /**
@@ -49,14 +50,14 @@ export const createAppointmentSchema = z
             .string()
             .regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:MM'),
         patient: patientSchema,
-        payment_type: z.enum(['PRIVATE', 'HEALTH_INSURANCE']).default('PRIVATE'),
+        payment_type: z.enum(['PARTICULAR', 'CONVENIO']).default('PARTICULAR'),
         type: z.enum(['IN_PERSON', 'TELEMEDICINA', 'online']).default('IN_PERSON').optional(),
         health_insurance_plan_id: z.string().uuid().optional().nullable(),
         insurance_card_number: z.string().optional().nullable(),
         insurance_card_validity: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional().nullable(),
     })
     .superRefine((data, ctx) => {
-        if (data.payment_type === 'HEALTH_INSURANCE') {
+        if (data.payment_type === 'CONVENIO') {
             if (!data.health_insurance_plan_id) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
@@ -107,6 +108,14 @@ export const createAppointmentSchema = z
  * Update appointment schema
  */
 export const updateAppointmentSchema = z.object({
+    appointment_date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato YYYY-MM-DD')
+        .optional(),
+    appointment_time: z
+        .string()
+        .regex(/^\d{2}:\d{2}$/, 'Hora deve estar no formato HH:MM')
+        .optional(),
     status: z
         .enum(['PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'])
         .optional(),

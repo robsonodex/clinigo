@@ -61,8 +61,10 @@ export async function GET(request: NextRequest) {
             }
         }
         // Priority 3: Private access via authenticated user
+        // ⚠️ FIX: Use Service Role to bypass RLS when fetching user's clinic_id
         else if (userRole !== 'SUPER_ADMIN' && userId) {
-            const { data: user } = await supabase
+            const adminClient = createServiceRoleClient() as any
+            const { data: user } = await adminClient
                 .from('users')
                 .select('clinic_id')
                 .eq('id', userId as any)

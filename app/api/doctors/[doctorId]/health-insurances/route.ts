@@ -24,9 +24,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const userRole = request.headers.get('x-user-role')
         const userClinicId = request.headers.get('x-clinic-id')
 
-        if (!userId) {
-            throw new ForbiddenError('Não autorizado')
-        }
+        // Public access is allowed (for booking page)
+        // If no user, we'll only return ACTIVE insurances
 
         const { searchParams } = new URL(request.url)
         const query = listDoctorHealthInsurancesQuerySchema.parse(Object.fromEntries(searchParams))
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         const supabase = createServiceRoleClient()
 
-        // Verify doctor exists and check access
+        // Verify doctor exists
         const { data: doctor, error: doctorError } = await supabase
             .from('doctors')
             .select('id, clinic_id, user_id')
@@ -45,13 +44,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             throw new NotFoundError('Médico')
         }
 
-        // Check access: Clinic Admin can see doctors from their clinic, Doctor can see own
-        if (userRole !== 'SUPER_ADMIN') {
-            if (userRole === 'DOCTOR' && doctor.user_id !== userId) {
-                throw new ForbiddenError('Acesso negado')
-            }
-            if (userRole === 'CLINIC_ADMIN' && doctor.clinic_id !== userClinicId) {
-                throw new ForbiddenError('Acesso negado')
+        // Check access only if authenticated user
+        if (userId) {
+            if (userRole !== 'SUPER_ADMIN') {
+                if (userRole === 'DOCTOR' && doctor.user_id !== userId) {
+                    throw new ForbiddenError('Acesso negado')
+                }
+                if (userRole === 'CLINIC_ADMIN' && doctor.clinic_id !== userClinicId) {
+                    throw new ForbiddenError('Acesso negado')
+                }
             }
         }
 

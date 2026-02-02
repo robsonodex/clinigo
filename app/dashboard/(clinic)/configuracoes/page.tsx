@@ -23,6 +23,10 @@ import { createClient } from '@/lib/supabase/client'
 
 const clinicSettingsSchema = z.object({
     name: z.string().min(3, 'Nome muito curto'),
+    slug: z.string()
+        .min(3, 'Slug deve ter no mínimo 3 caracteres')
+        .max(50, 'Slug deve ter no máximo 50 caracteres')
+        .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Slug inválido. Use apenas letras minúsculas, números e hífens'),
     email: z.string().email(),
     phone: z.string().min(10, 'Telefone inválido'),
     address: z.string().min(5, 'Endereço muito curto'),
@@ -56,6 +60,7 @@ export default function SettingsPage() {
         resolver: zodResolver(clinicSettingsSchema),
         defaultValues: {
             name: '',
+            slug: '',
             email: '',
             phone: '',
             address: '',
@@ -97,7 +102,7 @@ export default function SettingsPage() {
                 // Fetch clinic data
                 const { data: clinicData, error } = await supabase
                     .from('clinics')
-                    .select('name, email, phone, address, primary_color, logo_url, whatsapp_number')
+                    .select('name, slug, email, phone, address, primary_color, logo_url, whatsapp_number')
                     .eq('id', userData.clinic_id)
                     .single()
 
@@ -108,12 +113,33 @@ export default function SettingsPage() {
                 }
 
                 if (clinicData) {
+                    // Handle address that might be stored as JSON object
+                    let addressValue = ''
+                    if (clinicData.address) {
+                        if (typeof clinicData.address === 'string') {
+                            addressValue = clinicData.address
+                        } else if (typeof clinicData.address === 'object') {
+                            // Convert address object to readable string
+                            const addr = clinicData.address as Record<string, string>
+                            addressValue = [
+                                addr.street || addr.rua,
+                                addr.number || addr.numero,
+                                addr.complement || addr.complemento,
+                                addr.neighborhood || addr.bairro,
+                                addr.city || addr.cidade,
+                                addr.state || addr.estado,
+                                addr.zipCode || addr.cep
+                            ].filter(Boolean).join(', ')
+                        }
+                    }
+
                     // Update form with real data
                     reset({
                         name: clinicData.name || '',
+                        slug: clinicData.slug || '',
                         email: clinicData.email || '',
                         phone: clinicData.phone || '',
-                        address: clinicData.address || '',
+                        address: addressValue,
                         primary_color: clinicData.primary_color || '#3b82f6',
                         whatsapp_number: clinicData.whatsapp_number || '',
                         logo_url: clinicData.logo_url || null,
@@ -179,6 +205,7 @@ export default function SettingsPage() {
                 .from('clinics')
                 .update({
                     name: data.name,
+                    slug: data.slug,
                     email: data.email,
                     phone: data.phone,
                     address: data.address,
@@ -320,6 +347,26 @@ export default function SettingsPage() {
                                         <Input id="name" {...register('name')} error={!!errors.name} />
                                         {errors.name && (
                                             <p className="text-xs text-destructive">{errors.name.message}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="slug">Slug da Página Pública</Label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-muted-foreground whitespace-nowrap">clinigo.app/</span>
+                                            <Input
+                                                id="slug"
+                                                {...register('slug')}
+                                                error={!!errors.slug}
+                                                placeholder="minha-clinica"
+                                                className="font-mono"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Usado na URL da sua página pública. Apenas letras minúsculas, números e hífens.
+                                        </p>
+                                        {errors.slug && (
+                                            <p className="text-xs text-destructive">{errors.slug.message}</p>
                                         )}
                                     </div>
 

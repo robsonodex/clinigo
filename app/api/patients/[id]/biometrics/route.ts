@@ -6,9 +6,10 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id: patientId } = await params;
         const supabase = await createClient();
 
         // Verifica autenticação
@@ -16,8 +17,6 @@ export async function DELETE(
         if (authError || !user) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
-
-        const patientId = params.id;
 
         // Busca biometria para pegar URL da foto
         const { data: biometric } = await supabase
@@ -66,9 +65,10 @@ export async function DELETE(
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id: patientId } = await params;
         const supabase = await createClient();
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -79,7 +79,7 @@ export async function GET(
         const { data, error } = await supabase
             .from('patient_face_biometrics')
             .select('id, consent_given, consent_date, detection_score, created_at, reference_image_url')
-            .eq('patient_id', params.id)
+            .eq('patient_id', patientId)
             .single();
 
         if (error) {

@@ -73,6 +73,40 @@ export interface ThemeDisplay {
 }
 
 // =============================================================================
+// Content/Text Customization Types
+// =============================================================================
+
+export interface ThemeContent {
+    // Hero Section
+    /** Small tag above title (e.g., "Saúde Digital") */
+    hero_tag: string | null
+
+    // Feature Cards (the 4 feature cards on homepage)
+    feature1_title: string | null
+    feature1_description: string | null
+    feature2_title: string | null
+    feature2_description: string | null
+    feature3_title: string | null
+    feature3_description: string | null
+    feature4_title: string | null
+    feature4_description: string | null
+
+    // Stats Labels
+    stat1_label: string | null
+    stat2_label: string | null
+    stat3_label: string | null
+
+    // Section Titles
+    specialties_title: string | null
+    specialties_subtitle: string | null
+    doctors_title: string | null
+    doctors_subtitle: string | null
+    about_title: string | null
+    contact_title: string | null
+    contact_subtitle: string | null
+}
+
+// =============================================================================
 // SEO Settings Types
 // =============================================================================
 
@@ -132,6 +166,7 @@ export interface ClinicTheme {
     colors: ThemeColors
     typography: ThemeTypography
     hero: ThemeHero
+    content: ThemeContent
     display: ThemeDisplay
     seo: ThemeSEO
     advanced?: ThemeAdvanced
@@ -232,6 +267,27 @@ export const DEFAULT_THEME: ClinicTheme = {
         background_image_url: null,
         cta_text: 'Agendar Consulta',
     },
+    content: {
+        hero_tag: null,
+        feature1_title: null,
+        feature1_description: null,
+        feature2_title: null,
+        feature2_description: null,
+        feature3_title: null,
+        feature3_description: null,
+        feature4_title: null,
+        feature4_description: null,
+        stat1_label: null,
+        stat2_label: null,
+        stat3_label: null,
+        specialties_title: null,
+        specialties_subtitle: null,
+        doctors_title: null,
+        doctors_subtitle: null,
+        about_title: null,
+        contact_title: null,
+        contact_subtitle: null,
+    },
     display: {
         show_prices: false,
         show_reviews: true,
@@ -281,6 +337,7 @@ export function mergeWithDefaultTheme(partialTheme: Partial<ClinicTheme>): Clini
     const colors = filterEmptyValues(partialTheme?.colors)
     const typography = filterEmptyValues(partialTheme?.typography)
     const hero = filterEmptyValues(partialTheme?.hero)
+    const content = filterEmptyValues(partialTheme?.content)
     const display = filterEmptyValues(partialTheme?.display)
     const seo = filterEmptyValues(partialTheme?.seo)
     const advanced = filterEmptyValues(partialTheme?.advanced)
@@ -290,6 +347,7 @@ export function mergeWithDefaultTheme(partialTheme: Partial<ClinicTheme>): Clini
         colors: { ...DEFAULT_THEME.colors, ...colors },
         typography: { ...DEFAULT_THEME.typography, ...typography },
         hero: { ...DEFAULT_THEME.hero, ...hero },
+        content: { ...DEFAULT_THEME.content, ...content },
         display: { ...DEFAULT_THEME.display, ...display },
         seo: { ...DEFAULT_THEME.seo, ...seo },
         advanced: { ...DEFAULT_THEME.advanced, ...advanced },

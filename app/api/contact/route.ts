@@ -15,14 +15,28 @@ export async function POST(request: NextRequest) {
         }
 
         // Create transporter - uses existing SMTP config
+        // Port 587 uses STARTTLS, Port 465 uses implicit SSL
+        const port = parseInt(process.env.SMTP_PORT || '587')
+        const isSecure = port === 465 // Only port 465 uses implicit SSL
+
+        console.log('SMTP Config:', {
+            host: process.env.SMTP_HOST,
+            port,
+            secure: isSecure,
+            user: process.env.SMTP_USER
+        })
+
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-            port: parseInt(process.env.SMTP_PORT || '465'),
-            secure: true,
+            port,
+            secure: isSecure,
             auth: {
                 user: process.env.SMTP_USER || 'contato@clinigo.app',
                 pass: process.env.SMTP_PASSWORD,
             },
+            tls: {
+                rejectUnauthorized: false // Allow self-signed certificates
+            }
         })
 
         // Email content
@@ -81,8 +95,17 @@ export async function POST(request: NextRequest) {
 </html>
 `
 
+        // Verify SMTP connection first
+        try {
+            await transporter.verify()
+            console.log('SMTP connection verified successfully')
+        } catch (verifyError) {
+            console.error('SMTP verification failed:', verifyError)
+            throw verifyError
+        }
+
         // Send email
-        await transporter.sendMail({
+        const result = await transporter.sendMail({
             from: `"CliniGo Contato" <${process.env.SMTP_USER || 'contato@clinigo.app'}>`,
             to: 'contato@clinigo.app',
             replyTo: email,
@@ -99,6 +122,13 @@ Assunto: ${assunto}
 Mensagem:
 ${mensagem}
             `
+        })
+
+        console.log('Email sent successfully:', {
+            messageId: result.messageId,
+            accepted: result.accepted,
+            rejected: result.rejected,
+            response: result.response
         })
 
         // Also send a copy to suporte if it's a technical question
