@@ -185,9 +185,9 @@ export async function sendEmailMultiTenant({
 }
 
 /**
- * Test SMTP connection without sending an email
+ * Test SMTP connection and optionally send a test email
  */
-export async function testSMTPConnection(config: Partial<SMTPConfig>): Promise<{ success: boolean; error?: string }> {
+export async function testSMTPConnection(config: Partial<SMTPConfig> & { testEmail?: string }): Promise<{ success: boolean; error?: string }> {
     try {
         const transporter = nodemailer.createTransport({
             host: config.host,
@@ -199,7 +199,44 @@ export async function testSMTPConnection(config: Partial<SMTPConfig>): Promise<{
             },
         })
 
+        // First verify the connection
         await transporter.verify()
+
+        // If a test email is provided, send a real test message
+        if (config.testEmail) {
+            const fromEmail = config.fromEmail || config.user || 'noreply@clinigo.app'
+            const fromName = config.fromName || 'CliniGo'
+            const toEmail = config.testEmail.trim()
+
+            console.log('[SMTP TEST] Sending test email to:', toEmail)
+
+            if (!toEmail) {
+                return { success: false, error: 'E-mail de destinatário vazio' }
+            }
+
+            await transporter.sendMail({
+                from: `"${fromName}" <${fromEmail}>`,
+                to: toEmail,
+                subject: '✅ Teste de Configuração SMTP - CliniGo',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #10b981;">✅ Configuração SMTP Funcionando!</h2>
+                        <p>Este é um e-mail de teste para confirmar que sua configuração SMTP está correta.</p>
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                        <p style="color: #6b7280; font-size: 14px;">
+                            <strong>Servidor:</strong> ${config.host}<br>
+                            <strong>Porta:</strong> ${config.port || 587}<br>
+                            <strong>Usuário:</strong> ${config.user}
+                        </p>
+                        <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">
+                            Este e-mail foi enviado automaticamente pelo CliniGo.
+                        </p>
+                    </div>
+                `,
+                text: `Configuração SMTP Funcionando!\n\nEste é um e-mail de teste para confirmar que sua configuração SMTP está correta.\n\nServidor: ${config.host}\nPorta: ${config.port || 587}\nUsuário: ${config.user}`,
+            })
+        }
+
         return { success: true }
     } catch (error) {
         return {

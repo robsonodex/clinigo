@@ -17,8 +17,9 @@ const smtpConfigSchema = z.object({
     smtp_port: z.number().min(1).max(65535).optional(),
     smtp_user: z.string().optional(),
     smtp_password: z.string().optional(),
-    smtp_from_email: z.string().email().optional(),
+    smtp_from_email: z.string().email().optional().or(z.literal('')),
     smtp_from_name: z.string().optional(),
+    smtp_secure: z.boolean().optional(), // Frontend sends this, ignore for now
 })
 
 /**
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
         if (!clinicId) throw new BadRequestError('Clínica indefinida')
 
         // Get SMTP config (never return password)
+        // Note: smtp_secure is not a database column, it's derived from smtp_port
         const { data: clinic, error } = await supabase
             .from('clinics')
             .select('smtp_enabled, smtp_host, smtp_port, smtp_user, smtp_from_email, smtp_from_name')
@@ -61,9 +63,14 @@ export async function GET(request: NextRequest) {
 
         if (error || !clinic) throw error || new BadRequestError('Clínica não encontrada')
 
+        // Derive smtp_secure from port (465 = SSL/TLS enabled)
+        const smtpPort = (clinic as any).smtp_port
+        const smtpSecure = smtpPort === 465
+
         return successResponse({
             config: {
                 ...(clinic as any),
+                smtp_secure: smtpSecure, // Derived from port, not stored in DB
                 smtp_password_set: !!(clinic as any).smtp_host, // Indicate if password is configured
             }
         })
@@ -106,13 +113,15 @@ export async function PATCH(request: NextRequest) {
         // SMTP is available for all plans - no feature check needed
 
         // Build update object
+        // Note: smtp_secure is NOT a database column, it's only used by the frontend for UI state
         const updateData: Record<string, unknown> = {
             smtp_enabled: validatedData.smtp_enabled,
             smtp_host: validatedData.smtp_host,
             smtp_port: validatedData.smtp_port,
             smtp_user: validatedData.smtp_user,
-            smtp_from_email: validatedData.smtp_from_email,
+            smtp_from_email: validatedData.smtp_from_email || null,
             smtp_from_name: validatedData.smtp_from_name,
+            // smtp_secure is NOT saved - it's derived from smtp_port (465 = secure)
         }
 
         // Only update password if provided (encrypt it)
@@ -147,22 +156,27 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { smtp_host, smtp_port, smtp_user, smtp_password } = body
+        const { smtp_host, smtp_port, smtp_user, smtp_password, test_email } = body
 
         if (!smtp_host || !smtp_user || !smtp_password) {
             throw new BadRequestError('Host, usuário e senha são obrigatórios para teste')
         }
 
-        // Test the connection
+        if (!test_email) {
+            throw new BadRequestError('E-mail de destino é obrigatório para o teste')
+        }
+
+        // Test the connection and send test email
         const result = await testSMTPConnection({
             host: smtp_host,
             port: smtp_port || 587,
             user: smtp_user,
             password: smtp_password,
+            testEmail: test_email,
         })
 
         if (result.success) {
-            return successResponse({ message: 'Conexão SMTP testada com sucesso!' })
+            return successResponse({ message: 'E-mail de teste enviado com sucesso!' })
         } else {
             throw new BadRequestError(`Falha no teste SMTP: ${result.error}`)
         }

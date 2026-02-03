@@ -76,7 +76,7 @@ const manualAppointmentSchema = z.object({
     insurance_card_number: z.string().optional(),
     notes: z.string().optional(),
     send_whatsapp: z.boolean().default(true),
-    send_email: z.boolean().default(false),
+    send_email: z.boolean().default(true),
     ignore_schedule_constraints: z.boolean().default(false),
     override_reason: z.string().optional(),
 })
@@ -124,7 +124,7 @@ export function ManualAppointmentModal({
             type: 'presencial',
             payment_type: 'cash',
             send_whatsapp: true,
-            send_email: false,
+            send_email: true,
             ignore_schedule_constraints: false,
         },
     })

@@ -27,7 +27,7 @@ interface QRCodeData {
 
 interface AppointmentData {
     id: string
-    patient: { full_name: string }
+    patient: { full_name: string; phone?: string; email?: string }
     scheduled_at?: string
     appointment_date?: string
     appointment_time?: string
@@ -35,6 +35,7 @@ interface AppointmentData {
     qr_code: QRCodeData | null
     appointment_type?: string // 'online' | 'telemedicina' | 'presencial'
     type?: string // fallback field
+    clinic?: { name?: string }
 }
 
 interface AppointmentSuccessModalProps {
@@ -89,10 +90,18 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
                 await navigator.share({ files: [file], text: message })
                 toast.success('Compartilhado com sucesso!')
             } else {
-                // Fallback to WhatsApp Web
-                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+                // Fallback to WhatsApp Web with patient phone
+                const patientPhone = appointment.patient.phone?.replace(/\D/g, '')
+                console.log('[DEBUG] Patient phone raw:', appointment.patient.phone)
+                console.log('[DEBUG] Patient phone cleaned:', patientPhone)
+                const formattedPhone = patientPhone ? (patientPhone.startsWith('55') ? patientPhone : `55${patientPhone}`) : ''
+                console.log('[DEBUG] Formatted phone:', formattedPhone)
+                const whatsappUrl = formattedPhone
+                    ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
+                    : `https://wa.me/?text=${encodeURIComponent(message)}`
+                console.log('[DEBUG] WhatsApp URL:', whatsappUrl)
                 window.open(whatsappUrl, '_blank')
-                toast.info('Envie o comprovante manualmente via WhatsApp')
+                toast.success(formattedPhone ? 'WhatsApp aberto com o número do paciente!' : 'WhatsApp aberto! Selecione o contato.')
             }
         } catch (error) {
             console.error('Share error:', error)

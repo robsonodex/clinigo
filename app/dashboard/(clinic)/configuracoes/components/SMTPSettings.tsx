@@ -38,6 +38,8 @@ export function SMTPSettings() {
     const [isTesting, setIsTesting] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [testEmail, setTestEmail] = useState('')
+    const [isSaved, setIsSaved] = useState(false) // Indica se foi salvo com sucesso
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null) // Último salvamento
     const [config, setConfig] = useState<SMTPConfig>({
         smtp_host: '',
         smtp_port: 587,
@@ -57,8 +59,13 @@ export function SMTPSettings() {
         try {
             const response = await fetch('/api/clinics/smtp')
             const data = await response.json()
-            if (data.success && data.config) {
-                setConfig({ ...config, ...data.config })
+            if (data.success && data.data?.config) {
+                const fetchedConfig = data.data.config
+                setConfig({ ...config, ...fetchedConfig })
+                // Se já existe host configurado, marcar como salvo
+                if (fetchedConfig.smtp_host) {
+                    setIsSaved(true)
+                }
             }
         } catch (error) {
             console.error('Erro ao carregar configurações SMTP:', error)
@@ -74,6 +81,7 @@ export function SMTPSettings() {
         }
 
         setIsSaving(true)
+        setIsSaved(false)
         try {
             const response = await fetch('/api/clinics/smtp', {
                 method: 'PATCH',
@@ -83,11 +91,18 @@ export function SMTPSettings() {
             const data = await response.json()
             if (data.success) {
                 toast.success('Configurações SMTP salvas com sucesso!')
+                setIsSaved(true)
+                setLastSavedAt(new Date())
+                // Recarrega para confirmar que os dados foram persistidos
+                await fetchConfig()
             } else {
-                toast.error(data.error || 'Erro ao salvar configurações')
+                const errorMessage = typeof data.error === 'object' ? data.error?.message : data.error
+                toast.error(errorMessage || 'Erro ao salvar configurações')
+                setIsSaved(false)
             }
         } catch (error) {
             toast.error('Erro ao salvar configurações')
+            setIsSaved(false)
         } finally {
             setIsSaving(false)
         }
@@ -116,7 +131,8 @@ export function SMTPSettings() {
             if (data.success) {
                 toast.success('E-mail de teste enviado com sucesso!')
             } else {
-                toast.error(data.error || 'Erro ao enviar e-mail de teste')
+                const errorMessage = typeof data.error === 'object' ? data.error?.message : data.error
+                toast.error(errorMessage || 'Erro ao enviar e-mail de teste')
             }
         } catch (error) {
             toast.error('Erro ao enviar e-mail de teste')
@@ -155,14 +171,32 @@ export function SMTPSettings() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Info */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-blue-800">
-                            <p className="font-medium mb-1">E-mails personalizados com sua marca</p>
-                            <p>Configure seu próprio servidor SMTP para que os e-mails aos pacientes sejam enviados com o nome e endereço da sua clínica.</p>
+                    {/* Success indicator - shown when SMTP is configured */}
+                    {isSaved && config.smtp_host && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-green-800">
+                                <p className="font-medium mb-1">✓ SMTP Configurado com Sucesso!</p>
+                                <p>Suas configurações estão salvas e funcionando. Os e-mails serão enviados usando seu servidor SMTP.</p>
+                                {lastSavedAt && (
+                                    <p className="text-xs text-green-600 mt-1">
+                                        Último salvamento: {lastSavedAt.toLocaleTimeString('pt-BR')}
+                                    </p>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Info - only show when not configured yet */}
+                    {!isSaved && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-blue-800">
+                                <p className="font-medium mb-1">E-mails personalizados com sua marca</p>
+                                <p>Configure seu próprio servidor SMTP para que os e-mails aos pacientes sejam enviados com o nome e endereço da sua clínica.</p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Enable Toggle */}
                     <div className="flex items-center justify-between p-4 border rounded-lg">

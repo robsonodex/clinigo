@@ -161,47 +161,66 @@ export function InitialSetup() {
                     {/* SMTP */}
                     <div className="space-y-3">
                         <div className="flex items-start gap-3">
-                            <Mail className="w-5 h-5 text-blue-600 mt-1" />
+                            <Mail className={`w-5 h-5 mt-1 ${status.hasSmtp ? 'text-green-600' : 'text-blue-600'}`} />
                             <div className="flex-1">
                                 <h3 className="font-semibold mb-1">
                                     Configuração de E-mail (SMTP)
                                 </h3>
-                                <p className="text-sm text-muted-foreground mb-3">
-                                    Para que todas as funcionalidades de envio de e-mail
-                                    funcionem corretamente (confirmações, lembretes, links de
-                                    teleconsulta), é necessário configurar o SMTP.
-                                </p>
 
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <Link href="/dashboard/configuracoes">
-                                        <Button variant="outline" size="sm">
-                                            <Mail className="w-4 h-4 mr-2" />
-                                            Configurar Agora
-                                        </Button>
-                                    </Link>
-                                    <Link href="/help/smtp">
-                                        <Button variant="ghost" size="sm">
-                                            Ver Tutorial Completo →
-                                        </Button>
-                                    </Link>
-                                </div>
-
-                                {!status.hasSmtp && (
-                                    <Alert className="mt-3">
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertDescription className="text-sm">
-                                            <strong>Não sabe como configurar?</strong>
+                                {status.hasSmtp ? (
+                                    <Alert className="bg-green-50 border-green-200">
+                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                        <AlertDescription className="text-green-800">
+                                            <strong>SMTP Configurado com Sucesso!</strong>
                                             <br />
-                                            Consulte seu departamento de TI ou{' '}
-                                            <Link
-                                                href="/help/smtp"
-                                                className="text-primary underline"
-                                            >
-                                                veja nosso tutorial passo a passo
-                                            </Link>
-                                            .
+                                            Suas configurações de e-mail estão ativas e funcionando.
+                                            <div className="mt-2">
+                                                <Link href="/dashboard/configuracoes">
+                                                    <Button variant="ghost" size="sm" className="text-green-700 hover:text-green-800 p-0 h-auto">
+                                                        Gerenciar Configurações →
+                                                    </Button>
+                                                </Link>
+                                            </div>
                                         </AlertDescription>
                                     </Alert>
+                                ) : (
+                                    <>
+                                        <p className="text-sm text-muted-foreground mb-3">
+                                            Para que todas as funcionalidades de envio de e-mail
+                                            funcionem corretamente (confirmações, lembretes, links de
+                                            teleconsulta), é necessário configurar o SMTP.
+                                        </p>
+
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <Link href="/dashboard/configuracoes">
+                                                <Button variant="outline" size="sm">
+                                                    <Mail className="w-4 h-4 mr-2" />
+                                                    Configurar Agora
+                                                </Button>
+                                            </Link>
+                                            <Link href="/help/smtp">
+                                                <Button variant="ghost" size="sm">
+                                                    Ver Tutorial Completo →
+                                                </Button>
+                                            </Link>
+                                        </div>
+
+                                        <Alert className="mt-3">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertDescription className="text-sm">
+                                                <strong>Não sabe como configurar?</strong>
+                                                <br />
+                                                Consulte seu departamento de TI ou{' '}
+                                                <Link
+                                                    href="/help/smtp"
+                                                    className="text-primary underline"
+                                                >
+                                                    veja nosso tutorial passo a passo
+                                                </Link>
+                                                .
+                                            </AlertDescription>
+                                        </Alert>
+                                    </>
                                 )}
                             </div>
                         </div>

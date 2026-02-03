@@ -9,10 +9,10 @@ import { successResponse } from '@/lib/utils/responses'
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const patientId = params.id
+        const { id: patientId } = await params
         const supabase = await createClient() as any
 
         // Query patient no-show stats view

@@ -171,10 +171,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         // Use Service Role to bypass RLS for the update
         const adminDb = createServiceRoleClient() as any
 
-        // Get appointment
+        // Get appointment with full details for email
         const { data: appointment, error: fetchError } = await adminDb
             .from('appointments')
-            .select('clinic_id, doctor_id, status')
+            .select(`
+                clinic_id, doctor_id, status, appointment_date, appointment_time,
+                patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
+                doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
+                clinic:clinics!appointments_clinic_id_fkey(id, name)
+            `)
             .eq('id', appointmentId)
             .single()
 
@@ -202,6 +207,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             }
         }
 
+        // Check if date or time is changing (for email notification)
+        const isRescheduling =
+            (validatedData.appointment_date && validatedData.appointment_date !== appointment.appointment_date) ||
+            (validatedData.appointment_time && validatedData.appointment_time !== appointment.appointment_time)
+
         // Update appointment
         const { data: updatedAppointment, error: updateError } = await adminDb
             .from('appointments')
@@ -216,8 +226,63 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (updateError) throw updateError
 
+        // Send reschedule email notification if date/time changed
+        if (isRescheduling && appointment.patient?.email) {
+            try {
+                const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+
+                const newDate = validatedData.appointment_date || appointment.appointment_date
+                const newTime = validatedData.appointment_time || appointment.appointment_time
+                const doctorName = appointment.doctor?.user?.full_name || 'Médico'
+                const clinicName = appointment.clinic?.name || 'Clínica'
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+                const checkinUrl = `${baseUrl}/checkin/${appointmentId}`
+
+                await sendEmailMultiTenant({
+                    clinicId: appointment.clinic_id,
+                    to: appointment.patient.email,
+                    subject: `📅 Consulta Reagendada - ${newDate} às ${newTime}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <h2 style="color: #3b82f6;">📅 Sua Consulta foi Reagendada</h2>
+                            <p>Olá <strong>${appointment.patient.full_name}</strong>,</p>
+                            <p>Sua consulta foi reagendada para um novo horário:</p>
+                            
+                            <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #f59e0b;">
+                                <p style="margin: 4px 0; color: #92400e;"><strong>Horário anterior:</strong> ${appointment.appointment_date} às ${appointment.appointment_time.substring(0, 5)}</p>
+                            </div>
+                            
+                            <div style="background: #d1fae5; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #10b981;">
+                                <p style="margin: 4px 0; color: #065f46;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
+                                <p style="margin: 4px 0; color: #065f46;"><strong>📅 Nova Data:</strong> ${newDate}</p>
+                                <p style="margin: 4px 0; color: #065f46;"><strong>🕐 Novo Horário:</strong> ${newTime}</p>
+                                <p style="margin: 4px 0; color: #065f46;"><strong>🏥 Clínica:</strong> ${clinicName}</p>
+                            </div>
+                            
+                            <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                            <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
+                            <p style="text-align: center;">
+                                <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Fazer Pré-Check-in
+                                </a>
+                            </p>
+                            
+                            <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+                                Este e-mail foi enviado automaticamente. Caso precise cancelar ou reagendar novamente, entre em contato com a clínica.
+                            </p>
+                        </div>
+                    `,
+                })
+                console.log('[NOTIFICATION] Reschedule email sent to:', appointment.patient.email)
+            } catch (emailError) {
+                console.error('[NOTIFICATION] Reschedule email failed:', emailError)
+                // Non-blocking - don't fail the update
+            }
+        }
+
         return successResponse(updatedAppointment)
     } catch (error) {
         return handleApiError(error)
     }
 }
+

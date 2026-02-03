@@ -512,10 +512,49 @@ export async function POST(request: NextRequest) {
 
         const appointmentWithRelations = fullAppointment as any
 
-        // TODO: Send notifications if enabled
-        // if (body.notifications?.send_sms) { ... }
-        // if (body.notifications?.send_whatsapp) { ... }
-        // if (body.notifications?.send_email) { ... }
+        // Send email notification if enabled
+        if (body.notifications?.send_email && patient.email) {
+            try {
+                const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+                const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
+                const clinicName = appointmentWithRelations?.clinic?.name || 'Clínica'
+                const checkinUrl = qrCodeData?.url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/checkin/${appointmentId}`
+
+                await sendEmailMultiTenant({
+                    clinicId,
+                    to: patient.email,
+                    subject: `✅ Consulta Confirmada - ${appointmentDate} às ${appointmentTime}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <h2 style="color: #10b981;">✅ Agendamento Confirmado!</h2>
+                            <p>Olá <strong>${patient.full_name}</strong>,</p>
+                            <p>Sua consulta foi agendada com sucesso:</p>
+                            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                                <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorFullName}</p>
+                                <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${appointmentDate}</p>
+                                <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${appointmentTime}</p>
+                                <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicName}</p>
+                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${body.type === 'telemedicina' ? 'Telemedicina' : 'Presencial'}</p>
+                            </div>
+                            <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                            <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
+                            <p style="text-align: center;">
+                                <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Fazer Pré-Check-in
+                                </a>
+                            </p>
+                            <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+                                Este e-mail foi enviado automaticamente. Caso precise cancelar ou reagendar, entre em contato com a clínica.
+                            </p>
+                        </div>
+                    `,
+                })
+                console.log('[NOTIFICATION] Email sent to:', patient.email)
+            } catch (emailError) {
+                console.error('[NOTIFICATION] Email send failed:', emailError)
+                // Non-blocking - don't fail the appointment creation
+            }
+        }
 
         return NextResponse.json({
             success: true,
@@ -527,8 +566,8 @@ export async function POST(request: NextRequest) {
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',
                 appointment_type: body.type === 'telemedicina' ? 'telemedicina' : 'presencial',
-                patient: appointmentWithRelations?.patient || { full_name: (patient as any).full_name },
-                doctor: appointmentWithRelations?.doctor || { user: { full_name: (doctor as any).user.full_name } },
+                patient: appointmentWithRelations?.patient || { full_name: (patient as any).full_name, phone: (patient as any).phone, email: (patient as any).email },
+                doctor: appointmentWithRelations?.doctor || { user: { full_name: (doctor as any).user?.full_name || 'Médico' } },
                 clinic: appointmentWithRelations?.clinic,
                 qr_code: qrCodeData
             },
