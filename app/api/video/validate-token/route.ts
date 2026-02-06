@@ -40,7 +40,7 @@ export async function POST(request: Request) {
                     appointment_date,
                     appointment_time,
                     status,
-                    type,
+                    appointment_type,
                     patient:patients (
                         id,
                         full_name,
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
                 date: appointment.appointment_date,
                 time: appointment.appointment_time,
                 status: appointment.status,
-                type: appointment.type,
+                type: appointment.appointment_type,
                 patient: appointment.patient,
                 doctor: normalizedDoctor,
                 clinic: appointment.clinic
