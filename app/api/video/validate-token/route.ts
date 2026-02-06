@@ -48,8 +48,10 @@ export async function POST(request: Request) {
                     ),
                     doctor:doctors (
                         id,
-                        full_name,
-                        specialty
+                        specialty,
+                        user:users!doctors_user_id_fkey (
+                            full_name
+                        )
                     ),
                     clinic:clinics!appointments_clinic_id_fkey (
                         id,
@@ -91,6 +93,14 @@ export async function POST(request: Request) {
         }
 
         // Return success with appointment info
+        // Normalize doctor structure: extract full_name from nested user
+        const doctor = appointment.doctor
+        const normalizedDoctor = doctor ? {
+            id: doctor.id,
+            full_name: doctor.user?.full_name || 'Médico',
+            specialty: doctor.specialty
+        } : null
+
         return NextResponse.json({
             valid: true,
             role: isPatient ? 'patient' : 'doctor',
@@ -103,7 +113,7 @@ export async function POST(request: Request) {
                 status: appointment.status,
                 type: appointment.type,
                 patient: appointment.patient,
-                doctor: appointment.doctor,
+                doctor: normalizedDoctor,
                 clinic: appointment.clinic
             }
         })
