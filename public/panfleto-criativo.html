@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CliniGo - O Futuro é Agora</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-green: #00ff9d;
+            --deep-purple: #1b0b3b;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #050505;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 157, 0.1) 0%, transparent 40%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .flyer-container {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 40px 30px;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            margin: 20px;
+        }
+
+        /* Decorative Elements */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.6;
+            z-index: -1;
+        }
+
+        .orb-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--deep-purple);
+            top: -100px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 200px;
+            height: 200px;
+            background: var(--neon-blue);
+            bottom: -50px;
+            right: -50px;
+            opacity: 0.2;
+        }
+
+        /* Header */
+        .logo-area {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-img {
+            height: 50px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            line-height: 1;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: #ccc;
+            font-weight: 300;
+            margin-bottom: 30px;
+        }
+
+        /* 3D Cards */
+        .card-grid {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.3s, background 0.3s;
+            cursor: default;
+        }
+
+        .feature-card:hover {
+            transform: scale(1.02) translateX(5px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--neon-blue);
+        }
+
+        .icon {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-text h3 {
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+            color: var(--neon-green);
+        }
+
+        .card-text p {
+            font-size: 0.9rem;
+            color: #aaa;
+            line-height: 1.3;
+        }
+
+        /* CTA Section */
+        .cta-box {
+            text-align: center;
+            position: relative;
+            padding: 30px 0 10px;
+        }
+
+        .btn-glow {
+            display: inline-block;
+            text-decoration: none;
+            color: #000;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-green));
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(0, 255, 157, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 10;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.6);
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            border-radius: 50px;
+            border: 1px solid var(--neon-green);
+            animation: pulse-animation 2s infinite;
+            z-index: 1;
+        }
+
+        @keyframes pulse-animation {
+            0% {
+                transform: translate(-50%, -50%) scale(0.9);
+                opacity: 1;
+                isibility: visible;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 20px;
+        }
+
+        /* Floating particles */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .delay-1 {
+            animation-delay: 0.5s;
+        }
+
+        .delay-2 {
+            animation-delay: 1s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="flyer-container">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+
+        <div class="logo-area">
+            <img src="logo_white.svg" alt="CliniGo" class="logo-img">
+        </div>
+
+        <div class="header-text">
+            <h1>Sua Clínica.<br>No Piloto Automático.</h1>
+            <p class="tagline">A revolução digital que seus pacientes esperam e sua equipe precisa.</p>
+        </div>
+
+        <div class="card-grid">
+            <div class="feature-card floating">
+                <div class="icon">⚡</div>
+                <div class="card-text">
+                    <h3>Fila Zero</h3>
+                    <p>Check-in facial e QR Code. Seus pacientes direto para a sala.</p>
+                </div>
+            </div>
+
+            <div class="feature-card floating delay-1">
+                <div class="icon">🤖</div>
+                <div class="card-text">
+                    <h3>IA Manager</h3>
+                    <p>Agendamento e confirmação que funcionam sozinhos 24/7.</p>
+                </div>
+            </div>
+
+            <div class="feature-card floating delay-2">
+                <div class="icon">💎</div>
+                <div class="card-text">
+                    <h3>TISS Blindado</h3>
+                    <p>Faturamento automático sem glosas e sem dores de cabeça.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-box">
+            <div class="pulse-ring" style="width: 80%; height: 60px;"></div>
+            <a href="https://clinigo.app/cadastro" class="btn-glow">
+                Começar Agora
+            </a>
+            <p style="margin-top: 15px; font-size: 0.9rem; color: #888;">Teste Grátis • Sem Cartão</p>
+        </div>
+
+        <div class="footer">
+            <p>CliniGo HealthTech © 2026</p>
+            <p>Acelere seu consultório hoje.</p>
+        </div>
+    </div>
+
+</body>
+
+</html>
