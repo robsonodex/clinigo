@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PlanCard } from '@/components/plans/plan-card'
 import { RegistrationStepper } from '@/components/registration/registration-stepper'
+import { ReferralCodeInput } from '@/components/partners/ReferralCodeInput'
 import { PLANS, PLAN_ORDER, type PlanType } from '@/lib/constants/plans'
 import { generateSlug } from '@/lib/utils/slug'
 import { maskCNPJ, validateCNPJ, cleanCNPJ } from '@/lib/utils/cnpj'
@@ -58,6 +59,7 @@ type FormData = {
     phone: string
     email: string
     slug: string
+    referral_code?: string
     // Step 3
     street?: string
     number?: string
@@ -78,12 +80,16 @@ function CadastroContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const preselectedPlan = searchParams.get('plan') as PlanType | null
+    const refCode = searchParams.get('ref')
 
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [referralCode, setReferralCode] = useState(refCode?.toUpperCase() || '')
+    const [validPartner, setValidPartner] = useState<{ id: string; full_name: string } | null>(null)
     // Não pré-seleciona o plano mesmo quando vem da URL - usuário precisa clicar
     const [formData, setFormData] = useState<Partial<FormData>>({
         plan_type: undefined,
+        referral_code: refCode?.toUpperCase() || '',
     })
 
     const {
@@ -182,6 +188,7 @@ function CadastroContent() {
                     phone: allData.phone,
                     responsible_phone: allData.phone,
                     plan_type: allData.plan_type,
+                    referral_code: referralCode || null,
                     address: {
                         street: allData.street,
                         number: allData.number,
@@ -369,6 +376,18 @@ function CadastroContent() {
                                                 <p className="text-xs text-destructive">{errors.slug.message}</p>
                                             )}
                                         </div>
+                                    </div>
+
+                                    {/* Referral Code */}
+                                    <div className="border-t pt-4 mt-4">
+                                        <ReferralCodeInput
+                                            value={referralCode}
+                                            onChange={(value) => {
+                                                setReferralCode(value)
+                                                setFormData(prev => ({ ...prev, referral_code: value }))
+                                            }}
+                                            onValidPartner={setValidPartner}
+                                        />
                                     </div>
 
                                     <div className="flex justify-between mt-6">

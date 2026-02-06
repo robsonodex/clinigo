@@ -801,6 +801,7 @@ export default function LandingPremium() {
                                 <li><Link href="#sobre" className="hover:text-teal-vibrant transition-colors">Sobre nós</Link></li>
                                 <li><Link href="/blog" className="hover:text-teal-vibrant transition-colors">Blog</Link></li>
                                 <li><Link href="/contato" className="hover:text-teal-vibrant transition-colors">Contato</Link></li>
+                                <li><Link href="/partners/register" className="hover:text-teal-vibrant transition-colors">Seja Parceiro</Link></li>
                             </ul>
                         </div>
 

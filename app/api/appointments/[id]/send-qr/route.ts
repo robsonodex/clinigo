@@ -30,7 +30,7 @@ export async function POST(
         const { method }: SendQRRequest = await req.json()
         const appointmentId = params.appointmentId
 
-        // Fetch QR code with appointment data
+        // Fetch QR code with appointment data (including appointment_type and video_room)
         const { data: qrCode, error: qrError } = await supabase
             .from('appointment_qr_codes')
             .select(`
@@ -39,7 +39,8 @@ export async function POST(
                     *,
                     patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
                     doctor:doctors!appointments_doctor_id_fkey(id, full_name),
-                    clinic:clinics!appointments_clinic_id_fkey(id, name, slug, email, phone)
+                    clinic:clinics!appointments_clinic_id_fkey(id, name, slug, email, phone),
+                    video_room:video_rooms(room_id, patient_token)
                 )
             `)
             .eq('appointment_id', appointmentId)
@@ -83,16 +84,77 @@ export async function POST(
                     try {
                         const { sendMail } = await import('@/lib/services/mail-service')
 
-                        const scheduledDate = new Date(appointment.scheduled_at)
-                        const formattedDate = scheduledDate.toLocaleDateString('pt-BR')
-                        const formattedTime = scheduledDate.toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })
+                        // Detect appointment type and format date
+                        const appointmentType = appointment.appointment_type || 'IN_PERSON'
+                        const isTeleconsulta = appointmentType === 'TELEMEDICINA' || appointmentType === 'online'
 
+                        // Format date - use appointment_date if available, fallback to scheduled_at
+                        const appointmentDateStr = appointment.appointment_date || appointment.scheduled_at
+                        const appointmentTimeStr = appointment.appointment_time || ''
+                        const scheduledDate = new Date(appointmentDateStr)
+                        const formattedDate = scheduledDate.toLocaleDateString('pt-BR')
+                        const formattedTime = appointmentTimeStr
+                            ? appointmentTimeStr.substring(0, 5)
+                            : scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+                        // Generate video link for teleconsulta
+                        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+                        let videoLinkHtml = ''
+                        if (isTeleconsulta && appointment.video_room) {
+                            const patientVideoLink = `${baseUrl}/video/${appointment.video_room.room_id}?role=patient&token=${appointment.video_room.patient_token}`
+                            videoLinkHtml = `
+                                <h3 style="color: #3b82f6;">📹 Acesso à Teleconsulta:</h3>
+                                <p>Sua consulta será realizada <strong>online</strong>. No dia e horário agendados, clique no botão abaixo para acessar a sala de vídeo:</p>
+                                
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${patientVideoLink}" 
+                                       style="background: #3b82f6; color: white; padding: 16px 32px; 
+                                              text-decoration: none; border-radius: 8px; display: inline-block; font-size: 16px; font-weight: bold;">
+                                        🎥 Entrar na Teleconsulta
+                                    </a>
+                                </div>
+                                
+                                <div style="background: #fef3c7; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 16px 0;">
+                                    <p style="margin: 0; color: #92400e; font-size: 14px;">
+                                        <strong>⚠️ Dicas importantes:</strong><br>
+                                        • Teste sua câmera e microfone antes do horário<br>
+                                        • Use boa iluminação e um local silencioso<br>
+                                        • Acesse com 5 minutos de antecedência
+                                    </p>
+                                </div>
+                            `
+                        }
+
+                        // Generate QR Code section for in-person appointments only
+                        let qrCodeHtml = ''
+                        if (!isTeleconsulta) {
+                            qrCodeHtml = `
+                                <h3>📱 Complete seu Pré-Cadastro:</h3>
+                                <p>Para agilizar seu atendimento, complete seu cadastro antes da consulta:</p>
+                                
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <img src="${qrCode.qr_data?.qrCodeImage || ''}" alt="QR Code" style="max-width: 200px;">
+                                    <p>
+                                        <a href="${qrCode.qr_data?.preRegistrationUrl || ''}" 
+                                           style="background: #10b981; color: white; padding: 12px 24px; 
+                                                  text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">
+                                            Completar Cadastro
+                                        </a>
+                                    </p>
+                                </div>
+                                
+                                <p style="color: #666; font-size: 14px;">
+                                    Ao chegar na clínica, apresente este QR Code na recepção para check-in rápido.
+                                </p>
+                            `
+                        }
+
+                        // Compose email with conditional content
                         await sendMail({
                             to: patient.email,
-                            subject: `Confirmação de Consulta - ${clinic.name}`,
+                            subject: isTeleconsulta
+                                ? `📹 Link da sua Teleconsulta - ${clinic.name}`
+                                : `Confirmação de Consulta - ${clinic.name}`,
                             html: `
                                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                                     <h2 style="color: #10b981;">Olá, ${patient.full_name}!</h2>
@@ -103,26 +165,11 @@ export async function POST(
                                         <p><strong>Médico:</strong> Dr(a). ${doctor.full_name}</p>
                                         <p><strong>Data:</strong> ${formattedDate}</p>
                                         <p><strong>Horário:</strong> ${formattedTime}</p>
-                                        <p><strong>Local:</strong> ${clinic.name}</p>
+                                        <p><strong>Modalidade:</strong> ${isTeleconsulta ? '📹 Teleconsulta (Online)' : '🏥 Presencial'}</p>
+                                        ${!isTeleconsulta ? `<p><strong>Local:</strong> ${clinic.name}</p>` : ''}
                                     </div>
                                     
-                                    <h3>Complete seu Pré-Cadastro:</h3>
-                                    <p>Para agilizar seu atendimento, complete seu cadastro antes da consulta:</p>
-                                    
-                                    <div style="text-align: center; margin: 30px 0;">
-                                        <img src="${qrCode.qr_data.qrCodeImage}" alt="QR Code" style="max-width: 200px;">
-                                        <p>
-                                            <a href="${qrCode.qr_data.preRegistrationUrl}" 
-                                               style="background: #10b981; color: white; padding: 12px 24px; 
-                                                      text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;">
-                                                Completar Cadastro
-                                            </a>
-                                        </p>
-                                    </div>
-                                    
-                                    <p style="color: #666; font-size: 14px;">
-                                        Ao chegar na clínica, apresente este QR Code na recepção para check-in rápido.
-                                    </p>
+                                    ${isTeleconsulta ? videoLinkHtml : qrCodeHtml}
                                     
                                     <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                                     <p style="color: #999; font-size: 12px;">

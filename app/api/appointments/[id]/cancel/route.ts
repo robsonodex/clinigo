@@ -16,12 +16,12 @@ import { formatDateBR } from '@/lib/utils/date'
 export const runtime = 'nodejs'
 
 interface RouteParams {
-    params: Promise<{ appointmentId: string }>
+    params: Promise<{ id: string }>
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
-        const { appointmentId } = await params
+        const { id: appointmentId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 

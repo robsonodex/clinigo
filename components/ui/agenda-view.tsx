@@ -146,13 +146,15 @@ export default function AgendaPage() {
     })
 
     // Group appointments by date and time
+    // Exclude cancelled/completed/no-show to free up the slot
     const getAppointment = (date: Date, time: string) => {
         if (!appointments || !Array.isArray(appointments)) return null
         const dateStr = format(date, 'yyyy-MM-dd')
         return appointments.find(
             (a) =>
                 a.appointment_date === dateStr &&
-                a.appointment_time?.substring(0, 5) === time
+                a.appointment_time?.substring(0, 5) === time &&
+                !['CANCELLED', 'COMPLETED', 'NO_SHOW'].includes(a.status)
         )
     }
 

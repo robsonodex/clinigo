@@ -17,6 +17,7 @@ interface AppointmentData {
     doctor_name?: string
     appointment_date: string
     appointment_time: string
+    appointment_type?: 'IN_PERSON' | 'TELEMEDICINA' | 'online' | string  // NEW: to conditionally skip checkin for teleconsultas
 }
 
 interface NotificationResult {
@@ -43,6 +44,16 @@ export async function schedulePreCheckinNotification(
     hoursBeforeAppointment: number = 24
 ): Promise<NotificationResult> {
     try {
+        // 🚫 SKIP pre-check-in notifications for teleconsultas (they don't need facial check-in)
+        const appointmentType = appointment.appointment_type || 'IN_PERSON'
+        if (appointmentType === 'TELEMEDICINA' || appointmentType === 'online') {
+            console.log('[Checkin Notifications] Skipping pre-checkin for teleconsulta:', appointment.id)
+            return {
+                success: false,
+                error: 'Teleconsulta não requer check-in facial - paciente receberá link de vídeo'
+            }
+        }
+
         const supabase = createClient()
 
         // Generate check-in URL

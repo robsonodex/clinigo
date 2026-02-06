@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +7,9 @@ export const dynamic = 'force-dynamic'
  * POST /api/video/validate-token
  * Validates patient/doctor token for video room access
  * Returns appointment info if token is valid
+ * 
+ * NOTE: Uses Service Role Client to bypass RLS because patients access
+ * via token URL without being logged in. The token itself is the authentication.
  */
 export async function POST(request: Request) {
     try {
@@ -19,7 +22,9 @@ export async function POST(request: Request) {
             )
         }
 
-        const supabase = await createClient()
+        // Use Service Role to bypass RLS - patients access via token URL without auth session
+        // The patient_token/doctor_token IS the authentication mechanism
+        const supabase = createServiceRoleClient()
 
         // Find video room by room_id and validate token
         const { data: videoRoom, error: roomError } = await (supabase
@@ -30,7 +35,6 @@ export async function POST(request: Request) {
                 appointment_id,
                 patient_token,
                 doctor_token,
-                status,
                 appointment:appointments (
                     id,
                     appointment_date,

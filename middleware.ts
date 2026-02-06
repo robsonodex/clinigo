@@ -49,6 +49,7 @@ const PUBLIC_ROUTES = [
     '/api/aia/triage',
     '/api/plans', // New public plans API
     '/api/debug/', // DEBUG ROUTES
+    '/api/video/validate-token', // Patient video room access via token link
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
@@ -283,6 +284,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/pagamento/') ||
         pathname.startsWith('/paciente/entrar') ||
         pathname.startsWith('/paciente/registro') ||
+        pathname.startsWith('/video/') || // Patient video room via token link
         pathname.match(/^\/[^/]+\/agendar/)
 
     // Public routes/pages without user = allow

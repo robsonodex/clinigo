@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
             phone,
             responsible_phone,
             plan_type,
-            address
+            address,
+            referral_code
         } = body
 
         // Validate required fields
@@ -161,6 +162,7 @@ export async function POST(request: NextRequest) {
                     phone: phone,
                     password_hash: password, // Will be used by webhook to create user
                     address: address ? JSON.stringify(address) : null,
+                    referral_code: referral_code || null, // Partner referral code
                     is_new_registration: true, // Flag for webhook
                 },
                 items: [{

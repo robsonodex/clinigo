@@ -171,14 +171,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         // Use Service Role to bypass RLS for the update
         const adminDb = createServiceRoleClient() as any
 
-        // Get appointment with full details for email
+        // Get appointment with full details for email (including appointment_type and video_room for teleconsultas)
         const { data: appointment, error: fetchError } = await adminDb
             .from('appointments')
             .select(`
-                clinic_id, doctor_id, status, appointment_date, appointment_time,
+                clinic_id, doctor_id, status, appointment_date, appointment_time, appointment_type,
                 patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
                 doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
-                clinic:clinics!appointments_clinic_id_fkey(id, name)
+                clinic:clinics!appointments_clinic_id_fkey(id, name),
+                video_room:video_rooms(room_id, patient_token)
             `)
             .eq('id', appointmentId)
             .single()
@@ -236,12 +237,43 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 const doctorName = appointment.doctor?.user?.full_name || 'Médico'
                 const clinicName = appointment.clinic?.name || 'Clínica'
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
-                const checkinUrl = `${baseUrl}/checkin/${appointmentId}`
+
+                // Detect appointment type for conditional email content
+                const appointmentType = appointment.appointment_type || 'IN_PERSON'
+                const isTeleconsulta = appointmentType === 'TELEMEDICINA' || appointmentType === 'online'
+
+                // Generate appropriate link based on type
+                let actionHtml = ''
+                if (isTeleconsulta && appointment.video_room) {
+                    const patientVideoLink = `${baseUrl}/video/${appointment.video_room.room_id}?role=patient&token=${appointment.video_room.patient_token}`
+                    actionHtml = `
+                        <h3 style="color: #3b82f6;">📹 Acesse sua Teleconsulta</h3>
+                        <p>Sua consulta será realizada online. No novo horário, clique no botão abaixo:</p>
+                        <p style="text-align: center;">
+                            <a href="${patientVideoLink}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                🎥 Entrar na Teleconsulta
+                            </a>
+                        </p>
+                    `
+                } else {
+                    const checkinUrl = `${baseUrl}/checkin/${appointmentId}`
+                    actionHtml = `
+                        <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                        <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
+                        <p style="text-align: center;">
+                            <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                Fazer Pré-Check-in
+                            </a>
+                        </p>
+                    `
+                }
 
                 await sendEmailMultiTenant({
                     clinicId: appointment.clinic_id,
                     to: appointment.patient.email,
-                    subject: `📅 Consulta Reagendada - ${newDate} às ${newTime}`,
+                    subject: isTeleconsulta
+                        ? `📹 Teleconsulta Reagendada - ${newDate} às ${newTime}`
+                        : `📅 Consulta Reagendada - ${newDate} às ${newTime}`,
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                             <h2 style="color: #3b82f6;">📅 Sua Consulta foi Reagendada</h2>
@@ -256,16 +288,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                                 <p style="margin: 4px 0; color: #065f46;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
                                 <p style="margin: 4px 0; color: #065f46;"><strong>📅 Nova Data:</strong> ${newDate}</p>
                                 <p style="margin: 4px 0; color: #065f46;"><strong>🕐 Novo Horário:</strong> ${newTime}</p>
-                                <p style="margin: 4px 0; color: #065f46;"><strong>🏥 Clínica:</strong> ${clinicName}</p>
+                                <p style="margin: 4px 0; color: #065f46;"><strong>📍 Modalidade:</strong> ${isTeleconsulta ? '📹 Teleconsulta (Online)' : '🏥 Presencial - ' + clinicName}</p>
                             </div>
                             
-                            <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
-                            <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
-                            <p style="text-align: center;">
-                                <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                                    Fazer Pré-Check-in
-                                </a>
-                            </p>
+                            ${actionHtml}
                             
                             <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
                                 Este e-mail foi enviado automaticamente. Caso precise cancelar ou reagendar novamente, entre em contato com a clínica.
