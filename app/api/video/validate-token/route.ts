@@ -48,7 +48,7 @@ export async function POST(request: Request) {
                     ),
                     doctor:doctors (
                         id,
-                        name,
+                        full_name,
                         specialty
                     ),
                     clinic:clinics!appointments_clinic_id_fkey (

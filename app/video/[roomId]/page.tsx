@@ -19,7 +19,7 @@ interface AppointmentInfo {
     status: string
     type: string
     patient: { id: string; full_name: string; email: string }
-    doctor: { id: string; name: string; specialty: string }
+    doctor: { id: string; full_name: string; specialty: string }
     clinic: { id: string; name: string; slug: string }
 }
 
@@ -211,7 +211,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                                 <div className="flex items-center gap-3">
                                     <Stethoscope className="w-5 h-5 text-emerald-300" />
                                     <div>
-                                        <p className="font-medium">{appointmentInfo.doctor.name}</p>
+                                        <p className="font-medium">{appointmentInfo.doctor.full_name}</p>
                                         <p className="text-sm text-emerald-200">{appointmentInfo.doctor.specialty}</p>
                                     </div>
                                 </div>
