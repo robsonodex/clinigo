@@ -55,6 +55,7 @@ const PUBLIC_ROUTES = [
     '/api/debug-doctor', // DB Debug tool
     '/api/video/validate-token', // Patient video room access via token link
     '/api/partners/register', // Partner registration - public for new affiliates
+    '/api/qr/', // QR Code images for email - must be public
     '/partners/login', // Partner login page
     '/partners/register', // Partner registration page
 ]

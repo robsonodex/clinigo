@@ -5,6 +5,10 @@ import { PreCheckinWizard } from '@/components/checkin/PreCheckinWizard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, Heart, AlertCircle } from 'lucide-react'
 
+// Force dynamic rendering for this route - fixes 404 in production
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
+
 export const metadata = {
     title: 'Pré-Check-in | CliniGo',
     description: 'Preencha o formulário de pré-check-in para agilizar seu atendimento',

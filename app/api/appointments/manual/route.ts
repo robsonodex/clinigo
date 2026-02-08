@@ -525,9 +525,12 @@ export async function POST(request: NextRequest) {
                 const isTelemedicina = body.type === 'telemedicina'
 
                 if (!isTelemedicina && qrCodeData?.image) {
+                    // Use the QR API URL instead of base64 data URL for better email client compatibility
+                    const qrBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'
+                    const qrImageUrl = `${qrBaseUrl}/api/qr/${appointmentId}`
                     qrCodeImageHtml = `
                         <div style="text-align: center; margin: 20px 0;">
-                            <img src="${qrCodeData.image}" alt="QR Code Check-in" style="width: 200px; height: 200px;"/>
+                            <img src="${qrImageUrl}" alt="QR Code Check-in" width="200" height="200" style="width: 200px; height: 200px;"/>
                             <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">Escaneie o QR Code no dia da consulta para fazer check-in</p>
                         </div>
                     `
