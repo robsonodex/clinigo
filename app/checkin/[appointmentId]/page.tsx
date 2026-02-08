@@ -24,6 +24,7 @@ async function getAppointmentData(appointmentId: string) {
     const supabase = createServiceRoleClient()
 
     // Try finding in appointments first - without clinics join (no FK relation)
+    console.log('[CheckinPage] Searching for appointment:', appointmentId)
     const { data: appointment, error } = await supabase
         .from('appointments')
         .select(`
@@ -47,6 +48,8 @@ async function getAppointmentData(appointmentId: string) {
         .eq('id', appointmentId)
         .single()
 
+    console.log('[CheckinPage] Query result:', { hasData: !!appointment, error: error?.message || null })
+
     if (!error && appointment) {
         // Fetch clinic data separately
         const appointmentData = appointment as any
@@ -58,6 +61,7 @@ async function getAppointmentData(appointmentId: string) {
                 .eq('id', appointmentData.clinic_id)
                 .single()
             clinicData = clinic
+            console.log('[CheckinPage] Clinic data:', { clinicId: appointmentData.clinic_id, found: !!clinicData })
         }
 
         return {
