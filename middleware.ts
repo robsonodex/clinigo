@@ -53,6 +53,7 @@ const PUBLIC_ROUTES = [
     '/api/probe', // Root probe
     '/api/doctors/probe', // Doctors probe
     '/api/debug-doctor', // DB Debug tool
+    '/api/debug-appointment', // Temp debug for appointment lookup
     '/api/video/validate-token', // Patient video room access via token link
     '/api/partners/register', // Partner registration - public for new affiliates
     '/api/qr/', // QR Code images for email - dynamic route (legacy)
