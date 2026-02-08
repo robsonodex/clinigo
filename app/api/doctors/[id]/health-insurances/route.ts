@@ -14,7 +14,7 @@ import {
 } from '@/lib/validations/health-insurance'
 
 interface RouteParams {
-    params: Promise<{ doctor_id: string }>
+    params: Promise<{ id: string }>
 }
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctor_id: doctorId } = await params
+        const { id: doctorId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
         const userClinicId = request.headers.get('x-clinic-id')
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctor_id: doctorId } = await params
+        const { id: doctorId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
         const userClinicId = request.headers.get('x-clinic-id')

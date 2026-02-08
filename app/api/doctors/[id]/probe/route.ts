@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 interface RouteParams {
-    params: Promise<{ doctor_id: string }>
+    params: Promise<{ id: string }>
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-    const { doctor_id: doctorId } = await params
+    const { id: doctorId } = await params
     return NextResponse.json({
         status: 'ok',
         message: 'Dynamic Doctor Probe working',
