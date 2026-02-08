@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { preCheckinSchema, type PreCheckinFormData, CHECKIN_VALIDATION } from '@/lib/validations/pre-checkin'
@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { QRCodeCanvas } from 'qrcode.react'
+import Webcam from 'react-webcam'
 import {
     Phone,
     MapPin,
@@ -30,6 +31,9 @@ import {
     FileText,
     X,
     Camera,
+    SkipForward,
+    RefreshCw,
+    Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -54,7 +58,8 @@ const STEPS = [
     { id: 1, title: 'Contato', icon: Phone },
     { id: 2, title: 'Saúde', icon: Stethoscope },
     { id: 3, title: 'Documentos', icon: FileText },
-    { id: 4, title: 'QR Code', icon: QrCode },
+    { id: 4, title: 'Foto', icon: Camera },
+    { id: 5, title: 'QR Code', icon: QrCode },
 ]
 
 export function PreCheckinWizard({
@@ -72,6 +77,12 @@ export function PreCheckinWizard({
     const [qrToken, setQrToken] = useState<string | null>(null)
     const [qrData, setQrData] = useState<string | null>(null)
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+
+    // Estado para captura facial
+    const [facePhotoUrl, setFacePhotoUrl] = useState<string | null>(null)
+    const [isCameraReady, setIsCameraReady] = useState(false)
+    const [isCapturingFace, setIsCapturingFace] = useState(false)
+    const webcamRef = useRef<Webcam>(null)
 
     const supabase = createClient()
 
@@ -183,15 +194,65 @@ export function PreCheckinWizard({
             case 3:
                 // Documents are optional, check consents
                 return await trigger(['consent_treatment', 'consent_data_usage'])
+            case 4:
+                // Foto is optional, always return true
+                return true
             default:
                 return true
         }
     }
 
+    // Captura de foto facial
+    const captureFacePhoto = useCallback(async () => {
+        if (!webcamRef.current) return
+
+        setIsCapturingFace(true)
+        try {
+            const imageSrc = webcamRef.current.getScreenshot()
+            if (!imageSrc) {
+                toast.error('Não foi possível capturar a foto')
+                return
+            }
+
+            // Upload da foto para storage
+            const fileName = `precheckin/${appointmentId}-face-${Date.now()}.jpg`
+            const blob = await fetch(imageSrc).then(r => r.blob())
+
+            const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from('checkin-docs')
+                .upload(fileName, blob, { upsert: true })
+
+            if (uploadError) {
+                console.warn('Face photo upload failed:', uploadError)
+                // Continue without saving - photo is optional
+                setFacePhotoUrl(imageSrc) // Keep local for preview
+                toast.success('Foto capturada! (armazenamento local)')
+            } else {
+                const { data: urlData } = supabase
+                    .storage
+                    .from('checkin-docs')
+                    .getPublicUrl(uploadData.path)
+                setFacePhotoUrl(urlData.publicUrl)
+                toast.success('Foto capturada com sucesso!')
+            }
+        } catch (error) {
+            console.error('Face capture error:', error)
+            toast.error('Erro ao capturar foto')
+        } finally {
+            setIsCapturingFace(false)
+        }
+    }, [supabase, appointmentId])
+
+    const retakeFacePhoto = () => {
+        setFacePhotoUrl(null)
+        setIsCameraReady(false)
+    }
+
     const nextStep = async () => {
         const isValid = await validateStep(currentStep)
-        if (isValid && currentStep < 4) {
-            if (currentStep === 3) {
+        if (isValid && currentStep < 5) {
+            if (currentStep === 4) {
                 // Submit form before going to QR step
                 handleSubmit(onSubmit)()
             } else {
@@ -204,6 +265,11 @@ export function PreCheckinWizard({
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1)
         }
+    }
+
+    const skipFaceCapture = () => {
+        setCurrentStep(currentStep + 1)
+        handleSubmit(onSubmit)()
     }
 
     const onSubmit = async (data: PreCheckinFormData) => {
@@ -229,7 +295,7 @@ export function PreCheckinWizard({
             if (result.success) {
                 setQrToken(result.data.qr_token)
                 setQrData(result.data.qr_data)
-                setCurrentStep(4)
+                setCurrentStep(5)
                 toast.success('Pré-check-in realizado com sucesso!')
                 onComplete?.(result.data.qr_token)
             } else {
@@ -534,8 +600,129 @@ export function PreCheckinWizard({
                         </div>
                     )}
 
-                    {/* Step 4: QR Code */}
-                    {currentStep === 4 && qrToken && (
+                    {/* Step 4: Foto Facial */}
+                    {currentStep === 4 && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="text-center mb-4">
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <Camera className="w-5 h-5 text-primary" />
+                                    <h3 className="text-lg font-semibold">Foto de Identificação</h3>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    Tire uma foto sua para facilitar a identificação na chegada (opcional)
+                                </p>
+                            </div>
+
+                            {!facePhotoUrl ? (
+                                <div className="space-y-4">
+                                    <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden max-w-md mx-auto">
+                                        <Webcam
+                                            ref={webcamRef}
+                                            screenshotFormat="image/jpeg"
+                                            className="w-full h-full object-cover"
+                                            mirrored
+                                            onUserMedia={() => setIsCameraReady(true)}
+                                            onUserMediaError={() => {
+                                                toast.error('Não foi possível acessar a câmera')
+                                            }}
+                                            videoConstraints={{
+                                                facingMode: 'user',
+                                                width: 640,
+                                                height: 480
+                                            }}
+                                        />
+
+                                        {/* Guia visual de posicionamento */}
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="w-40 h-52 border-2 border-dashed border-white/40 rounded-[50%]" />
+                                        </div>
+
+                                        {!isCameraReady && (
+                                            <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+                                                <Loader2 className="w-8 h-8 animate-spin text-white" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 max-w-md mx-auto">
+                                        <Button
+                                            type="button"
+                                            onClick={captureFacePhoto}
+                                            disabled={!isCameraReady || isCapturingFace}
+                                            className="w-full"
+                                            size="lg"
+                                        >
+                                            {isCapturingFace ? (
+                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Capturando...</>
+                                            ) : (
+                                                <><Camera className="w-4 h-4 mr-2" />Tirar Foto</>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={skipFaceCapture}
+                                            disabled={isCapturingFace}
+                                            className="w-full"
+                                        >
+                                            <SkipForward className="w-4 h-4 mr-2" />
+                                            Pular esta etapa
+                                        </Button>
+                                    </div>
+
+                                    <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                                        <Shield className="w-3 h-3" />
+                                        Sua foto será usada apenas para identificação na chegada
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 max-w-md mx-auto">
+                                    <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                                        <img
+                                            src={facePhotoUrl}
+                                            alt="Sua foto"
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute top-2 right-2">
+                                            <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                Capturada
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={retakeFacePhoto}
+                                            className="flex-1"
+                                        >
+                                            <RefreshCw className="w-4 h-4 mr-2" />
+                                            Tirar Outra
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={() => {
+                                                handleSubmit(onSubmit)()
+                                            }}
+                                            disabled={isSubmitting}
+                                            className="flex-1"
+                                        >
+                                            {isSubmitting ? (
+                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Finalizando...</>
+                                            ) : (
+                                                <>Continuar<ChevronRight className="w-4 h-4 ml-2" /></>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Step 5: QR Code */}
+                    {currentStep === 5 && qrToken && (
                         <div className="text-center space-y-6 animate-in fade-in duration-300">
                             <div className="flex flex-col items-center">
                                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
