@@ -2,7 +2,6 @@
  * API Client for frontend data fetching
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || ''
 
 interface ApiError {
     message: string
@@ -26,7 +25,7 @@ interface ApiResponse<T> {
 class ApiClient {
     private baseUrl: string
 
-    constructor(baseUrl: string = API_BASE_URL) {
+    constructor(baseUrl: string) {
         this.baseUrl = baseUrl
     }
 
@@ -103,6 +102,7 @@ class ApiClient {
     }
 }
 
+// API Client always uses relative /api path (works in dev and production)
 export const api = new ApiClient('/api')
 
 // ============================================================================

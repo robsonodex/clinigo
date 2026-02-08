@@ -43,12 +43,16 @@ const PUBLIC_ROUTES = [
     '/api/auth/signup',
     '/api/auth/register',
     '/api/doctors',
+    '/api/doctors/', // Allow dynamic doctor routes (profile, schedules)
     '/api/clinics/by-slug/', // Public clinic lookup by slug for booking pages
     '/api/patient/auth',
     '/api/marketplace',
     '/api/aia/triage',
     '/api/plans', // New public plans API
     '/api/debug/', // DEBUG ROUTES
+    '/api/probe', // Root probe
+    '/api/doctors/probe', // Doctors probe
+    '/api/debug-doctor', // DB Debug tool
     '/api/video/validate-token', // Patient video room access via token link
     '/api/partners/register', // Partner registration - public for new affiliates
     '/partners/login', // Partner login page
@@ -178,6 +182,8 @@ export async function middleware(request: NextRequest) {
         })
     }
 
+
+
     // Skip static assets
     if (
         pathname.startsWith('/_next') ||
@@ -265,9 +271,28 @@ export async function middleware(request: NextRequest) {
             // GET /api/doctors (list) and GET /api/doctors/[id] are public for marketplace
             // Also allow /api/doctors/[id]/health-insurances for public booking
             if (request.method === 'GET') {
-                return pathname === '/api/doctors' ||
-                    pathname.match(/^\/api\/doctors\/[a-f0-9-]+$/) ||
-                    pathname.match(/^\/api\/doctors\/[a-f0-9-]+\/health-insurances$/)
+                // NUCLEAR OPTION: Allow ALL /api/doctors/* requests
+                if (pathname.startsWith('/api/doctors')) {
+                    console.log('[MIDDLEWARE ALLOW] Permitting /api/doctors path:', pathname)
+                    return true
+                }
+
+                // FALLBACK (Commented out for debug)
+                /*
+                const isDocRoot = pathname === '/api/doctors'
+                const isDocId = pathname.match(/^\/api\/doctors\/[a-f0-9-]+$/)
+                const isInsurances = pathname.match(/^\/api\/doctors\/[a-f0-9-]+\/health-insurances$/)
+                const isSchedules = pathname.match(/^\/api\/doctors\/[a-f0-9-]+\/schedules$/)
+                const isDynamicProbe = pathname.match(/^\/api\/doctors\/[a-f0-9-]+\/probe$/)
+
+                // DEBUG MATCH
+                if (pathname.includes('/schedules') || pathname.includes('/probe')) {
+                    console.log('[MIDDLEWARE MATCH]', { pathname, isSchedules: !!isSchedules, isDynamicProbe: !!isDynamicProbe })
+                }
+
+                return isDocRoot || isDocId || isInsurances || isSchedules || isDynamicProbe
+                */
+                return false
             }
             return false
         }
@@ -293,6 +318,18 @@ export async function middleware(request: NextRequest) {
     // Public routes/pages without user = allow
     if ((isPublicPage || isPublicRoute) && !user) {
         return response
+    }
+
+    // DEBUG: Log /api/doctors schedules requests (Correct Location)
+    if (pathname.includes('/schedules') && pathname.startsWith('/api/doctors')) {
+        console.log('[MIDDLEWARE DEBUG] /api/doctors/.../schedules request:', {
+            pathname,
+            method: request.method,
+            userPresent: !!user,
+            isPublicRoute,
+            isPublicPage,
+            userRole: user?.user_metadata?.role,
+        })
     }
 
     // Protected API without user = 401
