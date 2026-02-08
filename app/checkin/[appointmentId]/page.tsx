@@ -23,7 +23,7 @@ interface PageProps {
 async function getAppointmentData(appointmentId: string) {
     const supabase = createServiceRoleClient()
 
-    // Try finding in appointments first
+    // Try finding in appointments first - without clinics join (no FK relation)
     const { data: appointment, error } = await supabase
         .from('appointments')
         .select(`
@@ -42,18 +42,28 @@ async function getAppointmentData(appointmentId: string) {
             doctors (
                 id,
                 full_name
-            ),
-            clinics (
-                id,
-                name,
-                logo_url
             )
         `)
         .eq('id', appointmentId)
         .single()
 
     if (!error && appointment) {
-        return appointment
+        // Fetch clinic data separately
+        const appointmentData = appointment as any
+        let clinicData = null
+        if (appointmentData.clinic_id) {
+            const { data: clinic } = await supabase
+                .from('clinics')
+                .select('id, name, logo_url')
+                .eq('id', appointmentData.clinic_id)
+                .single()
+            clinicData = clinic
+        }
+
+        return {
+            ...appointmentData,
+            clinics: clinicData || { id: 'unknown', name: 'Clínica', logo_url: null }
+        }
     }
 
     // If not found, try walk_in_registrations
