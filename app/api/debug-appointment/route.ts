@@ -1,6 +1,6 @@
 /**
  * GET /api/debug-appointment?id=[appointmentId]
- * Temporary debug endpoint to check if appointment exists
+ * Debug endpoint to check appointment with full relations
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -19,32 +19,59 @@ export async function GET(request: NextRequest) {
 
         const supabase = createServiceRoleClient()
 
-        // Check in appointments table
-        const { data: appointment, error: appointmentError } = await supabase
+        // Query 1: Basic appointment data (same as debug)
+        const { data: basicAppointment, error: basicError } = await supabase
             .from('appointments')
             .select('id, status, appointment_date, appointment_time, patient_id, doctor_id, clinic_id, created_at')
             .eq('id', appointmentId)
             .single()
 
-        // Check in walk_in_registrations table
-        const { data: walkIn, error: walkInError } = await supabase
-            .from('walk_in_registrations')
-            .select('id, status, patient_id, doctor_id, created_at')
+        // Query 2: Full appointment with relations (same as checkin page)
+        const { data: fullAppointment, error: fullError } = await supabase
+            .from('appointments')
+            .select(`
+                id,
+                appointment_date,
+                appointment_time,
+                status,
+                clinic_id,
+                patient_id,
+                patients (
+                    id,
+                    full_name,
+                    phone,
+                    email
+                ),
+                doctors (
+                    id,
+                    full_name
+                ),
+                clinics (
+                    id,
+                    name,
+                    logo_url
+                )
+            `)
             .eq('id', appointmentId)
             .single()
 
         return NextResponse.json({
             appointmentId,
-            appointments: {
-                found: !!appointment,
-                data: appointment,
-                error: appointmentError?.message
+            basicQuery: {
+                success: !basicError,
+                data: basicAppointment,
+                error: basicError?.message,
+                errorDetails: basicError
             },
-            walkIn: {
-                found: !!walkIn,
-                data: walkIn,
-                error: walkInError?.message
+            fullQueryWithRelations: {
+                success: !fullError,
+                data: fullAppointment,
+                error: fullError?.message,
+                errorDetails: fullError
             }
+        }, {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
         })
 
     } catch (error) {
