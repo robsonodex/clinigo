@@ -10,7 +10,7 @@ import { successResponse, noContentResponse } from '@/lib/utils/responses'
 import { updateDoctorSchema } from '@/lib/validations/doctor'
 
 interface RouteParams {
-    params: Promise<{ doctorId: string }>
+    params: Promise<{ doctor_id: string }>
 }
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId } = await params
+        const { doctor_id: doctorId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId } = await params
+        const { doctor_id: doctorId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -163,7 +163,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId } = await params
+        const { doctor_id: doctorId } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 

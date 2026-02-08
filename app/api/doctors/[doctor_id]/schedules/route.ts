@@ -9,7 +9,7 @@ import { successResponse } from '@/lib/utils/responses'
 import { updateSchedulesSchema } from '@/lib/validations/doctor'
 
 interface RouteParams {
-    params: Promise<{ doctorId: string }>
+    params: Promise<{ doctor_id: string }>
 }
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +18,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId } = await params
+        const { doctor_id: doctorId } = await params
         console.log('[API] GET Doctor Schedules START', { doctorId })
 
         const supabase = await createClient()
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId } = await params
+        const { doctor_id: doctorId } = await params
 
         const supabase = await createClient()
 

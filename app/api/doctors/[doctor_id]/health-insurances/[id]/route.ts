@@ -12,7 +12,7 @@ import { successResponse } from '@/lib/utils/responses'
 import { updateDoctorHealthInsuranceSchema } from '@/lib/validations/health-insurance'
 
 interface RouteParams {
-    params: Promise<{ doctorId: string; id: string }>
+    params: Promise<{ doctor_id: string; id: string }>
 }
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +20,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId, id } = await params
+        const { doctor_id: doctorId, id } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
         const userClinicId = request.headers.get('x-clinic-id')
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId, id } = await params
+        const { doctor_id: doctorId, id } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
         const userClinicId = request.headers.get('x-clinic-id')
@@ -124,7 +124,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
-        const { doctorId, id } = await params
+        const { doctor_id: doctorId, id } = await params
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
         const userClinicId = request.headers.get('x-clinic-id')
