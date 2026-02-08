@@ -125,9 +125,29 @@ export interface ThemeSEO {
 // Page Template Types
 // =============================================================================
 
-export type PageTemplate = 'glassmorphism' | 'swiss-minimal' | 'aurora-neon'
+export type PageTemplate = 'glassmorphism' | 'swiss-minimal' | 'aurora-neon' | 'classic-medical' | 'modern-minimal' | 'corporate-healthcare' | 'swiss-clean'
 
 export const PAGE_TEMPLATES: { id: PageTemplate; name: string; description: string }[] = [
+    {
+        id: 'classic-medical',
+        name: 'Clássico Médico',
+        description: 'Layout tradicional de clínica, fundo branco, hero centrado, grid de serviços'
+    },
+    {
+        id: 'modern-minimal',
+        name: 'Moderno Minimal',
+        description: 'Muito espaço em branco, tipografia grande, layout split lateral'
+    },
+    {
+        id: 'corporate-healthcare',
+        name: 'Corporativo Saúde',
+        description: 'Visual institucional com header navy, estruturado e profissional'
+    },
+    {
+        id: 'swiss-clean',
+        name: 'Swiss Clean',
+        description: 'Design suíço com grid rigoroso, tipografia pesada, serviços numerados'
+    },
     {
         id: 'glassmorphism',
         name: 'Glassmorphism',

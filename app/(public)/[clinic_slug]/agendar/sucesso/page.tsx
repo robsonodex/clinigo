@@ -104,7 +104,11 @@ function SuccessContent({ clinicSlug }: { clinicSlug: string }) {
     }
 
     // Determinar status
-    const status = appointment?.status || 'PENDING_PAYMENT'
+    // Se não conseguiu buscar o appointment (API autenticada falha para pacientes não-logados),
+    // usamos o paymentInfo do sessionStorage como fonte de verdade:
+    // - Se há paymentInfo, é PENDING_PAYMENT (prepaid flow)
+    // - Se não há paymentInfo, é CONFIRMED (agendamento normal)
+    const status = appointment?.status || (paymentInfo ? 'PENDING_PAYMENT' : 'CONFIRMED')
     const needsPayment = status === 'PENDING_PAYMENT'
     const waitingConfirmation = status === 'PAYMENT_PENDING'
     const isConfirmed = status === 'CONFIRMED'

@@ -13,11 +13,13 @@ interface RouteParams {
 }
 
 export const dynamic = 'force-dynamic'
+export const dynamicParams = true
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const { doctorId } = await params
+        console.log('[API] GET Doctor Schedules START', { doctorId })
 
         const supabase = await createClient()
 
@@ -52,11 +54,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Get user profile
-        const { data: userProfile } = await supabase
+        const { data: userProfileData } = await supabase
             .from('users')
             .select('id, role, clinic_id')
             .eq('id', user.id)
             .single()
+
+        const userProfile = userProfileData as any
 
         if (!userProfile) {
             return handleApiError(new ForbiddenError('Perfil não encontrado'))
@@ -69,11 +73,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const validatedData = updateSchedulesSchema.parse(body)
 
         // Get doctor to check authorization
-        const { data: doctor, error: fetchError } = await supabase
+        const { data: doctorData, error: fetchError } = await supabase
             .from('doctors')
             .select('user_id, clinic_id')
             .eq('id', doctorId)
             .single()
+
+        const doctor = doctorData as any
 
         if (fetchError || !doctor) {
             throw new NotFoundError('Médico')
@@ -116,7 +122,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
             const { error: insertError } = await supabase
                 .from('schedules')
-                .insert(schedulesToInsert)
+                .insert(schedulesToInsert as any)
 
             if (insertError) throw insertError
         }

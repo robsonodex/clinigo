@@ -4,7 +4,7 @@
  * DELETE /api/doctors/[doctorId] - Deactivate doctor
  */
 import { type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse, noContentResponse } from '@/lib/utils/responses'
 import { updateDoctorSchema } from '@/lib/validations/doctor'
@@ -14,6 +14,7 @@ interface RouteParams {
 }
 
 export const dynamic = 'force-dynamic'
+export const dynamicParams = true
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -22,7 +23,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
-        const supabase = await createClient()
+        // Use service role for public access (no auth headers) to bypass RLS
+        // Use regular client for authenticated users to respect RLS
+        const supabase = userId ? await createClient() : createServiceRoleClient()
 
         const { data: doctor, error } = await supabase
             .from('doctors')

@@ -11,6 +11,51 @@ interface TemplateSelectorProps {
 
 // Template preview thumbnails (inline SVG patterns)
 const templatePreviews: Record<PageTemplate, { gradient: string; pattern: string }> = {
+    'classic-medical': {
+        gradient: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        pattern: `
+            <rect x="0" y="0" width="200" height="50" fill="#0b1120"/>
+            <rect x="60" y="70" width="80" height="12" fill="#0b1120"/>
+            <rect x="50" y="90" width="100" height="6" fill="#d1d5db"/>
+            <rect x="20" y="120" width="50" height="35" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+            <rect x="75" y="120" width="50" height="35" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+            <rect x="130" y="120" width="50" height="35" rx="4" fill="#f3f4f6" stroke="#e5e7eb"/>
+        `
+    },
+    'modern-minimal': {
+        gradient: 'linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)',
+        pattern: `
+            <rect x="20" y="50" width="80" height="10" fill="#111827"/>
+            <rect x="20" y="65" width="60" height="4" fill="#9ca3af"/>
+            <rect x="120" y="40" width="60" height="80" fill="#f3f4f6"/>
+            <text x="130" y="75" fill="#6b7280" font-size="20" font-weight="bold">01</text>
+            <text x="130" y="95" fill="#6b7280" font-size="20" font-weight="bold">02</text>
+        `
+    },
+    'corporate-healthcare': {
+        gradient: 'linear-gradient(180deg, #0b1120 0%, #1e293b 40%, #ffffff 40%)',
+        pattern: `
+            <rect x="20" y="50" width="100" height="12" fill="#14b8a6"/>
+            <rect x="20" y="70" width="60" height="6" fill="rgba(255,255,255,0.6)"/>
+            <rect x="20" y="110" width="160" height="1" fill="#e5e7eb"/>
+            <rect x="20" y="125" width="160" height="1" fill="#e5e7eb"/>
+            <rect x="20" y="140" width="160" height="1" fill="#e5e7eb"/>
+        `
+    },
+    'swiss-clean': {
+        gradient: 'linear-gradient(180deg, #ffffff 0%, #ffffff 100%)',
+        pattern: `
+            <rect x="0" y="0" width="200" height="2" fill="#000"/>
+            <rect x="0" y="158" width="200" height="2" fill="#000"/>
+            <text x="20" y="70" fill="#000" font-size="36" font-weight="900">SAÚDE</text>
+            <rect x="20" y="100" width="40" height="40" fill="#fff" stroke="#000" stroke-width="1"/>
+            <rect x="65" y="100" width="40" height="40" fill="#fff" stroke="#000" stroke-width="1"/>
+            <rect x="110" y="100" width="40" height="40" fill="#fff" stroke="#000" stroke-width="1"/>
+            <text x="30" y="115" fill="#14b8a6" font-size="8" font-weight="700">01</text>
+            <text x="75" y="115" fill="#14b8a6" font-size="8" font-weight="700">02</text>
+            <text x="120" y="115" fill="#14b8a6" font-size="8" font-weight="700">03</text>
+        `
+    },
     'glassmorphism': {
         gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
         pattern: `

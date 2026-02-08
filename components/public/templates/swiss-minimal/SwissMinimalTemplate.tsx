@@ -21,6 +21,7 @@ export function SwissMinimalTemplate({
     const theme = mergeWithDefaultTheme(clinic.theme || {})
     const content = theme.content
     const hero = theme.hero
+    const display = theme.display
 
     const handleBook = () => {
         onBook()

@@ -13,6 +13,7 @@ import { PLANS, type PlanType } from '@/lib/constants/plans'
 
 // Force Node.js runtime for nodemailer support
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 
 export async function GET(request: NextRequest) {

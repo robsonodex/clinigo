@@ -407,6 +407,158 @@ export async function POST(request: NextRequest) {
                 // Don't fail appointment creation, just log
             }
 
+            // ============================================================
+            // SEND NOTIFICATIONS (PREPAID FLOW): Email to Patient + Notification to Clinic
+            // ============================================================
+            const { data: patientData } = await supabase
+                .from('patients')
+                .select('full_name, email, phone')
+                .eq('id', patientId)
+                .single()
+
+            const { data: clinicNotifData } = await supabase
+                .from('clinics')
+                .select('name, email')
+                .eq('id', clinic.id)
+                .single()
+
+            const prepaidAppointmentType = validatedData.type || 'IN_PERSON'
+            const isPrepaidTelemedicine = prepaidAppointmentType === 'TELEMEDICINA' || prepaidAppointmentType === 'online'
+
+            // Send email to patient
+            if (patientData?.email) {
+                try {
+                    const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+                    const QRCode = (await import('qrcode')).default
+
+                    // Generate QR code image for the email
+                    let qrCodeImageHtml = ''
+                    if (!isPrepaidTelemedicine) {
+                        try {
+                            const qrImageDataUrl = await QRCode.toDataURL(checkinUrl, {
+                                width: 200,
+                                margin: 2,
+                                color: { dark: '#000000', light: '#FFFFFF' },
+                                errorCorrectionLevel: 'M'
+                            })
+                            qrCodeImageHtml = `
+                                <div style="text-align: center; margin: 20px 0;">
+                                    <img src="${qrImageDataUrl}" alt="QR Code Check-in" style="width: 200px; height: 200px;"/>
+                                    <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">Escaneie o QR Code no dia da consulta para fazer check-in</p>
+                                </div>
+                            `
+                        } catch (qrImageError) {
+                            console.warn('[EMAIL] QR code image generation failed:', qrImageError)
+                        }
+                    }
+
+                    // Video link section for telemedicine
+                    let videoLinkHtml = ''
+                    if (isPrepaidTelemedicine && videoRoom) {
+                        const videoUrl = `${baseUrl}/video/${appointment.id}?token=${(videoRoom as any).patient_token}`
+                        videoLinkHtml = `
+                            <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+                                <h3 style="color: #1e40af; margin: 0 0 8px 0;">📹 Link da Teleconsulta</h3>
+                                <p style="margin: 0 0 12px 0;">Acesse o link abaixo no horário da consulta:</p>
+                                <p style="text-align: center;">
+                                    <a href="${videoUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                        Acessar Consulta Online
+                                    </a>
+                                </p>
+                            </div>
+                        `
+                    }
+
+                    // Pre-checkin section for in-person appointments
+                    let checkinHtml = ''
+                    if (!isPrepaidTelemedicine) {
+                        checkinHtml = `
+                            <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                            <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
+                            <p style="text-align: center;">
+                                <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Fazer Pré-Check-in
+                                </a>
+                            </p>
+                            ${qrCodeImageHtml}
+                        `
+                    }
+
+                    await sendEmailMultiTenant({
+                        clinicId: clinic.id,
+                        to: patientData.email,
+                        subject: `⏳ Agendamento Pendente - Complete o Pagamento - ${validatedData.appointment_date} às ${validatedData.appointment_time}`,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                                <h2 style="color: #f59e0b;">⏳ Agendamento Pendente de Pagamento</h2>
+                                <p>Olá <strong>${patientData.full_name}</strong>,</p>
+                                <p>Sua consulta foi pré-agendada. Complete o pagamento para confirmar:</p>
+                                <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                                    <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
+                                    <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
+                                    <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
+                                    <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicNotifData?.name || clinic.name}</p>
+                                    <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isPrepaidTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                    <p style="margin: 4px 0;"><strong>💰 Valor:</strong> R$ ${(doctor.consultation_price / 100).toFixed(2).replace('.', ',')}</p>
+                                </div>
+                                <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #f59e0b;">
+                                    <h3 style="color: #92400e; margin: 0 0 8px 0;">💳 Instruções de Pagamento</h3>
+                                    ${clinicPaymentInfo?.pix_key ? `<p><strong>Chave PIX:</strong> ${clinicPaymentInfo.pix_key}</p>` : ''}
+                                    ${clinicPaymentInfo?.bank_account_info ? `<p><strong>Dados Bancários:</strong> ${clinicPaymentInfo.bank_account_info}</p>` : ''}
+                                    <p>${clinicPaymentInfo?.payment_instructions || 'Entre em contato com a clínica para realizar o pagamento.'}</p>
+                                </div>
+                                ${videoLinkHtml}
+                                ${checkinHtml}
+                                <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+                                    Este e-mail foi enviado automaticamente. Após o pagamento, sua consulta será confirmada.
+                                </p>
+                            </div>
+                        `,
+                    })
+                    console.log('[NOTIFICATION] Prepaid patient email sent to:', patientData.email)
+                } catch (emailError) {
+                    console.error('[NOTIFICATION] Prepaid patient email send failed:', emailError)
+                    // Non-blocking - don't fail the appointment creation
+                }
+            }
+
+            // Send notification to clinic
+            if (clinicNotifData?.email) {
+                try {
+                    const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+
+                    await sendEmailMultiTenant({
+                        clinicId: clinic.id,
+                        to: clinicNotifData.email,
+                        subject: `⏳ Novo Agendamento (Pendente Pagamento) - ${patientData?.full_name || 'Paciente'}`,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                                <h2 style="color: #f59e0b;">⏳ Novo Agendamento - Aguardando Pagamento</h2>
+                                <p>Um novo agendamento foi realizado e está aguardando confirmação de pagamento:</p>
+                                <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                                    <p style="margin: 4px 0;"><strong>👤 Paciente:</strong> ${patientData?.full_name || 'N/A'}</p>
+                                    <p style="margin: 4px 0;"><strong>📧 Email:</strong> ${patientData?.email || 'N/A'}</p>
+                                    <p style="margin: 4px 0;"><strong>📱 Telefone:</strong> ${patientData?.phone || 'N/A'}</p>
+                                    <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
+                                    <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
+                                    <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
+                                    <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isPrepaidTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                    <p style="margin: 4px 0;"><strong>💳 Pagamento:</strong> Particular (Pendente)</p>
+                                    <p style="margin: 4px 0;"><strong>💰 Valor:</strong> R$ ${(doctor.consultation_price / 100).toFixed(2).replace('.', ',')}</p>
+                                </div>
+                                <p style="color: #6b7280; font-size: 14px;">
+                                    Aguarde a confirmação do pagamento para liberar o agendamento.
+                                </p>
+                            </div>
+                        `,
+                    })
+                    console.log('[NOTIFICATION] Prepaid clinic notification sent to:', clinicNotifData.email)
+                } catch (emailError) {
+                    console.error('[NOTIFICATION] Prepaid clinic email send failed:', emailError)
+                    // Non-blocking - don't fail the appointment creation
+                }
+            }
+
             // Gateway-Agnostic: Retornar instruções de pagamento em vez de URL do gateway
             return successResponse(
                 {
@@ -463,6 +615,152 @@ export async function POST(request: NextRequest) {
         if (qrError) {
             console.error('[QR_CODE] Error saving QR token:', qrError)
             // Don't fail appointment creation, just log
+        }
+
+        // ============================================================
+        // SEND NOTIFICATIONS: Email to Patient + Notification to Clinic
+        // ============================================================
+
+        // Fetch patient and clinic data for notifications
+        const { data: patientData } = await supabase
+            .from('patients')
+            .select('full_name, email, phone')
+            .eq('id', patientId)
+            .single()
+
+        const { data: clinicNotifData } = await supabase
+            .from('clinics')
+            .select('name, email')
+            .eq('id', clinic.id)
+            .single()
+
+        const notifAppointmentType = validatedData.type || 'IN_PERSON'
+        const isTelemedicine = notifAppointmentType === 'TELEMEDICINA' || notifAppointmentType === 'online'
+
+        // Send email to patient
+        if (patientData?.email) {
+            try {
+                const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+                const QRCode = (await import('qrcode')).default
+
+                // Generate QR code image for the email
+                let qrCodeImageHtml = ''
+                if (!isTelemedicine) {
+                    try {
+                        const qrImageDataUrl = await QRCode.toDataURL(checkinUrl, {
+                            width: 200,
+                            margin: 2,
+                            color: { dark: '#000000', light: '#FFFFFF' },
+                            errorCorrectionLevel: 'M'
+                        })
+                        qrCodeImageHtml = `
+                            <div style="text-align: center; margin: 20px 0;">
+                                <img src="${qrImageDataUrl}" alt="QR Code Check-in" style="width: 200px; height: 200px;"/>
+                                <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">Escaneie o QR Code no dia da consulta para fazer check-in</p>
+                            </div>
+                        `
+                    } catch (qrImageError) {
+                        console.warn('[EMAIL] QR code image generation failed:', qrImageError)
+                    }
+                }
+
+                // Video link section for telemedicine
+                let videoLinkHtml = ''
+                if (isTelemedicine && videoRoom) {
+                    const videoUrl = `${baseUrl}/video/${appointment.id}?token=${(videoRoom as any).patient_token}`
+                    videoLinkHtml = `
+                        <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+                            <h3 style="color: #1e40af; margin: 0 0 8px 0;">📹 Link da Teleconsulta</h3>
+                            <p style="margin: 0 0 12px 0;">Acesse o link abaixo no horário da consulta:</p>
+                            <p style="text-align: center;">
+                                <a href="${videoUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Acessar Consulta Online
+                                </a>
+                            </p>
+                        </div>
+                    `
+                }
+
+                // Pre-checkin section for in-person appointments
+                let checkinHtml = ''
+                if (!isTelemedicine) {
+                    checkinHtml = `
+                        <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                        <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
+                        <p style="text-align: center;">
+                            <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                Fazer Pré-Check-in
+                            </a>
+                        </p>
+                        ${qrCodeImageHtml}
+                    `
+                }
+
+                await sendEmailMultiTenant({
+                    clinicId: clinic.id,
+                    to: patientData.email,
+                    subject: `✅ Consulta Confirmada - ${validatedData.appointment_date} às ${validatedData.appointment_time}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <h2 style="color: #10b981;">✅ Agendamento Confirmado!</h2>
+                            <p>Olá <strong>${patientData.full_name}</strong>,</p>
+                            <p>Sua consulta foi agendada com sucesso:</p>
+                            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                                <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
+                                <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
+                                <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
+                                <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicNotifData?.name || clinic.name}</p>
+                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                            </div>
+                            ${videoLinkHtml}
+                            ${checkinHtml}
+                            <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+                                Este e-mail foi enviado automaticamente. Caso precise cancelar ou reagendar, entre em contato com a clínica.
+                            </p>
+                        </div>
+                    `,
+                })
+                console.log('[NOTIFICATION] Patient email sent to:', patientData.email)
+            } catch (emailError) {
+                console.error('[NOTIFICATION] Patient email send failed:', emailError)
+                // Non-blocking - don't fail the appointment creation
+            }
+        }
+
+        // Send notification to clinic
+        if (clinicNotifData?.email) {
+            try {
+                const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+
+                await sendEmailMultiTenant({
+                    clinicId: clinic.id,
+                    to: clinicNotifData.email,
+                    subject: `🗓️ Novo Agendamento Online - ${patientData?.full_name || 'Paciente'}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <h2 style="color: #3b82f6;">🗓️ Novo Agendamento Recebido!</h2>
+                            <p>Um novo agendamento foi realizado através da página pública de agendamento:</p>
+                            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                                <p style="margin: 4px 0;"><strong>👤 Paciente:</strong> ${patientData?.full_name || 'N/A'}</p>
+                                <p style="margin: 4px 0;"><strong>📧 Email:</strong> ${patientData?.email || 'N/A'}</p>
+                                <p style="margin: 4px 0;"><strong>📱 Telefone:</strong> ${patientData?.phone || 'N/A'}</p>
+                                <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
+                                <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
+                                <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
+                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                <p style="margin: 4px 0;"><strong>💳 Pagamento:</strong> ${validatedData.payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}</p>
+                            </div>
+                            <p style="color: #6b7280; font-size: 14px;">
+                                O agendamento já está visível na agenda do sistema.
+                            </p>
+                        </div>
+                    `,
+                })
+                console.log('[NOTIFICATION] Clinic notification sent to:', clinicNotifData.email)
+            } catch (emailError) {
+                console.error('[NOTIFICATION] Clinic email send failed:', emailError)
+                // Non-blocking - don't fail the appointment creation
+            }
         }
 
         return successResponse(

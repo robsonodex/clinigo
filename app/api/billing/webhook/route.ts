@@ -127,6 +127,21 @@ async function handleNewRegistration(supabase: any, payment: any, paymentId: str
             // Don't rollback - clinic was already created
         }
 
+        // 5.5. Handle partner referral if present
+        if (metadata.referral_code) {
+            try {
+                const { createClinicReferral } = await import('@/lib/services/partner.service')
+                await createClinicReferral({
+                    clinic_id: clinic.id,
+                    referral_code: metadata.referral_code
+                })
+                console.log(`🤝 [WEBHOOK] Partner referral created: code=${metadata.referral_code}`)
+            } catch (refError) {
+                console.warn('⚠️ [WEBHOOK] Failed to create referral:', refError)
+                // Don't fail registration if referral fails
+            }
+        }
+
         // 6. Log payment
         await supabase.from('payment_logs').insert({
             clinic_id: clinic.id,

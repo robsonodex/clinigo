@@ -136,6 +136,9 @@ export interface Doctor {
     bio_extended?: string
     faithful_patients_count?: number
     specialties_additional?: string[]
+    subspecialties?: string[]
+    education?: string[]
+    accepted_insurances?: string[]
     certifications?: string[]
     languages?: string[]
     user: {

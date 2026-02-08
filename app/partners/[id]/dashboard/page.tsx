@@ -71,11 +71,56 @@ export default function PartnerDashboardPage({ params }: PageProps) {
     const [copied, setCopied] = useState(false)
 
     useEffect(() => {
-        fetchDashboard()
+        checkAuthAndFetchDashboard()
     }, [id])
 
-    const fetchDashboard = async () => {
+    const checkAuthAndFetchDashboard = async () => {
         try {
+            // Import supabase client dynamically to check auth
+            const { createClient } = await import('@/lib/supabase/client')
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+
+            // If not authenticated, redirect to login
+            if (!user) {
+                router.push('/partners/login')
+                return
+            }
+
+            // Check if user is a partner
+            const role = user.user_metadata?.role
+            if (role !== 'PARTNER') {
+                toast.error('Acesso não autorizado')
+                router.push('/partners/login')
+                return
+            }
+
+            // Get partner_id from metadata or fetch from database
+            let partnerId = user.user_metadata?.partner_id
+
+            if (!partnerId) {
+                // For older registrations, fetch partner_id by user_id
+                const { data: partner } = await supabase
+                    .from('partners')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+
+                partnerId = partner?.id
+            }
+
+            // Verify the user is accessing their own dashboard
+            if (partnerId !== id) {
+                toast.error('Você só pode acessar seu próprio dashboard')
+                if (partnerId) {
+                    router.push(`/partners/${partnerId}/dashboard`)
+                } else {
+                    router.push('/partners/login')
+                }
+                return
+            }
+
+            // Fetch dashboard data
             const response = await fetch(`/api/partners/${id}/dashboard`)
 
             if (!response.ok) {
@@ -130,7 +175,22 @@ export default function PartnerDashboardPage({ params }: PageProps) {
     }
 
     const { dashboard, clinics, commission_history } = data
-    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/cadastro?ref=${dashboard.referral_code}`
+
+    // Guard against undefined dashboard
+    if (!dashboard) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Card className="max-w-md">
+                    <CardContent className="pt-6 text-center">
+                        <p className="text-muted-foreground mb-4">Dados do dashboard não disponíveis</p>
+                        <Button onClick={() => router.push('/partners/login')}>Fazer login novamente</Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/cadastro?ref=${dashboard.referral_code || ''}`
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -219,7 +279,7 @@ export default function PartnerDashboardPage({ params }: PageProps) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600">
-                                R$ {dashboard.total_earned.toFixed(2)}
+                                R$ {(dashboard.total_earned ?? 0).toFixed(2)}
                             </div>
                         </CardContent>
                     </Card>
@@ -233,7 +293,7 @@ export default function PartnerDashboardPage({ params }: PageProps) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-amber-600">
-                                R$ {dashboard.pending_commissions.toFixed(2)}
+                                R$ {(dashboard.pending_commissions ?? 0).toFixed(2)}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 Pagamento dia 5
@@ -250,7 +310,7 @@ export default function PartnerDashboardPage({ params }: PageProps) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-blue-600">
-                                R$ {dashboard.this_month_estimate.toFixed(2)}
+                                R$ {(dashboard.this_month_estimate ?? 0).toFixed(2)}
                             </div>
                         </CardContent>
                     </Card>
@@ -333,7 +393,7 @@ export default function PartnerDashboardPage({ params }: PageProps) {
                                             </div>
                                             <div className="text-right">
                                                 <p className="font-semibold text-emerald-600">
-                                                    R$ {comm.commission_amount.toFixed(2)}
+                                                    R$ {(comm.commission_amount ?? 0).toFixed(2)}
                                                 </p>
                                                 <Badge
                                                     variant={comm.status === 'PAID' ? 'default' : 'secondary'}

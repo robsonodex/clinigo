@@ -28,12 +28,11 @@ export default function PartnersPage() {
                         Programa de Parceiros
                     </div>
                     <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                        Ganhe <span className="text-teal-vibrant">30% de comissão</span><br />
-                        por cada clínica indicada
+                        Ganhe <span className="text-teal-vibrant">até 45% + 8% recorrente</span><br />
+                        por cada venda fechada
                     </h1>
                     <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
-                        Indique clínicas para o CliniGo e ganhe <strong className="text-teal-vibrant">30% da primeira mensalidade</strong> de cada venda fechada.
-                        Quanto mais você vende, mais você ganha.
+                        Venda o CliniGo para clínicas e ganhe <strong className="text-teal-vibrant">35% base + até 10% de bônus</strong> quando a assinatura for paga + <strong className="text-teal-vibrant">8% recorrente mensal</strong> enquanto a clínica continuar cliente.
                     </p>
                     <Link
                         href="/partners/register"
@@ -54,9 +53,9 @@ export default function PartnersPage() {
                     <div className="grid md:grid-cols-4 gap-8">
                         {[
                             { step: '1', title: 'Cadastre-se', desc: 'Preencha seus dados e receba seu código exclusivo' },
-                            { step: '2', title: 'Indique', desc: 'Compartilhe seu código ou link com clínicas' },
-                            { step: '3', title: 'Clínica assina', desc: 'Quando a clínica se cadastrar usando seu código' },
-                            { step: '4', title: 'Ganhe!', desc: 'Receba 30% da 1ª mensalidade via Pix (uma vez por venda)' },
+                            { step: '2', title: 'Prospecte', desc: 'Apresente o CliniGo para clínicas e negocie' },
+                            { step: '3', title: 'Feche a venda', desc: 'Quando a clínica assinar e PAGAR a primeira mensalidade' },
+                            { step: '4', title: 'Receba!', desc: 'Sua comissão é liberada após o pagamento confirmado' },
                         ].map((item) => (
                             <div key={item.step} className="text-center">
                                 <div className="w-16 h-16 bg-teal-vibrant/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -81,10 +80,9 @@ export default function PartnersPage() {
                             <div className="w-12 h-12 bg-teal-vibrant/20 rounded-lg flex items-center justify-center mb-4">
                                 <TrendingUp className="w-6 h-6 text-teal-vibrant" />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">Comissão por Venda</h3>
+                            <h3 className="text-xl font-bold mb-2">Comissão por Venda Fechada</h3>
                             <p className="text-slate-400">
-                                Ganhe 30% da primeira mensalidade de cada clínica que você vender.
-                                Vendeu, ganhou. Simples assim.
+                                Ganhe 35% base quando a clínica <strong>pagar</strong>. Venda 5+ no mês e ganhe 40%. Venda 10+ e ganhe 45%!
                             </p>
                         </div>
                         <div className="p-8 bg-slate-900/50 rounded-2xl border border-slate-800">
@@ -101,9 +99,9 @@ export default function PartnersPage() {
                             <div className="w-12 h-12 bg-teal-vibrant/20 rounded-lg flex items-center justify-center mb-4">
                                 <Users className="w-6 h-6 text-teal-vibrant" />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">Sem Limite</h3>
+                            <h3 className="text-xl font-bold mb-2">Venda Sem Limite</h3>
                             <p className="text-slate-400">
-                                Indique quantas clínicas quiser. Quanto mais indicações,
+                                Venda quantas clínicas quiser. Quanto mais vendas fechadas,
                                 mais você ganha. Sem teto de comissão.
                             </p>
                         </div>
@@ -118,23 +116,26 @@ export default function PartnersPage() {
                         Quanto você pode ganhar por mês?
                     </h2>
                     <p className="text-slate-400 text-center mb-12 max-w-xl mx-auto">
-                        Exemplo: se você vender estas clínicas no mês, recebe no dia 5 do mês seguinte
+                        Comissão paga após a clínica pagar a assinatura + 8% recorrente todo mês!
                     </p>
                     <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                         <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700 text-center">
-                            <p className="text-slate-400 mb-2">Vendeu 3 (Básico)</p>
-                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 134</p>
-                            <p className="text-sm text-slate-500">3 × R$149 × 30%</p>
+                            <p className="text-slate-400 mb-2">3 vendas (Básico) = 35%</p>
+                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 156</p>
+                            <p className="text-sm text-slate-500">3 × R$149 × 35%</p>
+                            <p className="text-xs text-teal-vibrant/70 mt-2">+ R$ 35/mês recorrente</p>
                         </div>
                         <div className="p-6 bg-teal-vibrant/10 rounded-xl border border-teal-vibrant/30 text-center">
-                            <p className="text-slate-400 mb-2">Vendeu 5 (Avançado)</p>
-                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 448</p>
-                            <p className="text-sm text-slate-500">5 × R$299 × 30%</p>
+                            <p className="text-slate-400 mb-2">7 vendas (Avançado) = 40%</p>
+                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 837</p>
+                            <p className="text-sm text-slate-500">7 × R$299 × 40%</p>
+                            <p className="text-xs text-teal-vibrant/70 mt-2">+ R$ 167/mês recorrente</p>
                         </div>
                         <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700 text-center">
-                            <p className="text-slate-400 mb-2">Vendeu 10 (Profiss.)</p>
-                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 1.647</p>
-                            <p className="text-sm text-slate-500">10 × R$549 × 30%</p>
+                            <p className="text-slate-400 mb-2">10 vendas (Prof.) = 45%</p>
+                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 2.470</p>
+                            <p className="text-sm text-slate-500">10 × R$549 × 45%</p>
+                            <p className="text-xs text-teal-vibrant/70 mt-2">+ R$ 439/mês recorrente</p>
                         </div>
                     </div>
                 </div>

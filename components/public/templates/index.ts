@@ -78,3 +78,10 @@ export { GlassmorphismTemplate } from './glassmorphism/GlassmorphismTemplate'
 export { SwissMinimalTemplate } from './swiss-minimal/SwissMinimalTemplate'
 export { AuroraNeonTemplate } from './aurora-neon/AuroraNeonTemplate'
 
+// New Templates (4 selected)
+export { ClassicMedicalTemplate } from './classic-medical/ClassicMedicalTemplate'
+export { ModernMinimalTemplate } from './modern-minimal/ModernMinimalTemplate'
+export { CorporateHealthcareTemplate } from './corporate-healthcare/CorporateHealthcareTemplate'
+export { SwissCleanTemplate } from './swiss-clean/SwissCleanTemplate'
+
+

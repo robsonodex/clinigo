@@ -50,6 +50,9 @@ const PUBLIC_ROUTES = [
     '/api/plans', // New public plans API
     '/api/debug/', // DEBUG ROUTES
     '/api/video/validate-token', // Patient video room access via token link
+    '/api/partners/register', // Partner registration - public for new affiliates
+    '/partners/login', // Partner login page
+    '/partners/register', // Partner registration page
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)

@@ -14,6 +14,10 @@ export interface PartnerRegistration {
     pix_key: string
     cnpj?: string
     company_name?: string
+    password: string
+    confirm_password?: string // Only used for validation, not stored
+    terms_accepted: boolean
+    terms_accepted_ip?: string
 }
 
 export interface PartnerDashboard {
@@ -80,7 +84,28 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
         // 1. Generate referral code
         const referralCode = await generateReferralCode(data.full_name)
 
-        // 2. Create partner record
+        // 2. Create Supabase auth user with password
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email: data.email,
+            password: data.password,
+            email_confirm: true, // Auto-confirm email
+            user_metadata: {
+                role: 'PARTNER',
+                full_name: data.full_name
+            }
+        })
+
+        if (authError) {
+            console.error('[PARTNER] Auth user creation error:', authError)
+
+            if (authError.message.includes('already been registered')) {
+                return { success: false, error: 'Este email já está cadastrado' }
+            }
+
+            return { success: false, error: 'Erro ao criar conta de usuário' }
+        }
+
+        // 3. Create partner record with terms acceptance and user_id
         const { data: partner, error: partnerError } = await supabase
             .from('partners')
             .insert({
@@ -93,8 +118,12 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
                 cnpj: data.cnpj || null,
                 company_name: data.company_name || null,
                 referral_code: referralCode,
-                commission_rate: 30.00,
-                status: 'ACTIVE'
+                commission_rate: 35.00,
+                status: 'ACTIVE',
+                user_id: authUser.user.id, // Link to auth user
+                terms_accepted_at: data.terms_accepted ? new Date().toISOString() : null,
+                terms_version: '1.0',
+                terms_accepted_ip: data.terms_accepted_ip || null
             })
             .select('id, referral_code')
             .single()
@@ -115,10 +144,37 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
             return { success: false, error: partnerError.message }
         }
 
+        // 4. Update user_metadata to include partner_id for future auth checks
+        await supabase.auth.admin.updateUserById(authUser.user.id, {
+            user_metadata: {
+                role: 'PARTNER',
+                full_name: data.full_name,
+                partner_id: partner?.id
+            }
+        })
+
+        // 3. Send email notification to admin about new partner
+        try {
+            await sendPartnerRegistrationNotification({
+                full_name: data.full_name,
+                email: data.email,
+                cpf: data.cpf,
+                phone: data.phone,
+                pix_key_type: data.pix_key_type,
+                pix_key: data.pix_key,
+                cnpj: data.cnpj,
+                company_name: data.company_name,
+                referral_code: partner?.referral_code || referralCode
+            })
+        } catch (emailError) {
+            // Don't fail registration if email fails
+            console.error('[PARTNER] Email notification error:', emailError)
+        }
+
         return {
             success: true,
-            partner_id: partner.id,
-            referral_code: partner.referral_code
+            partner_id: partner?.id,
+            referral_code: partner?.referral_code
         }
     } catch (error: any) {
         console.error('[PARTNER] Registration exception:', error)
@@ -284,4 +340,132 @@ export async function getPartnerByUserId(userId: string): Promise<{ id: string; 
     }
 
     return data
+}
+
+/**
+ * Send email notification to admin when a new partner registers
+ */
+async function sendPartnerRegistrationNotification(partner: {
+    full_name: string
+    email: string
+    cpf: string
+    phone: string
+    pix_key_type: string
+    pix_key: string
+    cnpj?: string
+    company_name?: string
+    referral_code: string
+}): Promise<void> {
+    const { sendMail } = await import('@/lib/services/mail-service')
+
+    // Format CPF for display
+    const formatCPF = (cpf: string) => {
+        const cleaned = cpf.replace(/\D/g, '')
+        return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    }
+
+    // Format phone for display
+    const formatPhone = (phone: string) => {
+        const cleaned = phone.replace(/\D/g, '')
+        if (cleaned.length === 11) {
+            return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+        }
+        return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+    }
+
+    const registrationDate = new Date().toLocaleString('pt-BR', {
+        dateStyle: 'full',
+        timeStyle: 'short'
+    })
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'contato@clinigo.app'
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Parceiro Cadastrado</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #0f172a;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+            <h1 style="color: #14b8a6; margin: 0; font-size: 24px;">🎉 Novo Parceiro Cadastrado!</h1>
+            <p style="color: #94a3b8; margin: 10px 0 0 0; font-size: 14px;">${registrationDate}</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 30px;">
+            <h2 style="color: #f1f5f9; margin: 0 0 20px 0; font-size: 18px;">Dados do Parceiro</h2>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8; width: 40%;">Nome Completo</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #f1f5f9; font-weight: 500;">${partner.full_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">Email</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #14b8a6;">${partner.email}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">CPF</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #f1f5f9;">${formatCPF(partner.cpf)}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">Telefone</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #f1f5f9;">${formatPhone(partner.phone)}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">Código de Parceiro</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155;">
+                        <span style="background-color: #14b8a6; color: #0f172a; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-family: monospace;">${partner.referral_code}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">Chave Pix (${partner.pix_key_type})</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #f1f5f9;">${partner.pix_key}</td>
+                </tr>
+                ${partner.cnpj ? `
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">CNPJ</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #f1f5f9;">${partner.cnpj}</td>
+                </tr>
+                ` : ''}
+                ${partner.company_name ? `
+                <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #94a3b8;">Razão Social</td>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #334155; color: #f1f5f9;">${partner.company_name}</td>
+                </tr>
+                ` : ''}
+            </table>
+
+            <!-- Info Box -->
+            <div style="background-color: #14b8a6; background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(20, 184, 166, 0.05) 100%); border: 1px solid rgba(20, 184, 166, 0.3); border-radius: 8px; padding: 16px; margin-top: 24px;">
+                <p style="color: #14b8a6; margin: 0; font-size: 14px;">
+                    ✅ <strong>Termos aceitos:</strong> O parceiro aceitou os termos de parceria comercial (versão 1.0)
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #0f172a; padding: 20px 30px; text-align: center; border-top: 1px solid #334155;">
+            <p style="color: #64748b; margin: 0; font-size: 12px;">
+                CliniGo - Sistema de Gestão para Clínicas<br>
+                Este é um email automático, não responda.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+    `.trim()
+
+    await sendMail({
+        to: adminEmail,
+        subject: `🤝 Novo Parceiro: ${partner.full_name} [${partner.referral_code}]`,
+        html
+    })
+
+    console.log(`[PARTNER] Registration notification sent to ${adminEmail} for partner ${partner.referral_code}`)
 }

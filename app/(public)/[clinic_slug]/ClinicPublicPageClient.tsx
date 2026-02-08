@@ -6,6 +6,10 @@ import {
     GlassmorphismTemplate,
     SwissMinimalTemplate,
     AuroraNeonTemplate,
+    ClassicMedicalTemplate,
+    ModernMinimalTemplate,
+    CorporateHealthcareTemplate,
+    SwissCleanTemplate,
     TemplateProps,
     ClinicData,
     Doctor,
@@ -137,6 +141,18 @@ export function ClinicPublicPageClient({ data }: ClinicPublicPageClientProps) {
 
     // Render new templates
     switch (selectedTemplate) {
+        case 'classic-medical':
+            return <ClassicMedicalTemplate {...templateProps} />
+
+        case 'modern-minimal':
+            return <ModernMinimalTemplate {...templateProps} />
+
+        case 'corporate-healthcare':
+            return <CorporateHealthcareTemplate {...templateProps} />
+
+        case 'swiss-clean':
+            return <SwissCleanTemplate {...templateProps} />
+
         case 'glassmorphism':
             return <GlassmorphismTemplate {...templateProps} />
 
@@ -147,8 +163,8 @@ export function ClinicPublicPageClient({ data }: ClinicPublicPageClientProps) {
             return <AuroraNeonTemplate {...templateProps} />
 
         default:
-            // Legacy fallback (original design) - this shouldn't happen normally
-            return <LegacyTemplate data={data} sanitizedTheme={sanitizedTheme} />
+            // Fallback to classic-medical as the main template
+            return <ClassicMedicalTemplate {...templateProps} />
     }
 }
 

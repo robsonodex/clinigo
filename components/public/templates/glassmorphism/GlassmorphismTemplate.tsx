@@ -22,6 +22,7 @@ export function GlassmorphismTemplate({
     const theme = mergeWithDefaultTheme(clinic.theme || {})
     const content = theme.content
     const hero = theme.hero
+    const display = theme.display
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -148,7 +149,7 @@ export function GlassmorphismTemplate({
                                         onClick={() => onBook(doctor.id)}
                                     >
                                         <div className="glass-doctor-avatar">
-                                            {doctor.photo_url ? (
+                                            {display.show_doctor_photos && doctor.photo_url ? (
                                                 <img src={doctor.photo_url} alt={doctor.full_name} />
                                             ) : (
                                                 doctor.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')
@@ -170,36 +171,38 @@ export function GlassmorphismTemplate({
             </section>
 
             {/* Especialidades Section */}
-            <section id="especialidades" className="glass-section">
-                <div className="glass-section-container">
-                    <h2 className="glass-section-title">
-                        {content.specialties_title || 'Nossas'} <span className="glass-gradient-text">{content.specialties_title ? '' : 'Especialidades'}</span>
-                    </h2>
-                    <p className="glass-section-subtitle">
-                        {content.specialties_subtitle || 'Oferecemos atendimento em diversas especialidades médicas'}
-                    </p>
-                    <div className="glass-specialties-grid">
-                        {specialties.map((specialty) => (
-                            <div
-                                key={specialty.slug}
-                                className="glass-specialty-card"
-                                onClick={() => router.push(`/${clinic.slug}/agendar?especialidade=${specialty.slug}`)}
-                            >
-                                <div className="glass-specialty-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                                    </svg>
+            {display.show_specialties_grid && (
+                <section id="especialidades" className="glass-section">
+                    <div className="glass-section-container">
+                        <h2 className="glass-section-title">
+                            {content.specialties_title || 'Nossas'} <span className="glass-gradient-text">{content.specialties_title ? '' : 'Especialidades'}</span>
+                        </h2>
+                        <p className="glass-section-subtitle">
+                            {content.specialties_subtitle || 'Oferecemos atendimento em diversas especialidades médicas'}
+                        </p>
+                        <div className="glass-specialties-grid">
+                            {specialties.map((specialty) => (
+                                <div
+                                    key={specialty.slug}
+                                    className="glass-specialty-card"
+                                    onClick={() => router.push(`/${clinic.slug}/agendar?especialidade=${specialty.slug}`)}
+                                >
+                                    <div className="glass-specialty-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                        </svg>
+                                    </div>
+                                    <h3>{specialty.name}</h3>
+                                    <p>{specialty.doctorCount} médico{specialty.doctorCount !== 1 ? 's' : ''}</p>
+                                    <button className="glass-btn glass-btn-ghost glass-btn-small">
+                                        Ver Médicos
+                                    </button>
                                 </div>
-                                <h3>{specialty.name}</h3>
-                                <p>{specialty.doctorCount} médico{specialty.doctorCount !== 1 ? 's' : ''}</p>
-                                <button className="glass-btn glass-btn-ghost glass-btn-small">
-                                    Ver Médicos
-                                </button>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
 
             {/* Médicos Section */}
             <section id="medicos" className="glass-section glass-section-alt">
@@ -218,7 +221,7 @@ export function GlassmorphismTemplate({
                                 onClick={() => onBook(doctor.id)}
                             >
                                 <div className="glass-doctor-avatar-large">
-                                    {doctor.photo_url ? (
+                                    {display.show_doctor_photos && doctor.photo_url ? (
                                         <img src={doctor.photo_url} alt={doctor.full_name} />
                                     ) : (
                                         <div className="glass-avatar-placeholder">

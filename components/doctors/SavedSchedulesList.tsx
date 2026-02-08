@@ -46,17 +46,12 @@ interface SavedSchedulesListProps {
 export function SavedSchedulesList({ doctorId }: SavedSchedulesListProps) {
     const queryClient = useQueryClient()
 
-    // Fetch saved schedules
+    // Fetch saved schedules - using api client for proper credentials in production
     const { data: schedules, isLoading, error } = useQuery({
         queryKey: ['schedules', doctorId],
         queryFn: async () => {
-            const response = await fetch(`/api/doctors/${doctorId}/schedules`)
-            if (!response.ok) {
-                throw new Error('Erro ao carregar horários')
-            }
-            const result = await response.json()
-            // API returns { success: true, data: [...] }
-            return (result.data || result) as Schedule[]
+            const result = await api.get<Schedule[]>(`/doctors/${doctorId}/schedules`)
+            return result || []
         },
         enabled: !!doctorId,
     })
@@ -156,15 +151,15 @@ export function SavedSchedulesList({ doctorId }: SavedSchedulesListProps) {
                                 <div
                                     key={day.value}
                                     className={`flex items-start justify-between p-3 rounded-lg border transition-colors ${hasSchedule
-                                            ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800'
-                                            : 'bg-muted/30 border-muted'
+                                        ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800'
+                                        : 'bg-muted/30 border-muted'
                                         }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div
                                             className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${hasSchedule
-                                                    ? 'bg-green-600 text-white'
-                                                    : 'bg-muted text-muted-foreground'
+                                                ? 'bg-green-600 text-white'
+                                                : 'bg-muted text-muted-foreground'
                                                 }`}
                                         >
                                             {day.short}

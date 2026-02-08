@@ -1,0 +1,575 @@
+/* =============================================================================
+   Swiss Clean Template - CSS
+   Design suíço, grid rigoroso, tipografia bold
+   Sem animações ou efeitos complexos
+   ============================================================================= */
+
+.swiss-template {
+    min-height: 100vh;
+    background: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #000000;
+}
+
+/* Header */
+.swiss-header {
+    position: sticky;
+    top: 0;
+    background: #ffffff;
+    z-index: 100;
+    border-bottom: 2px solid #000000;
+}
+
+.swiss-header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.swiss-logo img {
+    height: 1.75rem;
+}
+
+.swiss-logo span {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.swiss-header-right {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.swiss-phone {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #000000;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+}
+
+/* Buttons */
+.swiss-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 2px solid #000000;
+    cursor: pointer;
+    background: transparent;
+}
+
+.swiss-btn-primary {
+    background: #000000;
+    color: #ffffff;
+}
+
+.swiss-btn-primary:hover {
+    background: #1a1a1a;
+}
+
+.swiss-btn-outline {
+    background: transparent;
+    color: #000000;
+}
+
+.swiss-btn-outline:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.swiss-btn-accent {
+    background: #14b8a6;
+    color: #ffffff;
+    border-color: #14b8a6;
+}
+
+.swiss-btn-white {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+}
+
+.swiss-btn-outline-light {
+    background: transparent;
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+.swiss-btn-outline-light:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+.swiss-btn-large {
+    padding: 1rem 2rem;
+    font-size: 0.875rem;
+}
+
+/* Hero */
+.swiss-hero {
+    padding: 6rem 2rem;
+    border-bottom: 2px solid #000000;
+}
+
+.swiss-hero-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.swiss-hero-tag {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #14b8a6;
+    margin-bottom: 1.5rem;
+}
+
+.swiss-hero h1 {
+    font-size: 4rem;
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin: 0 0 1.5rem;
+    text-transform: uppercase;
+}
+
+@media (min-width: 768px) {
+    .swiss-hero h1 {
+        font-size: 6rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .swiss-hero h1 {
+        font-size: 8rem;
+    }
+}
+
+.swiss-hero p {
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0 0 2.5rem;
+    color: #4b5563;
+}
+
+.swiss-hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Stats */
+.swiss-stats {
+    background: #000000;
+    padding: 2rem;
+}
+
+.swiss-stats-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+}
+
+.swiss-stat-item {
+    text-align: center;
+}
+
+.swiss-stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.swiss-stat-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.25rem;
+}
+
+.swiss-stat-divider {
+    width: 1px;
+    height: 3rem;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Search */
+.swiss-search-section {
+    padding: 2rem;
+    border-bottom: 2px solid #000000;
+}
+
+.swiss-search {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.swiss-search-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #9ca3af;
+    flex-shrink: 0;
+}
+
+.swiss-search input {
+    flex: 1;
+    padding: 0.75rem 0;
+    border: none;
+    border-bottom: 2px solid #000000;
+    font-size: 1rem;
+    font-weight: 500;
+    outline: none;
+    background: transparent;
+}
+
+.swiss-search button {
+    padding: 0.75rem;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+/* Sections */
+.swiss-section {
+    padding: 5rem 2rem;
+    border-bottom: 2px solid #000000;
+}
+
+.swiss-section-dark {
+    background: #000000;
+    color: #ffffff;
+}
+
+.swiss-section-accent {
+    background: #14b8a6;
+    color: #ffffff;
+}
+
+.swiss-section-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.swiss-section-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.swiss-section-header-light h2 {
+    color: #ffffff;
+}
+
+.swiss-section-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #14b8a6;
+    font-family: monospace;
+}
+
+.swiss-section-header h2 {
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.swiss-section-intro {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0 0 3rem;
+    padding-left: 3.5rem;
+}
+
+.swiss-section-intro-light {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.swiss-section-cta {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+/* Services Grid */
+.swiss-services-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 0;
+}
+
+@media (min-width: 640px) {
+    .swiss-services-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .swiss-services-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.swiss-service-card {
+    padding: 2rem;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+}
+
+.swiss-service-card:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+}
+
+.swiss-service-number {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: #14b8a6;
+    margin-bottom: 1rem;
+}
+
+.swiss-service-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.5rem;
+}
+
+.swiss-service-card p {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 0;
+}
+
+.swiss-service-card:hover p {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Doctors Grid */
+.swiss-doctors-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@media (min-width: 640px) {
+    .swiss-doctors-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .swiss-doctors-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.swiss-doctor-card {
+    background: #000000;
+    padding: 1.5rem;
+    cursor: pointer;
+}
+
+.swiss-doctor-card:hover {
+    background: #1a1a1a;
+}
+
+.swiss-doctor-photo {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: #1a1a1a;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swiss-doctor-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.swiss-doctor-photo span {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.swiss-doctor-info h3 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.25rem;
+}
+
+.swiss-doctor-specialty {
+    font-size: 0.75rem;
+    color: #14b8a6;
+    margin: 0;
+}
+
+.swiss-doctor-crm {
+    font-size: 0.625rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: monospace;
+    margin: 0;
+}
+
+/* About */
+.swiss-about {
+    max-width: 800px;
+}
+
+.swiss-about>p {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    margin: 0 0 2.5rem;
+    padding-left: 3.5rem;
+}
+
+.swiss-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    padding-left: 3.5rem;
+}
+
+.swiss-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.swiss-feature span {
+    font-size: 0.625rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: #14b8a6;
+    padding-top: 0.25rem;
+}
+
+.swiss-feature p {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Contact */
+.swiss-contact {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+}
+
+@media (min-width: 768px) {
+    .swiss-contact {
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+    }
+}
+
+.swiss-contact-info>p {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 1.5rem;
+    padding-left: 3.5rem;
+}
+
+.swiss-contact-details {
+    padding-left: 3.5rem;
+}
+
+.swiss-contact-details p {
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
+}
+
+.swiss-contact-cta {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Footer */
+.swiss-footer {
+    padding: 2rem;
+    border-top: 2px solid #000000;
+}
+
+.swiss-footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.swiss-footer-brand img {
+    height: 1.5rem;
+}
+
+.swiss-footer-brand span {
+    font-size: 0.875rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.swiss-footer-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.swiss-footer-links a {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #000000;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+}
+
+.swiss-footer-links a:hover {
+    color: #14b8a6;
+}
+
+.swiss-footer-copy {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 0;
+}

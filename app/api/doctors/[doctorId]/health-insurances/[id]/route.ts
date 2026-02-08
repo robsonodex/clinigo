@@ -15,6 +15,9 @@ interface RouteParams {
     params: Promise<{ doctorId: string; id: string }>
 }
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const { doctorId, id } = await params

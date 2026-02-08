@@ -99,7 +99,22 @@ export const partnerRegistrationSchema = z.object({
     company_name: z.string()
         .max(100, 'Nome da empresa muito longo')
         .optional()
-        .nullable()
+        .nullable(),
+
+    // Password fields - REQUIRED for login
+    password: z.string()
+        .min(6, 'Senha deve ter pelo menos 6 caracteres')
+        .max(100, 'Senha muito longa'),
+
+    confirm_password: z.string()
+        .min(1, 'Confirme sua senha'),
+
+    // Terms acceptance - REQUIRED
+    terms_accepted: z.boolean()
+        .refine(val => val === true, 'Você deve aceitar os termos de parceria para continuar')
+}).refine(data => data.password === data.confirm_password, {
+    message: 'As senhas não coincidem',
+    path: ['confirm_password']
 })
 
 // Referral code validation schema

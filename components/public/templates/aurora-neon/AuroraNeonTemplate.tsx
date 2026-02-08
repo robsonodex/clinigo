@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TemplateProps } from '../index'
+import { mergeWithDefaultTheme } from '@/types/clinic-theme'
 import './aurora-neon.css'
 
 export function AuroraNeonTemplate({
@@ -16,6 +17,12 @@ export function AuroraNeonTemplate({
 }: TemplateProps) {
     const router = useRouter()
     const [searchTerm, setSearchTerm] = useState('')
+
+    // Merge theme with defaults to get all values
+    const theme = mergeWithDefaultTheme(clinic.theme || {})
+    const content = theme.content
+    const hero = theme.hero
+    const display = theme.display
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault()

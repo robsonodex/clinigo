@@ -520,6 +520,52 @@ export async function POST(request: NextRequest) {
                 const clinicName = appointmentWithRelations?.clinic?.name || 'Clínica'
                 const checkinUrl = qrCodeData?.url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/checkin/${appointmentId}`
 
+                // Generate QR code image for presencial appointments
+                let qrCodeImageHtml = ''
+                const isTelemedicina = body.type === 'telemedicina'
+
+                if (!isTelemedicina && qrCodeData?.image) {
+                    qrCodeImageHtml = `
+                        <div style="text-align: center; margin: 20px 0;">
+                            <img src="${qrCodeData.image}" alt="QR Code Check-in" style="width: 200px; height: 200px;"/>
+                            <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">Escaneie o QR Code no dia da consulta para fazer check-in</p>
+                        </div>
+                    `
+                }
+
+                // Video link section for telemedicine
+                let videoLinkHtml = ''
+                if (isTelemedicina && videoRoom) {
+                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+                    const videoUrl = `${baseUrl}/video/${appointmentId}?token=${(videoRoom as any).patient_token}`
+                    videoLinkHtml = `
+                        <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+                            <h3 style="color: #1e40af; margin: 0 0 8px 0;">📹 Link da Teleconsulta</h3>
+                            <p style="margin: 0 0 12px 0;">Acesse o link abaixo no horário da consulta:</p>
+                            <p style="text-align: center;">
+                                <a href="${videoUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Acessar Consulta Online
+                                </a>
+                            </p>
+                        </div>
+                    `
+                }
+
+                // Pre-checkin section for in-person appointments
+                let checkinHtml = ''
+                if (!isTelemedicina) {
+                    checkinHtml = `
+                        <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                        <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
+                        <p style="text-align: center;">
+                            <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                Fazer Pré-Check-in
+                            </a>
+                        </p>
+                        ${qrCodeImageHtml}
+                    `
+                }
+
                 await sendEmailMultiTenant({
                     clinicId,
                     to: patient.email,
@@ -534,15 +580,10 @@ export async function POST(request: NextRequest) {
                                 <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${appointmentDate}</p>
                                 <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${appointmentTime}</p>
                                 <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicName}</p>
-                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${body.type === 'telemedicina' ? 'Telemedicina' : 'Presencial'}</p>
+                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isTelemedicina ? 'Teleconsulta' : 'Presencial'}</p>
                             </div>
-                            <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
-                            <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
-                            <p style="text-align: center;">
-                                <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                                    Fazer Pré-Check-in
-                                </a>
-                            </p>
+                            ${videoLinkHtml}
+                            ${checkinHtml}
                             <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
                                 Este e-mail foi enviado automaticamente. Caso precise cancelar ou reagendar, entre em contato com a clínica.
                             </p>

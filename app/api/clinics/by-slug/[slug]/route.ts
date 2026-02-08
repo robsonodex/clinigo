@@ -7,6 +7,9 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 interface RouteParams {
     params: Promise<{ slug: string }>
 }

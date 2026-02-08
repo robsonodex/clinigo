@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
         const validated = partnerRegistrationSchema.safeParse(body)
 
         if (!validated.success) {
+            console.log('[API:partners/register] Validation errors:', JSON.stringify(validated.error.errors, null, 2))
+            console.log('[API:partners/register] Body received:', JSON.stringify(body, null, 2))
             return NextResponse.json(
                 {
                     error: 'Dados inválidos',
