@@ -61,14 +61,14 @@ function ConfirmBookingContent({ params }: PageProps) {
     // Fetch doctor
     const { data: doctor, isLoading: doctorLoading } = useQuery({
         queryKey: ['doctor', doctor_id],
-        queryFn: () => api.get<Doctor>(`/doctors/${doctor_id}`),
+        queryFn: () => api.get<Doctor>(`/doctors/detail?id=${doctor_id}&action=profile`),
         enabled: !!date && !!time, // Only fetch if we have valid params
     })
 
     // Fetch doctor insurances
     const { data: insurancesResponse } = useQuery({
         queryKey: ['doctor-insurances', doctor_id],
-        queryFn: () => api.getFull<DoctorHealthInsurance[]>(`/doctors/${doctor_id}/health-insurances`, {
+        queryFn: () => api.getFull<DoctorHealthInsurance[]>(`/doctors/detail?id=${doctor_id}&action=health-insurances`, {
             status: 'ACTIVE'
         }),
         enabled: !!doctor_id && !!date && !!time

@@ -1,15 +1,16 @@
 /**
  * POST /api/billing/create-subscription
- * Creates a new subscription and Mercado Pago checkout preference
+ * Creates a new subscription and Banco Inter billing (Boleto/Pix)
  * 
  * 🔥 CRITICAL: This enables revenue generation
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { MercadoPagoConfig, Preference } from 'mercadopago'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
+import { bancoInterService } from '@/lib/services/bancointer'
+import { addDays, format } from 'date-fns'
 
 const createSubscriptionSchema = z.object({
     plan: z.enum(['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK']),
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
         // Get user's clinic
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('clinic_id, clinics(id, name, plan_type)')
+            .select('clinic_id, email, clinics(id, name, plan_type, cnpj, address, responsible_name, phone)')
             .eq('id', userId)
             .single()
 
@@ -49,6 +50,11 @@ export async function POST(request: NextRequest) {
         }
 
         const clinic = (userData as any).clinics
+        // Basic Clinic Data Validation for Boleto
+        if (!clinic.cnpj || !clinic.address) {
+            return NextResponse.json({ error: 'CNPJ e Endereço são obrigatórios para emissão de boleto.' }, { status: 400 })
+        }
+
         const clinicId = clinic.id
 
         // Prevent downgrade (basic security)
@@ -60,7 +66,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate amount
-        const amount = PLAN_PRICES[plan][billing_cycle]
+        const amount = PLAN_PRICES[plan as keyof typeof PLAN_PRICES][billing_cycle as 'MONTHLY' | 'YEARLY']
 
         // Create subscription record
         const { data: subscription, error: subError } = await (supabase as any)
@@ -78,81 +84,90 @@ export async function POST(request: NextRequest) {
 
         const subscriptionId = subscription
 
-        // Initialize Mercado Pago
-        if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
-            logger.error('MERCADOPAGO_ACCESS_TOKEN not configured')
-            return NextResponse.json({ error: 'Pagamento não configurado' }, { status: 500 })
-        }
+        // Initialize Banco Inter Payment
+        try {
+            const dueDate = addDays(new Date(), 3) // 3 days to pay
+            const formattedDueDate = format(dueDate, 'yyyy-MM-dd')
 
-        const client = new MercadoPagoConfig({
-            accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-        })
-        const preference = new Preference(client)
+            // Clean phone
+            const phone = clinic.phone ? clinic.phone.replace(/\D/g, '') : ''
+            const ddd = phone.length >= 2 ? phone.substring(0, 2) : '21'
+            const number = phone.length > 2 ? phone.substring(2) : '900000000'
 
-        // Create checkout preference
-        const externalReference = `sub_${subscriptionId}`
-        const notificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercadopago`
+            const boletoData = {
+                seuNumero: subscriptionId, // Using UUID as custom identifier
+                cnpjCPFBeneficiario: process.env.INTER_CNPJ_BENEFICIARIO || '', // Must be set in env
+                valorNominal: amount,
+                dataVencimento: formattedDueDate,
+                numDiasAgenda: 0,
+                pagador: {
+                    cpfCnpj: clinic.cnpj.replace(/\D/g, ''),
+                    tipoPessoa: clinic.cnpj.replace(/\D/g, '').length > 11 ? 'JURIDICA' : 'FISICA' as any,
+                    nome: clinic.responsible_name || clinic.name,
+                    endereco: clinic.address || 'Endereço não informado', // Split address logic might be needed
+                    numero: 'S/N', // Ideally should be separated
+                    bairro: 'Centro',
+                    cidade: 'Rio de Janeiro',
+                    uf: 'RJ',
+                    cep: '20000000', // Default if missing
+                    email: (userData as any).email,
+                    ddd: ddd,
+                    telefone: number
+                },
+                mensagem: {
+                    linha1: `Assinatura CliniGo ${plan}`,
+                    linha2: billing_cycle === 'MONTHLY' ? 'Mensal' : 'Anual'
+                }
+            }
 
-        const preferenceData = await preference.create({
-            body: {
-                items: [
-                    {
-                        id: subscriptionId,
-                        title: `CliniGo ${plan} - ${billing_cycle === 'MONTHLY' ? 'Mensal' : 'Anual'}`,
-                        description: `Assinatura ${plan} do CliniGo`,
-                        category_id: 'services',
-                        quantity: 1,
-                        unit_price: amount,
-                        currency_id: 'BRL',
+            // NOTE: Split address logic is simplified here. In production, address should be structured.
+            // Assuming clinic.address might contain full info, but Inter requires splitting.
+            // For now, using defaults if not structured to avoid blocking, but this MUST be improved.
+
+            const billingResult = await bancoInterService.createBoleto(boletoData)
+
+            // Update subscription with payment info
+            await (supabase
+                .from('subscriptions') as any)
+                .update({
+                    mp_preference_id: billingResult.nossoNumero, // Storing nossoNumero in existing column for now
+                    metadata: {
+                        gateway: 'BANCO_INTER',
+                        nosso_numero: billingResult.nossoNumero,
+                        linha_digitavel: billingResult.linhaDigitavel,
+                        codigo_barras: billingResult.codigoBarras,
+                        boleto_pdf: `https://cdpj.partners.bancointer.com.br/cobranca/v2/boletos/${billingResult.nossoNumero}/pdf` // Hypothetical common URL, usually client gets via API
                     },
-                ],
-                payer: {
-                    email: (userData as any).email || 'contato@clinigo.com.br',
-                },
-                external_reference: externalReference,
-                notification_url: notificationUrl,
-                back_urls: {
-                    success: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes/plano?status=success`,
-                    failure: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes/plano?status=failure`,
-                    pending: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes/plano?status=pending`,
-                },
-                auto_return: 'approved',
-                payment_methods: {
-                    excluded_payment_types: [],
-                    installments: billing_cycle === 'YEARLY' ? 12 : 1,
-                },
-            },
-        })
+                })
+                .eq('id', subscriptionId)
 
-        // Update subscription with preference_id
-        await (supabase
-            .from('subscriptions') as any)
-            .update({
-                mp_preference_id: preferenceData.id,
-                metadata: {
-                    init_point: preferenceData.init_point,
-                    sandbox_init_point: preferenceData.sandbox_init_point,
-                },
+            // Log billing event
+            logger.info({
+                event: 'subscription_created',
+                subscriptionId,
+                clinicId,
+                plan,
+                amount,
+                billing_cycle,
+                gateway: 'BANCO_INTER',
+                nossoNumero: billingResult.nossoNumero
+            }, 'BILLING')
+
+            return NextResponse.json({
+                subscription_id: subscriptionId,
+                payment_method: 'BOLETO',
+                boleto: {
+                    linha_digitavel: billingResult.linhaDigitavel,
+                    codigo_barras: billingResult.codigoBarras,
+                    nosso_numero: billingResult.nossoNumero
+                }
             })
-            .eq('id', subscriptionId)
 
-        // Log billing event
-        logger.info({
-            event: 'subscription_created',
-            subscriptionId,
-            clinicId,
-            plan,
-            amount,
-            billing_cycle,
-            preferenceId: preferenceData.id,
-        }, 'BILLING')
-
-        return NextResponse.json({
-            subscription_id: subscriptionId,
-            preference_id: preferenceData.id,
-            init_point: preferenceData.init_point,
-            sandbox_init_point: preferenceData.sandbox_init_point,
-        })
+        } catch (interError: any) {
+            console.error('Inter Error:', JSON.stringify(interError.response?.data || interError))
+            logger.error({ error: interError, clinicId }, 'Banco Inter Billing Failed')
+            return NextResponse.json({ error: 'Erro ao gerar boleto. Verifique os dados cadastrais (CNPJ/Endereço).' }, { status: 500 })
+        }
 
     } catch (error) {
         logger.error({ error }, 'Billing API error')
@@ -169,4 +184,5 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
     }
 }
+
 

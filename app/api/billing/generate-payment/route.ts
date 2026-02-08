@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-
-// Mercado Pago SDK
-import { MercadoPagoConfig, Preference } from 'mercadopago'
+import { bancoInterService } from '@/lib/services/bancointer'
+import { addDays, format } from 'date-fns'
 
 // =============================================================================
 // Tipos
 // =============================================================================
 
-type PlanType = 'STARTER' | 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+type PlanType = 'STARTER' | 'BASIC' | 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
 
 interface PlanDetails {
     name: string
@@ -33,6 +32,18 @@ const PLAN_DETAILS: Record<PlanType, PlanDetails> = {
         price: 147,
         description: 'Ideal para clínicas pequenas',
         features: ['Até 5 médicos', 'Teleconsultas', 'Agenda online'],
+    },
+    BASICO: {
+        name: 'CliniGo Básico',
+        price: 149,
+        description: 'Ideal para clínicas pequenas',
+        features: ['2 médicos', '100 agendamentos/mês', 'Check-in QR Code', 'Teleconsulta'],
+    },
+    AVANCADO: {
+        name: 'CliniGo Avançado',
+        price: 299,
+        description: 'Para clínicas médias',
+        features: ['5 médicos', '500 agendamentos/mês', 'Financeiro completo'],
     },
     PROFESSIONAL: {
         name: 'Profissional',
@@ -101,14 +112,21 @@ export async function POST(req: NextRequest) {
         }
 
         // 4. Buscar dados da clínica alvo
-        const { data: clinic } = await supabase
+        const { data: clinicData } = await supabase
             .from('clinics')
-            .select('id, name, plan_type, subscription_due_date')
+            .select('id, name, plan_type, subscription_due_date, cnpj, address, responsible_name, phone')
             .eq('id', targetClinicId)
             .single()
 
+        const clinic = clinicData as any
+
         if (!clinic) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+        }
+
+        // Validar dados necessários para boleto
+        if (!clinic.cnpj) {
+            return NextResponse.json({ error: 'CNPJ da clínica é obrigatório para gerar boleto' }, { status: 400 })
         }
 
         // 5. Pegar plan_type
@@ -120,80 +138,97 @@ export async function POST(req: NextRequest) {
 
         const planDetails = PLAN_DETAILS[targetPlan]
 
-        // Se plano é STARTER, não gerar pagamento (exceto se forçarem valor manual, mas por enquanto segue a regra)
+        // Se plano é STARTER, não gerar pagamento
         if (planDetails.price === 0) {
             return NextResponse.json({ error: 'Plano gratuito não requer pagamento' }, { status: 400 })
         }
 
-        // 5. Configurar Mercado Pago
-        const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN
-        if (!accessToken) {
-            console.error('MERCADOPAGO_ACCESS_TOKEN não configurado')
-            return NextResponse.json({ error: 'Configuração de pagamento inválida' }, { status: 500 })
-        }
+        // 6. Gerar Boleto via Banco Inter
+        try {
+            const dueDate = addDays(new Date(), 5) // 5 dias para pagar
+            const formattedDueDate = format(dueDate, 'yyyy-MM-dd')
 
-        const client = new MercadoPagoConfig({
-            accessToken,
-            options: { timeout: 5000 },
-        })
+            // Clean phone
+            const phone = clinic.phone ? clinic.phone.replace(/\D/g, '') : ''
+            const ddd = phone.length >= 2 ? phone.substring(0, 2) : '21'
+            const number = phone.length > 2 ? phone.substring(2) : '900000000'
 
-        // 6. Criar preferência de pagamento
-        const preference = new Preference(client)
-
-        const preferenceData = {
-            items: [
-                {
-                    id: `PLAN-${targetPlan}`,
-                    title: `CliniGo - ${planDetails.name}`,
-                    description: planDetails.description,
-                    quantity: 1,
-                    unit_price: planDetails.price,
-                    currency_id: 'BRL',
+            const boletoData = {
+                // seuNumero deve ser único para cada boleto - usar clinic_id + timestamp
+                seuNumero: (clinic.id.replace(/-/g, '').substring(0, 8) + Date.now().toString().slice(-7)).substring(0, 15),
+                cnpjCPFBeneficiario: process.env.INTER_CNPJ_BENEFICIARIO || '',
+                valorNominal: planDetails.price,
+                dataVencimento: formattedDueDate,
+                numDiasAgenda: 0,
+                pagador: {
+                    cpfCnpj: clinic.cnpj.replace(/\D/g, ''),
+                    tipoPessoa: clinic.cnpj.replace(/\D/g, '').length > 11 ? 'JURIDICA' : 'FISICA' as any,
+                    nome: clinic.responsible_name || clinic.name,
+                    endereco: clinic.address || 'Endereço não informado',
+                    numero: 'S/N',
+                    bairro: 'Centro',
+                    cidade: 'Rio de Janeiro',
+                    uf: 'RJ',
+                    cep: '20000000',
+                    email: user.email || 'contato@clinigo.app',
+                    ddd: ddd,
+                    telefone: number
                 },
-            ],
-            payer: {
-                name: clinic.name,
-                email: user.email || 'noreply@clinigo.com.br',
-            },
-            back_urls: {
-                success: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?payment=success`,
-                failure: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?payment=failure`,
-                pending: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/configuracoes?payment=pending`,
-            },
-            auto_return: 'approved' as const,
-            external_reference: clinic.id,
-            metadata: {
+                mensagem: {
+                    linha1: `CliniGo - Plano ${planDetails.name}`,
+                    linha2: `Assinatura Mensal`
+                }
+            }
+
+            const billingResult = await bancoInterService.createBoleto(boletoData)
+            if (!billingResult || !billingResult.nossoNumero) {
+                console.error('Erro: Resposta do Inter inválida ou sem nossoNumero', billingResult)
+                throw new Error('Falha ao gerar boleto: Resposta inválida do banco')
+            }
+
+            // 7. Salvar solicitação no banco
+            const { error: insertError } = await supabase.from('payment_requests').insert({
                 clinic_id: clinic.id,
+                amount: planDetails.price,
                 plan_type: targetPlan,
-                current_plan: clinic.plan_type,
-            },
-            notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/billing/webhook`,
+                description: `Assinatura ${planDetails.name} - Mensal`,
+                mercadopago_preference_id: billingResult.nossoNumero, // Reusing column for Inter
+                mercadopago_init_point: billingResult.linhaDigitavel, // Storing linha digitavel here
+                status: 'PENDING',
+            } as any)
+
+            if (insertError) {
+                console.error('Erro ao salvar payment_request:', insertError)
+            }
+
+            // 8. Retornar dados do boleto
+            return NextResponse.json({
+                success: true,
+                payment_method: 'BOLETO',
+                boleto: {
+                    linha_digitavel: billingResult.linhaDigitavel,
+                    codigo_barras: billingResult.codigoBarras,
+                    nosso_numero: billingResult.nossoNumero,
+                },
+                plan: planDetails,
+            })
+
+        } catch (interError: any) {
+            console.error('=== ERRO BANCO INTER DEBUG ===')
+            console.error('Full error:', JSON.stringify(interError, Object.getOwnPropertyNames(interError), 2))
+            console.error('Response data:', interError.response?.data)
+            console.error('Response status:', interError.response?.status)
+            console.error('Error message:', interError.message)
+            console.error('=== FIM DEBUG ===')
+            return NextResponse.json(
+                {
+                    error: 'Erro ao gerar boleto',
+                    details: interError.response?.data?.message || interError.message || 'Erro desconhecido',
+                },
+                { status: 500 }
+            )
         }
 
-        const response = await preference.create({ body: preferenceData })
-
-        // 7. Salvar solicitação no banco
-        const { error: insertError } = await supabase.from('payment_requests').insert({
-            clinic_id: clinic.id,
-            amount: planDetails.price,
-            plan_type: targetPlan,
-            description: `Assinatura ${planDetails.name} - Mensal`,
-            mercadopago_preference_id: response.id!,
-            mercadopago_init_point: response.init_point!,
-            status: 'PENDING',
-        } as any) // Type assertion para evitar erro com PostgrestFilterBuilder
-
-        if (insertError) {
-            console.error('Erro ao salvar payment_request:', insertError)
-        }
-
-        // 8. Retornar link de pagamento
-        return NextResponse.json({
-            success: true,
-            payment_url: response.init_point,
-            preference_id: response.id,
-            plan: planDetails,
-        })
     } catch (error) {
         console.error('Erro ao gerar pagamento:', error)
         return NextResponse.json(
@@ -205,3 +240,4 @@ export async function POST(req: NextRequest) {
         )
     }
 }
+

@@ -74,7 +74,7 @@ export default function SchedulePage() {
             // `d:\clinigo\app\app\api\doctors\[doctorId]\route.ts` ->
             // It does `select('*, schedules(*)')`. Yes!
 
-            const doctor = await api.get<any>(`/doctors/${selectedDoctorId}`)
+            const doctor = await api.get<any>(`/doctors/detail?id=${selectedDoctorId}&action=profile`)
             return doctor.schedules as any[]
         },
         enabled: !!selectedDoctorId,

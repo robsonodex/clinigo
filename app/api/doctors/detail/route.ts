@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
 
         if (action === 'schedules') {
             return handlePostSchedules(request, doctorId)
+        } else if (action === 'health-insurances') {
+            return handlePostHealthInsurance(request, doctorId)
         }
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
@@ -69,12 +71,40 @@ export async function PATCH(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const doctorId = searchParams.get('id')
+        const action = searchParams.get('action')
+        const insuranceId = searchParams.get('insuranceId')
 
         if (!doctorId) {
             return NextResponse.json({ error: 'Missing doctor ID' }, { status: 400 })
         }
 
+        if (action === 'health-insurances' && insuranceId) {
+            return handlePatchHealthInsurance(request, doctorId, insuranceId)
+        }
+
         return handlePatchDoctor(request, doctorId)
+    } catch (error) {
+        return handleApiError(error)
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url)
+        const doctorId = searchParams.get('id')
+        const action = searchParams.get('action')
+        const insuranceId = searchParams.get('insuranceId')
+
+        if (!doctorId) {
+            return NextResponse.json({ error: 'Missing doctor ID' }, { status: 400 })
+        }
+
+        if (action === 'health-insurances' && insuranceId) {
+            return handleDeleteHealthInsurance(doctorId, insuranceId)
+        }
+
+        // Default: delete/deactivate doctor
+        return handleDeleteDoctor(doctorId)
     } catch (error) {
         return handleApiError(error)
     }
@@ -370,4 +400,127 @@ async function handleGetHealthInsurances(doctorId: string) {
     }))
 
     return successResponse(flattenedData)
+}
+
+async function handlePostHealthInsurance(request: NextRequest, doctorId: string) {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return handleApiError(new ForbiddenError('Não autorizado'))
+    }
+
+    const body = await request.json()
+
+    // Verify doctor exists
+    const { data: doctor, error: doctorError } = await supabase
+        .from('doctors')
+        .select('id, clinic_id')
+        .eq('id', doctorId)
+        .single()
+
+    if (doctorError || !doctor) {
+        throw new NotFoundError('Médico')
+    }
+
+    // Insert the health insurance link
+    const { data: newInsurance, error: insertError } = await supabase
+        .from('doctor_health_insurances')
+        .insert({
+            doctor_id: doctorId,
+            health_insurance_plan_id: body.health_insurance_plan_id,
+            consultation_price: body.consultation_price,
+            accepts_new_patients: body.accepts_new_patients ?? true,
+            notes: body.notes || null,
+            status: 'ACTIVE'
+        } as any)
+        .select()
+        .single()
+
+    if (insertError) throw insertError
+
+    return successResponse(newInsurance)
+}
+
+async function handlePatchHealthInsurance(request: NextRequest, doctorId: string, insuranceId: string) {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return handleApiError(new ForbiddenError('Não autorizado'))
+    }
+
+    const body = await request.json()
+
+    // Build update object
+    const updateData: Record<string, unknown> = {}
+    if (body.consultation_price !== undefined) updateData.consultation_price = body.consultation_price
+    if (body.accepts_new_patients !== undefined) updateData.accepts_new_patients = body.accepts_new_patients
+    if (body.notes !== undefined) updateData.notes = body.notes
+    if (body.status !== undefined) updateData.status = body.status
+
+    const { data: updated, error: updateError } = await supabase
+        .from('doctor_health_insurances')
+        .update(updateData as any)
+        .eq('id', insuranceId)
+        .eq('doctor_id', doctorId)
+        .select()
+        .single()
+
+    if (updateError) throw updateError
+
+    return successResponse(updated)
+}
+
+async function handleDeleteHealthInsurance(doctorId: string, insuranceId: string) {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return handleApiError(new ForbiddenError('Não autorizado'))
+    }
+
+    // Soft delete by setting deleted_at
+    const { error: deleteError } = await supabase
+        .from('doctor_health_insurances')
+        .update({ deleted_at: new Date().toISOString() } as any)
+        .eq('id', insuranceId)
+        .eq('doctor_id', doctorId)
+
+    if (deleteError) throw deleteError
+
+    return successResponse({ message: 'Convênio removido com sucesso' })
+}
+
+async function handleDeleteDoctor(doctorId: string) {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return handleApiError(new ForbiddenError('Não autorizado'))
+    }
+
+    // Soft delete: set is_accepting_appointments to false
+    const { error: updateError } = await supabase
+        .from('doctors')
+        .update({ is_accepting_appointments: false } as any)
+        .eq('id', doctorId)
+
+    if (updateError) throw updateError
+
+    // Also deactivate user
+    const { data: doctor } = await supabase
+        .from('doctors')
+        .select('user_id')
+        .eq('id', doctorId)
+        .single()
+
+    if (doctor) {
+        await supabase
+            .from('users')
+            .update({ is_active: false } as any)
+            .eq('id', (doctor as any).user_id)
+    }
+
+    return successResponse({ message: 'Médico desativado com sucesso' })
 }

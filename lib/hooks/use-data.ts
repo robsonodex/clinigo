@@ -75,7 +75,7 @@ export function useDoctors(clinicId?: string) {
 export function useDoctor(doctorId: string | null) {
     return useQuery({
         queryKey: ['doctor', doctorId],
-        queryFn: () => api.get<Doctor>(`/doctors/${doctorId}`),
+        queryFn: () => api.get<Doctor>(`/doctors/detail?id=${doctorId}&action=profile`),
         enabled: !!doctorId,
         ...CACHE_TIMES.doctors,
     })

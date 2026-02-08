@@ -735,7 +735,7 @@ function MedicosTab() {
     // Fetch doctor's insurances when modal is open
     const { data: doctorInsurancesResponse, isLoading: loadingInsurances } = useQuery({
         queryKey: ['doctor-insurances', selectedDoctor?.id],
-        queryFn: () => api.getFull<DoctorHealthInsurance[]>(`/doctors/${selectedDoctor?.id}/health-insurances`),
+        queryFn: () => api.getFull<DoctorHealthInsurance[]>(`/doctors/detail?id=${selectedDoctor?.id}&action=health-insurances`),
         enabled: !!selectedDoctor?.id,
     })
     const doctorInsurances = doctorInsurancesResponse?.data || []
@@ -751,7 +751,7 @@ function MedicosTab() {
     // Add insurance mutation
     const addInsuranceMutation = useMutation({
         mutationFn: ({ doctorId, data }: { doctorId: string; data: any }) =>
-            api.post(`/doctors/${doctorId}/health-insurances`, data),
+            api.post(`/doctors/detail?id=${doctorId}&action=health-insurances`, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctor-insurances', selectedDoctor?.id] })
             queryClient.invalidateQueries({ queryKey: ['doctors-with-insurances'] })
@@ -763,7 +763,7 @@ function MedicosTab() {
     // Update insurance mutation
     const updateInsuranceMutation = useMutation({
         mutationFn: ({ doctorId, id, data }: { doctorId: string; id: string; data: any }) =>
-            api.patch(`/doctors/${doctorId}/health-insurances/${id}`, data),
+            api.patch(`/doctors/detail?id=${doctorId}&action=health-insurances&insuranceId=${id}`, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctor-insurances', selectedDoctor?.id] })
             toast.success('Convênio atualizado')
@@ -774,7 +774,7 @@ function MedicosTab() {
     // Remove insurance mutation
     const removeInsuranceMutation = useMutation({
         mutationFn: ({ doctorId, id }: { doctorId: string; id: string }) =>
-            api.delete(`/doctors/${doctorId}/health-insurances/${id}`),
+            api.delete(`/doctors/detail?id=${doctorId}&action=health-insurances&insuranceId=${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctor-insurances', selectedDoctor?.id] })
             queryClient.invalidateQueries({ queryKey: ['doctors-with-insurances'] })

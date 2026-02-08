@@ -69,14 +69,28 @@ async function fetchClinicPlan(): Promise<ClinicData> {
     return res.json()
 }
 
-async function generatePaymentLink(planType: PlanType): Promise<{ payment_url: string }> {
+interface BoletoResponse {
+    success: boolean
+    payment_method: 'BOLETO'
+    boleto: {
+        linha_digitavel: string
+        codigo_barras: string
+        nosso_numero: string
+    }
+    plan: { name: string; price: number }
+}
+
+async function generatePaymentLink(planType: PlanType): Promise<BoletoResponse> {
     const res = await fetch('/api/billing/generate-payment', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_type: planType }),
     })
-    if (!res.ok) throw new Error('Erro ao gerar link de pagamento')
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erro ao gerar boleto')
+    }
     return res.json()
 }
 
@@ -93,11 +107,39 @@ export function PlanAndBilling() {
     const generatePayment = useMutation({
         mutationFn: generatePaymentLink,
         onSuccess: (data) => {
-            window.open(data.payment_url, '_blank')
-            toast.success('Link de pagamento gerado! Abrindo Mercado Pago...')
+            // Show boleto info in a toast and copy to clipboard
+            if (data.boleto) {
+                const downloadUrl = `/api/billing/boleto-pdf?nossoNumero=${data.boleto.nosso_numero}`
+
+                // Open PDF in new tab immediately
+                window.open(downloadUrl, '_blank')
+
+                navigator.clipboard.writeText(data.boleto.linha_digitavel)
+                toast.success(
+                    <div className="space-y-3">
+                        <p className="font-bold">✅ Boleto gerado!</p>
+                        <p className="text-xs">Linha digitável copiada para a área de transferência.</p>
+                        <div className="flex gap-2">
+                            <a
+                                href={downloadUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 rounded text-xs font-medium inline-flex items-center gap-1"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+                                Baixar PDF
+                            </a>
+                        </div>
+                        <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded break-all select-all">
+                            {data.boleto.linha_digitavel}
+                        </p>
+                    </div>,
+                    { duration: 15000 }
+                )
+            }
         },
         onError: (error) => {
-            toast.error(error instanceof Error ? error.message : 'Erro ao gerar pagamento')
+            toast.error(error instanceof Error ? error.message : 'Erro ao gerar boleto')
         },
     })
 
@@ -218,7 +260,7 @@ export function PlanAndBilling() {
                                 </div>
                                 <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
                                     <ExternalLink className="w-3 h-3" />
-                                    Você será redirecionado para o Mercado Pago
+                                    Será gerado um boleto Banco Inter para pagamento
                                 </p>
                             </div>
                         )}

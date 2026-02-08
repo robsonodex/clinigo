@@ -32,6 +32,12 @@ const clinicSettingsSchema = z.object({
     address: z.string().min(5, 'Endereço muito curto'),
     primary_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Cor inválida'),
     logo_url: z.string().optional().nullable(),
+    cnpj: z.string()
+        .optional()
+        .refine(
+            (val) => !val || /^\d{14}$/.test(val.replace(/\D/g, '')),
+            'CNPJ inválido. Use apenas números (14 dígitos)'
+        ),
     whatsapp_number: z.string()
         .optional()
         .refine(
@@ -65,6 +71,7 @@ export default function SettingsPage() {
             phone: '',
             address: '',
             primary_color: '#3b82f6',
+            cnpj: '',
             whatsapp_number: '',
             logo_url: null,
         },
@@ -102,7 +109,7 @@ export default function SettingsPage() {
                 // Fetch clinic data
                 const { data: clinicData, error } = await supabase
                     .from('clinics')
-                    .select('name, slug, email, phone, address, primary_color, logo_url, whatsapp_number')
+                    .select('name, slug, email, phone, address, primary_color, logo_url, cnpj, whatsapp_number')
                     .eq('id', userData.clinic_id)
                     .single()
 
@@ -141,6 +148,7 @@ export default function SettingsPage() {
                         phone: clinicData.phone || '',
                         address: addressValue,
                         primary_color: clinicData.primary_color || '#3b82f6',
+                        cnpj: (clinicData as any).cnpj || '',
                         whatsapp_number: clinicData.whatsapp_number || '',
                         logo_url: clinicData.logo_url || null,
                     })
@@ -210,6 +218,7 @@ export default function SettingsPage() {
                     phone: data.phone,
                     address: data.address,
                     primary_color: data.primary_color,
+                    cnpj: data.cnpj ? data.cnpj.replace(/\D/g, '') : null,
                     whatsapp_number: data.whatsapp_number,
                     logo_url: data.logo_url,
                 })
@@ -383,6 +392,22 @@ export default function SettingsPage() {
                                         <Input id="phone" {...register('phone')} error={!!errors.phone} />
                                         {errors.phone && (
                                             <p className="text-xs text-destructive">{errors.phone.message}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="cnpj">CNPJ da Clínica</Label>
+                                        <Input
+                                            id="cnpj"
+                                            {...register('cnpj')}
+                                            placeholder="00.000.000/0000-00"
+                                            maxLength={18}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Necessário para geração de boletos. Apenas números.
+                                        </p>
+                                        {errors.cnpj && (
+                                            <p className="text-xs text-destructive">{errors.cnpj.message}</p>
                                         )}
                                     </div>
 

@@ -50,7 +50,7 @@ export function SavedSchedulesList({ doctorId }: SavedSchedulesListProps) {
     const { data: schedules, isLoading, error } = useQuery({
         queryKey: ['schedules', doctorId],
         queryFn: async () => {
-            const result = await api.get<Schedule[]>(`/doctors/${doctorId}/schedules`)
+            const result = await api.get<Schedule[]>(`/doctors/detail?id=${doctorId}&action=schedules`)
             return result || []
         },
         enabled: !!doctorId,

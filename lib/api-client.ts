@@ -163,7 +163,7 @@ export async function fetchDoctors(clinicIdOrSlug: string, specialty?: string | 
 }
 
 export async function fetchDoctor(doctorId: string) {
-    return api.get<Doctor>(`/doctors/${doctorId}`)
+    return api.get<Doctor>(`/doctors/detail?id=${doctorId}&action=profile`)
 }
 
 // Available Slots

@@ -23,7 +23,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
     // Fetch doctor data
     const { data: doctor, isLoading: doctorLoading } = useQuery({
         queryKey: ['doctor-profile', doctor_id],
-        queryFn: () => api.get<Doctor>(`/doctors/${doctor_id}`),
+        queryFn: () => api.get<Doctor>(`/doctors/detail?id=${doctor_id}&action=profile`),
     })
 
     // Fetch available slots when date is selected
@@ -168,8 +168,8 @@ export default function DoctorProfilePage({ params }: PageProps) {
                                         setSelectedTime(null)
                                     }}
                                     className={`px-4 py-2 text-xs border-b-2 ${isSelected
-                                            ? 'border-black font-medium'
-                                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                                        ? 'border-black font-medium'
+                                        : 'border-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                 >
                                     {isToday ? 'Hoje' : format(date, 'EEE', { locale: ptBR })} {format(date, 'd/MM')}
@@ -204,8 +204,8 @@ export default function DoctorProfilePage({ params }: PageProps) {
                                         key={slot.time}
                                         onClick={() => handleTimeSelect(slot.time)}
                                         className={`px-4 py-2 text-sm border ${selectedTime === slot.time
-                                                ? 'bg-black text-white border-black'
-                                                : 'hover:border-black'
+                                            ? 'bg-black text-white border-black'
+                                            : 'hover:border-black'
                                             }`}
                                     >
                                         {slot.time}

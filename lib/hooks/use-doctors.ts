@@ -66,7 +66,7 @@ export function useUpdateDoctor() {
 
     return useMutation({
         mutationFn: ({ doctorId, data }: { doctorId: string; data: Partial<Doctor> }) =>
-            api.patch<Doctor>(`/doctors/${doctorId}`, data),
+            api.patch<Doctor>(`/doctors/detail?id=${doctorId}`, data),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['doctors'], exact: false })
             queryClient.invalidateQueries({ queryKey: ['doctor', variables.doctorId] })
@@ -93,7 +93,7 @@ export function useUpdateSchedules() {
 
     return useMutation({
         mutationFn: ({ doctorId, schedules }: { doctorId: string; schedules: ScheduleInput[] }) =>
-            api.post(`/doctors/${doctorId}/schedules`, { schedules }),
+            api.post(`/doctors/detail?id=${doctorId}&action=schedules`, { schedules }),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['doctor', variables.doctorId] })
             queryClient.invalidateQueries({ queryKey: ['schedules', variables.doctorId] })

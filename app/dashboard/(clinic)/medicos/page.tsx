@@ -71,7 +71,7 @@ export default function DoctorsPage() {
 
     const updateStatusMutation = useMutation({
         mutationFn: ({ id, is_accepting_appointments }: { id: string; is_accepting_appointments: boolean }) =>
-            api.patch(`/doctors/${id}`, { is_accepting_appointments }),
+            api.patch(`/doctors/detail?id=${id}`, { is_accepting_appointments }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
             toast.success('Status do médico atualizado')
@@ -109,7 +109,7 @@ export default function DoctorsPage() {
 
     const deleteMutation = useMutation({
         mutationFn: (id: string) =>
-            api.delete(`/doctors/${id}`),
+            api.delete(`/doctors/detail?id=${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
             toast.success('Médico desativado com sucesso')
