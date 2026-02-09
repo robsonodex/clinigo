@@ -42,7 +42,7 @@ async function getAppointmentData(appointmentId: string) {
             ),
             doctors (
                 id,
-                full_name
+                user:users(full_name)
             )
         `)
         .eq('id', appointmentId)
@@ -87,7 +87,7 @@ async function getAppointmentData(appointmentId: string) {
             ),
             doctors (
                 id,
-                full_name
+                user:users(full_name)
             )
         `)
         .eq('id', appointmentId)
