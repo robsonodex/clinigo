@@ -76,24 +76,101 @@ export async function POST(request: NextRequest) {
         }
 
         if (qrError || !qrData) {
-            // Try to find QR without clinic filter to debug
-            const { data: debugQR } = await (supabase
-                .from('appointment_qr_codes') as any)
-                .select('id, clinic_id, qr_token, appointment_id')
-                .or(`qr_token.eq.${qr_token},appointment_id.eq.${qr_token}`)
-                .single()
-
-            console.log('[CHECKIN-QR DEBUG] QR exists?', debugQR ? 'YES' : 'NO')
-            if (debugQR) {
-                console.log('[CHECKIN-QR DEBUG] QR clinic_id:', debugQR.clinic_id)
-                console.log('[CHECKIN-QR DEBUG] Expected clinic_id:', userProfile.clinic_id)
-                console.log('[CHECKIN-QR DEBUG] Match?', debugQR.clinic_id === userProfile.clinic_id)
+            // NEW: Fallback for pre-checkin QR format CLINIGO:{appointment_id}
+            // Pre-checkin generates QR with just the appointment_id, not stored in appointment_qr_codes
+            let appointmentId = qr_token
+            if (qr_token.startsWith('CLINIGO:')) {
+                appointmentId = qr_token.replace('CLINIGO:', '')
             }
 
+            console.log('[CHECKIN-QR] Trying direct appointment lookup:', appointmentId)
+
+            // Try to find appointment directly
+            const { data: directAppointment, error: directError } = await supabase
+                .from('appointments')
+                .select(`
+                    id,
+                    appointment_date,
+                    appointment_time,
+                    status,
+                    clinic_id,
+                    checked_in_at,
+                    patients:patient_id (
+                        id,
+                        full_name,
+                        phone,
+                        email
+                    ),
+                    doctors:doctor_id (
+                        id,
+                        users (
+                            full_name
+                        )
+                    )
+                `)
+                .eq('id', appointmentId)
+                .eq('clinic_id', userProfile.clinic_id)
+                .single()
+
+            if (directError || !directAppointment) {
+                console.log('[CHECKIN-QR] Direct lookup failed:', directError)
+                return NextResponse.json({
+                    success: false,
+                    error: 'QR Code inválido ou não pertence a esta clínica'
+                }, { status: 404 })
+            }
+
+            // Check if already checked in
+            if ((directAppointment as any).checked_in_at) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Paciente já realizou check-in',
+                    checked_in_at: (directAppointment as any).checked_in_at,
+                    appointment: directAppointment
+                }, { status: 400 })
+            }
+
+            // Check if appointment is for today (±1 day)
+            const appointmentDate = new Date((directAppointment as any).appointment_date)
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            appointmentDate.setHours(0, 0, 0, 0)
+            const dayDiff = Math.abs((appointmentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+            if (dayDiff > 1) {
+                const formattedDate = appointmentDate.toLocaleDateString('pt-BR')
+                return NextResponse.json({
+                    success: false,
+                    error: `Check-in disponível apenas no dia da consulta. Data: ${formattedDate}`,
+                    appointment: directAppointment
+                }, { status: 400 })
+            }
+
+            // Perform check-in directly
+            const now = new Date().toISOString()
+            await supabase
+                .from('appointments')
+                .update({
+                    status: 'WAITING_ROOM',
+                    checked_in_at: now
+                } as any)
+                .eq('id', appointmentId)
+
+            const patient = (directAppointment as any).patients
+            const doctor = (directAppointment as any).doctors
+
             return NextResponse.json({
-                success: false,
-                error: 'QR Code inválido ou não pertence a esta clínica'
-            }, { status: 404 })
+                success: true,
+                message: 'Check-in realizado com sucesso!',
+                data: {
+                    patient_name: patient?.full_name || 'Paciente',
+                    patient_phone: patient?.phone,
+                    doctor_name: doctor?.users?.full_name || 'Médico',
+                    appointment_date: (directAppointment as any).appointment_date,
+                    appointment_time: (directAppointment as any).appointment_time,
+                    checked_in_at: now
+                }
+            })
         }
 
         // Check if already checked in
