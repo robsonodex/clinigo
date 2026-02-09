@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import {
     Dialog,
     DialogContent,
@@ -56,7 +55,6 @@ export function CheckinDocumentsModal({
     const [isLoading, setIsLoading] = useState(true)
     const [preCheckinData, setPreCheckinData] = useState<PreCheckinData | null>(null)
     const [documents, setDocuments] = useState<CheckinDocument[]>([])
-    const supabase = createClient()
 
     useEffect(() => {
         if (isOpen && appointmentId) {
@@ -67,27 +65,21 @@ export function CheckinDocumentsModal({
     const loadData = async () => {
         setIsLoading(true)
         try {
-            // Load pre-checkin submission
-            const { data: submission } = await supabase
-                .from('pre_checkin_submissions')
-                .select('*')
-                .eq('appointment_id', appointmentId)
-                .single()
+            // Use API route to bypass RLS issues
+            const response = await fetch(`/api/dashboard/recepcao/checkin-documents?appointmentId=${appointmentId}`)
 
-            if (submission) {
-                setPreCheckinData(submission as PreCheckinData)
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`)
             }
 
-            // Load appointment checkin documents
-            const { data: checkinData } = await supabase
-                .from('appointment_checkins')
-                .select('documents')
-                .eq('appointment_id', appointmentId)
-                .single()
+            const result = await response.json()
 
-            const checkinResult = checkinData as { documents?: CheckinDocument[] } | null
-            if (checkinResult?.documents) {
-                setDocuments(checkinResult.documents)
+            if (result.preCheckin) {
+                setPreCheckinData(result.preCheckin as PreCheckinData)
+            }
+
+            if (result.documents && Array.isArray(result.documents)) {
+                setDocuments(result.documents)
             }
         } catch (error) {
             console.error('Error loading checkin data:', error)

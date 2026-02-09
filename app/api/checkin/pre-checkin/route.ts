@@ -254,10 +254,9 @@ export async function POST(request: NextRequest) {
                 .upsert({
                     patient_id: (appointment as any).patient_id,
                     clinic_id,
-                    photo_url: face_photo_url,
-                    is_primary: true,
-                    source: 'pre_checkin',
-                    verified: false,
+                    reference_image_url: face_photo_url,  // Correct field name from schema
+                    consent_given: true,  // Set consent based on pre-checkin form acceptance
+                    consent_date: new Date().toISOString(),
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 } as any, { onConflict: 'patient_id,clinic_id' })

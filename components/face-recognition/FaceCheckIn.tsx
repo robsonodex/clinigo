@@ -48,6 +48,7 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
     const [isScanning, setIsScanning] = useState(false);
     const [scanAttempts, setScanAttempts] = useState(0);
     const [biometricsLoaded, setBiometricsLoaded] = useState(false);
+    const [patientsWithPhotos, setPatientsWithPhotos] = useState<Array<{ patientId: string; name: string; photoUrl: string; appointmentId?: string }>>([]);
     const descriptorsRef = useRef<Array<{ patientId: string; name: string; descriptor: Float32Array; imageUrl?: string }>>([]);
     const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -134,12 +135,62 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
         setBiometricsLoaded(true);
     };
 
+    // Fallback: carregar pacientes com agendamento hoje que fizeram pré-checkin com foto
+    const loadPatientsWithPhotos = async () => {
+        const supabase = createClient();
+        const today = new Date().toISOString().split('T')[0];
+
+        // Buscar agendamentos do dia com seus pacientes
+        const { data: appointments } = await supabase
+            .from('appointments')
+            .select(`
+                id,
+                patient_id,
+                patients(id, full_name)
+            `)
+            .eq('clinic_id', clinicId)
+            .eq('appointment_date', today)
+            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING'])
+            .limit(50);
+
+        if (!appointments || appointments.length === 0) {
+            setPatientsWithPhotos([]);
+            return;
+        }
+
+        // Buscar biometrias com foto para esses pacientes
+        const patientIds = appointments.map(a => (a as any).patient_id).filter(Boolean);
+
+        const { data: biometrics } = await supabase
+            .from('patient_face_biometrics')
+            .select('patient_id, reference_image_url')
+            .in('patient_id', patientIds);
+
+        // Mapear pacientes com fotos
+        const photoPatients: typeof patientsWithPhotos = [];
+        for (const apt of appointments) {
+            const bio = biometrics?.find(b => b.patient_id === (apt as any).patient_id);
+            if (bio?.reference_image_url) {
+                photoPatients.push({
+                    patientId: (apt as any).patient_id,
+                    name: ((apt as any).patients as any)?.full_name || 'Paciente',
+                    photoUrl: bio.reference_image_url,
+                    appointmentId: apt.id
+                });
+            }
+        }
+
+        setPatientsWithPhotos(photoPatients);
+    };
+
     // Loop de detecção contínua
     useEffect(() => {
         if (isLoading || detectedPatient || !biometricsLoaded) return;
 
         if (descriptorsRef.current.length === 0) {
-            return; // Nenhuma biometria cadastrada
+            // Nenhum descriptor biométrico - tenta carregar pacientes com foto
+            loadPatientsWithPhotos();
+            return;
         }
 
         scanIntervalRef.current = setInterval(async () => {
@@ -268,15 +319,88 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
         );
     }
 
-    // Nenhuma biometria cadastrada
+    // Nenhuma biometria cadastrada - mostra pacientes com foto para seleção manual
     if (biometricsLoaded && descriptorsRef.current.length === 0) {
+        // Se há pacientes com foto, mostrar grid para seleção
+        if (patientsWithPhotos.length > 0) {
+            return (
+                <div className="space-y-6 p-4">
+                    <div className="text-center">
+                        <h2 className="text-xl font-bold mb-2">Check-in Visual</h2>
+                        <p className="text-muted-foreground">Toque na foto do paciente para confirmar</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {patientsWithPhotos.map((patient) => (
+                            <Card
+                                key={patient.patientId}
+                                className="cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => setDetectedPatient({
+                                    patient_id: patient.patientId,
+                                    full_name: patient.name,
+                                    reference_image_url: patient.photoUrl,
+                                    confidence: 100
+                                })}
+                            >
+                                <CardContent className="p-3 text-center">
+                                    <img
+                                        src={patient.photoUrl}
+                                        alt={patient.name}
+                                        className="w-24 h-24 rounded-full mx-auto object-cover mb-2"
+                                    />
+                                    <p className="font-medium text-sm truncate">{patient.name}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <div className="flex gap-2 justify-center">
+                        <Button variant="outline" onClick={() => loadPatientsWithPhotos()}>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Atualizar
+                        </Button>
+                        <Button variant="outline" onClick={onFallbackToQR}>
+                            <QrCode className="w-4 h-4 mr-2" />
+                            QR Code
+                        </Button>
+                    </div>
+
+                    {/* Modal de confirmação */}
+                    {detectedPatient && (
+                        <div className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50">
+                            <div className="bg-white rounded-2xl p-8 max-w-md text-center">
+                                <img
+                                    src={detectedPatient.reference_image_url || ''}
+                                    alt={detectedPatient.full_name}
+                                    className="w-32 h-32 rounded-full mx-auto object-cover mb-4 border-4 border-primary"
+                                />
+                                <h2 className="text-2xl font-bold mb-2">{detectedPatient.full_name}</h2>
+                                <p className="text-muted-foreground mb-6">Confirma o check-in?</p>
+                                <div className="flex gap-4 justify-center">
+                                    <Button onClick={confirmCheckIn} className="bg-green-600 hover:bg-green-700">
+                                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                                        Confirmar
+                                    </Button>
+                                    <Button variant="outline" onClick={resetDetection}>
+                                        <XCircle className="w-4 h-4 mr-2" />
+                                        Cancelar
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Nenhum paciente com foto - fallback original
         return (
             <Card className="max-w-md mx-auto">
                 <CardContent className="pt-6 text-center space-y-4">
                     <User className="w-16 h-16 text-muted-foreground mx-auto" />
-                    <h2 className="text-xl font-bold">Nenhuma Biometria Cadastrada</h2>
+                    <h2 className="text-xl font-bold">Nenhum Paciente com Foto</h2>
                     <p className="text-muted-foreground">
-                        Ainda não há pacientes com biometria facial cadastrada nesta clínica.
+                        Não há pacientes com foto do pré-check-in agendados para hoje.
                     </p>
                     <Button variant="outline" onClick={onFallbackToQR}>
                         <QrCode className="w-4 h-4 mr-2" />
