@@ -214,9 +214,18 @@ export function PreCheckinWizard({
                 return
             }
 
+            // Convert base64 to Blob (CSP-safe method - no fetch needed)
+            const base64Data = imageSrc.split(',')[1]
+            const byteCharacters = atob(base64Data)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            const blob = new Blob([byteArray], { type: 'image/jpeg' })
+
             // Upload da foto para storage
             const fileName = `precheckin/${appointmentId}-face-${Date.now()}.jpg`
-            const blob = await fetch(imageSrc).then(r => r.blob())
 
             const { data: uploadData, error: uploadError } = await supabase
                 .storage
