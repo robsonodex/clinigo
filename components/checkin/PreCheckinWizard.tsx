@@ -74,6 +74,7 @@ export function PreCheckinWizard({
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const [isProcessingOCR, setIsProcessingOCR] = useState(false)
     const [qrToken, setQrToken] = useState<string | null>(null)
     const [qrData, setQrData] = useState<string | null>(null)
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -92,6 +93,7 @@ export function PreCheckinWizard({
         watch,
         setValue,
         trigger,
+        getValues,
         formState: { errors },
     } = useForm<PreCheckinFormData>({
         resolver: zodResolver(preCheckinSchema.partial()),
@@ -172,13 +174,53 @@ export function PreCheckinWizard({
             }])
 
             toast.success('Documento enviado!')
+
+            // OCR: Auto-extract data from RG/CNH to fill form fields
+            if (docType === 'rg' && file.type.startsWith('image/')) {
+                setIsProcessingOCR(true)
+                toast.info('Processando documento com IA...')
+                try {
+                    // Convert file to base64
+                    const reader = new FileReader()
+                    reader.onloadend = async () => {
+                        const base64 = reader.result as string
+                        try {
+                            const ocrResponse = await fetch('/api/checkin/ocr', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ image: base64, mimeType: file.type })
+                            })
+                            const ocrData = await ocrResponse.json()
+
+                            if (ocrData.success && ocrData.data?.patientInfo) {
+                                const { patientInfo } = ocrData.data
+                                // Auto-fill address if extracted
+                                if (patientInfo.address && !watch('address')) {
+                                    setValue('address', patientInfo.address)
+                                    toast.success('Endereço preenchido automaticamente!')
+                                }
+                                // Store extracted data for later use
+                                console.log('[OCR] Extracted patient info:', patientInfo)
+                            }
+                        } catch (ocrError) {
+                            console.error('[OCR] Error:', ocrError)
+                        } finally {
+                            setIsProcessingOCR(false)
+                        }
+                    }
+                    reader.readAsDataURL(file)
+                } catch (ocrError) {
+                    console.error('[OCR] Error:', ocrError)
+                    setIsProcessingOCR(false)
+                }
+            }
         } catch (error: any) {
             console.error('Upload error:', error)
             toast.error('Erro ao enviar documento')
         } finally {
             setIsUploading(false)
         }
-    }, [supabase, appointmentId, uploadedFiles.length])
+    }, [supabase, appointmentId, uploadedFiles.length, setValue, watch])
 
     // Remove uploaded file
     const removeFile = (index: number) => {
@@ -262,8 +304,9 @@ export function PreCheckinWizard({
         const isValid = await validateStep(currentStep)
         if (isValid && currentStep < 5) {
             if (currentStep === 4) {
-                // Submit form before going to QR step
-                handleSubmit(onSubmit)()
+                // Submit form before going to QR step - call onSubmit directly
+                const formData = getValues()
+                await onSubmit(formData)
             } else {
                 setCurrentStep(currentStep + 1)
             }
@@ -308,7 +351,10 @@ export function PreCheckinWizard({
                 toast.success('Pré-check-in realizado com sucesso!')
                 onComplete?.(result.data.qr_token)
             } else {
-                toast.error(result.error || 'Erro ao realizar pré-check-in')
+                const errorMsg = typeof result.error === 'string'
+                    ? result.error
+                    : result.error?.message || 'Erro ao realizar pré-check-in'
+                toast.error(errorMsg)
             }
         } catch (error) {
             toast.error('Erro de conexão')
@@ -712,8 +758,9 @@ export function PreCheckinWizard({
                                         </Button>
                                         <Button
                                             type="button"
-                                            onClick={() => {
-                                                handleSubmit(onSubmit)()
+                                            onClick={async () => {
+                                                const formData = getValues()
+                                                await onSubmit(formData)
                                             }}
                                             disabled={isSubmitting}
                                             className="flex-1"
@@ -760,8 +807,8 @@ export function PreCheckinWizard({
                             </div>
 
                             <div className="text-sm text-muted-foreground space-y-1">
-                                <p>⏱️ Este QR Code expira em 2 horas</p>
-                                <p>📱 Você também receberá por WhatsApp</p>
+                                <p>✅ Este QR Code é válido até o dia da sua consulta</p>
+                                <p>📧 Uma cópia foi enviada para seu e-mail</p>
                             </div>
 
                             {/* Instructions */}

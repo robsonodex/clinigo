@@ -210,7 +210,7 @@ export default async function CheckinPage({ params }: PageProps) {
             <header className="bg-white/80 backdrop-blur-sm border-b py-4">
                 <div className="container mx-auto px-4 flex items-center justify-center">
                     <img
-                        src="/logo.png"
+                        src="/logo_black.svg"
                         alt="CliniGo"
                         className="h-10 w-auto"
                     />

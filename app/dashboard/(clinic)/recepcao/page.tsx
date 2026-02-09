@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle, XCircle, AlertTriangle,
-    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle, Settings, Camera
+    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle, Settings, Camera, FileText
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -18,6 +18,7 @@ import PatientSelector from '@/components/prontuarios/patient-selector'
 import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { QRCodeSVG } from 'qrcode.react'
 import { QRScannerDialog } from '@/components/reception/qr-scanner-dialog'
+import { CheckinDocumentsModal } from './components/checkin-documents-modal'
 
 interface QueueItem {
     id: string
@@ -73,6 +74,9 @@ export default function RecepcaoPage() {
     const [isCreatingPatient, setIsCreatingPatient] = useState(false)
     const [isSubmittingPatient, setIsSubmittingPatient] = useState(false)
     const [createdWalkIn, setCreatedWalkIn] = useState<any>(null)
+    const [documentsModalOpen, setDocumentsModalOpen] = useState(false)
+    const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
+    const [selectedPatientName, setSelectedPatientName] = useState<string>('')
 
     useEffect(() => {
         loadData()
@@ -491,6 +495,19 @@ export default function RecepcaoPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
+                                            {/* Ver Documentos Button */}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    setSelectedAppointmentId(item.id)
+                                                    setSelectedPatientName(item.patient?.full_name || '')
+                                                    setDocumentsModalOpen(true)
+                                                }}
+                                                title="Ver documentos do pré-check-in"
+                                            >
+                                                <FileText className="w-4 h-4" />
+                                            </Button>
                                             {/* 🔥 UPDATED: Only show check-in button if NOT yet checked in */}
                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
                                                 <Button
@@ -536,6 +553,19 @@ export default function RecepcaoPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Documents Modal */}
+            {selectedAppointmentId && (
+                <CheckinDocumentsModal
+                    isOpen={documentsModalOpen}
+                    onClose={() => {
+                        setDocumentsModalOpen(false)
+                        setSelectedAppointmentId(null)
+                    }}
+                    appointmentId={selectedAppointmentId}
+                    patientName={selectedPatientName}
+                />
+            )}
         </div>
     )
 }

@@ -12,12 +12,26 @@ const JWT_SECRET = process.env.CHECKIN_SECRET_KEY || process.env.SUPABASE_SERVIC
 
 /**
  * Generate JWT token for QR Code
+ * Token expires at the end of the appointment day (23:59)
  */
 function generateCheckinToken(payload: {
     appointment_id: string
     clinic_id: string
     patient_id?: string
+    appointment_date?: string
 }): string {
+    // Calculate expiration: end of appointment day or 30 days if no date
+    let expiresInSeconds = 30 * 24 * 60 * 60 // Default: 30 days in seconds
+
+    if (payload.appointment_date) {
+        const appointmentDate = new Date(payload.appointment_date)
+        // Set to end of day (23:59:59)
+        appointmentDate.setHours(23, 59, 59, 999)
+        const now = new Date()
+        const diffMs = appointmentDate.getTime() - now.getTime()
+        expiresInSeconds = Math.max(Math.ceil(diffMs / 1000), 3600) // minimum 1 hour
+    }
+
     return jwt.sign(
         {
             ...payload,
@@ -26,7 +40,7 @@ function generateCheckinToken(payload: {
         },
         JWT_SECRET,
         {
-            expiresIn: '2h', // Token expires in 2 hours
+            expiresIn: expiresInSeconds,
             issuer: 'clinigo',
             audience: 'checkin',
         }
@@ -90,7 +104,7 @@ export async function POST(request: NextRequest) {
         // Verify appointment exists and belongs to clinic
         const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
-            .select('id, patient_id, status, doctor_id')
+            .select('id, patient_id, status, doctor_id, appointment_date')
             .eq('id', appointment_id)
             .eq('clinic_id', clinic_id)
             .single()
@@ -148,18 +162,72 @@ export async function POST(request: NextRequest) {
             checked_in_at: new Date().toISOString(),
         }
 
-        // Save pre-checkin submission using upsert
-        const { data: submission, error: submissionError } = await supabase
+        // Check if pre-checkin already exists for this appointment
+        const { data: existingSubmission } = await supabase
             .from('pre_checkin_submissions')
-            .upsert(submissionData as any, { onConflict: 'appointment_id' })
-            .select()
+            .select('id')
+            .eq('appointment_id', appointment_id)
             .single()
+
+        let submission
+        let submissionError
+
+        if (existingSubmission) {
+            // Update existing submission
+            const result = await supabase
+                .from('pre_checkin_submissions')
+                .update(submissionData as any)
+                .eq('appointment_id', appointment_id)
+                .select()
+                .single()
+            submission = result.data
+            submissionError = result.error
+        } else {
+            // Insert new submission
+            const result = await supabase
+                .from('pre_checkin_submissions')
+                .insert(submissionData as any)
+                .select()
+                .single()
+            submission = result.data
+            submissionError = result.error
+        }
 
         if (submissionError) {
             console.error('[Pre-Checkin] Error saving submission:', submissionError)
             // Continue even if table doesn't exist
             if (!submissionError.message?.includes('does not exist')) {
                 throw submissionError
+            }
+        }
+
+        // Sync data with patients table (update phone, address if provided)
+        if ((appointment as any).patient_id && (formData.phone || formData.address)) {
+            const patientUpdate: Record<string, any> = {}
+
+            if (formData.phone) patientUpdate.phone = formData.phone
+            if (formData.address) patientUpdate.address = formData.address
+
+            // Store health data in metadata
+            if (healthData.allergies_list || healthData.medications_list) {
+                patientUpdate.metadata = {
+                    last_precheckin: new Date().toISOString(),
+                    allergies: healthData.allergies_list,
+                    medications: healthData.medications_list
+                }
+            }
+
+            if (Object.keys(patientUpdate).length > 0) {
+                const { error: patientError } = await supabase
+                    .from('patients')
+                    .update(patientUpdate)
+                    .eq('id', (appointment as any).patient_id)
+
+                if (patientError) {
+                    console.warn('[Pre-Checkin] Could not sync patient data:', patientError.message)
+                } else {
+                    console.log('[Pre-Checkin] Patient data synced:', Object.keys(patientUpdate))
+                }
             }
         }
 
@@ -184,6 +252,7 @@ export async function POST(request: NextRequest) {
             appointment_id,
             clinic_id,
             patient_id: (appointment as any).patient_id,
+            appointment_date: (appointment as any).appointment_date,
         })
 
         // Decode to get expiration
