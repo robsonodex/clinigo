@@ -333,6 +333,7 @@ export function PreCheckinWizard({
                 body: JSON.stringify({
                     appointment_id: appointmentId,
                     clinic_id: clinicId,
+                    face_photo_url: facePhotoUrl,
                     documents: uploadedFiles.map(f => ({
                         type: f.type,
                         url: f.url,

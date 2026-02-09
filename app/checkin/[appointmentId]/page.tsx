@@ -175,6 +175,33 @@ async function CheckinContent({ appointmentId }: { appointmentId: string }) {
         )
     }
 
+    // Check if pre-checkin was already completed
+    const supabase = createServiceRoleClient()
+    const { data: existingCheckin } = await supabase
+        .from('pre_checkin_submissions')
+        .select('id, status, checked_in_at')
+        .eq('appointment_id', appointmentId)
+        .single()
+
+    if (existingCheckin && (existingCheckin as any).status === 'completed') {
+        return (
+            <Card className="max-w-lg mx-auto">
+                <CardContent className="pt-6 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                        <Heart className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-green-700">Pré-Check-in já realizado!</h2>
+                    <p className="text-muted-foreground mt-2">
+                        Você já completou o pré-check-in para este agendamento.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-4">
+                        Apresente-se na recepção no dia da consulta.
+                    </p>
+                </CardContent>
+            </Card>
+        )
+    }
+
     const appointmentDate = new Date(appointment.appointment_date)
     const formattedDate = appointmentDate.toLocaleDateString('pt-BR', {
         weekday: 'long',

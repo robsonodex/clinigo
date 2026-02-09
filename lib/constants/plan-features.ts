@@ -1,107 +1,145 @@
 /**
- * Plan Features Matrix - 5-Tier System
+ * Plan Features Matrix - 4-Tier System (REAL FEATURES ONLY)
  * Defines which features are available in each plan
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REALMENTE implementadas
+ * Planos: BASICO (1), AVANCADO (2), PROFESSIONAL (3), ENTERPRISE (4)
  */
 
 import { type PlanType, PLAN_LEVEL } from './plans'
 
-// Feature keys for checking
+// Feature keys for checking - APENAS FUNCIONALIDADES REAIS
 export type FeatureKey =
-    // Check-in Features
-    | 'check_in_qr'
-    | 'check_in_advanced'
-    | 'pre_registration'
-    // Teleconsulta Features
-    | 'teleconsulta_webrtc'
-    // AI Features (deprecated - kept for compatibility)
-    | 'ai_simple'
-    | 'ai_reasoning'
-    | 'ai_predictive'
-    | 'ai_custom_training'
-    // Video Features
-    | 'video_google_meet'
-    | 'video_daily'
-    | 'video_whitelabel'
-    // WhatsApp Features
-    | 'whatsapp_manual'
-    | 'whatsapp_automation'
-    | 'whatsapp_chatbot'
-    // Core Features
-    | 'prontuario_basic'
-    | 'prontuario_advanced'
-    | 'prontuario_multi_unit'
-    | 'financeiro_basic'
-    | 'financeiro_advanced'
-    | 'relatorios_basic'
-    | 'relatorios_advanced'
-    | 'relatorios_bi'
-    // Premium Features
-    | 'crm'
-    | 'tiss'
-    | 'marketplace'
-    | 'estoque'
-    // Enterprise Features
-    | 'multi_units'
-    | 'datasus'
-    | 'labs_rj'
-    | 'api_dedicated'
-    // Network Features
-    | 'whitelabel'
-    | 'custom_integrations'
-    | 'unlimited_units'
+    // ============================================
+    // CHECK-IN & RECEPÇÃO (✅ IMPLEMENTADO)
+    // ============================================
+    | 'check_in_qr'              // QR Code check-in
+    | 'check_in_facial'          // Reconhecimento facial
+    | 'pre_registration'         // Pré-cadastro pelo paciente
+    | 'triagem'                  // Fluxo de triagem
+
+    // ============================================
+    // TELECONSULTA (✅ IMPLEMENTADO)
+    // ============================================
+    | 'teleconsulta_webrtc'      // Vídeo nativo WebRTC
+
+    // ============================================
+    // PRONTUÁRIO (✅ IMPLEMENTADO)
+    // ============================================
+    | 'prontuario'               // Prontuário eletrônico
+    | 'documentos'               // Upload de documentos
+    | 'termos_legais'            // Termos e consentimentos
+
+    // ============================================
+    // FINANCEIRO (✅ IMPLEMENTADO)
+    // ============================================
+    | 'financeiro'               // Controle financeiro
+    | 'pagamentos'               // Recebimento de pagamentos
+    | 'convenios'                // Gestão de convênios
+    | 'dre'                      // Demonstrativo de resultados
+    | 'auditoria'                // Auditoria financeira
+    | 'repasse_medico'           // Cálculo de repasse
+
+    // ============================================
+    // TISS (✅ IMPLEMENTADO)
+    // ============================================
+    | 'tiss'                     // Faturamento TISS completo
+
+    // ============================================
+    // CRM & COMUNICAÇÃO (✅ IMPLEMENTADO)
+    // ============================================
+    | 'crm'                      // CRM completo (automações, campanhas)
+    | 'notificacoes_email'       // Notificações por e-mail
+    | 'whatsapp_evolution'       // Integração WhatsApp Evolution
+
+    // ============================================
+    // RELATÓRIOS (✅ IMPLEMENTADO)
+    // ============================================
+    | 'relatorios'               // Relatórios (mesma funcionalidade para todos)
+
+    // ============================================
+    // GESTÃO (✅ IMPLEMENTADO)
+    // ============================================
+    | 'estoque'                  // Controle de estoque
+    | 'importacao'               // Importação de dados CSV
+    | 'agenda'                   // Gestão de agenda
+    | 'horarios'                 // Configuração de horários
+    | 'medicos'                  // Gestão de médicos
+    | 'pacientes'                // Gestão de pacientes
+    | 'usuarios'                 // Gestão de usuários
+
+    // ============================================
+    // PLATAFORMA (✅ IMPLEMENTADO)
+    // ============================================
+    | 'pagina_publica'           // Página pública de agendamento
+    | 'multi_units'              // Múltiplas unidades
 
 // Feature matrix: which plan level unlocks each feature
+// 1 = BASICO, 2 = AVANCADO, 3 = PROFESSIONAL, 4 = ENTERPRISE
 const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
-    // Check-in Features
-    check_in_qr: 1,          // STARTER+ (all plans)
-    check_in_advanced: 2,    // BASIC+
-    pre_registration: 1,     // STARTER+ (all plans)
+    // ============================================
+    // CHECK-IN & RECEPÇÃO
+    // ============================================
+    check_in_qr: 1,              // Todos os planos
+    check_in_facial: 2,          // AVANCADO+
+    pre_registration: 1,         // Todos os planos
+    triagem: 1,                  // Todos os planos
 
-    // Teleconsulta Features
-    teleconsulta_webrtc: 2,  // BASIC+
+    // ============================================
+    // TELECONSULTA
+    // ============================================
+    teleconsulta_webrtc: 1,      // Todos os planos (não existe "básica" separada)
 
-    // AI Features (deprecated - keeping for compatibility)
-    ai_simple: 1,            // STARTER+
-    ai_reasoning: 3,         // PROFESSIONAL+
-    ai_predictive: 4,        // ENTERPRISE+
-    ai_custom_training: 5,   // NETWORK only
+    // ============================================
+    // PRONTUÁRIO
+    // ============================================
+    prontuario: 1,               // Todos os planos
+    documentos: 1,               // Todos os planos
+    termos_legais: 1,            // Todos os planos
 
-    // Video Features
-    video_google_meet: 2,    // BASIC+
-    video_daily: 3,          // PROFESSIONAL+
-    video_whitelabel: 5,     // NETWORK only
+    // ============================================
+    // FINANCEIRO
+    // ============================================
+    financeiro: 1,               // Todos os planos
+    pagamentos: 1,               // Todos os planos
+    convenios: 1,                // Todos os planos
+    dre: 2,                      // AVANCADO+
+    auditoria: 2,                // AVANCADO+
+    repasse_medico: 2,           // AVANCADO+
 
-    // WhatsApp Features
-    whatsapp_manual: 1,      // STARTER+ (all plans)
-    whatsapp_automation: 2,  // BASIC+
-    whatsapp_chatbot: 4,     // ENTERPRISE+
+    // ============================================
+    // TISS
+    // ============================================
+    tiss: 3,                     // PROFESSIONAL+
 
-    // Core Features
-    prontuario_basic: 1,     // STARTER+
-    prontuario_advanced: 2,  // BASIC+
-    prontuario_multi_unit: 3, // PROFESSIONAL+
-    financeiro_basic: 1,     // STARTER+
-    financeiro_advanced: 2,  // BASIC+
-    relatorios_basic: 1,     // STARTER+
-    relatorios_advanced: 2,  // BASIC+
-    relatorios_bi: 3,        // PROFESSIONAL+
+    // ============================================
+    // CRM & COMUNICAÇÃO
+    // ============================================
+    crm: 2,                      // AVANCADO+
+    notificacoes_email: 1,       // Todos os planos
+    whatsapp_evolution: 2,       // AVANCADO+
 
-    // Premium Features
-    crm: 2,                  // BASIC+
-    tiss: 3,                 // PROFESSIONAL+
-    marketplace: 3,          // PROFESSIONAL+
-    estoque: 2,              // BASIC+
+    // ============================================
+    // RELATÓRIOS
+    // ============================================
+    relatorios: 1,               // Todos os planos (mesma funcionalidade)
 
-    // Enterprise Features
-    multi_units: 3,          // PROFESSIONAL+
-    datasus: 4,              // ENTERPRISE+
-    labs_rj: 4,              // ENTERPRISE+
-    api_dedicated: 3,        // PROFESSIONAL+
+    // ============================================
+    // GESTÃO
+    // ============================================
+    estoque: 1,                  // Todos os planos
+    importacao: 2,               // AVANCADO+
+    agenda: 1,                   // Todos os planos
+    horarios: 1,                 // Todos os planos
+    medicos: 1,                  // Todos os planos
+    pacientes: 1,                // Todos os planos
+    usuarios: 1,                 // Todos os planos
 
-    // Network Features
-    whitelabel: 5,           // NETWORK only
-    custom_integrations: 5,  // NETWORK only
-    unlimited_units: 4,      // ENTERPRISE+
+    // ============================================
+    // PLATAFORMA
+    // ============================================
+    pagina_publica: 1,           // Todos os planos
+    multi_units: 3,              // PROFESSIONAL+
 }
 
 /**
@@ -119,13 +157,12 @@ export function hasFeature(planType: PlanType, feature: FeatureKey): boolean {
 export function getMinPlanForFeature(feature: FeatureKey): PlanType {
     const requiredLevel = FEATURE_PLAN_LEVEL[feature]
     const planMap: Record<number, PlanType> = {
-        1: 'STARTER',
-        2: 'BASIC',
+        1: 'BASICO',
+        2: 'AVANCADO',
         3: 'PROFESSIONAL',
         4: 'ENTERPRISE',
-        5: 'NETWORK',
     }
-    return planMap[requiredLevel] || 'NETWORK'
+    return planMap[requiredLevel] || 'ENTERPRISE'
 }
 
 /**
@@ -146,4 +183,55 @@ export function getLockedFeatures(planType: PlanType): FeatureKey[] {
     return Object.entries(FEATURE_PLAN_LEVEL)
         .filter(([, level]) => planLevel < level)
         .map(([feature]) => feature as FeatureKey)
+}
+
+/**
+ * Human-readable feature names for UI
+ */
+export const FEATURE_LABELS: Record<FeatureKey, string> = {
+    // Check-in
+    check_in_qr: 'Check-in QR Code',
+    check_in_facial: 'Check-in Facial',
+    pre_registration: 'Pré-Cadastro',
+    triagem: 'Triagem',
+
+    // Teleconsulta
+    teleconsulta_webrtc: 'Teleconsulta',
+
+    // Prontuário
+    prontuario: 'Prontuário Eletrônico',
+    documentos: 'Documentos',
+    termos_legais: 'Termos Legais',
+
+    // Financeiro
+    financeiro: 'Financeiro',
+    pagamentos: 'Pagamentos',
+    convenios: 'Convênios',
+    dre: 'DRE',
+    auditoria: 'Auditoria',
+    repasse_medico: 'Repasse Médico',
+
+    // TISS
+    tiss: 'Faturamento TISS',
+
+    // CRM
+    crm: 'CRM',
+    notificacoes_email: 'Notificações E-mail',
+    whatsapp_evolution: 'WhatsApp',
+
+    // Relatórios
+    relatorios: 'Relatórios',
+
+    // Gestão
+    estoque: 'Estoque',
+    importacao: 'Importação de Dados',
+    agenda: 'Agenda',
+    horarios: 'Horários',
+    medicos: 'Médicos',
+    pacientes: 'Pacientes',
+    usuarios: 'Usuários',
+
+    // Plataforma
+    pagina_publica: 'Página Pública',
+    multi_units: 'Múltiplas Unidades',
 }

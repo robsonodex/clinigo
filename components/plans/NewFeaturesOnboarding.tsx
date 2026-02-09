@@ -1,6 +1,8 @@
 /**
  * Component: New Features Onboarding Modal
  * Modal de boas-vindas a novas features após upgrade
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
  */
 'use client'
 
@@ -15,36 +17,47 @@ interface NewFeaturesOnboardingProps {
     newPlan: string
 }
 
+// Funcionalidades REAIS por plano
 const PLAN_FEATURES: Record<string, { name: string; features: string[] }> = {
     BASICO: {
         name: 'Básico',
         features: [
-            'Até 3 médicos simultâneos',
-            'WhatsApp Automático - envie lembretes',
-            'Marketplace - divulgue sua clínica',
-            'Relatórios financeiros básicos',
+            'Até 2 médicos simultâneos',
+            'Check-in QR Code',
+            'Teleconsulta WebRTC',
+            'Prontuário eletrônico',
+            'Financeiro básico',
         ],
     },
     AVANCADO: {
         name: 'Avançado',
         features: [
-            'Até 10 médicos simultâneos',
-            'TISS Completo - fature convênios',
-            'Multi-unidade - gerencie 3 unidades',
-            'CRM Avançado - automatize marketing',
-            'Teleconsulta - atenda online',
-            'Relatórios avançados',
+            'Até 5 médicos simultâneos',
+            'Check-in Facial',
+            'WhatsApp Evolution',
+            'CRM completo',
+            'DRE e Auditoria',
+            'Importação de dados',
+        ],
+    },
+    PROFESSIONAL: {
+        name: 'Professional',
+        features: [
+            'Até 30 médicos simultâneos',
+            'TISS - Faturamento de convênios',
+            'Até 3 unidades',
+            'Repasse médico automático',
+            'Suporte prioritário',
         ],
     },
     ENTERPRISE: {
         name: 'Enterprise',
         features: [
             'Médicos e unidades ilimitados',
-            'API Access - integre sistemas',
-            'SSO - login único corporativo',
-            'White Label - personalize completamente',
-            'Integrações customizadas',
-            'Suporte prioritário 24/7',
+            'Migração dedicada',
+            'Gerente de conta dedicado',
+            'Suporte 24/7',
+            'SLA garantido 99.5%',
         ],
     },
 }
@@ -104,8 +117,8 @@ export function NewFeaturesOnboarding({ open, onClose, newPlan }: NewFeaturesOnb
                                 <div
                                     key={idx}
                                     className={`h-1.5 rounded-full transition-all ${idx === currentStep
-                                            ? 'w-8 bg-primary'
-                                            : 'w-1.5 bg-muted'
+                                        ? 'w-8 bg-primary'
+                                        : 'w-1.5 bg-muted'
                                         }`}
                                 />
                             ))}

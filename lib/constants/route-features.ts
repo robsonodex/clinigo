@@ -2,6 +2,8 @@
  * Route to Feature Mapping - 4-Tier System
  * Maps routes to minimum required plan level
  * Plans: BASICO (R$149), AVANCADO (R$299), PROFESSIONAL (R$549), ENTERPRISE (R$799)
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas rotas de funcionalidades REAIS
  */
 
 import { type PlanType } from './plans'
@@ -10,7 +12,7 @@ import { type PlanType } from './plans'
 // Using 4-Tier Plan System: BASICO, AVANCADO, PROFESSIONAL, ENTERPRISE
 export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
     // === BASICO Routes (R$149) - Core features ===
-    // Dashboard, Agenda, Prontuários básico, Financeiro básico, Relatórios básicos
+    // Dashboard, Agenda, Prontuários, Financeiro básico, Relatórios
     // These are NOT restricted by default (no entry needed = all plans have access)
 
     // === AVANÇADO Routes (R$299) - Advanced features ===
@@ -26,29 +28,17 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
     '/api/crm': 'AVANCADO',
     '/api/whatsapp': 'AVANCADO',
 
-    // === PROFESSIONAL Routes (R$549) - Enterprise-lite features ===
+    // === PROFESSIONAL Routes (R$549) ===
     '/dashboard/tiss': 'PROFESSIONAL',
-    '/dashboard/marketplace': 'PROFESSIONAL',
     '/dashboard/grupos': 'PROFESSIONAL',
     '/api/tiss': 'PROFESSIONAL',
-    '/api/marketplace': 'PROFESSIONAL',
-    '/api/aia': 'PROFESSIONAL',
 
-    // === ENTERPRISE Routes (R$799) - Full enterprise ===
-    '/dashboard/relatorios-globais': 'ENTERPRISE',
+    // === ENTERPRISE Routes (R$799) ===
     '/api/groups': 'ENTERPRISE',
     '/api/integrations': 'ENTERPRISE',
-    '/api/datasus': 'ENTERPRISE',
-    '/api/labs-rj': 'ENTERPRISE',
-
-    // === NETWORK Routes (legacy - maps to ENTERPRISE) ===
-    '/dashboard/api-keys': 'ENTERPRISE',
-    '/dashboard/white-label': 'ENTERPRISE',
-    '/api/api-keys': 'ENTERPRISE',
-    '/api/white-label': 'ENTERPRISE',
 }
 
-// Feature labels for UI display
+// Feature labels for UI display - APENAS FUNCIONALIDADES REAIS
 export const FEATURE_LABELS: Record<string, string> = {
     // AVANÇADO Features
     '/dashboard/financial/payroll': 'Repasse Médico',
@@ -56,17 +46,12 @@ export const FEATURE_LABELS: Record<string, string> = {
     '/dashboard/financial/audit': 'Auditoria Financeira',
     '/dashboard/automacao': 'Automação',
     '/dashboard/crm': 'CRM',
-    '/dashboard/whatsapp': 'WhatsApp Automação',
+    '/dashboard/whatsapp': 'WhatsApp',
     '/dashboard/importacao': 'Importação de Dados',
     '/dashboard/integracoes': 'Integrações',
     // PROFESSIONAL Features
     '/dashboard/tiss': 'TISS',
-    '/dashboard/marketplace': 'Marketplace',
     '/dashboard/grupos': 'Multi-Unidade',
-    // ENTERPRISE Features
-    '/dashboard/relatorios-globais': 'BI Multi-Filiais',
-    '/dashboard/api-keys': 'API Dedicada',
-    '/dashboard/white-label': 'White-Label',
 }
 
 // Get minimum required plan for a route

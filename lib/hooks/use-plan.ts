@@ -1,6 +1,8 @@
 /**
  * usePlan Hook
  * Provides current user's plan information with type safety
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
  */
 
 import { useEffect, useState } from 'react'
@@ -68,13 +70,22 @@ export function usePlan(): UsePlanResult {
     const canAccess = (feature: string): boolean => {
         if (!planType) return false
 
-        // Premium features only for PRO/ENTERPRISE
-        const premiumFeatures = ['crm', 'tiss', 'marketplace', 'ai_reasoning', 'daily_video']
+        // Features REAIS por nível de plano
+        // AVANCADO+: crm, dre, whatsapp_evolution, importacao, check_in_facial
+        // PROFESSIONAL+: tiss, multi_units
 
-        if (premiumFeatures.includes(feature)) {
-            return planType === 'PROFESSIONAL' || planType === 'ENTERPRISE' || planType === 'NETWORK'
+        const avancadoFeatures = ['crm', 'dre', 'whatsapp_evolution', 'importacao', 'check_in_facial', 'auditoria', 'repasse_medico']
+        const professionalFeatures = ['tiss', 'multi_units']
+
+        if (avancadoFeatures.includes(feature)) {
+            return planType === 'AVANCADO' || planType === 'PROFESSIONAL' || planType === 'ENTERPRISE'
         }
 
+        if (professionalFeatures.includes(feature)) {
+            return planType === 'PROFESSIONAL' || planType === 'ENTERPRISE'
+        }
+
+        // Todas as outras features são liberadas para todos
         return true
     }
 
@@ -83,8 +94,7 @@ export function usePlan(): UsePlanResult {
         isLoading,
         isBasic: planType === 'BASICO',
         isPro: planType === 'PROFESSIONAL',
-        isEnterprise: planType === 'ENTERPRISE' || planType === 'NETWORK',
+        isEnterprise: planType === 'ENTERPRISE',
         canAccess,
     }
 }
-

@@ -1,44 +1,55 @@
 /**
  * Core Types - Single Source of Truth
  * 4-Tier Plan System: Básico, Avançado, Professional, Enterprise
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REALMENTE implementadas
  */
 
 // ============================================================================
 // PLAN TYPES (4-Tier Source of Truth)
 // ============================================================================
 
-export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
 
+// Funcionalidades que REALMENTE existem no sistema
 export type PlanFeature =
-    | 'ai_simple'
-    | 'ai_reasoning'
-    | 'ai_predictive'
-    | 'ai_custom_training'
-    | 'video_google_meet'
-    | 'video_daily'
-    | 'video_whitelabel'
-    | 'whatsapp_manual'
-    | 'whatsapp_automation'
-    | 'whatsapp_chatbot'
-    | 'prontuario_basic'
-    | 'prontuario_advanced'
-    | 'prontuario_multi_unit'
-    | 'financeiro_basic'
-    | 'financeiro_advanced'
-    | 'relatorios_basic'
-    | 'relatorios_advanced'
-    | 'relatorios_bi'
-    | 'crm'
+    // Check-in & Recepção
+    | 'check_in_qr'
+    | 'check_in_facial'
+    | 'pre_registration'
+    | 'triagem'
+    // Teleconsulta
+    | 'teleconsulta_webrtc'
+    // Prontuário
+    | 'prontuario'
+    | 'documentos'
+    | 'termos_legais'
+    // Financeiro
+    | 'financeiro'
+    | 'pagamentos'
+    | 'convenios'
+    | 'dre'
+    | 'auditoria'
+    | 'repasse_medico'
+    // TISS
     | 'tiss'
-    | 'marketplace'
+    // CRM & Comunicação
+    | 'crm'
+    | 'notificacoes_email'
+    | 'whatsapp_evolution'
+    // Relatórios
+    | 'relatorios'
+    // Gestão
     | 'estoque'
+    | 'importacao'
+    | 'agenda'
+    | 'horarios'
+    | 'medicos'
+    | 'pacientes'
+    | 'usuarios'
+    // Plataforma
+    | 'pagina_publica'
     | 'multi_units'
-    | 'datasus'
-    | 'labs_rj'
-    | 'api_dedicated'
-    | 'whitelabel'
-    | 'custom_integrations'
-    | 'unlimited_units'
 
 export interface PlanLimits {
     max_doctors: number
@@ -157,7 +168,7 @@ export interface BillingCheckoutResponse {
 // ============================================================================
 
 export function isPlanType(value: string): value is PlanType {
-    return ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(value)
+    return ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'].includes(value)
 }
 
 export function isUserRole(value: string): value is UserRole {
@@ -169,7 +180,7 @@ export function isSubscriptionStatus(value: string): value is SubscriptionStatus
 }
 
 // ============================================================================
-// CONSTANTS (4-Tier)
+// CONSTANTS (4-Tier) - APENAS FUNCIONALIDADES REAIS
 // ============================================================================
 
 export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
@@ -187,11 +198,25 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
             max_units: 1,
         },
         features: [
-            'ai_simple',
-            'prontuario_basic',
-            'whatsapp_manual',
-            'financeiro_basic',
-            'relatorios_basic',
+            'check_in_qr',
+            'pre_registration',
+            'triagem',
+            'teleconsulta_webrtc',
+            'prontuario',
+            'documentos',
+            'termos_legais',
+            'financeiro',
+            'pagamentos',
+            'convenios',
+            'notificacoes_email',
+            'relatorios',
+            'estoque',
+            'agenda',
+            'horarios',
+            'medicos',
+            'pacientes',
+            'usuarios',
+            'pagina_publica',
         ],
     },
     AVANCADO: {
@@ -208,13 +233,33 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
             max_units: 1,
         },
         features: [
-            'ai_simple',
-            'video_google_meet',
-            'whatsapp_automation',
-            'prontuario_basic',
-            'financeiro_advanced',
-            'relatorios_advanced',
+            // Tudo do BASICO +
+            'check_in_qr',
+            'check_in_facial',
+            'pre_registration',
+            'triagem',
+            'teleconsulta_webrtc',
+            'prontuario',
+            'documentos',
+            'termos_legais',
+            'financeiro',
+            'pagamentos',
+            'convenios',
+            'dre',
+            'auditoria',
+            'repasse_medico',
             'crm',
+            'notificacoes_email',
+            'whatsapp_evolution',
+            'relatorios',
+            'estoque',
+            'importacao',
+            'agenda',
+            'horarios',
+            'medicos',
+            'pacientes',
+            'usuarios',
+            'pagina_publica',
         ],
     },
     PROFESSIONAL: {
@@ -231,17 +276,35 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
             max_units: 3,
         },
         features: [
-            'ai_simple',
-            'ai_reasoning',
-            'video_daily',
-            'whatsapp_automation',
-            'prontuario_advanced',
-            'financeiro_advanced',
-            'relatorios_advanced',
-            'crm',
+            // Tudo do AVANCADO +
+            'check_in_qr',
+            'check_in_facial',
+            'pre_registration',
+            'triagem',
+            'teleconsulta_webrtc',
+            'prontuario',
+            'documentos',
+            'termos_legais',
+            'financeiro',
+            'pagamentos',
+            'convenios',
+            'dre',
+            'auditoria',
+            'repasse_medico',
             'tiss',
-            'marketplace',
+            'crm',
+            'notificacoes_email',
+            'whatsapp_evolution',
+            'relatorios',
             'estoque',
+            'importacao',
+            'agenda',
+            'horarios',
+            'medicos',
+            'pacientes',
+            'usuarios',
+            'pagina_publica',
+            'multi_units',
         ],
     },
     ENTERPRISE: {
@@ -258,60 +321,35 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
             max_units: -1,
         },
         features: [
-            'ai_simple',
-            'ai_reasoning',
-            'ai_predictive',
-            'video_daily',
-            'whatsapp_automation',
-            'whatsapp_chatbot',
-            'prontuario_multi_unit',
-            'financeiro_advanced',
-            'relatorios_bi',
-            'crm',
+            // Tudo do PROFESSIONAL + ilimitado
+            'check_in_qr',
+            'check_in_facial',
+            'pre_registration',
+            'triagem',
+            'teleconsulta_webrtc',
+            'prontuario',
+            'documentos',
+            'termos_legais',
+            'financeiro',
+            'pagamentos',
+            'convenios',
+            'dre',
+            'auditoria',
+            'repasse_medico',
             'tiss',
-            'marketplace',
-            'estoque',
-            'multi_units',
-            'datasus',
-            'labs_rj',
-            'api_dedicated',
-            'whitelabel',
-        ],
-    },
-    NETWORK: {
-        type: 'NETWORK',
-        name: 'Network (Legacy)',
-        price_monthly: 999,
-        price_yearly: 9990,
-        tier: 5,
-        limits: {
-            max_doctors: -1,
-            max_appointments_month: -1,
-            max_patients: -1,
-            max_storage_gb: 1000,
-            max_units: -1,
-        },
-        features: [
-            'ai_simple',
-            'ai_reasoning',
-            'ai_predictive',
-            'ai_custom_training',
-            'video_whitelabel',
-            'whatsapp_chatbot',
-            'prontuario_multi_unit',
-            'financeiro_advanced',
-            'relatorios_bi',
             'crm',
-            'tiss',
-            'marketplace',
+            'notificacoes_email',
+            'whatsapp_evolution',
+            'relatorios',
             'estoque',
+            'importacao',
+            'agenda',
+            'horarios',
+            'medicos',
+            'pacientes',
+            'usuarios',
+            'pagina_publica',
             'multi_units',
-            'datasus',
-            'labs_rj',
-            'api_dedicated',
-            'whitelabel',
-            'custom_integrations',
-            'unlimited_units',
         ],
     },
 }

@@ -79,7 +79,7 @@ export function verifyCheckinToken(token: string): {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { appointment_id, clinic_id, documents, ...formData } = body
+        const { appointment_id, clinic_id, documents, face_photo_url, ...formData } = body
 
         if (!appointment_id || !clinic_id) {
             throw new ValidationError('appointment_id e clinic_id são obrigatórios')
@@ -247,6 +247,29 @@ export async function POST(request: NextRequest) {
                 .select()
         }
 
+        // Save face photo to patient_face_biometrics for facial recognition check-in
+        if (face_photo_url && (appointment as any).patient_id) {
+            const { error: biometricsError } = await supabase
+                .from('patient_face_biometrics')
+                .upsert({
+                    patient_id: (appointment as any).patient_id,
+                    clinic_id,
+                    photo_url: face_photo_url,
+                    is_primary: true,
+                    source: 'pre_checkin',
+                    verified: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                } as any, { onConflict: 'patient_id,clinic_id' })
+
+            if (biometricsError) {
+                console.warn('[Pre-Checkin] Error saving face biometrics:', biometricsError)
+                // Continue even if biometrics save fails - it's optional
+            } else {
+                console.log('[Pre-Checkin] Face biometrics saved successfully')
+            }
+        }
+
         // Generate JWT token for QR Code
         const qrToken = generateCheckinToken({
             appointment_id,
@@ -258,14 +281,9 @@ export async function POST(request: NextRequest) {
         // Decode to get expiration
         const decoded = jwt.decode(qrToken) as any
 
-        // Generate QR code data payload
-        const qrData = JSON.stringify({
-            token: qrToken,
-            appointment_id,
-            clinic_id,
-            type: 'clinigo_checkin',
-            version: '1.0',
-        })
+        // Generate simple QR code data - just the appointment_id for easy scanning
+        // The reception can verify the check-in status by appointment_id
+        const qrData = `CLINIGO:${appointment_id}`
 
         return successResponse({
             message: 'Pré-check-in realizado com sucesso!',

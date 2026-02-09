@@ -1,6 +1,8 @@
 /**
  * PremiumFeatureGuard Component
  * Wraps premium features and shows upgrade CTA for BASIC plans
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
  */
 
 'use client'
@@ -15,7 +17,7 @@ import { useUpgradeModal } from '@/lib/hooks/use-upgrade-modal'
 
 interface PremiumFeatureGuardProps {
     children: ReactNode
-    feature: 'crm' | 'tiss' | 'marketplace' | 'ai_reasoning'
+    feature: 'crm' | 'tiss' | 'dre' | 'whatsapp_evolution' | 'importacao'
     featureName: string
     featureDescription: string
     benefits: string[]
@@ -52,14 +54,14 @@ export function PremiumFeatureGuard({
         <div className="container max-w-4xl mx-auto py-12 px-4">
             <Card className="relative overflow-hidden border-2 border-dashed">
                 {/* Background gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-teal-500/5 pointer-events-none" />
 
                 <div className="relative p-12 text-center space-y-8">
                     {/* Lock Icon */}
                     <div className="flex justify-center">
                         <div className="relative">
                             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                            <div className="relative bg-gradient-to-br from-primary to-purple-600 p-6 rounded-2xl">
+                            <div className="relative bg-gradient-to-br from-primary to-teal-600 p-6 rounded-2xl">
                                 {icon || <Lock className="h-12 w-12 text-white" />}
                             </div>
                         </div>
@@ -72,13 +74,13 @@ export function PremiumFeatureGuard({
                             className="px-4 py-2 text-sm font-semibold border-2 border-primary/50 bg-primary/10"
                         >
                             <Sparkles className="mr-2 h-4 w-4" />
-                            Recurso Exclusivo PRO
+                            Recurso do Plano Avançado
                         </Badge>
                     </div>
 
                     {/* Title */}
                     <div className="space-y-3">
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">
                             {featureName}
                         </h1>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -89,7 +91,7 @@ export function PremiumFeatureGuard({
                     {/* Current Plan Badge */}
                     <div className="flex justify-center">
                         <Badge variant="secondary" className="px-4 py-2">
-                            Seu Plano: <span className="font-bold ml-1">Básico (R$ 97/mês)</span>
+                            Seu Plano: <span className="font-bold ml-1">Básico (R$ 149/mês)</span>
                         </Badge>
                     </div>
 
@@ -114,27 +116,27 @@ export function PremiumFeatureGuard({
                     <div className="pt-6 space-y-4">
                         <Button
                             size="lg"
-                            className="px-8 py-6 text-lg font-semibold bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg hover:shadow-xl transition-all"
+                            className="px-8 py-6 text-lg font-semibold bg-gradient-to-r from-primary to-teal-600 hover:from-primary/90 hover:to-teal-600/90 shadow-lg hover:shadow-xl transition-all"
                             onClick={() => openUpgradeModal(feature)}
                         >
                             <Sparkles className="mr-2 h-5 w-5" />
-                            Fazer Upgrade para o Plano Profissional
+                            Fazer Upgrade para o Plano Avançado
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
 
                         <p className="text-sm text-muted-foreground">
-                            A partir de <span className="font-bold text-foreground">R$ 297/mês</span> •
+                            A partir de <span className="font-bold text-foreground">R$ 299/mês</span> •
                             Sem fidelidade • Cancele quando quiser
                         </p>
                     </div>
 
-                    {/* Feature List */}
+                    {/* Feature List - APENAS FUNCIONALIDADES REAIS */}
                     <div className="pt-8 border-t">
                         <p className="text-sm font-semibold mb-4">
-                            O que você ganha no Plano Profissional:
+                            O que você ganha no Plano Avançado:
                         </p>
                         <div className="flex flex-wrap justify-center gap-2">
-                            {['CRM Completo', 'TISS Integrado', 'Marketplace', 'IA Avançada', '15 Médicos', 'Consultas Ilimitadas', 'WhatsApp Automação', 'Suporte 24/7'].map((item) => (
+                            {['CRM Completo', 'TISS', 'DRE', 'Auditoria', '5 Médicos', 'WhatsApp', 'Check-in Facial', 'Importação'].map((item) => (
                                 <Badge key={item} variant="outline" className="bg-primary/5">
                                     {item}
                                 </Badge>

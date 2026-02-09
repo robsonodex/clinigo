@@ -1,6 +1,8 @@
 /**
  * Component: Upgrade Modal
  * Modal de confirmação de upgrade com cálculo proporcional
+ * 
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
  */
 'use client'
 
@@ -19,26 +21,27 @@ interface UpgradeModalProps {
     newPlan: string | null
 }
 
+// Funcionalidades REAIS por plano
 const PLAN_INFO: Record<string, { name: string; price: number; features: string[] }> = {
-    STARTER: {
-        name: 'Starter',
-        price: 149,
-        features: ['1 Médico', '1 Unidade', 'Agendamento Básico'],
-    },
     BASICO: {
         name: 'Básico',
-        price: 299,
-        features: ['3 Médicos', 'WhatsApp Automático', 'Marketplace'],
+        price: 149,
+        features: ['2 Médicos', 'Check-in QR', 'Teleconsulta', 'Prontuário', 'Financeiro'],
     },
     AVANCADO: {
         name: 'Avançado',
+        price: 299,
+        features: ['5 Médicos', 'Check-in Facial', 'WhatsApp', 'CRM', 'DRE', 'Importação'],
+    },
+    PROFESSIONAL: {
+        name: 'Professional',
         price: 549,
-        features: ['10 Médicos', '3 Unidades', 'TISS Completo', 'CRM'],
+        features: ['30 Médicos', 'TISS', '3 Unidades', 'Tudo do Avançado'],
     },
     ENTERPRISE: {
         name: 'Enterprise',
         price: 799,
-        features: ['Ilimitado', 'API Access', 'SSO', 'White Label'],
+        features: ['Médicos Ilimitados', 'Unidades Ilimitadas', 'Suporte 24/7', 'Gerente de Conta'],
     },
 }
 
@@ -79,13 +82,13 @@ export function UpgradeModal({ open, onClose, currentPlan, newPlan }: UpgradeMod
 
             return await res.json()
         },
-        onSuccess: (data) => {
+        onSuccess: () => {
             toast.success(`Upgrade realizado com sucesso para ${PLAN_INFO[newPlan!]?.name}!`)
             queryClient.invalidateQueries({ queryKey: ['clinic'] })
             queryClient.invalidateQueries({ queryKey: ['feature-gate'] })
             onClose()
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             toast.error(error.message || 'Erro ao processar upgrade')
         },
     })
@@ -102,8 +105,8 @@ export function UpgradeModal({ open, onClose, currentPlan, newPlan }: UpgradeMod
 
     if (!currentPlan || !newPlan) return null
 
-    const current = PLAN_INFO[currentPlan]
-    const next = PLAN_INFO[newPlan]
+    const current = PLAN_INFO[currentPlan] || PLAN_INFO.BASICO
+    const next = PLAN_INFO[newPlan] || PLAN_INFO.BASICO
 
     const priceDifference = next.price - current.price
     const isUpgrade = priceDifference > 0

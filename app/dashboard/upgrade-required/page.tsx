@@ -7,17 +7,22 @@ import { Badge } from '@/components/ui/badge'
 import { Lock, ArrowRight, Sparkles, Shield, Zap } from 'lucide-react'
 import Link from 'next/link'
 
+/**
+ * Upgrade Required Page
+ * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
+ */
+
 const PLAN_FEATURES = {
     AVANCADO: {
         name: 'Avançado',
         price: 'R$ 299/mês',
         features: [
             'CRM Completo',
-            'WhatsApp Automação',
+            'WhatsApp Evolution',
             'Repasse Médico',
             'DRE Gerencial',
             'Importação de Dados',
-            'Integrações',
+            'Check-in Facial',
         ],
     },
     PROFESSIONAL: {
@@ -27,9 +32,8 @@ const PLAN_FEATURES = {
             'Tudo do Avançado +',
             'Faturamento TISS',
             'Multi-Unidades (até 3)',
-            'Marketplace',
-            'IA Avançada',
-            'API Dedicada',
+            '30 Médicos',
+            'Suporte Prioritário',
         ],
     },
     ENTERPRISE: {
@@ -37,11 +41,10 @@ const PLAN_FEATURES = {
         price: 'R$ 799/mês',
         features: [
             'Tudo do Professional +',
+            'Médicos Ilimitados',
             'Unidades Ilimitadas',
-            'BI Multi-Filiais',
-            'DataSUS',
-            'White-Label',
             'Gerente Dedicado',
+            'SLA 99.5%',
         ],
     },
 }
@@ -49,7 +52,7 @@ const PLAN_FEATURES = {
 const DEFAULT_PLAN = {
     name: 'Avançado',
     price: 'R$ 299/mês',
-    features: ['CRM Completo', 'WhatsApp Automação', 'Repasse Médico']
+    features: ['CRM Completo', 'WhatsApp Evolution', 'Repasse Médico']
 }
 
 export default function UpgradePage() {
