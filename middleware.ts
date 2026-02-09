@@ -58,6 +58,9 @@ const PUBLIC_ROUTES = [
     '/api/partners/register', // Partner registration - public for new affiliates
     '/api/qr/', // QR Code images for email - dynamic route (legacy)
     '/api/qr', // QR Code images for email - query parameter route
+    '/api/checkin/', // Pre-checkin API routes (public for patients)
+    '/api/checkin/pre-checkin', // Pre-checkin submission (public)
+    '/api/checkin/ocr', // OCR processing for documents (public)
     '/partners/login', // Partner login page
     '/partners/register', // Partner registration page
 ]
