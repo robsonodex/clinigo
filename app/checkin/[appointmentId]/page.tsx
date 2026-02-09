@@ -208,9 +208,12 @@ export default async function CheckinPage({ params }: PageProps) {
         <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
             {/* Header */}
             <header className="bg-white/80 backdrop-blur-sm border-b py-4">
-                <div className="container mx-auto px-4 flex items-center justify-center gap-2">
-                    <Heart className="w-6 h-6 text-green-600" />
-                    <h1 className="text-xl font-bold text-green-700">CliniGo</h1>
+                <div className="container mx-auto px-4 flex items-center justify-center">
+                    <img
+                        src="/logo.png"
+                        alt="CliniGo"
+                        className="h-10 w-auto"
+                    />
                 </div>
             </header>
 
