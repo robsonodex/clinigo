@@ -61,6 +61,8 @@ const PUBLIC_ROUTES = [
     '/api/checkin/', // Pre-checkin API routes (public for patients)
     '/api/checkin/pre-checkin', // Pre-checkin submission (public)
     '/api/checkin/ocr', // OCR processing for documents (public)
+    '/api/checkin/validate', // QR Code validation (public)
+    '/api/checkin/verify', // QR Code verification and queue (public)
     '/partners/login', // Partner login page
     '/partners/register', // Partner registration page
 ]

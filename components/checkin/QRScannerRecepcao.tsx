@@ -206,23 +206,35 @@ export function QRScannerRecepcao({ clinicId, onCheckinSuccess }: QRScannerRecep
         setLastResult(null)
 
         try {
-            // Parse QR data
+            // Parse QR data - support multiple formats
             let token: string
-            try {
-                const qrData = JSON.parse(decodedText)
-                if (qrData.type !== 'clinigo_checkin') {
-                    throw new Error('QR Code inválido - não é do CliniGo')
+            let appointmentId: string | null = null
+
+            // Format 1: Simple CLINIGO:{appointment_id} format (new, preferred)
+            if (decodedText.startsWith('CLINIGO:')) {
+                appointmentId = decodedText.replace('CLINIGO:', '')
+                token = appointmentId // Use appointment_id as token for lookup
+            }
+            // Format 2: JSON with token (legacy)
+            else {
+                try {
+                    const qrData = JSON.parse(decodedText)
+                    if (qrData.type === 'clinigo_checkin') {
+                        token = qrData.token
+                        appointmentId = qrData.appointment_id
+                    } else {
+                        throw new Error('QR Code inválido - não é do CliniGo')
+                    }
+                } catch {
+                    // Format 3: Plain token/appointment_id (fallback)
+                    token = decodedText
                 }
-                token = qrData.token
-            } catch {
-                // If not JSON, assume it's just the token
-                token = decodedText
             }
 
-            setScannedToken(token)
+            setScannedToken(appointmentId || token)
 
             // Validate and get patient data
-            const result = await validateToken(token)
+            const result = await validateToken(appointmentId || token)
             setLastResult(result)
 
             if (result.success && result.patient) {
