@@ -332,26 +332,26 @@ export function PreCheckinWizard({
                 </CardDescription>
 
                 {/* Progress Steps */}
-                <div className="flex items-center justify-between mt-6">
+                <div className="flex items-center justify-center gap-1 mt-6 overflow-x-auto">
                     {STEPS.map((step, index) => (
-                        <div key={step.id} className="flex items-center">
+                        <div key={step.id} className="flex items-center flex-shrink-0">
                             <div
                                 className={cn(
-                                    'flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all',
+                                    'flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all',
                                     currentStep >= step.id
                                         ? 'bg-primary border-primary text-primary-foreground'
                                         : 'border-muted-foreground/30 text-muted-foreground'
                                 )}
                             >
                                 {currentStep > step.id ? (
-                                    <CheckCircle2 className="w-5 h-5" />
+                                    <CheckCircle2 className="w-4 h-4" />
                                 ) : (
-                                    <step.icon className="w-5 h-5" />
+                                    <step.icon className="w-4 h-4" />
                                 )}
                             </div>
                             <span
                                 className={cn(
-                                    'ml-2 text-sm font-medium hidden sm:block',
+                                    'ml-1 text-xs font-medium hidden sm:block whitespace-nowrap',
                                     currentStep >= step.id ? 'text-primary' : 'text-muted-foreground'
                                 )}
                             >
@@ -360,7 +360,7 @@ export function PreCheckinWizard({
                             {index < STEPS.length - 1 && (
                                 <div
                                     className={cn(
-                                        'w-6 sm:w-12 h-0.5 mx-2',
+                                        'w-4 sm:w-6 h-0.5 mx-1',
                                         currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground/30'
                                     )}
                                 />
