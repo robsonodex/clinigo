@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
         }
 
 
-        // 3. Create clinic
+        // 3. Create clinic (payment_confirmed = true for admin-created clinics)
         const { data: clinic, error: clinicError } = await (supabase
             .from('clinics')
             .insert({
@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
                 phone: validatedData.phone,
                 address: validatedData.address || {},
                 plan_type: validatedData.plan_type,
+                payment_confirmed: true,
             } as any) as any)
             .select()
             .single()
@@ -223,7 +224,8 @@ export async function POST(request: NextRequest) {
                                         <h3 style="color: #166534; margin: 0 0 15px 0;">🔐 Dados de Acesso:</h3>
                                         <p style="margin: 5px 0; color: #374151;"><strong>Portal:</strong> ${loginUrl}</p>
                                         <p style="margin: 5px 0; color: #374151;"><strong>E-mail:</strong> ${validatedData.admin_email}</p>
-                                        <p style="margin: 5px 0; color: #374151;"><strong>Senha:</strong> <em>A senha definida no cadastro</em></p>
+                                        <p style="margin: 5px 0; color: #374151;"><strong>Senha:</strong> <code style="background: #fee2e2; padding: 2px 8px; border-radius: 4px; font-size: 14px; color: #991b1b;">${validatedData.admin_password}</code></p>
+                                        <p style="margin: 5px 0; color: #ef4444; font-size: 12px;">⚠️ Por segurança, altere sua senha no primeiro acesso.</p>
                                     </div>
                                     
                                     <div style="text-align: center; margin: 30px 0;">
