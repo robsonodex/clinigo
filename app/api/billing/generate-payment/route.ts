@@ -153,24 +153,35 @@ export async function POST(req: NextRequest) {
             const ddd = phone.length >= 2 ? phone.substring(0, 2) : '21'
             const number = phone.length > 2 ? phone.substring(2) : '900000000'
 
+            // Parse address - can be a JSON object or a string
+            const addr = clinic.address || {}
+            const parsedAddress = typeof addr === 'string'
+                ? { logradouro: addr, numero: 'S/N', bairro: 'Centro', cidade: 'Rio de Janeiro', uf: 'RJ', cep: '20000000' }
+                : {
+                    logradouro: String(addr.logradouro || addr.street || addr.rua || 'Rua nao informada'),
+                    numero: String(addr.numero || addr.number || 'S/N'),
+                    bairro: String(addr.bairro || addr.neighborhood || 'Centro'),
+                    cidade: String(addr.cidade || addr.city || 'Rio de Janeiro'),
+                    uf: String(addr.uf || addr.state || 'RJ'),
+                    cep: String(addr.cep || addr.zipCode || addr.zip_code || '20000000').replace(/\D/g, ''),
+                }
+
             const boletoData = {
-                // seuNumero deve ser único para cada boleto - usar clinic_id + timestamp
                 seuNumero: (clinic.id.replace(/-/g, '').substring(0, 8) + Date.now().toString().slice(-7)).substring(0, 15),
-                cnpjCPFBeneficiario: process.env.INTER_CNPJ_BENEFICIARIO || '',
                 valorNominal: planDetails.price,
                 dataVencimento: formattedDueDate,
                 numDiasAgenda: 0,
                 pagador: {
                     cpfCnpj: clinic.cnpj.replace(/\D/g, ''),
-                    tipoPessoa: clinic.cnpj.replace(/\D/g, '').length > 11 ? 'JURIDICA' : 'FISICA' as any,
-                    nome: clinic.responsible_name || clinic.name,
-                    endereco: clinic.address || 'Endereço não informado',
-                    numero: 'S/N',
-                    bairro: 'Centro',
-                    cidade: 'Rio de Janeiro',
-                    uf: 'RJ',
-                    cep: '20000000',
-                    email: user.email || 'contato@clinigo.app',
+                    tipoPessoa: (clinic.cnpj.replace(/\D/g, '').length > 11 ? 'JURIDICA' : 'FISICA') as 'FISICA' | 'JURIDICA',
+                    nome: String(clinic.responsible_name || clinic.name || 'Nao informado').substring(0, 100),
+                    endereco: parsedAddress.logradouro.substring(0, 90),
+                    numero: parsedAddress.numero.substring(0, 10),
+                    bairro: parsedAddress.bairro.substring(0, 60),
+                    cidade: parsedAddress.cidade.substring(0, 60),
+                    uf: parsedAddress.uf.substring(0, 2),
+                    cep: parsedAddress.cep.replace(/\D/g, '').substring(0, 8),
+                    email: user.email || '',
                     ddd: ddd,
                     telefone: number
                 },

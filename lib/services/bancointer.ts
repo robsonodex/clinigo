@@ -14,7 +14,7 @@ interface InterConfig {
 
 interface BoletoData {
     seuNumero: string // ID único do cliente (ex: subscription_id)
-    cnpjCPFBeneficiario: string
+    cnpjCPFBeneficiario?: string
     valorNominal: number
     dataVencimento: string // YYYY-MM-DD
     numDiasAgenda: number // 0 (pagamento no mesmo dia) a 60
@@ -24,6 +24,7 @@ interface BoletoData {
         nome: string
         endereco: string
         numero: string
+        complemento?: string
         bairro: string
         cidade: string
         uf: string
@@ -60,27 +61,69 @@ export class BancoInterService {
         this.config = {
             clientId: process.env.INTER_CLIENT_ID!,
             clientSecret: process.env.INTER_CLIENT_SECRET!,
-            certPath: process.env.INTER_CERT_PATH || path.join(process.cwd(), 'certs', 'inter.crt'),
-            keyPath: process.env.INTER_KEY_PATH || path.join(process.cwd(), 'certs', 'inter.key'),
+            certPath: process.env.INTER_CERT_PATH || path.join(process.cwd(), 'certs', 'Inter API_Certificado.crt'),
+            keyPath: process.env.INTER_KEY_PATH || path.join(process.cwd(), 'certs', 'Inter API_Chave.key'),
         }
-
-        // Check if certs exist (only if we are not in build time environment check)
-        // We initialize the agent lazily in methods to avoid startup crashes if files are missing
     }
 
     private getHttpsAgent() {
         try {
-            if (!fs.existsSync(this.config.certPath) || !fs.existsSync(this.config.keyPath)) {
-                throw new Error(`Certificates not found at ${this.config.certPath} or ${this.config.keyPath}`)
+            let cert: Buffer | string
+            let key: Buffer | string
+            let strategy = 'unknown'
+
+            // Strategy 1: Load from environment variables (raw PEM or base64 - for Vercel/serverless)
+            if (process.env.INTER_CERT_CONTENT && process.env.INTER_KEY_CONTENT) {
+                const certContent = process.env.INTER_CERT_CONTENT
+                const keyContent = process.env.INTER_KEY_CONTENT
+
+                // Auto-detect: if starts with -----BEGIN, it's raw PEM; otherwise base64
+                cert = certContent.trim().startsWith('-----BEGIN')
+                    ? certContent
+                    : Buffer.from(certContent, 'base64')
+                key = keyContent.trim().startsWith('-----BEGIN')
+                    ? keyContent
+                    : Buffer.from(keyContent, 'base64')
+                strategy = 'env_vars'
+            }
+            // Strategy 2: Load from filesystem (local development)
+            else if (fs.existsSync(this.config.certPath) && fs.existsSync(this.config.keyPath)) {
+                cert = fs.readFileSync(this.config.certPath)
+                key = fs.readFileSync(this.config.keyPath)
+                strategy = 'filesystem'
+            }
+            // Strategy 3: Try legacy filenames as final fallback
+            else {
+                const legacyCert = path.join(process.cwd(), 'certs', 'inter.crt')
+                const legacyKey = path.join(process.cwd(), 'certs', 'inter.key')
+                if (fs.existsSync(legacyCert) && fs.existsSync(legacyKey)) {
+                    cert = fs.readFileSync(legacyCert)
+                    key = fs.readFileSync(legacyKey)
+                    strategy = 'legacy_files'
+                } else {
+                    throw new Error(
+                        `Certificates not found. Tried: ` +
+                        `env vars (INTER_CERT_CONTENT/INTER_KEY_CONTENT), ` +
+                        `files (${this.config.certPath}), ` +
+                        `legacy (${legacyCert})`
+                    )
+                }
             }
 
-            const cert = fs.readFileSync(this.config.certPath)
-            const key = fs.readFileSync(this.config.keyPath)
+            const certStr = cert.toString()
+            const keyStr = key.toString()
+            logger.info({
+                strategy,
+                certSize: certStr.length,
+                keySize: keyStr.length,
+                certStartsWith: certStr.substring(0, 30),
+                keyStartsWith: keyStr.substring(0, 30),
+            }, 'Banco Inter certificates loaded')
 
             return new https.Agent({
                 cert,
                 key,
-                passphrase: process.env.INTER_CERT_PASSWORD // Optional if key is encrypted
+                passphrase: process.env.INTER_CERT_PASSWORD
             })
         } catch (error) {
             logger.error({ error }, 'Failed to load Banco Inter certificates')
@@ -105,7 +148,14 @@ export class BancoInterService {
             params.append('client_id', this.config.clientId)
             params.append('client_secret', this.config.clientSecret)
             params.append('grant_type', 'client_credentials')
-            params.append('scope', 'boleto-cobranca.read boleto-cobranca.write pix.read pix.write webhook.read webhook.write') // Adjust scopes as needed
+            params.append('scope', 'boleto-cobranca.read boleto-cobranca.write pix.read pix.write webhook.read webhook.write')
+
+            logger.info({
+                clientIdLength: this.config.clientId?.length || 0,
+                clientIdPrefix: this.config.clientId?.substring(0, 8) || 'MISSING',
+                hasSecret: !!this.config.clientSecret,
+                secretLength: this.config.clientSecret?.length || 0,
+            }, 'Banco Inter Auth - attempting token request')
 
             const response = await axios.post(
                 'https://cdpj.partners.bancointer.com.br/oauth/v2/token',
@@ -124,7 +174,11 @@ export class BancoInterService {
 
             return this.token!
         } catch (error: any) {
-            logger.error({ error: error.response?.data || error.message }, 'Banco Inter Auth Failed')
+            logger.error({
+                errorData: error.response?.data,
+                errorStatus: error.response?.status,
+                errorMessage: error.message,
+            }, 'Banco Inter Auth Failed')
             throw new Error('Falha na autenticação com Banco Inter')
         }
     }
