@@ -1,10 +1,47 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BillingTable } from '@/components/admin/billing-table'
-import { DollarSign, AlertTriangle, TrendingUp, Users } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { DollarSign, Users, TrendingUp } from 'lucide-react'
+import { api } from '@/lib/api-client'
+import { PLANS } from '@/lib/constants/plans'
+import type { PlanType } from '@/lib/constants/plans'
+
+interface Clinic {
+    id: string
+    name: string
+    slug: string
+    plan_type: PlanType
+    is_active: boolean
+    created_at: string
+}
 
 export default function CobrancaPage() {
+    const { data: response, isLoading } = useQuery({
+        queryKey: ['admin-billing-kpis'],
+        queryFn: () =>
+            api.getFull<Clinic[]>('/clinics', {
+                page: '1',
+                pageSize: '1000',
+                is_active: 'all',
+            }),
+    })
+
+    const clinics = response?.data || []
+    const activeClinics = clinics.filter(c => c.is_active)
+    const totalClinics = clinics.length
+
+    // Calculate MRR from active clinics
+    const mrr = activeClinics.reduce((sum, c) => {
+        const planPrice = PLANS[c.plan_type]?.price || 0
+        return sum + planPrice
+    }, 0)
+
+    const formatCurrency = (value: number) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -12,7 +49,7 @@ export default function CobrancaPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Painel de Cobrança</h1>
                     <p className="text-muted-foreground mt-1">
-                        Gestão financeira e recuperação de receita.
+                        Gestão financeira e visão geral das clínicas.
                     </p>
                 </div>
             </div>
@@ -27,24 +64,13 @@ export default function CobrancaPage() {
                         <DollarSign className="h-4 w-4 text-emerald-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-slate-900">R$ 45.900,00</div>
+                        {isLoading ? (
+                            <Skeleton className="h-8 w-[140px]" />
+                        ) : (
+                            <div className="text-2xl font-bold text-slate-900">{formatCurrency(mrr)}</div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-1">
-                            +2.5% em relação ao mês anterior
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-red-100 bg-red-50/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-red-600">
-                            Total em Atraso
-                        </CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">R$ 848,00</div>
-                        <p className="text-xs text-red-600/80 mt-1 font-medium">
-                            2 clínicas inadimplentes precisando de atenção
+                            Receita recorrente mensal estimada
                         </p>
                     </CardContent>
                 </Card>
@@ -52,14 +78,41 @@ export default function CobrancaPage() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
-                            Renovações Hoje
+                            Clínicas Ativas
                         </CardTitle>
-                        <TrendingUp className="h-4 w-4 text-blue-600" />
+                        <Users className="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-slate-900">12</div>
+                        {isLoading ? (
+                            <Skeleton className="h-8 w-[60px]" />
+                        ) : (
+                            <div className="text-2xl font-bold text-slate-900">{activeClinics.length}</div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-1">
-                            Previsão de entrada: R$ 3.450,00
+                            de {totalClinics} {totalClinics === 1 ? 'clínica cadastrada' : 'clínicas cadastradas'}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Ticket Médio
+                        </CardTitle>
+                        <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <Skeleton className="h-8 w-[100px]" />
+                        ) : (
+                            <div className="text-2xl font-bold text-slate-900">
+                                {activeClinics.length > 0
+                                    ? formatCurrency(mrr / activeClinics.length)
+                                    : 'R$ 0,00'}
+                            </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Valor médio por clínica ativa
                         </p>
                     </CardContent>
                 </Card>
@@ -68,7 +121,7 @@ export default function CobrancaPage() {
             {/* Main Table Section */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-slate-900">Faturas Recentes & Pendências</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">Clínicas Cadastradas</h2>
                 </div>
 
                 <BillingTable />

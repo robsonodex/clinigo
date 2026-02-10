@@ -406,24 +406,24 @@ export default function LandingPremium() {
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">CliniGo Básico</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-sm text-slate-500">R$</span>
-                            <span className="text-4xl font-bold text-white">149</span>
+                            <span className="text-4xl font-bold text-white">99</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
-                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para consultórios com até 2 médicos</p>
+                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para médico solo iniciante</p>
 
                         <div className="flex-1 mb-5">
                             <ul className="space-y-2">
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Até 2 médicos
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> 1 médico
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in QR Code
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> 50 consultas/mês
+                                </li>
+                                <li className="flex items-center gap-2 text-xs text-slate-300">
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Agenda anti-overbooking
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Prontuário eletrônico
-                                </li>
-                                <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Teleconsulta integrada
                                 </li>
                             </ul>
 
@@ -433,10 +433,10 @@ export default function LandingPremium() {
                                     <span className="hidden group-open:block">- Ver menos</span>
                                 </summary>
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> SMTP próprio</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in manual</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Financeiro básico</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Relatórios básicos</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Agenda anti-overbooking</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> E-mail transacional</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Suporte padrão</li>
                                 </ul>
                             </details>
@@ -458,7 +458,7 @@ export default function LandingPremium() {
                         <h3 className="text-sm font-bold text-teal-vibrant uppercase tracking-widest mb-4">CliniGo Avançado</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-sm text-slate-500">R$</span>
-                            <span className="text-4xl font-bold text-white">299</span>
+                            <span className="text-4xl font-bold text-white">249</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
                         <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para clínicas com até 5 médicos</p>
@@ -472,10 +472,10 @@ export default function LandingPremium() {
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Tudo do Básico +
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-white font-medium">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in avançado + Upload
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Teleconsulta WebRTC
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-white font-medium">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Prontuário completo
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in QR Code
                                 </li>
                             </ul>
 
@@ -485,11 +485,11 @@ export default function LandingPremium() {
                                     <span className="hidden group-open:block">- Ver menos</span>
                                 </summary>
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Teleconsulta WebRTC</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> SMTP próprio</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> CRM completo</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Financeiro completo</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> DRE + Repasse Médico</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Fluxo de Caixa</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Templates customizados</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Relatórios avançados</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Lembretes automáticos</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Suporte prioritário</li>
                                 </ul>
                             </details>
@@ -505,7 +505,7 @@ export default function LandingPremium() {
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">CliniGo Professional</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-sm text-slate-500">R$</span>
-                            <span className="text-4xl font-bold text-white">549</span>
+                            <span className="text-4xl font-bold text-white">449</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
                         <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para centros com até 30 médicos</p>
@@ -532,13 +532,13 @@ export default function LandingPremium() {
                                     <span className="hidden group-open:block">- Ver menos</span>
                                 </summary>
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Prontuário multi-unidade</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Faturamento TISS</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> SMTP próprio</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> API dedicada</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> BI e relatórios gerenciais</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> TISS completo</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in Facial</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Transcrição IA</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Auditoria financeira</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Dashboards customizados</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> API/Webhooks</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> SLA 99.5%</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Onboarding personalizado</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Suporte 24/7</li>
                                 </ul>
                             </details>
@@ -564,7 +564,7 @@ export default function LandingPremium() {
                                     <span className="text-sm text-slate-500 block mb-1">A partir de</span>
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-sm text-slate-500">R$</span>
-                                        <span className="text-4xl md:text-5xl font-bold text-white">799</span>
+                                        <span className="text-4xl md:text-5xl font-bold text-white">699</span>
                                         <span className="text-sm text-slate-500">/mês</span>
                                     </div>
                                 </div>
@@ -587,7 +587,13 @@ export default function LandingPremium() {
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Unidades ilimitadas
                                     </li>
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> SMTP próprio
+                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Portal Super Admin
+                                    </li>
+                                    <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
+                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Gestão centralizada
+                                    </li>
+                                    <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
+                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Analytics global
                                     </li>
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Migração dedicada
@@ -596,13 +602,7 @@ export default function LandingPremium() {
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Atendimento direto
                                     </li>
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Ajustes sob demanda
-                                    </li>
-                                    <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Consultoria de implantação
-                                    </li>
-                                    <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Treinamento presencial
                                     </li>
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> SLA garantido 99.5%
