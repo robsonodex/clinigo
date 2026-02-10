@@ -192,18 +192,38 @@ export async function POST(request: NextRequest) {
             if (authError) {
                 console.error('Failed to create admin user:', authError)
             } else {
-                // Create user profile
-                const { error: profileError } = await (supabase.from('users').insert({
-                    id: authData.user.id,
-                    email: validatedData.admin_email,
-                    full_name: validatedData.admin_name,
-                    role: 'CLINIC_ADMIN',
-                    clinic_id: (clinic as any).id,
-                } as any) as any)
+                // Create user profile (with retry for resilience)
+                let profileCreated = false
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    const { error: profileError } = await (supabase.from('users').insert({
+                        id: authData.user.id,
+                        email: validatedData.admin_email,
+                        full_name: validatedData.admin_name,
+                        role: 'CLINIC_ADMIN',
+                        clinic_id: (clinic as any).id,
+                    } as any) as any)
 
-                if (profileError) {
-                    console.error('[POST /api/clinics] CRITICAL: Failed to create user profile:', profileError)
-                    // Don't throw - clinic was already created, but log for debugging
+                    if (!profileError) {
+                        profileCreated = true
+                        break
+                    }
+
+                    console.error(`[POST /api/clinics] CRITICAL: Failed to create user profile (attempt ${attempt}/2):`, profileError)
+
+                    if (attempt === 2) {
+                        // Profile creation failed after retry - rollback auth user and clinic
+                        console.error('[POST /api/clinics] ROLLING BACK: Deleting auth user and clinic due to profile creation failure')
+                        try {
+                            await supabase.auth.admin.deleteUser(authData.user.id)
+                            await supabase.from('clinics').delete().eq('id', (clinic as any).id)
+                        } catch (rollbackErr) {
+                            console.error('[POST /api/clinics] Rollback error:', rollbackErr)
+                        }
+                        return handleApiError(new Error('Erro ao criar perfil do administrador. Tente novamente.'))
+                    }
+
+                    // Wait briefly before retry
+                    await new Promise(resolve => setTimeout(resolve, 500))
                 }
 
                 // Send professional welcome email (uses stub if @react-email not installed)
