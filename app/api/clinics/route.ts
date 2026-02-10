@@ -193,13 +193,18 @@ export async function POST(request: NextRequest) {
                 console.error('Failed to create admin user:', authError)
             } else {
                 // Create user profile
-                await (supabase.from('users').insert({
+                const { error: profileError } = await (supabase.from('users').insert({
                     id: authData.user.id,
                     email: validatedData.admin_email,
                     full_name: validatedData.admin_name,
                     role: 'CLINIC_ADMIN',
                     clinic_id: (clinic as any).id,
                 } as any) as any)
+
+                if (profileError) {
+                    console.error('[POST /api/clinics] CRITICAL: Failed to create user profile:', profileError)
+                    // Don't throw - clinic was already created, but log for debugging
+                }
 
                 // Send professional welcome email (uses stub if @react-email not installed)
                 const loginUrl = 'https://clinigo.app/clinica'
