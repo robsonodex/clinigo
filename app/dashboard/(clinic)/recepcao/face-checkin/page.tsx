@@ -182,10 +182,12 @@ export default function FaceCheckInPage() {
                             ) : (
                                 <>
                                     <video
-                                        ref={videoRef}
+                                        ref={(el) => {
+                                            (videoRef as any).current = el;
+                                            if (el) el.muted = true;
+                                        }}
                                         autoPlay
                                         playsInline
-                                        muted
                                         className="w-full h-full object-cover"
                                     />
 
