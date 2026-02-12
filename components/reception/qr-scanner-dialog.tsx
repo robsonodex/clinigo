@@ -177,8 +177,8 @@ export function QRScannerDialog({ onCheckIn }: QRScannerDialogProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                    <QrCode className="w-4 h-4" />
+                <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-6 text-base font-semibold shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all">
+                    <QrCode className="w-5 h-5" />
                     Escanear QR Code
                 </Button>
             </DialogTrigger>

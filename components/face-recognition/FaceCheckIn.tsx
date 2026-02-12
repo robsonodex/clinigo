@@ -30,6 +30,7 @@ interface PatientMatch {
     full_name: string;
     reference_image_url?: string | null;
     confidence: number;
+    appointment_id?: string;
 }
 
 interface FaceCheckInProps {
@@ -46,10 +47,12 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
     const [isLoading, setIsLoading] = useState(true);
     const [detectedPatient, setDetectedPatient] = useState<PatientMatch | null>(null);
     const [isScanning, setIsScanning] = useState(false);
+    const [checkInCompleted, setCheckInCompleted] = useState<{ name: string } | null>(null);
     const [scanAttempts, setScanAttempts] = useState(0);
     const [biometricsLoaded, setBiometricsLoaded] = useState(false);
     const [patientsWithPhotos, setPatientsWithPhotos] = useState<Array<{ patientId: string; name: string; photoUrl: string; appointmentId?: string }>>([]);
-    const descriptorsRef = useRef<Array<{ patientId: string; name: string; descriptor: Float32Array; imageUrl?: string }>>([]);
+    const descriptorsRef = useRef<Array<{ patientId: string; name: string; descriptor: Float32Array; imageUrl?: string; appointmentId?: string; doctorId?: string }>>([])
+    const autoConfirmingRef = useRef(false);;
     const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Carrega modelos e biometrias
@@ -84,53 +87,81 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
 
     const loadBiometrics = async () => {
         const supabase = createClient();
+        const today = new Date().toISOString().split('T')[0];
 
-        const { data, error } = await supabase
-            .from('patient_face_biometrics')
-            .select(`
-                patient_id,
-                face_descriptor_encrypted,
-                reference_image_url,
-                patients(full_name)
-            `)
+        // Buscar agendamentos do dia com pacientes
+        const { data: appointmentsRaw, error: aptError } = await supabase
+            .from('appointments')
+            .select('id, patient_id, doctor_id, patients(full_name)')
             .eq('clinic_id', clinicId)
-            .eq('consent_given', true);
+            .eq('appointment_date', today)
+            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING'])
+            .limit(50);
 
-        if (error) {
-            console.error('Error loading biometrics:', error);
-            return;
-        }
+        const appointments = (appointmentsRaw || []) as Array<{ id: string; patient_id: string; doctor_id: string; patients: { full_name: string } | null }>;
 
-        if (!data || data.length === 0) {
+        if (aptError || appointments.length === 0) {
             setBiometricsLoaded(true);
             return;
         }
 
-        // Descriptografa no servidor
-        const decryptResponse = await fetch('/api/face-biometrics/decrypt-batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                encrypted: data.map(d => ({
-                    id: d.patient_id,
-                    data: d.face_descriptor_encrypted
-                }))
-            })
-        });
+        const patientIds = appointments.map(a => (a as any).patient_id).filter(Boolean);
 
-        if (!decryptResponse.ok) {
-            console.error('Failed to decrypt biometrics');
-            return;
+        // Buscar fotos do pré-checkin
+        const { data: biometricsData } = await supabase
+            .from('patient_face_biometrics')
+            .select('patient_id, reference_image_url')
+            .in('patient_id', patientIds);
+
+        const biometrics = (biometricsData || []) as Array<{ patient_id: string; reference_image_url: string | null }>;
+
+        // Gerar descriptors a partir das fotos usando face-api.js
+        const newDescriptors: typeof descriptorsRef.current = [];
+
+        for (const apt of appointments) {
+            const bio = biometrics.find(b => b.patient_id === apt.patient_id);
+            if (bio?.reference_image_url) {
+                try {
+                    const img = await faceapi.fetchImage(bio.reference_image_url);
+                    const detection = await faceapi
+                        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+
+                    if (detection) {
+                        newDescriptors.push({
+                            patientId: apt.patient_id,
+                            name: (apt.patients as any)?.full_name || 'Paciente',
+                            descriptor: detection.descriptor,
+                            imageUrl: bio.reference_image_url,
+                            appointmentId: apt.id,
+                            doctorId: apt.doctor_id,
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Could not process face from photo for patient:', apt.patient_id, e);
+                }
+            }
         }
 
-        const { decrypted } = await decryptResponse.json();
+        descriptorsRef.current = newDescriptors;
 
-        descriptorsRef.current = data.map((bio, idx) => ({
-            patientId: bio.patient_id,
-            name: (bio.patients as any)?.full_name || 'Paciente',
-            descriptor: new Float32Array(decrypted[idx]),
-            imageUrl: bio.reference_image_url
-        }));
+        // Also load patients with photos for the visual fallback grid
+        if (newDescriptors.length === 0) {
+            const photoPatients: typeof patientsWithPhotos = [];
+            for (const apt of appointments) {
+                const bio = biometrics.find(b => b.patient_id === apt.patient_id);
+                if (bio?.reference_image_url) {
+                    photoPatients.push({
+                        patientId: apt.patient_id,
+                        name: (apt.patients as any)?.full_name || 'Paciente',
+                        photoUrl: bio.reference_image_url,
+                        appointmentId: apt.id
+                    });
+                }
+            }
+            setPatientsWithPhotos(photoPatients);
+        }
 
         setBiometricsLoaded(true);
     };
@@ -161,10 +192,12 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
         // Buscar biometrias com foto para esses pacientes
         const patientIds = appointments.map(a => (a as any).patient_id).filter(Boolean);
 
-        const { data: biometrics } = await supabase
+        const { data: biometricsRaw } = await supabase
             .from('patient_face_biometrics')
             .select('patient_id, reference_image_url')
             .in('patient_id', patientIds);
+
+        const biometrics = (biometricsRaw || []) as Array<{ patient_id: string; reference_image_url: string | null }>;
 
         // Mapear pacientes com fotos
         const photoPatients: typeof patientsWithPhotos = [];
@@ -230,12 +263,14 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
 
                 if (bestMatch) {
                     // Match encontrado!
-                    setDetectedPatient({
+                    const matchedPatient: PatientMatch = {
                         patient_id: bestMatch.patient.patientId,
                         full_name: bestMatch.patient.name,
                         reference_image_url: bestMatch.patient.imageUrl,
-                        confidence: Math.round((1 - bestMatch.distance) * 100)
-                    });
+                        confidence: Math.round((1 - bestMatch.distance) * 100),
+                        appointment_id: bestMatch.patient.appointmentId,
+                    };
+                    setDetectedPatient(matchedPatient);
 
                     // Som de sucesso
                     try {
@@ -245,6 +280,35 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                     // Para o scan
                     if (scanIntervalRef.current) {
                         clearInterval(scanIntervalRef.current);
+                    }
+
+                    // Auto-confirm check-in
+                    if (!autoConfirmingRef.current) {
+                        autoConfirmingRef.current = true;
+                        try {
+                            const res = await fetch('/api/checkin/face-confirm', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    appointment_id: bestMatch.patient.appointmentId,
+                                    clinic_id: clinicId,
+                                    patient_id: bestMatch.patient.patientId,
+                                })
+                            });
+                            const result = await res.json();
+                            if (result.success || result.data?.already_in_queue) {
+                                toast.success(`Check-in confirmado: ${bestMatch.patient.name}`);
+                                setCheckInCompleted({ name: bestMatch.patient.name });
+                                onCheckInSuccess?.(bestMatch.patient.patientId, bestMatch.patient.name);
+                            } else if (result.error) {
+                                toast.error(result.error?.message || result.error);
+                                setDetectedPatient(null);
+                            }
+                        } catch (err) {
+                            console.error('Auto-confirm error:', err);
+                        } finally {
+                            autoConfirmingRef.current = false;
+                        }
                     }
                 }
             } catch (error) {
@@ -265,38 +329,48 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
         if (!detectedPatient) return;
 
         try {
-            const supabase = createClient();
+            // Use the appointment_id from the detected patient, or find it
+            let appointmentId = detectedPatient.appointment_id;
 
-            // Buscar appointment do dia do paciente
-            const today = new Date().toISOString().split('T')[0];
+            if (!appointmentId) {
+                const supabase = createClient();
+                const today = new Date().toISOString().split('T')[0];
 
-            const { data: appointments } = await supabase
-                .from('appointments')
-                .select('id')
-                .eq('patient_id', detectedPatient.patient_id)
-                .eq('appointment_date', today)
-                .in('status', ['SCHEDULED', 'CONFIRMED'])
-                .limit(1);
-
-            if (appointments && appointments.length > 0) {
-                // Atualiza status do appointment
-                await supabase
+                const { data: aptData } = await supabase
                     .from('appointments')
-                    .update({
-                        status: 'CHECKED_IN',
-                        updated_at: new Date().toISOString()
+                    .select('id')
+                    .eq('patient_id', detectedPatient.patient_id)
+                    .eq('appointment_date', today)
+                    .in('status', ['SCHEDULED', 'CONFIRMED'])
+                    .limit(1);
+
+                appointmentId = (aptData as any)?.[0]?.id;
+            }
+
+            if (appointmentId) {
+                // Add to queue via API
+                const res = await fetch('/api/checkin/face-confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        appointment_id: appointmentId,
+                        clinic_id: clinicId,
+                        patient_id: detectedPatient.patient_id,
                     })
-                    .eq('id', appointments[0].id);
+                });
+
+                const result = await res.json();
+                if (!res.ok && !result.data?.already_in_queue) {
+                    const errorMsg = result.error?.message || result.error || 'Erro ao confirmar';
+                    toast.error(errorMsg);
+                    setDetectedPatient(null);
+                    return;
+                }
             }
 
             toast.success(`Check-in confirmado: ${detectedPatient.full_name}`);
+            setCheckInCompleted({ name: detectedPatient.full_name });
             onCheckInSuccess?.(detectedPatient.patient_id, detectedPatient.full_name);
-
-            // Reset após 3s
-            setTimeout(() => {
-                setDetectedPatient(null);
-                setScanAttempts(0);
-            }, 3000);
 
         } catch (error) {
             toast.error('Erro ao confirmar check-in');
@@ -306,8 +380,41 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
 
     const resetDetection = () => {
         setDetectedPatient(null);
+        setCheckInCompleted(null);
         setScanAttempts(0);
     };
+
+    // Auto-reset after successful check-in (5 seconds)
+    useEffect(() => {
+        if (checkInCompleted) {
+            const timer = setTimeout(() => {
+                setCheckInCompleted(null);
+                setDetectedPatient(null);
+                setScanAttempts(0);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [checkInCompleted]);
+
+    // Check-in completed - show success screen (camera closed)
+    if (checkInCompleted) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 animate-in fade-in zoom-in duration-500">
+                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="w-14 h-14 text-green-600" />
+                </div>
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-green-700 mb-2">Check-in Realizado com Sucesso!</h2>
+                    <p className="text-lg text-muted-foreground">{checkInCompleted.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Paciente adicionado à fila de atendimento</p>
+                </div>
+                <Button variant="outline" onClick={resetDetection} className="mt-4">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Próximo Check-in
+                </Button>
+            </div>
+        );
+    }
 
     // Loading
     if (isLoading) {

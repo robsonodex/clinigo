@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint } from 'lucide-react'
+import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -76,13 +76,18 @@ export default function LandingPremium() {
                                 Gestão Médica Inteligente
                             </div>
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
-                                Gestão médica completa para{' '}
+                                A Plataforma{' '}
+                                <span className="relative inline-block">
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-vibrant via-teal-200 to-white">All-in-One</span>
+                                    <span className="absolute -bottom-1 left-0 w-full h-[3px] bg-gradient-to-r from-teal-vibrant via-teal-200 to-transparent rounded-full" />
+                                </span>{' '}
+                                para Gestão de{' '}
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-vibrant via-teal-200 to-white">
-                                    clínicas e consultórios
+                                    Clínicas e Consultórios
                                 </span>
                             </h1>
                             <p className="text-lg md:text-xl text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
-                                Elimine atrasos, reduza faltas e modernize sua clínica com a plataforma mais completa e elegante do mercado.
+                                Tudo que você precisa em um só lugar: Elimine atrasos, reduza faltas e aumente seu faturamento com a solução mais completa do mercado.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <Link href="/contato" className="h-14 px-8 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
@@ -384,6 +389,22 @@ export default function LandingPremium() {
                             Gestão completa do relacionamento com pacientes, histórico de interações e acompanhamento.
                         </p>
                     </motion.div>
+
+                    {/* Feature 7 - Painel de TV Dinâmico */}
+                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
+                        <div className="absolute top-4 right-4">
+                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                                Novo
+                            </span>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
+                            <Monitor className="w-6 h-6 text-teal-vibrant" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Painel de TV Dinâmico</h3>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            Exiba a fila de atendimento em tempo real na TV da recepção. Chamada automática por consultório com atualização instantânea.
+                        </p>
+                    </motion.div>
                 </div>
             </section>
 
@@ -534,7 +555,6 @@ export default function LandingPremium() {
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> TISS completo</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in Facial</li>
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Transcrição IA</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Auditoria financeira</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Dashboards customizados</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> API/Webhooks</li>
@@ -606,9 +626,6 @@ export default function LandingPremium() {
                                     </li>
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> SLA garantido 99.5%
-                                    </li>
-                                    <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300 sm:col-span-2">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Gerente de conta dedicado
                                     </li>
                                 </ul>
                             </div>

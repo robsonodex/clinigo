@@ -165,12 +165,18 @@ export function ManualAppointmentModal({
     }, [open, appointmentToEdit, preselectedDate, preselectedTime, preselectedDoctorId, reset, setValue])
 
     // Fetch doctors with caching
-    const { data: doctors, isLoading: doctorsLoading } = useQuery({
+    const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useQuery({
         queryKey: ['doctors-for-manual'],
-        queryFn: () => api.get<Doctor[]>('/doctors'),
+        queryFn: async () => {
+            console.log('[ManualAppointment] Fetching doctors...');
+            const result = await api.get<Doctor[]>('/doctors');
+            console.log('[ManualAppointment] Doctors result:', result);
+            return result;
+        },
         enabled: open,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
+        retry: 2,
     })
 
     // Get selected doctor data
@@ -404,15 +410,25 @@ export function ManualAppointmentModal({
                                             <SelectTrigger className={errors.doctor_id ? 'border-destructive' : ''}>
                                                 <SelectValue placeholder="Selecione o médico" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
                                                 {doctorsLoading && (
                                                     <div className="p-2 text-center">
                                                         <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                                                     </div>
                                                 )}
-                                                {doctors?.map((doctor) => (
+                                                {doctorsError && (
+                                                    <div className="p-2 text-center text-sm text-destructive">
+                                                        Erro ao carregar médicos
+                                                    </div>
+                                                )}
+                                                {!doctorsLoading && !doctorsError && doctors && doctors.length === 0 && (
+                                                    <div className="p-2 text-center text-sm text-muted-foreground">
+                                                        Nenhum médico cadastrado
+                                                    </div>
+                                                )}
+                                                {doctors?.filter(d => d.id && d.user).map((doctor) => (
                                                     <SelectItem key={doctor.id} value={doctor.id}>
-                                                        {doctor.user.full_name} - {doctor.specialty}
+                                                        {doctor.user?.full_name || 'Médico'} - {doctor.specialty}
                                                         {doctor.consultation_price > 0 && (
                                                             <span className="text-muted-foreground ml-2">
                                                                 ({formatCurrency(doctor.consultation_price)})

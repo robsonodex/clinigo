@@ -210,6 +210,7 @@ export function QueueManager({ doctorId, clinicId, doctorName }: QueueManagerPro
     const startConsultation = (queueId: string) => performAction('start_consultation', queueId)
     const endConsultation = (queueId: string) => performAction('end_consultation', queueId)
     const markNoShow = (queueId: string) => performAction('no_show', queueId)
+    const recallPatient = (queueId: string) => performAction('recall', queueId)
 
     // Format wait time
     const formatWaitTime = (minutes: number) => {
@@ -418,6 +419,21 @@ export function QueueManager({ doctorId, clinicId, doctorName }: QueueManagerPro
                             </div>
                             <div className="flex gap-2">
                                 <Button
+                                    variant="outline"
+                                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                                    onClick={() => recallPatient(calledPatient.id)}
+                                    disabled={actionLoading === 'recall' + calledPatient.id}
+                                >
+                                    {actionLoading === 'recall' + calledPatient.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Bell className="w-4 h-4 mr-1" />
+                                            Chamar Novamente
+                                        </>
+                                    )}
+                                </Button>
+                                <Button
                                     size="lg"
                                     className="bg-blue-600 hover:bg-blue-700"
                                     onClick={() => startConsultation(calledPatient.id)}
@@ -454,7 +470,7 @@ export function QueueManager({ doctorId, clinicId, doctorName }: QueueManagerPro
             )}
 
             {/* Call Next Button */}
-            {!calledPatient && !inConsultation && waitingPatients.length > 0 && (
+            {!inConsultation && waitingPatients.length > 0 && (
                 <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
                     <CardContent className="py-6">
                         <div className="flex items-center justify-between">

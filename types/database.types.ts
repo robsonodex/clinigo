@@ -583,6 +583,273 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['doctor_health_insurances']['Insert']>
       }
+      tiss_batches: {
+        Row: {
+          id: string
+          clinic_id: string
+          batch_number: string
+          insurance_company_id: string | null
+          insurance_company_name: string | null
+          reference_month: number
+          reference_year: number
+          status: string
+          total_guides: number | null
+          total_value: number | null
+          approved_value: number | null
+          denied_value: number | null
+          glosa_value: number | null
+          glosa_percentage: number | null
+          xml_file_url: string | null
+          xml_file_size: number | null
+          xml_generated_at: string | null
+          return_file_url: string | null
+          return_processed_at: string | null
+          submission_date: string | null
+          protocol_number: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          submitted_by: string | null
+          submitted_at: string | null
+          import_error_count: number | null
+          orphan_guide_count: number | null
+          tiss_version_used: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          batch_number: string
+          insurance_company_id?: string | null
+          insurance_company_name?: string | null
+          reference_month: number
+          reference_year: number
+          status?: string
+          total_guides?: number | null
+          total_value?: number | null
+          approved_value?: number | null
+          denied_value?: number | null
+          glosa_value?: number | null
+          glosa_percentage?: number | null
+          xml_file_url?: string | null
+          xml_file_size?: number | null
+          xml_generated_at?: string | null
+          return_file_url?: string | null
+          return_processed_at?: string | null
+          submission_date?: string | null
+          protocol_number?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          submitted_by?: string | null
+          submitted_at?: string | null
+          import_error_count?: number | null
+          orphan_guide_count?: number | null
+          tiss_version_used?: string
+        }
+        Update: Partial<Database['public']['Tables']['tiss_batches']['Insert']>
+      }
+      tiss_guides: {
+        Row: {
+          id: string
+          batch_id: string | null
+          clinic_id: string
+          appointment_id: string | null
+          consultation_id: string | null
+          patient_id: string | null
+          doctor_id: string | null
+          guide_number: string
+          guide_type: string
+          patient_cpf: string | null
+          patient_name: string
+          patient_card_number: string
+          patient_card_validity: string | null
+          procedure_code: string
+          procedure_name: string
+          procedure_quantity: number | null
+          unit_value: number
+          total_value: number
+          cid10_code: string | null
+          cid10_description: string | null
+          authorization_code: string | null
+          execution_date: string
+          status: string
+          validation_status: string | null
+          glosa_value: number | null
+          glosa_code: string | null
+          glosa_description: string | null
+          can_appeal: boolean | null
+          appeal_deadline: string | null
+          appeal_status: string | null
+          appeal_xml_url: string | null
+          appeal_response_value: number | null
+          appeal_sent_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+          sent_at: string | null
+          processed_at: string | null
+        }
+        Insert: {
+          id?: string
+          batch_id?: string | null
+          clinic_id: string
+          appointment_id?: string | null
+          consultation_id?: string | null
+          patient_id?: string | null
+          doctor_id?: string | null
+          guide_number: string
+          guide_type: string
+          patient_cpf?: string | null
+          patient_name: string
+          patient_card_number: string
+          patient_card_validity?: string | null
+          procedure_code: string
+          procedure_name: string
+          procedure_quantity?: number | null
+          unit_value: number
+          total_value: number
+          cid10_code?: string | null
+          cid10_description?: string | null
+          authorization_code?: string | null
+          execution_date: string
+          status?: string
+          validation_status?: string | null
+          glosa_value?: number | null
+          glosa_code?: string | null
+          glosa_description?: string | null
+          can_appeal?: boolean | null
+          appeal_deadline?: string | null
+          appeal_status?: string | null
+          appeal_xml_url?: string | null
+          appeal_response_value?: number | null
+          appeal_sent_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          sent_at?: string | null
+          processed_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['tiss_guides']['Insert']>
+      }
+      tiss_glosas: {
+        Row: {
+          id: string
+          clinic_id: string
+          guide_id: string | null
+          batch_id: string | null
+          glosa_code: string
+          glosa_description: string
+          glosa_value: number
+          guide_number: string | null
+          operator_note: string | null
+          received_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          guide_id?: string | null
+          batch_id?: string | null
+          glosa_code: string
+          glosa_description: string
+          glosa_value: number
+          guide_number?: string | null
+          operator_note?: string | null
+          received_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['tiss_glosas']['Insert']>
+      }
+      tiss_returns: {
+        Row: {
+          id: string
+          batch_id: string
+          clinic_id: string
+          return_file_url: string
+          return_file_name: string | null
+          return_file_size: number | null
+          file_type: string | null
+          parsed_data: Json | null
+          processing_status: string | null
+          processing_error: string | null
+          total_guides_processed: number | null
+          total_approved: number | null
+          total_denied: number | null
+          total_partial: number | null
+          amount_requested: number | null
+          amount_approved: number | null
+          amount_denied: number | null
+          uploaded_by: string | null
+          uploaded_at: string | null
+          processed_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          batch_id: string
+          clinic_id: string
+          return_file_url: string
+          return_file_name?: string | null
+          return_file_size?: number | null
+          file_type?: string | null
+          parsed_data?: Json | null
+          processing_status?: string | null
+          processing_error?: string | null
+          total_guides_processed?: number | null
+          total_approved?: number | null
+          total_denied?: number | null
+          total_partial?: number | null
+          amount_requested?: number | null
+          amount_approved?: number | null
+          amount_denied?: number | null
+          uploaded_by?: string | null
+          uploaded_at?: string | null
+          processed_at?: string | null
+          created_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['tiss_returns']['Insert']>
+      }
+      tiss_validation_errors: {
+        Row: {
+          id: string
+          guide_id: string | null
+          batch_id: string | null
+          clinic_id: string
+          error_code: string
+          error_message: string
+          error_field: string | null
+          severity: string
+          current_value: string | null
+          suggested_value: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolution_notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          guide_id?: string | null
+          batch_id?: string | null
+          clinic_id: string
+          error_code: string
+          error_message: string
+          error_field?: string | null
+          severity?: string
+          current_value?: string | null
+          suggested_value?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolution_notes?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['tiss_validation_errors']['Insert']>
+      }
     },
     Views: {
       [_ in never]: never

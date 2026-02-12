@@ -55,7 +55,6 @@ const PLAN_FEATURES: Record<string, { name: string; features: string[] }> = {
         features: [
             'Médicos e unidades ilimitados',
             'Migração dedicada',
-            'Gerente de conta dedicado',
             'Suporte 24/7',
             'SLA garantido 99.5%',
         ],

@@ -13,7 +13,7 @@ import {
     X,
     AlertTriangle,
     ArrowRight,
-    Download,
+
     RefreshCw,
     Crown,
     Zap,
@@ -38,10 +38,11 @@ import {
 
 interface PaymentHistory {
     id: string
-    date: string
+    created_at: string
     amount: number
-    status: 'paid' | 'pending' | 'failed'
-    invoice_url?: string
+    status: string
+    payment_method: string
+    payment_id: string
 }
 
 const PLAN_ICONS: Record<string, any> = {
@@ -108,30 +109,24 @@ export default function AssinaturaPage() {
                 setCurrentPlan(migrateLegacyPlan(rawPlanType))
             }
 
-            // Mock payment history (TODO: implementar tabela real)
-            setPaymentHistory([
-                {
-                    id: '1',
-                    date: '2026-01-15',
-                    amount: 149.00,
-                    status: 'paid',
-                    invoice_url: '#'
-                },
-                {
-                    id: '2',
-                    date: '2025-12-15',
-                    amount: 149.00,
-                    status: 'paid',
-                    invoice_url: '#'
-                },
-                {
-                    id: '3',
-                    date: '2025-11-15',
-                    amount: 149.00,
-                    status: 'paid',
-                    invoice_url: '#'
-                },
-            ])
+            // Load real payment history from payment_logs table
+            const { data: payments } = await supabase
+                .from('payment_logs')
+                .select('id, created_at, amount, status, payment_method, payment_id')
+                .eq('clinic_id', userData.clinic_id)
+                .order('created_at', { ascending: false })
+                .limit(20)
+
+            if (payments && payments.length > 0) {
+                setPaymentHistory(payments.map(p => ({
+                    id: p.id,
+                    created_at: p.created_at,
+                    amount: Number(p.amount),
+                    status: p.status,
+                    payment_method: p.payment_method || '-',
+                    payment_id: p.payment_id || '-',
+                })))
+            }
 
         } catch (error) {
             console.error('Error loading data:', error)
@@ -374,51 +369,57 @@ export default function AssinaturaPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
-                                {paymentHistory.map((payment) => (
-                                    <div
-                                        key={payment.id}
-                                        className="flex items-center justify-between p-4 border rounded-lg"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={cn(
-                                                "p-2 rounded-full",
-                                                payment.status === 'paid' ? 'bg-green-100' :
-                                                    payment.status === 'pending' ? 'bg-yellow-100' : 'bg-red-100'
-                                            )}>
-                                                {payment.status === 'paid' ? (
-                                                    <Check className="w-4 h-4 text-green-600" />
-                                                ) : payment.status === 'pending' ? (
-                                                    <RefreshCw className="w-4 h-4 text-yellow-600" />
-                                                ) : (
-                                                    <X className="w-4 h-4 text-red-600" />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <p className="font-medium">
-                                                    {new Date(payment.date).toLocaleDateString('pt-BR', {
-                                                        day: '2-digit',
-                                                        month: 'long',
-                                                        year: 'numeric'
-                                                    })}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {payment.status === 'paid' ? 'Pago' :
-                                                        payment.status === 'pending' ? 'Pendente' : 'Falhou'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <span className="font-semibold">
-                                                R$ {payment.amount.toFixed(2)}
-                                            </span>
-                                            {payment.invoice_url && (
-                                                <Button variant="ghost" size="sm">
-                                                    <Download className="w-4 h-4" />
-                                                </Button>
-                                            )}
-                                        </div>
+                                {paymentHistory.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                                        <p className="font-medium">Nenhum pagamento registrado</p>
+                                        <p className="text-sm">O histórico aparecerá aqui quando houver pagamentos confirmados.</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    paymentHistory.map((payment) => (
+                                        <div
+                                            key={payment.id}
+                                            className="flex items-center justify-between p-4 border rounded-lg"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "p-2 rounded-full",
+                                                    payment.status === 'APPROVED' ? 'bg-green-100' :
+                                                        payment.status === 'PENDING' ? 'bg-yellow-100' : 'bg-red-100'
+                                                )}>
+                                                    {payment.status === 'APPROVED' ? (
+                                                        <Check className="w-4 h-4 text-green-600" />
+                                                    ) : payment.status === 'PENDING' ? (
+                                                        <RefreshCw className="w-4 h-4 text-yellow-600" />
+                                                    ) : (
+                                                        <X className="w-4 h-4 text-red-600" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {new Date(payment.created_at).toLocaleDateString('pt-BR', {
+                                                            day: '2-digit',
+                                                            month: 'long',
+                                                            year: 'numeric'
+                                                        })}
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {payment.status === 'APPROVED' ? 'Pago' :
+                                                            payment.status === 'PENDING' ? 'Pendente' :
+                                                                payment.status === 'REJECTED' ? 'Rejeitado' :
+                                                                    payment.status === 'CANCELLED' ? 'Cancelado' : payment.status}
+                                                        {payment.payment_method ? ` • ${payment.payment_method}` : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-semibold">
+                                                    R$ {payment.amount.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -458,35 +459,39 @@ export default function AssinaturaPage() {
                                 <div className="flex items-center gap-3 p-4 border rounded-lg">
                                     <CreditCard className="w-8 h-8 text-muted-foreground" />
                                     <div>
-                                        <p className="font-medium">Cartão terminando em ****</p>
+                                        <p className="font-medium">
+                                            {clinic?.payment_method === 'BOLETO' ? 'Boleto Bancário' :
+                                                clinic?.payment_method === 'PIX' ? 'PIX' :
+                                                    clinic?.payment_method === 'CREDIT_CARD' ? 'Cartão de Crédito' :
+                                                        'Nenhuma forma de pagamento registrada'}
+                                        </p>
                                         <p className="text-sm text-muted-foreground">
-                                            Vinculado ao Mercado Pago
+                                            {clinic?.payment_confirmed ? 'Pagamento confirmado' : 'Pagamento pendente'}
                                         </p>
                                     </div>
-                                    <Button variant="outline" className="ml-auto">
-                                        Alterar
-                                    </Button>
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t">
-                                <h4 className="font-medium mb-3">Próxima Cobrança</h4>
-                                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                                    <Calendar className="w-6 h-6" />
-                                    <div>
-                                        <p className="font-medium">
-                                            {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', {
-                                                day: '2-digit',
-                                                month: 'long',
-                                                year: 'numeric'
-                                            })}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            R$ {planConfig?.price || 149},00 - {planConfig?.name}
-                                        </p>
+                            {clinic?.payment_confirmed_at && (
+                                <div className="pt-4 border-t">
+                                    <h4 className="font-medium mb-3">Último Pagamento Confirmado</h4>
+                                    <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                                        <Calendar className="w-6 h-6" />
+                                        <div>
+                                            <p className="font-medium">
+                                                {new Date(clinic.payment_confirmed_at).toLocaleDateString('pt-BR', {
+                                                    day: '2-digit',
+                                                    month: 'long',
+                                                    year: 'numeric'
+                                                })}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {planConfig?.name} - R$ {planConfig?.price || 0}/mês
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

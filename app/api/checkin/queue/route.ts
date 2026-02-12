@@ -138,6 +138,21 @@ export async function POST(request: NextRequest) {
                 })
             }
 
+            case 'recall': {
+                // Re-call an already called patient (updates called_at to re-trigger TV panel)
+                if (!queue_id) throw new ValidationError('queue_id é obrigatório')
+
+                await (supabase
+                    .from('appointment_queue') as any)
+                    .update({ called_at: new Date().toISOString() })
+                    .eq('id', queue_id)
+
+                return successResponse({
+                    message: 'Paciente chamado novamente!',
+                    called: true,
+                })
+            }
+
             case 'start_consultation': {
                 if (!queue_id) throw new ValidationError('queue_id é obrigatório')
 

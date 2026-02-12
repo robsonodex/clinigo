@@ -49,7 +49,7 @@ export default function PainelChamadasPage() {
           doctor:doctors(user:users(full_name))
         `)
                 .eq('appointment_date', today)
-                .in('status', ['WAITING', 'IN_PROGRESS', 'COMPLETED'])
+                .in('status', ['WAITING', 'IN_PROGRESS', 'COMPLETED', 'CONFIRMED'])
                 .order('appointment_time', { ascending: true })
 
             if (data) setAppointments(data as any)
@@ -75,20 +75,19 @@ export default function PainelChamadasPage() {
                             )
                         )
 
-                        // Show call animation when status changes to IN_PROGRESS
+                        // Show call animation when patient is called (CONFIRMED→WAITING)
                         if (
-                            payload.new.status === 'IN_PROGRESS' &&
-                            payload.old?.status === 'WAITING'
+                            payload.new.status === 'WAITING' &&
+                            (payload.old?.status === 'CONFIRMED' || payload.old?.status === 'WAITING')
                         ) {
-                            // Recharger les données complètes pour avoir patient et doctor
                             fetchAppointments()
                             setTimeout(() => {
                                 const updatedApt = appointments.find(a => a.id === payload.new.id)
                                 if (updatedApt) {
                                     setLastCalled(updatedApt)
-                                    setTimeout(() => setLastCalled(null), 5000) // Hide after 5s
+                                    setTimeout(() => setLastCalled(null), 5000)
                                 }
-                            }, 100)
+                            }, 500)
                         }
                     }
                 }

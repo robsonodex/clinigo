@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { ArrowLeft, ArrowRight, Check, Loader2, Stethoscope } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Loader2, Stethoscope, Copy, CheckCircle, Barcode, Download } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -86,6 +86,15 @@ function CadastroContent() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [referralCode, setReferralCode] = useState(refCode?.toUpperCase() || '')
     const [validPartner, setValidPartner] = useState<{ id: string; full_name: string } | null>(null)
+    const [boletoData, setBoletoData] = useState<{
+        linha_digitavel: string
+        codigo_barras: string
+        nosso_numero: string
+        plan_name: string
+        plan_price: number
+        due_date: string
+    } | null>(null)
+    const [copied, setCopied] = useState(false)
     // Não pré-seleciona o plano mesmo quando vem da URL - usuário precisa clicar
     const [formData, setFormData] = useState<Partial<FormData>>({
         plan_type: undefined,
@@ -175,7 +184,7 @@ function CadastroContent() {
                 throw new Error('Senha é obrigatória')
             }
 
-            // Step 1: Pre-register the clinic and get preference URL
+            // Pre-register and generate boleto via Banco Inter
             const response = await fetch('/api/auth/pre-register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -207,18 +216,35 @@ function CadastroContent() {
                 throw new Error(result.error?.message || result.error || 'Erro ao criar pré-cadastro')
             }
 
-            // Step 2: Redirect to Mercado Pago checkout
-            if (result.checkout_url) {
-                toast.success('Redirecionando para o pagamento...')
-                window.location.href = result.checkout_url
+            // Show boleto data on Step 6
+            if (result.success && result.boleto) {
+                setBoletoData({
+                    linha_digitavel: result.boleto.linha_digitavel,
+                    codigo_barras: result.boleto.codigo_barras,
+                    nosso_numero: result.boleto.nosso_numero,
+                    plan_name: result.plan?.name || '',
+                    plan_price: result.plan?.price || 0,
+                    due_date: result.due_date || '',
+                })
+                setCurrentStep(6)
+                toast.success('Boleto gerado com sucesso!')
             } else {
-                throw new Error('URL de pagamento não recebida')
+                throw new Error('Erro ao gerar boleto')
             }
         } catch (error) {
             console.error('Registration error:', error)
             toast.error(error instanceof Error ? error.message : 'Erro ao processar cadastro')
         } finally {
             setIsSubmitting(false)
+        }
+    }
+
+    const handleCopyLinhaDigitavel = () => {
+        if (boletoData?.linha_digitavel) {
+            navigator.clipboard.writeText(boletoData.linha_digitavel)
+            setCopied(true)
+            toast.success('Linha digitável copiada!')
+            setTimeout(() => setCopied(false), 3000)
         }
     }
 
@@ -636,6 +662,123 @@ function CadastroContent() {
                                             )}
                                         </Button>
                                     </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Step 6: Boleto / Payment */}
+                        {currentStep === 6 && boletoData && (
+                            <Card>
+                                <CardHeader className="text-center">
+                                    <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                                        <CheckCircle className="h-8 w-8 text-emerald-600" />
+                                    </div>
+                                    <CardTitle className="text-2xl">Pré-cadastro realizado!</CardTitle>
+                                    <CardDescription>
+                                        Pague o boleto abaixo para ativar sua clínica
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    {/* Plan Summary */}
+                                    <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="font-semibold text-emerald-800">{boletoData.plan_name}</p>
+                                                <p className="text-sm text-emerald-600">Assinatura mensal</p>
+                                            </div>
+                                            <p className="text-2xl font-bold text-emerald-700">
+                                                R$ {boletoData.plan_price.toFixed(2).replace('.', ',')}
+                                            </p>
+                                        </div>
+                                        {boletoData.due_date && (
+                                            <p className="text-xs text-emerald-600 mt-2">
+                                                Vencimento: {new Date(boletoData.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Linha Digitável */}
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2">
+                                            <Barcode className="w-4 h-4" />
+                                            Linha Digitável
+                                        </Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={boletoData.linha_digitavel}
+                                                readOnly
+                                                className="font-mono text-sm bg-gray-50"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={handleCopyLinhaDigitavel}
+                                                className="shrink-0"
+                                            >
+                                                {copied ? (
+                                                    <Check className="w-4 h-4 text-emerald-600" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Instructions */}
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-blue-800 mb-2">📋 Como pagar:</h4>
+                                        <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                                            <li>Copie a linha digitável acima</li>
+                                            <li>Abra o app do seu banco</li>
+                                            <li>Escolha &quot;Pagar Boleto&quot; e cole a linha digitável</li>
+                                            <li>Confirme o pagamento</li>
+                                        </ol>
+                                        <p className="text-xs text-blue-600 mt-3">
+                                            Após a confirmação do pagamento (pode levar até 24h úteis),
+                                            você receberá um e-mail com suas credenciais de acesso.
+                                        </p>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex flex-col gap-3">
+                                        <Button
+                                            type="button"
+                                            size="lg"
+                                            className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                            onClick={handleCopyLinhaDigitavel}
+                                        >
+                                            {copied ? (
+                                                <><Check className="mr-2 w-4 h-4" /> Copiado!</>
+                                            ) : (
+                                                <><Copy className="mr-2 w-4 h-4" /> Copiar Linha Digitável</>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="lg"
+                                            variant="outline"
+                                            className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                            onClick={() => {
+                                                if (boletoData?.nosso_numero) {
+                                                    window.open(`/api/auth/boleto-pdf?nossoNumero=${boletoData.nosso_numero}`, '_blank')
+                                                }
+                                            }}
+                                        >
+                                            <Download className="mr-2 w-4 h-4" /> Baixar Boleto em PDF
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => router.push('/')}
+                                        >
+                                            Voltar para o site
+                                        </Button>
+                                    </div>
+
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        Dúvidas? Entre em contato: suporte@clinigo.app
+                                    </p>
                                 </CardContent>
                             </Card>
                         )}

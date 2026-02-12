@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { Preference } from 'mercadopago'
+import { bancoInterService } from '@/lib/services/bancointer'
 import { PLANS, type PlanType } from '@/lib/constants/plans'
+import { addDays, format } from 'date-fns'
 
 // =============================================================================
-// Pre-Register API - Creates pending registration and payment preference
+// Pre-Register API - Creates pending registration and generates Banco Inter boleto
 // =============================================================================
 
-const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
 
 export async function POST(request: NextRequest) {
     try {
         console.log('[PRE-REGISTER] Starting...')
-        console.log('[PRE-REGISTER] MERCADOPAGO_ACCESS_TOKEN exists:', !!MERCADOPAGO_ACCESS_TOKEN)
-        console.log('[PRE-REGISTER] APP_URL:', APP_URL)
 
         const body = await request.json()
         console.log('[PRE-REGISTER] Body received:', {
@@ -23,6 +21,7 @@ export async function POST(request: NextRequest) {
             clinic_name: body.clinic_name,
             plan_type: body.plan_type,
             hasPassword: !!body.password,
+            referral_code: body.referral_code || null,
         })
 
         const {
@@ -58,6 +57,14 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('[PRE-REGISTER] Plan found:', plan.name, 'price:', plan.price)
+
+        // Free plan - no payment needed
+        if (!plan.price || plan.price === 0) {
+            return NextResponse.json(
+                { error: 'Plano gratuito não requer pagamento. Use o cadastro normal.' },
+                { status: 400 }
+            )
+        }
 
         const supabase = createServiceRoleClient() as any
 
@@ -95,7 +102,6 @@ export async function POST(request: NextRequest) {
         const registrationRef = `REG_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
         // Store pending registration data
-        // We use a registration_pending table to store data before payment
         const { data: pending, error: pendingError } = await supabase
             .from('registration_pending')
             .insert({
@@ -109,116 +115,148 @@ export async function POST(request: NextRequest) {
                 responsible_phone,
                 plan_type,
                 address: address || null,
+                referral_code: referral_code || null,
+                payment_method: 'BOLETO',
                 status: 'PENDING',
-                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h expiration
+                expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48h expiration for boleto
             })
             .select('id')
             .single()
 
-        // If table doesn't exist, continue without it (for backwards compatibility)
-        if (pendingError && !pendingError.message.includes('registration_pending')) {
+        if (pendingError) {
             console.error('[PRE-REGISTER] Error storing pending registration:', pendingError)
-        }
-
-        // Create Mercado Pago preference
-        if (!MERCADOPAGO_ACCESS_TOKEN) {
             return NextResponse.json(
-                { error: 'Pagamento não configurado. Entre em contato com o suporte.' },
+                { error: 'Erro ao salvar dados do pré-cadastro.' },
                 { status: 500 }
             )
         }
 
-        const preference = new Preference({
-            accessToken: MERCADOPAGO_ACCESS_TOKEN
-        })
+        console.log('[PRE-REGISTER] Pending registration saved:', pending?.id)
 
-        // Calculate price
-        const price = plan.price || 0
-        if (price === 0) {
-            // Free plan - just register without payment
-            return NextResponse.json(
-                {
-                    error: 'Plano gratuito não requer pagamento. Use o cadastro normal.',
-                    redirect_url: '/api/auth/register'
-                },
-                { status: 400 }
-            )
-        }
+        // =====================================================================
+        // Generate Boleto via Banco Inter
+        // =====================================================================
+        try {
+            const dueDate = addDays(new Date(), 5) // 5 days to pay
+            const formattedDueDate = format(dueDate, 'yyyy-MM-dd')
 
-        const expirationDate = new Date()
-        expirationDate.setHours(expirationDate.getHours() + 24)
+            // Clean phone for boleto
+            const cleanPhone = phone ? phone.replace(/\D/g, '') : ''
+            const ddd = cleanPhone.length >= 2 ? cleanPhone.substring(0, 2) : '21'
+            const phoneNumber = cleanPhone.length > 2 ? cleanPhone.substring(2) : '900000000'
 
-        const isLocalhost = APP_URL.includes('localhost')
+            // Parse address for boleto
+            const addr = address || {}
+            const parsedAddress = {
+                logradouro: String(addr.street || addr.logradouro || 'Rua nao informada').substring(0, 90),
+                numero: String(addr.number || addr.numero || 'S/N').substring(0, 10),
+                bairro: String(addr.neighborhood || addr.bairro || 'Centro').substring(0, 60),
+                cidade: String(addr.city || addr.cidade || 'Rio de Janeiro').substring(0, 60),
+                uf: String(addr.state || addr.uf || 'RJ').substring(0, 2),
+                cep: String(addr.zip || addr.cep || '20000000').replace(/\D/g, '').substring(0, 8),
+            }
 
-        const result = await preference.create({
-            body: {
-                metadata: {
-                    registration_ref: registrationRef,
-                    plan_type: plan_type,
+            // seuNumero must be max 15 chars
+            const seuNumero = ('REG' + Date.now().toString().slice(-12)).substring(0, 15)
+
+            // Determine pagador type
+            const cleanCnpj = cnpj ? cnpj.replace(/\D/g, '') : ''
+            const tipoPessoa = cleanCnpj.length > 11 ? 'JURIDICA' : 'FISICA'
+
+            const boletoData = {
+                seuNumero,
+                valorNominal: plan.price,
+                dataVencimento: formattedDueDate,
+                numDiasAgenda: 5,
+                pagador: {
+                    cpfCnpj: cleanCnpj || '00000000000',
+                    tipoPessoa: tipoPessoa as 'FISICA' | 'JURIDICA',
+                    nome: String(full_name || clinic_name || 'Nao informado').substring(0, 100),
+                    endereco: parsedAddress.logradouro,
+                    numero: parsedAddress.numero,
+                    bairro: parsedAddress.bairro,
+                    cidade: parsedAddress.cidade,
+                    uf: parsedAddress.uf,
+                    cep: parsedAddress.cep,
                     email: email,
-                    clinic_name: clinic_name,
-                    full_name: full_name,
-                    cnpj: cnpj,
-                    phone: phone,
-                    password_hash: password, // Will be used by webhook to create user
-                    address: address ? JSON.stringify(address) : null,
-                    referral_code: referral_code || null, // Partner referral code
-                    is_new_registration: true, // Flag for webhook
+                    ddd: ddd,
+                    telefone: phoneNumber,
                 },
-                items: [{
-                    id: registrationRef,
-                    title: `CliniGo ${plan.name} - Assinatura Mensal`,
-                    description: `Assinatura do plano ${plan.name} para ${clinic_name}`,
-                    quantity: 1,
-                    unit_price: price,
-                    currency_id: 'BRL',
-                }],
-                payer: {
-                    email: email,
-                    name: full_name,
-                    phone: phone ? {
-                        area_code: phone.substring(0, 2),
-                        number: phone.substring(2),
-                    } : undefined,
-                    identification: cnpj ? {
-                        type: 'CNPJ',
-                        number: cnpj.replace(/\D/g, ''),
-                    } : undefined,
-                },
-                external_reference: registrationRef,
-                notification_url: isLocalhost ? undefined : `${APP_URL}/api/billing/webhook`,
-                back_urls: {
-                    success: `${APP_URL}/pagamento/sucesso?ref=${registrationRef}`,
-                    failure: `${APP_URL}/pagamento/erro?ref=${registrationRef}`,
-                    pending: `${APP_URL}/pagamento/pendente?ref=${registrationRef}`,
-                },
-                // auto_return only works with non-localhost URLs
-                auto_return: isLocalhost ? undefined : 'approved',
-                expires: true,
-                expiration_date_to: expirationDate.toISOString(),
-                statement_descriptor: 'CLINIGO',
-                payment_methods: {
-                    installments: 12,
+                mensagem: {
+                    linha1: `CliniGo - Plano ${plan.name}`,
+                    linha2: `Cadastro: ${clinic_name}`,
                 },
             }
-        })
 
-        if (!result?.init_point) {
-            console.error('[PRE-REGISTER] Mercado Pago response:', result)
+            console.log('[PRE-REGISTER] Generating boleto via Banco Inter...')
+            const boleto = await bancoInterService.createBoleto(boletoData)
+
+            if (!boleto || !boleto.nossoNumero) {
+                console.error('[PRE-REGISTER] Invalid Inter response:', boleto)
+                throw new Error('Resposta inválida do banco')
+            }
+
+            console.log('[PRE-REGISTER] Boleto generated:', boleto.nossoNumero)
+
+            // Update registration_pending with boleto data
+            await supabase
+                .from('registration_pending')
+                .update({
+                    boleto_nosso_numero: boleto.nossoNumero,
+                    boleto_linha_digitavel: boleto.linhaDigitavel,
+                    boleto_codigo_barras: boleto.codigoBarras,
+                    mercadopago_preference_id: boleto.nossoNumero, // Keep compatibility with webhook lookup
+                })
+                .eq('id', pending.id)
+
+            // Also save in payment_requests for webhook processing
+            try {
+                await (supabase.from('payment_requests').insert({
+                    clinic_id: null, // Clinic not created yet
+                    amount: plan.price,
+                    plan_type: plan_type,
+                    description: `Cadastro ${plan.name} - ${clinic_name}`,
+                    mercadopago_preference_id: boleto.nossoNumero,
+                    mercadopago_init_point: boleto.linhaDigitavel,
+                    status: 'PENDING',
+                } as any) as any)
+            } catch (e: any) {
+                console.warn('[PRE-REGISTER] payment_requests insert failed (non-blocking):', e.message)
+            }
+
+            console.log(`✅ [PRE-REGISTER] Boleto created for ${email}, ref=${registrationRef}`)
+
+            return NextResponse.json({
+                success: true,
+                payment_method: 'BOLETO',
+                reference: registrationRef,
+                boleto: {
+                    linha_digitavel: boleto.linhaDigitavel,
+                    codigo_barras: boleto.codigoBarras,
+                    nosso_numero: boleto.nossoNumero,
+                },
+                plan: {
+                    name: plan.name,
+                    price: plan.price,
+                },
+                due_date: formattedDueDate,
+            })
+
+        } catch (interError: any) {
+            console.error('=== ERRO BANCO INTER (PRE-REGISTER) ===')
+            console.error('Full error:', JSON.stringify(interError, Object.getOwnPropertyNames(interError), 2))
+            console.error('Response data:', interError.response?.data)
+            console.error('Response status:', interError.response?.status)
+            console.error('=== FIM DEBUG ===')
+
             return NextResponse.json(
-                { error: 'Erro ao criar link de pagamento' },
+                {
+                    error: 'Erro ao gerar boleto de pagamento',
+                    details: interError.response?.data?.message || interError.message || 'Erro desconhecido',
+                },
                 { status: 500 }
             )
         }
-
-        console.log(`✅ [PRE-REGISTER] Created preference for ${email}, ref=${registrationRef}`)
-
-        return NextResponse.json({
-            success: true,
-            checkout_url: result.init_point,
-            sandbox_url: result.sandbox_init_point,
-            reference: registrationRef,
-        })
 
     } catch (error) {
         console.error('[PRE-REGISTER] Error:', error)

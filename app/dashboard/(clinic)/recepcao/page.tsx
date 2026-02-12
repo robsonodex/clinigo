@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-    Users, Clock, CheckCircle, XCircle, AlertTriangle,
-    Plus, Search, QrCode, User, Calendar, Phone, MessageCircle, Settings, Camera, FileText
+    Users, Clock, CheckCircle, CheckCircle2, XCircle, AlertTriangle,
+    Plus, Search, QrCode, User, UserX, Calendar, Phone, MessageCircle, Settings, FileText,
+    Megaphone, Bell, Loader2, Tv
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -19,6 +20,8 @@ import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { QRCodeSVG } from 'qrcode.react'
 import { QRScannerDialog } from '@/components/reception/qr-scanner-dialog'
 import { CheckinDocumentsModal } from './components/checkin-documents-modal'
+import { createClient } from '@/lib/supabase/client'
+import { useUser } from '@/hooks/use-user'
 
 interface QueueItem {
     id: string
@@ -38,7 +41,17 @@ interface QueueItem {
     isPriority: boolean
     status: string
     notes?: string
-    checkedInAt?: string // 🔥 NEW: Check-in timestamp
+    checkedInAt?: string
+    consulting_room_id?: string
+}
+
+interface ConsultingRoom {
+    id: string
+    name: string
+    display_name: string | null
+    room_number: number
+    doctor_id: string | null
+    doctor?: { id: string; user: { full_name: string }; specialty: string }
 }
 
 interface Stats {
@@ -50,6 +63,7 @@ interface Stats {
 
 export default function RecepcaoPage() {
     const { toast } = useToast()
+    const { user: currentUser } = useUser()
     const [queue, setQueue] = useState<QueueItem[]>([])
     const [stats, setStats] = useState<Stats>({
         waiting_count: 0,
@@ -77,6 +91,12 @@ export default function RecepcaoPage() {
     const [documentsModalOpen, setDocumentsModalOpen] = useState(false)
     const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
     const [selectedPatientName, setSelectedPatientName] = useState<string>('')
+    const [callingId, setCallingId] = useState<string | null>(null)
+    const [actionId, setActionId] = useState<string | null>(null)
+    const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([])
+    const [preCheckinCount, setPreCheckinCount] = useState(0)
+    const [preCheckinAlerts, setPreCheckinAlerts] = useState<Array<{ id: string; patientName: string; time: string }>>([])
+    const [showNoShowList, setShowNoShowList] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -85,28 +105,174 @@ export default function RecepcaoPage() {
         return () => clearInterval(interval)
     }, [refreshInterval]) // Re-create interval when refreshInterval changes
 
+    // Realtime subscription for pre-check-in notifications
+    useEffect(() => {
+        const supabase = createClient()
+        const channel = supabase
+            .channel('precheckin_realtime')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'pre_checkin_submissions',
+                },
+                async (payload: any) => {
+                    // A new pre-check-in was submitted — notify and refresh
+                    const newSubmission = payload.new
+                    if (newSubmission?.status === 'completed') {
+                        // Fetch patient name for the alert
+                        const { data: apt } = await (supabase as any)
+                            .from('appointments')
+                            .select('patients(full_name)')
+                            .eq('id', newSubmission.appointment_id)
+                            .single()
+
+                        const patientName = apt?.patients?.full_name || 'Paciente'
+                        setPreCheckinAlerts(prev => [
+                            { id: newSubmission.id, patientName, time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
+                            ...prev.slice(0, 4) // Keep max 5 alerts
+                        ])
+                        setPreCheckinCount(prev => prev + 1)
+                        toast({
+                            title: '📋 Novo Pré-Check-in Online!',
+                            description: `${patientName} completou o pré-check-in.`,
+                        })
+                        loadData() // Refresh queue
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            channel.unsubscribe()
+        }
+    }, [])
+
     async function loadData() {
         setLoading(true)
         try {
-            // Load stats
-            const statsRes = await fetch('/api/reception/dashboard')
-            if (statsRes.ok) {
-                const data = await statsRes.json()
-                if (data.stats) {
-                    setStats(data.stats)
-                }
-            }
-
-            // Load queue
+            // Load queue and calculate stats locally for consistency
             const queueRes = await fetch('/api/reception/queue')
             if (queueRes.ok) {
                 const data = await queueRes.json()
-                setQueue(data.queue || [])
+                const q: QueueItem[] = data.queue || []
+                setQueue(q)
+
+                // Calculate stats from queue (Dashboard API is redundant for counts)
+                setStats({
+                    waiting_count: q.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).length,
+                    in_service_count: q.filter(i => i.status === 'IN_PROGRESS').length,
+                    completed_count: q.filter(i => i.status === 'COMPLETED').length,
+                    no_show_count: q.filter(i => i.status === 'NO_SHOW').length
+                })
+            }
+            // Load consulting rooms
+            const roomsRes = await fetch('/api/consulting-rooms')
+            if (roomsRes.ok) {
+                const data = await roomsRes.json()
+                setConsultingRooms(data.rooms || [])
             }
         } catch (error) {
             console.error('Error loading reception data:', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    async function handleCallPatient(appointmentId: string, patientName: string) {
+        setCallingId(appointmentId)
+        try {
+            const res = await fetch('/api/reception/call-patient', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId })
+            })
+
+            if (res.ok) {
+                toast({
+                    title: '📢 Paciente Chamado!',
+                    description: `${patientName} foi chamado(a) para atendimento.`,
+                })
+                loadData()
+            } else {
+                const errData = await res.json()
+                throw new Error(errData.error || 'Falha ao chamar paciente')
+            }
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: error instanceof Error ? error.message : 'Não foi possível chamar o paciente',
+            })
+        } finally {
+            setCallingId(null)
+        }
+    }
+
+    async function handleStartService(appointmentId: string, patientName: string) {
+        setActionId(appointmentId)
+        try {
+            const res = await fetch('/api/reception/start-service', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId })
+            })
+            if (res.ok) {
+                toast({ title: '🩺 Em Atendimento', description: `${patientName} está em atendimento.` })
+                loadData()
+            } else {
+                const errData = await res.json()
+                throw new Error(errData.error || 'Falha ao iniciar atendimento')
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao iniciar atendimento' })
+        } finally {
+            setActionId(null)
+        }
+    }
+
+    async function handleCompleteService(appointmentId: string, patientName: string) {
+        setActionId(appointmentId)
+        try {
+            const res = await fetch('/api/reception/complete-service', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId })
+            })
+            if (res.ok) {
+                toast({ title: '✅ Concluído', description: `Atendimento de ${patientName} concluído.` })
+                loadData()
+            } else {
+                const errData = await res.json()
+                throw new Error(errData.error || 'Falha ao concluir atendimento')
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao concluir atendimento' })
+        } finally {
+            setActionId(null)
+        }
+    }
+
+    async function handleNoShow(appointmentId: string, patientName: string) {
+        setActionId(appointmentId)
+        try {
+            const res = await fetch('/api/reception/no-show', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId })
+            })
+            if (res.ok) {
+                toast({ title: 'Não Compareceu', description: `${patientName} marcado como não compareceu.` })
+                loadData()
+            } else {
+                const errData = await res.json()
+                throw new Error(errData.error || 'Falha ao marcar não comparecimento')
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao marcar não comparecimento' })
+        } finally {
+            setActionId(null)
         }
     }
 
@@ -239,10 +405,25 @@ export default function RecepcaoPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    {/* Check-in Fácil (Face Recognition) Button */}
+                    {/* 📺 TV Panel Link */}
+                    {currentUser?.clinic_id && (
+                        <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => {
+                                const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
+                                window.open(url, '_blank')
+                            }}
+                        >
+                            <Tv className="w-4 h-4" />
+                            Painel TV
+                        </Button>
+                    )}
+
+                    {/* Check-in Fácil (Pré-Check-in Online) Button */}
                     <Link href="/dashboard/recepcao/face-checkin">
-                        <Button variant="outline" className="gap-2">
-                            <Camera className="w-4 h-4" />
+                        <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-6 text-base font-semibold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all">
+                            <CheckCircle2 className="w-5 h-5" />
                             Check-in Fácil
                         </Button>
                     </Link>
@@ -409,11 +590,11 @@ export default function RecepcaoPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors shadow-sm hover:shadow-md" onClick={() => setShowNoShowList(true)} role="button" tabIndex={0}>
                     <CardContent className="pt-6">
                         <div className="flex items-center gap-3">
                             <div className="p-3 bg-red-100 rounded-lg">
-                                <XCircle className="w-5 h-5 text-red-600" />
+                                <UserX className="w-5 h-5 text-red-600" />
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-red-600">
@@ -426,107 +607,215 @@ export default function RecepcaoPage() {
                 </Card>
             </div>
 
-            {/* Queue */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Fila de Atendimento</CardTitle>
-                    <CardDescription>
-                        {queue.length} {queue.length === 1 ? 'paciente' : 'pacientes'} na fila
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {loading ? (
-                        <p className="text-center py-8 text-muted-foreground">Carregando...</p>
-                    ) : queue.length === 0 ? (
-                        <p className="text-center py-8 text-muted-foreground">
-                            Nenhum paciente na fila
-                        </p>
-                    ) : (
-                        <div className="space-y-3">
-                            {queue.map((item, index) => (
-                                <div
-                                    key={item.id}
-                                    className={`p-4 rounded-lg border-2 ${item.isPriority ? 'border-red-200 bg-red-50' : 'border-border'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-bold text-primary">
-                                                {index + 1}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="font-semibold">{item.patient?.full_name || 'Paciente não identificado'}</h4>
-                                                    {item.isPriority && (
-                                                        <Badge variant="destructive" className="text-xs">
-                                                            <AlertTriangle className="w-3 h-3 mr-1" />
-                                                            Prioridade
-                                                        </Badge>
-                                                    )}
-                                                    {/* 🔥 UPDATED: Show different badge based on check-in status */}
-                                                    {item.type === 'appointment' && item.checkedInAt ? (
-                                                        <Badge variant="default" className="text-xs bg-green-600">
-                                                            <CheckCircle className="w-3 h-3 mr-1" />
-                                                            Check-in Realizado
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {item.type === 'appointment' ? 'Agendado' : 'Walk-in'}
-                                                        </Badge>
-                                                    )}
+            <Dialog open={showNoShowList} onOpenChange={setShowNoShowList}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Pacientes que não compareceram</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                        {stats.no_show_count === 0 ? (
+                            <p className="text-center text-muted-foreground py-4 text-sm">Nenhum paciente nesta lista.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {queue.filter(i => i.status === 'NO_SHOW').map(item => (
+                                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg bg-red-50/50 border-red-100">
+                                        <div>
+                                            <p className="font-medium text-sm">{item.patient.full_name}</p>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                                <Clock className="w-3 h-3" />
+                                                Chegada original: {getTimeWaiting(item.arrivalTime)}
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Ausente</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Pre-Check-in Realtime Alerts */}
+            {
+                preCheckinAlerts.length > 0 && (
+                    <Card className="border-2 border-amber-300 bg-amber-50">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Bell className="w-5 h-5 text-amber-600" />
+                                Pré-Check-ins Online Recentes
+                                <Badge className="bg-amber-600 text-white">{preCheckinAlerts.length}</Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            <div className="space-y-2">
+                                {preCheckinAlerts.map((alert) => (
+                                    <div key={alert.id} className="flex items-center justify-between p-2 rounded-lg bg-white border border-amber-200">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                                            <span className="font-medium text-sm">{alert.patientName}</span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">{alert.time}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-2 w-full text-amber-700 hover:bg-amber-100"
+                                onClick={() => setPreCheckinAlerts([])}
+                            >
+                                Limpar notificações
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )
+            }
+
+            {/* 3-Panel Queue Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Panel 1: Aguardando */}
+                <Card className="border-t-4 border-t-amber-500">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-amber-600" />
+                            Aguardando
+                            <Badge className="bg-amber-100 text-amber-800">
+                                {queue.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).length}
+                            </Badge>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        {loading ? (
+                            <p className="text-center py-6 text-muted-foreground text-sm">Carregando...</p>
+                        ) : queue.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).length === 0 ? (
+                            <p className="text-center py-6 text-muted-foreground text-sm">Nenhum paciente aguardando</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {queue.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
+                                    <div key={item.id} className={`p-3 rounded-lg border ${item.isPriority ? 'border-red-200 bg-red-50' : 'border-border'}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-bold text-sm shrink-0">
+                                                    {index + 1}
                                                 </div>
-                                                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        Aguardando há {getTimeWaiting(item.arrivalTime)}
-                                                    </span>
-                                                    {item.doctor && (
-                                                        <span className="flex items-center gap-1">
-                                                            <User className="w-3 h-3" />
-                                                            {item.doctor.user.name}
+                                                <div className="min-w-0">
+                                                    <h4 className="font-semibold text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            {getTimeWaiting(item.arrivalTime)}
                                                         </span>
-                                                    )}
+                                                        {item.status === 'WAITING' && (
+                                                            <Badge className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0">Chamado</Badge>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {item.notes && (
-                                                    <p className="text-sm text-muted-foreground mt-1">
-                                                        {item.notes}
-                                                    </p>
+                                            </div>
+                                            <div className="flex gap-1 shrink-0">
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} title="Documentos">
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                </Button>
+                                                {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
+                                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleCheckIn(item.id)}>
+                                                        <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                                                        Check-in
+                                                    </Button>
                                                 )}
+                                                {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
+                                                    <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                        {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
+                                                    </Button>
+                                                )}
+                                                {item.status === 'WAITING' && (
+                                                    <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStartService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
+                                                        {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>🩺 Em Atend.</>}
+                                                    </Button>
+                                                )}
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                                    <UserX className="w-3.5 h-3.5" />
+                                                </Button>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            {/* Ver Documentos Button */}
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => {
-                                                    setSelectedAppointmentId(item.id)
-                                                    setSelectedPatientName(item.patient?.full_name || '')
-                                                    setDocumentsModalOpen(true)
-                                                }}
-                                                title="Ver documentos do pré-check-in"
-                                            >
-                                                <FileText className="w-4 h-4" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Panel 2: Em Atendimento */}
+                <Card className="border-t-4 border-t-emerald-500">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Users className="w-5 h-5 text-emerald-600" />
+                            Em Atendimento
+                            <Badge className="bg-emerald-100 text-emerald-800">
+                                {queue.filter(i => i.status === 'IN_PROGRESS').length}
+                            </Badge>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        {queue.filter(i => i.status === 'IN_PROGRESS').length === 0 ? (
+                            <p className="text-center py-6 text-muted-foreground text-sm">Nenhum paciente em atendimento</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {queue.filter(i => i.status === 'IN_PROGRESS').map((item) => (
+                                    <div key={item.id} className="p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                                        <div className="flex items-center justify-between">
+                                            <div className="min-w-0">
+                                                <h4 className="font-semibold text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                                {item.doctor && (
+                                                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                        <User className="w-3 h-3" />
+                                                        {item.doctor.user.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <Button size="sm" className="h-8 text-xs bg-gray-600 hover:bg-gray-700 text-white shrink-0" onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
+                                                {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>✅ Concluir</>}
                                             </Button>
-                                            {/* 🔥 UPDATED: Only show check-in button if NOT yet checked in */}
-                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleCheckIn(item.id)}
-                                                >
-                                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                                    Check-in
-                                                </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Panel 3: Concluídos */}
+                <Card className="border-t-4 border-t-gray-400">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <CheckCircle className="w-5 h-5 text-gray-500" />
+                            Concluídos
+                            <Badge className="bg-gray-100 text-gray-600">
+                                {queue.filter(i => i.status === 'COMPLETED').length}
+                            </Badge>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        {queue.filter(i => i.status === 'COMPLETED').length === 0 ? (
+                            <p className="text-center py-6 text-muted-foreground text-sm">Nenhum atendimento concluído</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {queue.filter(i => i.status === 'COMPLETED').map((item) => (
+                                    <div key={item.id} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                        <div className="min-w-0">
+                                            <h4 className="font-medium text-sm text-gray-600 truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            {item.doctor && (
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                    <User className="w-3 h-3" />
+                                                    {item.doctor.user.name}
+                                                </span>
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Success Dialog */}
             <Dialog open={!!createdWalkIn} onOpenChange={(open) => !open && setCreatedWalkIn(null)}>
@@ -555,17 +844,19 @@ export default function RecepcaoPage() {
             </Dialog>
 
             {/* Documents Modal */}
-            {selectedAppointmentId && (
-                <CheckinDocumentsModal
-                    isOpen={documentsModalOpen}
-                    onClose={() => {
-                        setDocumentsModalOpen(false)
-                        setSelectedAppointmentId(null)
-                    }}
-                    appointmentId={selectedAppointmentId}
-                    patientName={selectedPatientName}
-                />
-            )}
-        </div>
+            {
+                selectedAppointmentId && (
+                    <CheckinDocumentsModal
+                        isOpen={documentsModalOpen}
+                        onClose={() => {
+                            setDocumentsModalOpen(false)
+                            setSelectedAppointmentId(null)
+                        }}
+                        appointmentId={selectedAppointmentId}
+                        patientName={selectedPatientName}
+                    />
+                )
+            }
+        </div >
     )
 }

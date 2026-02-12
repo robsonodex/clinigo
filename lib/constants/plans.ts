@@ -109,7 +109,6 @@ export const PLANS: Record<PlanType, PlanConfig> = {
             { name: 'Até 3 unidades', included: true },
             { name: 'TISS completo', included: true, tooltip: 'Guias, XML ANS, validação XSD, assinatura digital' },
             { name: 'Check-in Facial', included: true },
-            { name: 'Transcrição IA', included: true, tooltip: 'Transcrição com OpenAI Whisper' },
             { name: 'Auditoria financeira', included: true },
             { name: 'Dashboards customizados', included: true },
             { name: 'API/Webhooks', included: true },
@@ -145,7 +144,6 @@ export const PLANS: Record<PlanType, PlanConfig> = {
             { name: 'Atendimento direto', included: true },
             { name: 'Consultoria de implantação', included: true },
             { name: 'SLA garantido 99.5%', included: true },
-            { name: 'Gerente de conta dedicado', included: true },
         ],
         limits: {
             max_doctors: -1,

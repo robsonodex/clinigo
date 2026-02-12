@@ -49,6 +49,17 @@ const nextConfig = {
     //     return config
     // },
 
+    // Rewrite: route.ts moved to list/ to fix Next.js 16 Vercel bug where
+    // route.ts + [id]/ at same level prevents dynamic route registration
+    async rewrites() {
+        return [
+            {
+                source: '/api/appointments',
+                destination: '/api/appointments/list',
+            },
+        ]
+    },
+
     // Headers for security and caching
     async headers() {
         return [

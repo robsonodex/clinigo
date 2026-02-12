@@ -42,6 +42,9 @@ const PUBLIC_ROUTES = [
     '/api/auth/login',
     '/api/auth/signup',
     '/api/auth/register',
+    '/api/auth/pre-register', // Self-registration with Banco Inter boleto - public for new clinics
+    '/api/auth/boleto-pdf', // Boleto PDF download for registration - public
+    '/api/webhooks/bancointer', // Banco Inter webhook - CRITICAL for payment confirmation
     '/api/doctors',
     '/api/doctors/', // Allow dynamic doctor routes (profile, schedules)
     '/api/clinics/by-slug/', // Public clinic lookup by slug for booking pages
@@ -321,6 +324,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/entrar') ||
         pathname.startsWith('/paciente/registro') ||
         pathname.startsWith('/video/') || // Patient video room via token link
+        pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
         pathname.match(/^\/[^/]+\/agendar/)
 
     // Public routes/pages without user = allow

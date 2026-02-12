@@ -26,12 +26,33 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { ChevronLeft, Loader2 } from 'lucide-react'
+import { ChevronLeft, Loader2, Dices, Copy, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
+
+function generateSecurePassword(): string {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+    const lower = 'abcdefghjkmnpqrstuvwxyz'
+    const digits = '23456789'
+    const special = '@#$!%&*'
+    const all = upper + lower + digits + special
+
+    let password = ''
+    password += upper[Math.floor(Math.random() * upper.length)]
+    password += lower[Math.floor(Math.random() * lower.length)]
+    password += digits[Math.floor(Math.random() * digits.length)]
+    password += special[Math.floor(Math.random() * special.length)]
+
+    for (let i = 0; i < 8; i++) {
+        password += all[Math.floor(Math.random() * all.length)]
+    }
+
+    return password.split('').sort(() => Math.random() - 0.5).join('')
+}
 
 export default function NewClinicPage() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     const form = useForm<CreateClinicData>({
         resolver: zodResolver(createClinicSchema),
@@ -228,9 +249,65 @@ export default function NewClinicPage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Senha Temporária</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="password" placeholder="******" {...field} />
-                                                    </FormControl>
+                                                    <div className="flex gap-2">
+                                                        <FormControl>
+                                                            <div className="relative flex-1">
+                                                                <Input
+                                                                    type={showPassword ? 'text' : 'password'}
+                                                                    placeholder="******"
+                                                                    {...field}
+                                                                    className="pr-10"
+                                                                />
+                                                                {field.value && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                                                        onClick={() => setShowPassword(!showPassword)}
+                                                                        title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                                                    >
+                                                                        {showPassword ? (
+                                                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                                        ) : (
+                                                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                                                        )}
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </FormControl>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            title="Gerar senha segura"
+                                                            onClick={() => {
+                                                                const pwd = generateSecurePassword()
+                                                                form.setValue('admin_password', pwd)
+                                                                setShowPassword(true)
+                                                                toast.success('Senha gerada!')
+                                                            }}
+                                                        >
+                                                            <Dices className="h-4 w-4" />
+                                                        </Button>
+                                                        {field.value && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="icon"
+                                                                title="Copiar senha"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(field.value || '')
+                                                                    toast.success('Senha copiada!')
+                                                                }}
+                                                            >
+                                                                <Copy className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                    <FormDescription>
+                                                        Clique no 🎲 para gerar uma senha segura
+                                                    </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}

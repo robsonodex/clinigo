@@ -1,125 +1,892 @@
 /**
- * Supabase Database Types
- * This file should be regenerated using: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > lib/supabase/database.types.ts
- * For now, using a minimal definition to allow build to pass
+ * Database Types for CliniGo
+ * Regenerate from Supabase: npx supabase gen types typescript --project-id YOUR_PROJECT_ID
  */
 
 export type Json =
-    | string
-    | number
-    | boolean
-    | null
-    | { [key: string]: Json | undefined }
-    | Json[]
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export interface Database {
-    public: {
-        Tables: {
-            [key: string]: {
-                Row: Record<string, unknown>
-                Insert: Record<string, unknown>
-                Update: Record<string, unknown>
-                Relationships: unknown[]
-            }
+  public: {
+    Tables: {
+      clinics: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          email: string | null
+          phone: string | null
+          address: string | null
+          logo_url: string | null
+          plan_type: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+          plan_limits: Json
+          is_active: boolean
+          addons: Json | null
+          mercadopago_access_token: string | null
+          theme: Json | null
+          public_page_settings: Json | null
+          created_at: string
+          updated_at: string
+          subscription_due_date?: string | null
+          last_payment_date?: string | null
+          payment_status?: string | null
+          payment_confirmed?: boolean
+          payment_method?: string | null
+          payment_confirmed_at?: string | null
+          mercadopago_payment_id?: string | null
+          mercadopago_subscription_id?: string | null
+          payment_expiration_date?: string | null
+          is_demo?: boolean | null
         }
-        Views: {
-            [key: string]: {
-                Row: Record<string, unknown>
-                Relationships: unknown[]
-            }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          logo_url?: string | null
+          plan_type?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+          plan_limits?: Json
+          is_active?: boolean
+          addons?: Json | null
+          mercadopago_access_token?: string | null
+          theme?: Json | null
+          public_page_settings?: Json | null
+          created_at?: string
+          updated_at?: string
+          subscription_due_date?: string | null
+          last_payment_date?: string | null
+          payment_status?: string | null
+          payment_confirmed?: boolean
+          payment_method?: string | null
+          payment_confirmed_at?: string | null
+          mercadopago_payment_id?: string | null
+          mercadopago_subscription_id?: string | null
+          payment_expiration_date?: string | null
         }
-        Functions: {
-            [key: string]: {
-                Args: Record<string, unknown>
-                Returns: unknown
-            }
+        Update: Partial<Database['public']['Tables']['clinics']['Insert']>
+      }
+      users: {
+        Row: {
+          id: string
+          email: string
+          full_name: string
+          phone: string | null
+          avatar_url: string | null
+          role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+          clinic_id: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
         }
-        Enums: {
-            [key: string]: string
+        Insert: {
+          id?: string
+          email: string
+          full_name: string
+          phone?: string | null
+          avatar_url?: string | null
+          role?: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+          clinic_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
-        CompositeTypes: {
-            [key: string]: Record<string, unknown>
+        Update: Partial<Database['public']['Tables']['users']['Insert']>
+      }
+      doctors: {
+        Row: {
+          id: string
+          clinic_id: string
+          user_id: string
+          specialty: string
+          crm: string
+          consultation_price: number
+          consultation_duration: number
+          display_settings: Json | null
+          is_accepting_appointments: boolean
+          is_active: boolean
+          user?: { full_name: string }
+          created_at: string
+          updated_at: string
         }
+        Insert: {
+          id?: string
+          clinic_id: string
+          user_id: string
+          specialty: string
+          crm: string
+          consultation_price?: number
+          consultation_duration?: number
+          display_settings?: Json | null
+          is_accepting_appointments?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['doctors']['Insert']>
+      }
+      patients: {
+        Row: {
+          id: string
+          clinic_id: string
+          cpf: string
+          full_name: string
+          email: string
+          phone: string
+          date_of_birth: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          cpf: string
+          full_name: string
+          email: string
+          phone: string
+          date_of_birth?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['patients']['Insert']>
+      }
+      appointments: {
+        Row: {
+          id: string
+          clinic_id: string
+          doctor_id: string
+          patient_id: string
+          appointment_date: string
+          appointment_time: string
+          status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+          video_link: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          doctor_id: string
+          patient_id: string
+          appointment_date: string
+          appointment_time: string
+          status?: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+          video_link?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['appointments']['Insert']>
+      }
+      payments: {
+        Row: {
+          id: string
+          clinic_id: string
+          appointment_id: string
+          patient_id: string
+          amount: number
+          status: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
+          mercadopago_preference_id: string | null
+          mercadopago_external_reference: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          appointment_id: string
+          patient_id: string
+          amount: number
+          status?: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
+          mercadopago_preference_id?: string | null
+          mercadopago_external_reference?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['payments']['Insert']>
+      }
+      financial_entries: {
+        Row: {
+          id: string
+          clinic_id: string
+          type: 'income' | 'expense'
+          category: string
+          description: string
+          amount: number
+          payment_method: string | null
+          status: 'pending' | 'paid' | 'cancelled'
+          paid_at: string | null
+          reference_type: string | null
+          reference_id: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          type: 'income' | 'expense'
+          category: string
+          description: string
+          amount: number
+          payment_method?: string | null
+          status?: 'pending' | 'paid' | 'cancelled'
+          paid_at?: string | null
+          reference_type?: string | null
+          reference_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['financial_entries']['Insert']>
+      }
+      schedules: {
+        Row: {
+          id: string
+          doctor_id: string
+          day_of_week: number
+          start_time: string
+          end_time: string
+          slot_duration: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          doctor_id: string
+          day_of_week: number
+          start_time: string
+          end_time: string
+          slot_duration?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['schedules']['Insert']>
+      }
+      medical_records: {
+        Row: {
+          id: string
+          clinic_id: string
+          patient_id: string
+          doctor_id: string
+          appointment_id: string | null
+          diagnosis: string | null
+          prescription: string | null
+          notes: string | null
+          chief_complaint: string | null
+          present_illness: string | null
+          physical_exam: string | null
+          treatment_plan: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          patient_id: string
+          doctor_id: string
+          appointment_id?: string | null
+          diagnosis?: string | null
+          prescription?: string | null
+          notes?: string | null
+          chief_complaint?: string | null
+          present_illness?: string | null
+          physical_exam?: string | null
+          treatment_plan?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['medical_records']['Insert']>
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          clinic_id: string | null
+          user_id: string | null
+          user_name: string | null
+          user_email: string | null
+          action: string
+          entity_type: string | null
+          entity_id: string | null
+          ip_address: string | null
+          user_agent: string | null
+          severity: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_email?: string | null
+          action: string
+          entity_type?: string | null
+          entity_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          severity?: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['audit_logs']['Insert']>
+      }
+      api_keys: {
+        Row: {
+          id: string
+          clinic_id: string | null
+          name: string
+          key_hash: string
+          permissions: string[]
+          rate_limit: number
+          last_used_at: string | null
+          expires_at: string | null
+          is_active: boolean
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id?: string | null
+          name: string
+          key_hash: string
+          permissions?: string[]
+          rate_limit?: number
+          last_used_at?: string | null
+          expires_at?: string | null
+          is_active?: boolean
+          created_by: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['api_keys']['Insert']>
+      }
+      import_jobs: {
+        Row: {
+          id: string
+          clinic_id: string
+          import_type: string
+          status: string
+          file_url: string
+          total_rows: number
+          processed_rows: number
+          successful_rows: number
+          failed_rows: number
+          validation_errors: Json | null
+          processing_errors: Json | null
+          field_mapping: Json | null
+          started_at: string | null
+          completed_at: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          import_type: string
+          status?: string
+          file_url: string
+          total_rows?: number
+          processed_rows?: number
+          successful_rows?: number
+          failed_rows?: number
+          validation_errors?: Json | null
+          processing_errors?: Json | null
+          field_mapping?: Json | null
+          started_at?: string | null
+          completed_at?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['import_jobs']['Insert']>
+      },
+      import_logs: {
+        Row: {
+          id: string
+          import_job_id: string
+          row_number: number
+          action: string
+          entity_id: string | null
+          error_message: string | null
+          row_data: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          import_job_id: string
+          row_number: number
+          action: string
+          entity_id?: string | null
+          error_message?: string | null
+          row_data?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['import_logs']['Insert']>
+      },
+      consultations: {
+        Row: {
+          id: string
+          appointment_id: string
+          doctor_id: string
+          patient_id: string
+          clinic_id: string
+          started_at: string | null
+          ended_at: string | null
+          status: string
+          notes: string | null
+          diagnosis: string | null
+          prescription: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          appointment_id: string
+          doctor_id: string
+          patient_id: string
+          clinic_id: string
+          started_at?: string | null
+          ended_at?: string | null
+          status?: string
+          notes?: string | null
+          diagnosis?: string | null
+          prescription?: string | null
+          created_at?: string
+          updated_at?: string
+        },
+        Update: Partial<Database['public']['Tables']['consultations']['Insert']>
+      },
+      consultation_ai_analyses: {
+        Row: {
+          id: string
+          consultation_id: string
+          clinic_id: string | null
+          doctor_id: string | null
+          analysis_type: string
+          prompt: string
+          result: string | null
+          model_used: string | null
+          plan_type: string | null
+          reasoning_enabled: boolean
+          tokens_used: number
+          created_at: string
+        },
+        Insert: {
+          id?: string
+          consultation_id: string
+          clinic_id?: string | null
+          doctor_id?: string | null
+          analysis_type: string
+          prompt: string
+          result?: string | null
+          model_used?: string | null
+          plan_type?: string | null
+          reasoning_enabled?: boolean
+          tokens_used?: number
+          created_at?: string
+        },
+        Update: Partial<Database['public']['Tables']['consultation_ai_analyses']['Insert']>
+      },
+      clinic_automation_configs: {
+        Row: {
+          id: string
+          clinic_id: string
+          automation_type: string
+          is_enabled: boolean
+          config: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          automation_type: string
+          is_enabled?: boolean
+          config?: Json
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['clinic_automation_configs']['Insert']>
+      }
+      appointment_slot_locks: {
+        Row: {
+          id: string
+          doctor_id: string
+          slot_datetime: string
+          locked_by: string
+          lock_status: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          doctor_id: string
+          slot_datetime: string
+          locked_by: string
+          lock_status?: string
+          expires_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['appointment_slot_locks']['Insert']>
+      }
+      appointment_lock_audit: {
+        Row: {
+          id: string
+          lock_id: string
+          action: string
+          user_id: string
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lock_id: string
+          action: string
+          user_id: string
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['appointment_lock_audit']['Insert']>
+      }
+      doctor_health_insurances: {
+        Row: {
+          id: string
+          doctor_id: string
+          health_insurance_plan_id: string
+          consultation_price: number
+          accepts_new_patients: boolean
+          notes: string | null
+          status: string
+          deleted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          doctor_id: string
+          health_insurance_plan_id: string
+          consultation_price?: number
+          accepts_new_patients?: boolean
+          notes?: string | null
+          status?: string
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['doctor_health_insurances']['Insert']>
+      }
+      tiss_batches: {
+        Row: {
+          id: string
+          clinic_id: string
+          batch_number: string
+          insurance_company_id: string | null
+          insurance_company_name: string | null
+          reference_month: number
+          reference_year: number
+          status: string
+          total_guides: number | null
+          total_value: number | null
+          approved_value: number | null
+          denied_value: number | null
+          glosa_value: number | null
+          glosa_percentage: number | null
+          xml_file_url: string | null
+          xml_file_size: number | null
+          xml_generated_at: string | null
+          return_file_url: string | null
+          return_processed_at: string | null
+          submission_date: string | null
+          protocol_number: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          submitted_by: string | null
+          submitted_at: string | null
+          import_error_count: number | null
+          orphan_guide_count: number | null
+          tiss_version_used: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          batch_number: string
+          insurance_company_id?: string | null
+          insurance_company_name?: string | null
+          reference_month: number
+          reference_year: number
+          status?: string
+          total_guides?: number | null
+          total_value?: number | null
+          approved_value?: number | null
+          denied_value?: number | null
+          glosa_value?: number | null
+          glosa_percentage?: number | null
+          xml_file_url?: string | null
+          xml_file_size?: number | null
+          xml_generated_at?: string | null
+          return_file_url?: string | null
+          return_processed_at?: string | null
+          submission_date?: string | null
+          protocol_number?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          submitted_by?: string | null
+          submitted_at?: string | null
+          import_error_count?: number | null
+          orphan_guide_count?: number | null
+          tiss_version_used?: string
+        }
+        Update: Partial<Database['public']['Tables']['tiss_batches']['Insert']>
+      }
+      tiss_guides: {
+        Row: {
+          id: string
+          batch_id: string | null
+          clinic_id: string
+          appointment_id: string | null
+          consultation_id: string | null
+          patient_id: string | null
+          doctor_id: string | null
+          guide_number: string
+          guide_type: string
+          patient_cpf: string | null
+          patient_name: string
+          patient_card_number: string
+          patient_card_validity: string | null
+          procedure_code: string
+          procedure_name: string
+          procedure_quantity: number | null
+          unit_value: number
+          total_value: number
+          cid10_code: string | null
+          cid10_description: string | null
+          authorization_code: string | null
+          execution_date: string
+          status: string
+          validation_status: string | null
+          glosa_value: number | null
+          glosa_code: string | null
+          glosa_description: string | null
+          can_appeal: boolean | null
+          appeal_deadline: string | null
+          appeal_status: string | null
+          appeal_xml_url: string | null
+          appeal_response_value: number | null
+          appeal_sent_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+          sent_at: string | null
+          processed_at: string | null
+        }
+        Insert: {
+          id?: string
+          batch_id?: string | null
+          clinic_id: string
+          appointment_id?: string | null
+          consultation_id?: string | null
+          patient_id?: string | null
+          doctor_id?: string | null
+          guide_number: string
+          guide_type: string
+          patient_cpf?: string | null
+          patient_name: string
+          patient_card_number: string
+          patient_card_validity?: string | null
+          procedure_code: string
+          procedure_name: string
+          procedure_quantity?: number | null
+          unit_value: number
+          total_value: number
+          cid10_code?: string | null
+          cid10_description?: string | null
+          authorization_code?: string | null
+          execution_date: string
+          status?: string
+          validation_status?: string | null
+          glosa_value?: number | null
+          glosa_code?: string | null
+          glosa_description?: string | null
+          can_appeal?: boolean | null
+          appeal_deadline?: string | null
+          appeal_status?: string | null
+          appeal_xml_url?: string | null
+          appeal_response_value?: number | null
+          appeal_sent_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          sent_at?: string | null
+          processed_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['tiss_guides']['Insert']>
+      }
+      tiss_glosas: {
+        Row: {
+          id: string
+          clinic_id: string
+          guide_id: string | null
+          batch_id: string | null
+          glosa_code: string
+          glosa_description: string
+          glosa_value: number
+          guide_number: string | null
+          operator_note: string | null
+          received_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          guide_id?: string | null
+          batch_id?: string | null
+          glosa_code: string
+          glosa_description: string
+          glosa_value: number
+          guide_number?: string | null
+          operator_note?: string | null
+          received_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['tiss_glosas']['Insert']>
+      }
+      tiss_returns: {
+        Row: {
+          id: string
+          batch_id: string
+          clinic_id: string
+          return_file_url: string
+          return_file_name: string | null
+          return_file_size: number | null
+          file_type: string | null
+          parsed_data: Json | null
+          processing_status: string | null
+          processing_error: string | null
+          total_guides_processed: number | null
+          total_approved: number | null
+          total_denied: number | null
+          total_partial: number | null
+          amount_requested: number | null
+          amount_approved: number | null
+          amount_denied: number | null
+          uploaded_by: string | null
+          uploaded_at: string | null
+          processed_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          batch_id: string
+          clinic_id: string
+          return_file_url: string
+          return_file_name?: string | null
+          return_file_size?: number | null
+          file_type?: string | null
+          parsed_data?: Json | null
+          processing_status?: string | null
+          processing_error?: string | null
+          total_guides_processed?: number | null
+          total_approved?: number | null
+          total_denied?: number | null
+          total_partial?: number | null
+          amount_requested?: number | null
+          amount_approved?: number | null
+          amount_denied?: number | null
+          uploaded_by?: string | null
+          uploaded_at?: string | null
+          processed_at?: string | null
+          created_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['tiss_returns']['Insert']>
+      }
+      tiss_validation_errors: {
+        Row: {
+          id: string
+          guide_id: string | null
+          batch_id: string | null
+          clinic_id: string
+          error_code: string
+          error_message: string
+          error_field: string | null
+          severity: string
+          current_value: string | null
+          suggested_value: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolution_notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          guide_id?: string | null
+          batch_id?: string | null
+          clinic_id: string
+          error_code: string
+          error_message: string
+          error_field?: string | null
+          severity?: string
+          current_value?: string | null
+          suggested_value?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolution_notes?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['tiss_validation_errors']['Insert']>
+      }
+    },
+    Views: {
+      [_ in never]: never
+    },
+    Functions: {
+      get_available_slots: {
+        Args: { p_doctor_id: string; p_date: string }
+        Returns: { slot_time: string }[]
+      },
+      is_slot_available: {
+        Args: { p_doctor_id: string; p_date: string; p_time: string }
+        Returns: boolean
+      },
+      get_clinic_kpis: {
+        Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      },
+      get_revenue_by_doctor: {
+        Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      },
+      get_appointments_by_day: {
+        Args: { p_clinic_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      }
+    },
+    Enums: {
+      user_role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF',
+      plan_type: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK',
+      appointment_status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW',
+      payment_status: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
     }
+  }
 }
 
-export type Tables<
-    PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-    ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-            Row: infer R
-        }
-    ? R
-    : never
-    : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
-        Database["public"]["Views"])
-    ? (Database["public"]["Tables"] &
-        Database["public"]["Views"])[PublicTableNameOrOptions] extends {
-            Row: infer R
-        }
-    ? R
-    : never
-    : never
-
-export type TablesInsert<
-    PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-        Insert: infer I
-    }
-    ? I
-    : never
-    : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-    ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
-        Insert: infer I
-    }
-    ? I
-    : never
-    : never
-
-export type TablesUpdate<
-    PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-        Update: infer U
-    }
-    ? U
-    : never
-    : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-    ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
-        Update: infer U
-    }
-    ? U
-    : never
-    : never
-
-export type Enums<
-    PublicEnumNameOrOptions extends
-    | keyof Database["public"]["Enums"]
-    | { schema: keyof Database },
-    EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-    : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-    ? Database["public"]["Enums"][PublicEnumNameOrOptions]
-    : never
-
+// Export type aliases for easier usage
+export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
+export type AppointmentStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+export type PaymentStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'

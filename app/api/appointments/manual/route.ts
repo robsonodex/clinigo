@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
                 .eq('doctor_id', body.doctor_id)
                 .eq('appointment_date', body.appointment_date)
                 .eq('appointment_time', body.appointment_time)
-                .neq('status', 'CANCELLED')
+                .not('status', 'in', '("CANCELLED","COMPLETED","NO_SHOW")')
 
             if (conflicts && conflicts.length > 0) {
                 return NextResponse.json(

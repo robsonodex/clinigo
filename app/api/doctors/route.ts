@@ -7,8 +7,6 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, BadRequestError } from '@/lib/utils/errors'
 import { successResponse, paginatedResponse, parsePaginationParams, buildPaginatedData } from '@/lib/utils/responses'
 import { createDoctorSchema, listDoctorsQuerySchema } from '@/lib/validations/doctor'
-// ⚠️ TEMPORARY: Disabled email service due to Turbopack error with @react-email
-// import { sendWelcomeEmail, isEmailConfigured } from '@/lib/services/email'
 import { PLANS, type PlanType } from '@/lib/constants/plans'
 
 // Force Node.js runtime for nodemailer support
@@ -26,14 +24,14 @@ export async function GET(request: NextRequest) {
         const query = listDoctorsQuerySchema.parse(Object.fromEntries(searchParams))
         const { page, pageSize, offset } = parsePaginationParams(searchParams)
 
-        // Use Service Role for CLINIC_ADMIN to bypass RLS issues (Trust inputs & filtering)
-        const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN')
+        // Use Service Role for CLINIC_ADMIN and RECEPTIONIST to bypass RLS issues (Trust inputs & filtering)
+        const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST')
             ? createServiceRoleClient() as any
             : await createClient()
 
         console.log('[GET /api/doctors] Debug:', {
             userRole,
-            isServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN'),
+            isServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST'),
             query: Object.fromEntries(searchParams)
         })
 
@@ -100,9 +98,9 @@ export async function GET(request: NextRequest) {
 
         if (query.is_accepting !== undefined) {
             queryBuilder = queryBuilder.eq('is_accepting_appointments', query.is_accepting)
-        } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
+        } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN' && userRole !== 'RECEPTIONIST') {
             // Default to active only for public/patients
-            // Admins see ALL by default
+            // Admins and receptionists see ALL by default
             queryBuilder = queryBuilder.eq('is_accepting_appointments', true)
         }
 
@@ -296,22 +294,38 @@ export async function POST(request: NextRequest) {
             throw new BadRequestError(doctorError.message)
         }
 
-        // ⚠️ TEMPORARY: Email disabled due to Turbopack error with @react-email
-        // Send welcome email
-        console.warn('[EMAIL] Welcome email functionality temporarily disabled - react-email not installed')
-        /*
-        if (isEmailConfigured()) {
-            try {
-                await sendWelcomeEmail({
-                    doctor_email: validatedData.email,
-                    doctor_name: validatedData.full_name,
-                    clinic_name: (clinic as any)?.name || 'CliniGo',
-                })
-            } catch (emailError) {
-                console.error('Failed to send welcome email:', emailError)
-            }
+        // Send welcome email to the new doctor
+        try {
+            const { sendMail } = await import('@/lib/services/mail-service')
+            const clinicName = (clinic as any)?.name || 'CliniGo'
+            const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/login`
+
+            await sendMail({
+                to: validatedData.email,
+                subject: `Bem-vindo ao ${clinicName} - Suas credenciais de acesso`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #1a1a1a;">Olá, Dr(a). ${validatedData.full_name}!</h2>
+                        <p>Sua conta na clínica <strong>${clinicName}</strong> foi criada com sucesso.</p>
+                        <p>Suas credenciais de acesso são:</p>
+                        <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                            <p style="margin: 4px 0;"><strong>Email:</strong> ${validatedData.email}</p>
+                            <p style="margin: 4px 0;"><strong>Senha:</strong> ${validatedData.password}</p>
+                        </div>
+                        <div style="text-align: center; margin: 32px 0;">
+                            <a href="${loginUrl}" style="background: #000; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">Acessar Painel</a>
+                        </div>
+                        <p style="color: #666; font-size: 14px;">Se tiver alguma dúvida, entre em contato com a administração da clínica.</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+                        <p style="color: #999; font-size: 12px;">Este email foi enviado automaticamente pelo sistema ${clinicName}.</p>
+                    </div>
+                `,
+            })
+            console.log('[POST /api/doctors] Welcome email sent to:', validatedData.email)
+        } catch (emailError) {
+            console.error('[POST /api/doctors] Failed to send welcome email:', emailError)
+            // Don't fail the doctor creation if email fails
         }
-        */
 
         return successResponse(
             {

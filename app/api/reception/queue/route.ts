@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const status = searchParams.get('status') || 'waiting' // waiting, in_service, completed
 
-        // Fetch appointments that are checked in but not completed
+        // Fetch appointments for all active statuses (3-panel layout)
         let appointments = []
         try {
             const { data, error: apptError } = await (supabase as any)
@@ -41,14 +41,15 @@ export async function GET(request: Request) {
         priority_level,
         waiting_room_notes,
         ticket_number,
+        consulting_room_id,
         patient:patients(id, full_name, date_of_birth, gender),
         doctor:doctors(id, user:users(full_name))
       `)
-                .eq('clinic_id', clinicId) // 🔒 SECURITY: Filter by clinic
-                .eq('status', status === 'waiting' ? 'CONFIRMED' : 'IN_PROGRESS') // Adapt status mapping
-                .not('checked_in_at', 'is', null) // Must be checked in
-                .order('priority_level', { ascending: false }) // Priority first
-                .order('checked_in_at', { ascending: true }) // Then FIFO
+                .eq('clinic_id', clinicId)
+                .eq('appointment_date', new Date().toISOString().split('T')[0])
+                .in('status', ['CONFIRMED', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW'])
+                .order('priority_level', { ascending: false })
+                .order('checked_in_at', { ascending: true, nullsFirst: false })
 
             if (apptError) throw apptError
             appointments = data || []
