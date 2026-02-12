@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
             `)
             .eq('clinic_id', clinic_id)
             .eq('appointment_date', today)
-            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING'])
+            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT'])
 
         if (aptError) {
             console.error('[Face-Recognize] Error fetching appointments:', aptError)
