@@ -14,6 +14,7 @@ import { formatDateBR } from '@/lib/utils/date'
 
 // Force Node.js runtime for nodemailer and mercadopago support
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 interface RouteParams {
     params: Promise<{ id: string }>

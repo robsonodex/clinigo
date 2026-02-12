@@ -4,6 +4,10 @@ import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/error
 import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
 
+// Force Node.js runtime for Supabase server client and email support
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 interface RouteParams {
     params: Promise<{ id: string }>
 }
@@ -12,7 +16,6 @@ interface RouteParams {
  * GET /api/appointments/[id]?include=qr_code
  * Fetch a single appointment with optional QR code
  */
-export const dynamic = 'force-dynamic'
 
 console.log('[DEBUG] Loading appointments/[id]/route.ts module')
 
