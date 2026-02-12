@@ -1,158 +1,146 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
-    ArrowLeft, QrCode, CheckCircle, UserCheck, Clock,
-    RefreshCw, Loader2, User, Calendar
+    ArrowLeft, Camera, CheckCircle, Loader2, VideoOff, RefreshCw
 } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/components/ui/use-toast';
-import { createClient } from '@/lib/supabase/client';
 
-interface PreCheckinPatient {
-    appointment_id: string;
-    patient_id: string;
-    patient_name: string;
-    doctor_name: string | null;
-    appointment_time: string | null;
-    checked_in_at: string;
-    already_checked_in: boolean;
-}
-
-export default function EasyCheckInPage() {
+export default function FaceCheckInPage() {
     const router = useRouter();
     const { user } = useUser();
     const { toast } = useToast();
-    const [patients, setPatients] = useState<PreCheckinPatient[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [confirmingId, setConfirmingId] = useState<string | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [cameraError, setCameraError] = useState<string | null>(null);
+    const [lastResult, setLastResult] = useState<{ success: boolean; patientName?: string } | null>(null);
 
     const clinicId = user?.clinic_id;
 
-    const loadPreCheckinPatients = useCallback(async () => {
-        if (!clinicId) return;
-        setLoading(true);
-
+    // Start camera automatically on page load
+    const startCamera = useCallback(async () => {
+        setCameraError(null);
         try {
-            const supabase = createClient();
-            const today = new Date().toISOString().split('T')[0];
-
-            // Fetch today's appointments
-            const { data: appointments, error: aptError } = await (supabase as any)
-                .from('appointments')
-                .select(`
-                    id,
-                    patient_id,
-                    status,
-                    checked_in_at,
-                    appointment_date,
-                    start_time,
-                    patients(full_name),
-                    doctors(user:users(full_name))
-                `)
-                .eq('clinic_id', clinicId)
-                .eq('appointment_date', today)
-                .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING']);
-
-            if (aptError || !appointments || appointments.length === 0) {
-                setPatients([]);
-                setLoading(false);
-                return;
+            const mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+            setStream(mediaStream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = mediaStream;
             }
-
-            const appointmentIds = appointments.map((a: any) => a.id);
-
-            // Fetch pre-checkin submissions for today's appointments
-            const { data: submissions } = await (supabase as any)
-                .from('pre_checkin_submissions')
-                .select('appointment_id, checked_in_at, status')
-                .in('appointment_id', appointmentIds)
-                .eq('status', 'completed');
-
-            if (!submissions || submissions.length === 0) {
-                setPatients([]);
-                setLoading(false);
-                return;
+        } catch (error: any) {
+            console.error('Camera access error:', error);
+            if (error.name === 'NotAllowedError') {
+                setCameraError('Permissão de câmera negada. Por favor, permita o acesso à câmera nas configurações do navegador.');
+            } else if (error.name === 'NotFoundError') {
+                setCameraError('Nenhuma câmera encontrada neste dispositivo.');
+            } else {
+                setCameraError('Erro ao acessar a câmera. Verifique se o dispositivo possui câmera disponível.');
             }
-
-            // Map submissions to patients
-            const preCheckinPatients: PreCheckinPatient[] = [];
-            for (const sub of submissions) {
-                const apt = appointments.find((a: any) => a.id === sub.appointment_id);
-                if (!apt) continue;
-
-                preCheckinPatients.push({
-                    appointment_id: apt.id,
-                    patient_id: apt.patient_id,
-                    patient_name: apt.patients?.full_name || 'Paciente',
-                    doctor_name: apt.doctors?.user?.full_name || null,
-                    appointment_time: apt.start_time || null,
-                    checked_in_at: sub.checked_in_at,
-                    already_checked_in: !!apt.checked_in_at,
-                });
-            }
-
-            setPatients(preCheckinPatients);
-        } catch (error) {
-            console.error('Error loading pre-checkin patients:', error);
-        } finally {
-            setLoading(false);
         }
-    }, [clinicId]);
+    }, []);
+
+    // Stop camera when leaving page
+    const stopCamera = useCallback(() => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+    }, [stream]);
 
     useEffect(() => {
-        loadPreCheckinPatients();
-        // Auto-refresh every 30 seconds
-        const interval = setInterval(loadPreCheckinPatients, 30000);
-        return () => clearInterval(interval);
-    }, [loadPreCheckinPatients]);
+        startCamera();
+        return () => {
+            // Cleanup: stop all tracks
+            if (videoRef.current?.srcObject) {
+                const s = videoRef.current.srcObject as MediaStream;
+                s.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [startCamera]);
 
-    const handleConfirmCheckIn = async (appointmentId: string, patientName: string) => {
-        setConfirmingId(appointmentId);
+    // Capture photo from video and attempt recognition
+    async function captureAndRecognize() {
+        if (!videoRef.current || !clinicId) return;
+
+        setIsProcessing(true);
+        setLastResult(null);
+
         try {
-            const res = await fetch(`/api/reception/checkin/${appointmentId}`, {
+            // Capture frame from video
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas context not available');
+            ctx.drawImage(videoRef.current, 0, 0);
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Call face recognition API
+            const response = await fetch('/api/checkin/face-recognize', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    photo: imageBase64,
+                    clinic_id: clinicId,
+                    date: new Date().toISOString().split('T')[0]
+                })
             });
 
-            if (res.ok) {
-                toast({
-                    title: 'Check-in confirmado!',
-                    description: `${patientName} foi adicionado(a) à fila de atendimento.`,
+            const data = await response.json();
+
+            if (data.success && data.patient) {
+                // Patient recognized — confirm check-in via existing API
+                const confirmRes = await fetch('/api/checkin/face-confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        appointment_id: data.appointment_id,
+                        clinic_id: clinicId,
+                        patient_id: data.patient.id,
+                    })
                 });
-                // Refresh list
-                await loadPreCheckinPatients();
+
+                const confirmData = await confirmRes.json();
+
+                if (confirmRes.ok) {
+                    setLastResult({ success: true, patientName: data.patient.name });
+                    toast({
+                        title: '✅ Check-in realizado!',
+                        description: `Paciente: ${data.patient.name}${confirmData.already_in_queue ? ' (já estava na fila)' : ''}`,
+                    });
+
+                    // Reset after 3 seconds for next patient
+                    setTimeout(() => {
+                        setLastResult(null);
+                    }, 3000);
+                } else {
+                    throw new Error(confirmData.error || 'Falha ao confirmar check-in');
+                }
             } else {
-                throw new Error('Falha no check-in');
+                setLastResult({ success: false });
+                toast({
+                    title: '❌ Paciente não reconhecido',
+                    description: data.error || 'Nenhum paciente agendado para hoje foi reconhecido. Tente novamente ou faça check-in manual.',
+                    variant: 'destructive'
+                });
             }
         } catch (error) {
+            console.error('Face recognition error:', error);
             toast({
-                variant: 'destructive',
-                title: 'Erro',
-                description: 'Não foi possível confirmar o check-in.',
+                title: 'Erro no reconhecimento',
+                description: error instanceof Error ? error.message : 'Erro ao processar reconhecimento facial. Tente novamente.',
+                variant: 'destructive'
             });
         } finally {
-            setConfirmingId(null);
+            setIsProcessing(false);
         }
-    };
-
-    if (!clinicId) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Card className="max-w-md">
-                    <CardContent className="pt-6 text-center">
-                        <p>Carregando informações da clínica...</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
     }
-
-    const pendingPatients = patients.filter(p => !p.already_checked_in);
-    const confirmedPatients = patients.filter(p => p.already_checked_in);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -160,150 +148,101 @@ export default function EasyCheckInPage() {
             <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-16 items-center justify-between px-4">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                        <Button variant="ghost" size="sm" onClick={() => { stopCamera(); router.push('/dashboard/recepcao'); }}>
                             <ArrowLeft className="w-4 h-4 mr-2" />
-                            Voltar
+                            Voltar para Recepção
                         </Button>
                         <div className="flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-emerald-600" />
-                            <h1 className="text-xl font-bold">Check-in Fácil</h1>
+                            <Camera className="w-5 h-5 text-emerald-600" />
+                            <h1 className="text-xl font-bold">Check-in Facial</h1>
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={loadPreCheckinPatients}>
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Atualizar
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/recepcao')}>
-                            <QrCode className="w-4 h-4 mr-2" />
-                            QR Code
-                        </Button>
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="container py-8 px-4 max-w-4xl mx-auto">
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
-                        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Carregando pacientes...</p>
-                    </div>
-                ) : patients.length === 0 ? (
-                    <Card className="max-w-md mx-auto">
-                        <CardContent className="pt-6 text-center space-y-4">
-                            <User className="w-16 h-16 text-muted-foreground mx-auto" />
-                            <h2 className="text-xl font-bold">Nenhum Pré-Check-in</h2>
-                            <p className="text-muted-foreground">
-                                Não há pacientes que realizaram pré-check-in online agendados para hoje.
-                            </p>
-                            <Button variant="outline" onClick={() => router.push('/dashboard/recepcao')}>
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Voltar para Recepção
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="space-y-6">
-                        {/* Pending check-ins */}
-                        {pendingPatients.length > 0 && (
-                            <div className="space-y-3">
-                                <h2 className="text-lg font-semibold flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-amber-500" />
-                                    Aguardando Confirmação ({pendingPatients.length})
-                                </h2>
-                                <div className="grid gap-3">
-                                    {pendingPatients.map((patient) => (
-                                        <Card
-                                            key={patient.appointment_id}
-                                            className="border-2 border-amber-200 hover:border-emerald-400 transition-colors"
-                                        >
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                                                            <UserCheck className="w-6 h-6 text-emerald-600" />
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-semibold text-lg">{patient.patient_name}</h3>
-                                                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                                                                {patient.doctor_name && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <User className="w-3 h-3" />
-                                                                        Dr(a). {patient.doctor_name}
-                                                                    </span>
-                                                                )}
-                                                                {patient.appointment_time && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <Calendar className="w-3 h-3" />
-                                                                        {patient.appointment_time}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <Badge variant="outline" className="mt-1 text-xs text-amber-600 border-amber-300">
-                                                                Pré-check-in realizado
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        onClick={() => handleConfirmCheckIn(patient.appointment_id, patient.patient_name)}
-                                                        disabled={confirmingId === patient.appointment_id}
-                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-5 text-base"
-                                                    >
-                                                        {confirmingId === patient.appointment_id ? (
-                                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                                        ) : (
-                                                            <>
-                                                                <CheckCircle className="w-5 h-5 mr-2" />
-                                                                Confirmar
-                                                            </>
-                                                        )}
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
+            <div className="container py-8 px-4 max-w-3xl mx-auto">
+                <Card className="overflow-hidden shadow-lg">
+                    <CardContent className="p-0">
+                        {/* Camera Feed */}
+                        <div className="relative aspect-video bg-black">
+                            {cameraError ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+                                    <VideoOff className="w-16 h-16 text-red-400" />
+                                    <p className="text-white text-lg">{cameraError}</p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={startCamera}
+                                        className="text-white border-white hover:bg-white/10"
+                                    >
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Tentar Novamente
+                                    </Button>
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <>
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="w-full h-full object-cover"
+                                    />
 
-                        {/* Already confirmed */}
-                        {confirmedPatients.length > 0 && (
-                            <div className="space-y-3">
-                                <h2 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                    Já Confirmados ({confirmedPatients.length})
-                                </h2>
-                                <div className="grid gap-2">
-                                    {confirmedPatients.map((patient) => (
-                                        <Card
-                                            key={patient.appointment_id}
-                                            className="border border-green-200 bg-green-50/50 opacity-75"
-                                        >
-                                            <CardContent className="p-3">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <CheckCircle className="w-5 h-5 text-green-600" />
-                                                        <span className="font-medium">{patient.patient_name}</span>
-                                                        {patient.doctor_name && (
-                                                            <span className="text-sm text-muted-foreground">
-                                                                — Dr(a). {patient.doctor_name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <Badge className="bg-green-600 text-white text-xs">
-                                                        Check-in realizado
-                                                    </Badge>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                                    {/* Processing overlay */}
+                                    {isProcessing && (
+                                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-3">
+                                            <Loader2 className="w-12 h-12 text-white animate-spin" />
+                                            <p className="text-white text-lg font-medium">Reconhecendo...</p>
+                                        </div>
+                                    )}
+
+                                    {/* Success overlay */}
+                                    {lastResult?.success && (
+                                        <div className="absolute inset-0 bg-emerald-600/80 flex flex-col items-center justify-center gap-3">
+                                            <CheckCircle className="w-16 h-16 text-white" />
+                                            <p className="text-white text-2xl font-bold">Check-in Realizado!</p>
+                                            <p className="text-white/90 text-lg">{lastResult.patientName}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Face guide overlay */}
+                                    {!isProcessing && !lastResult && (
+                                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                            <div className="w-64 h-64 border-2 border-white/40 rounded-full" />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Controls */}
+                        <div className="p-6 space-y-4">
+                            <p className="text-center text-muted-foreground">
+                                Posicione o rosto do paciente dentro do círculo e clique em &quot;Reconhecer Paciente&quot;
+                            </p>
+
+                            <Button
+                                onClick={captureAndRecognize}
+                                disabled={isProcessing || !!cameraError}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6 text-lg font-semibold"
+                                size="lg"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        Processando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Camera className="w-5 h-5 mr-2" />
+                                        Reconhecer Paciente
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
