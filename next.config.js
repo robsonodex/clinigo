@@ -49,13 +49,40 @@ const nextConfig = {
     //     return config
     // },
 
-    // Rewrite: route.ts moved to list/ to fix Next.js 16 Vercel bug where
-    // route.ts + [id]/ at same level prevents dynamic route registration
+    // Rewrites: Vercel has a bug that prevents ANY route under api/appointments/[id]
+    // from being registered (even a minimal handler). api-v2/appointments/[id] works.
+    // These rewrites transparently proxy [id] routes to their api-v2 equivalents.
     async rewrites() {
         return [
+            // Main [id] route - GET/PATCH
             {
-                source: '/api/appointments',
-                destination: '/api/appointments/list',
+                source: '/api/appointments/:id',
+                destination: '/api-v2/appointments/:id',
+            },
+            // Sub-routes
+            {
+                source: '/api/appointments/:id/cancel',
+                destination: '/api-v2/appointments/:id/cancel',
+            },
+            {
+                source: '/api/appointments/:id/confirm-payment',
+                destination: '/api-v2/appointments/:id/confirm-payment',
+            },
+            {
+                source: '/api/appointments/:id/generate-qr',
+                destination: '/api-v2/appointments/:id/generate-qr',
+            },
+            {
+                source: '/api/appointments/:id/mark-no-show',
+                destination: '/api-v2/appointments/:id/mark-no-show',
+            },
+            {
+                source: '/api/appointments/:id/send-qr',
+                destination: '/api-v2/appointments/:id/send-qr',
+            },
+            {
+                source: '/api/appointments/:id/video-link',
+                destination: '/api-v2/appointments/:id/video-link',
             },
         ]
     },
