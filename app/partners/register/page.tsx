@@ -370,7 +370,7 @@ export default function PartnerRegisterPage() {
 
                                 <div className="border-t border-slate-800 pt-4 mt-4">
                                     <p className="text-sm text-slate-400 mb-4">
-                                        <strong className="text-slate-300">Dados Empresariais</strong> (Opcional - recomendado para ganhos acima de R$ 3.000/mês)
+                                        <strong className="text-slate-300">Dados Empresariais</strong>
                                     </p>
 
                                     <div className="grid grid-cols-2 gap-4">
