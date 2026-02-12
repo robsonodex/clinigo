@@ -109,11 +109,13 @@ export async function POST(request: NextRequest) {
             throw queueError
         }
 
-        // Update appointment status to WAITING_ROOM
+        // Update appointment status to CONFIRMED (with checked_in_at set)
+        // This keeps the patient visible in the reception queue and enables the "Chamar" button.
+        // The queue API only fetches: CONFIRMED, WAITING, IN_PROGRESS, COMPLETED, NO_SHOW.
         await (supabase
             .from('appointments') as any)
             .update({
-                status: 'WAITING_ROOM',
+                status: 'CONFIRMED',
                 checked_in_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             })

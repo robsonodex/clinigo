@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
                 patient_id,
                 status,
                 appointment_date,
-                start_time,
+                appointment_time,
                 doctor_id,
                 checked_in_at
             `)
