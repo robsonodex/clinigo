@@ -273,11 +273,19 @@ export async function middleware(request: NextRequest) {
 
     if (isPartnerDashboardRoute || isPartnerApiRoute) {
         const { supabase: partnerSupabase, response: partnerResponse } = createSupabaseClient(request)
-        const { data: { user: partnerUser } } = await partnerSupabase.auth.getUser()
+        const { data: { user: partnerUser }, error: authError } = await partnerSupabase.auth.getUser()
 
-        if (partnerUser && partnerUser.user_metadata?.role === 'PARTNER') {
-            // Partner authenticated - allow access without users table lookup
-            return partnerResponse
+        console.log('[MIDDLEWARE:PARTNER] Path:', pathname, 'User:', partnerUser?.id, 'Role:', partnerUser?.user_metadata?.role, 'AppRole:', partnerUser?.app_metadata?.role, 'AuthError:', authError?.message)
+
+        if (partnerUser) {
+            const userRole = partnerUser.user_metadata?.role || partnerUser.app_metadata?.role
+            if (userRole === 'PARTNER') {
+                // Partner authenticated - allow access without users table lookup
+                console.log('[MIDDLEWARE:PARTNER] Access granted for partner:', partnerUser.id)
+                return partnerResponse
+            }
+            // User exists but is not a PARTNER - fall through to general auth
+            console.log('[MIDDLEWARE:PARTNER] User is not PARTNER, falling through to general auth')
         }
 
         if (!partnerUser) {

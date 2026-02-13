@@ -80,7 +80,7 @@ export default function PartnerLoginPage() {
             }
 
             toast.success('Login realizado com sucesso!')
-            router.push(`/partners/${partnerId}/dashboard`)
+            router.push('/partners/me/dashboard')
         } catch (error: any) {
             toast.error(error.message)
         } finally {
