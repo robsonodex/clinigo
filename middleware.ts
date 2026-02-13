@@ -59,6 +59,7 @@ const PUBLIC_ROUTES = [
     '/api/debug-appointment', // Temp debug for appointment lookup
     '/api/video/validate-token', // Patient video room access via token link
     '/api/partners/register', // Partner registration - public for new affiliates
+    '/api/partners/test-dashboard', // TEMP: Debug endpoint for partner dashboard
     '/api/qr/', // QR Code images for email - dynamic route (legacy)
     '/api/qr', // QR Code images for email - query parameter route
     '/api/checkin/', // Pre-checkin API routes (public for patients)
