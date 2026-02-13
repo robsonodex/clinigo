@@ -55,12 +55,7 @@ export default function PainelTVPage() {
     const [calledPatient, setCalledPatient] = useState<CalledPatient | null>(null)
     const [clinicName, setClinicName] = useState('')
     const [isConnected, setIsConnected] = useState(false)
-    const [audioReady, setAudioReady] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('tv_audio_ready') === 'true'
-        }
-        return false
-    })
+    const [audioReady, setAudioReady] = useState(false)
     const [rooms, setRooms] = useState<ConsultingRoom[]>([])
     const appointmentsRef = useRef<Appointment[]>([])
     const audioCtxRef = useRef<AudioContext | null>(null)
@@ -87,8 +82,17 @@ export default function PainelTVPage() {
 
     // Professional chime sound using Web Audio API
     const playCallSound = useCallback(async () => {
+        // Try to create AudioContext on-demand if not initialized (fallback for TV screens)
+        if (!audioCtxRef.current) {
+            try {
+                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+                setAudioReady(true)
+            } catch (e) {
+                console.error('[TV Panel] Cannot create AudioContext:', e)
+                return
+            }
+        }
         const ctx = audioCtxRef.current
-        if (!ctx) return
 
         // Resume AudioContext if browser suspended it after inactivity
         if (ctx.state === 'suspended') {
