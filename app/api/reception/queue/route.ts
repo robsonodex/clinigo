@@ -69,10 +69,10 @@ export async function GET(request: Request) {
         urgency_level,
         status,
         reason,
-        patient:patients(id, full_name, cpf, phone),
+        patient:patients!inner(id, full_name, cpf, phone),
         doctor:doctors(id, user:users(full_name))
       `)
-                .eq('clinic_id', clinicId) // 🔒 SECURITY: Filter by clinic
+                .eq('patient.clinic_id', clinicId) // 🔒 SECURITY: Filter by patient's clinic
                 .eq('status', status)
                 .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
                 .order('arrival_time', { ascending: true })
