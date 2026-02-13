@@ -353,10 +353,7 @@ export default function PacientesPage() {
                                                         <Eye className="w-4 h-4 mr-2" />
                                                         Ver detalhes
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=biometria`)}>
-                                                        <Camera className="w-4 h-4 mr-2" />
-                                                        Biometria Facial
-                                                    </DropdownMenuItem>
+
                                                     <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}>
                                                         <FileText className="w-4 h-4 mr-2" />
                                                         Prontuários

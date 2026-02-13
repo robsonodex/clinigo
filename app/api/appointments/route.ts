@@ -139,42 +139,7 @@ export async function POST(request: NextRequest) {
             throw new BadRequestError('Esta clínica não está aceitando agendamentos')
         }
 
-        // 🔥 COST PROTECTION: Validate plan limits for BASIC plan
-        const { data: clinicPlan, error: planError } = await supabase
-            .from('clinics')
-            .select('plan_type, plan_limits')
-            .eq('id', clinic.id)
-            .single()
-
-        if (planError) {
-            console.error('[PLAN CHECK] Error fetching plan:', planError)
-        }
-
-        // Check appointment limits for STARTER and BASIC plans
-        if (clinicPlan && (clinicPlan.plan_type === 'BASIC' || clinicPlan.plan_type === 'STARTER')) {
-            const defaultLimit = clinicPlan.plan_type === 'STARTER' ? 50 : 200
-            const maxAppointments = (clinicPlan.plan_limits as any)?.max_appointments_month || defaultLimit
-
-            if (maxAppointments !== -1) {
-                // Get count for current month
-                const firstDayOfMonth = new Date()
-                firstDayOfMonth.setDate(1)
-                firstDayOfMonth.setHours(0, 0, 0, 0)
-
-                const { count: monthlyCount } = await supabase
-                    .from('appointments')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('clinic_id', clinic.id)
-                    .gte('created_at', firstDayOfMonth.toISOString())
-
-                if ((monthlyCount || 0) >= maxAppointments) {
-                    const planName = clinicPlan.plan_type === 'STARTER' ? 'Starter' : 'Básico'
-                    throw new BadRequestError(
-                        `Limite de consultas mensais atingido (${maxAppointments} consultas/mês no plano ${planName}). Faça upgrade para aumentar seu limite.`
-                    )
-                }
-            }
-        }
+        // Note: Appointment limits have been removed - all plans have unlimited consultations
 
         // 2. Verify doctor exists and accepts appointments
         const { data: doctor, error: doctorError } = await supabase

@@ -177,15 +177,7 @@ export default function PatientDetailsPage() {
                         <User className="w-4 h-4" />
                         Informações
                     </TabsTrigger>
-                    <TabsTrigger value="biometria" className="gap-2">
-                        <Camera className="w-4 h-4" />
-                        Biometria Facial
-                        {biometricStatus?.hasBiometrics && (
-                            <Badge variant="default" className="ml-1 h-5 px-1.5">
-                                <CheckCircle2 className="w-3 h-3" />
-                            </Badge>
-                        )}
-                    </TabsTrigger>
+
                 </TabsList>
 
                 {/* Tab: Informações */}
@@ -229,118 +221,7 @@ export default function PatientDetailsPage() {
                     </Card>
                 </TabsContent>
 
-                {/* Tab: Biometria Facial */}
-                <TabsContent value="biometria">
-                    {showEnrollment ? (
-                        <FaceEnrollment
-                            patientId={patientId}
-                            clinicId={clinicId || ''}
-                            patientName={patient.full_name}
-                            onComplete={handleEnrollmentComplete}
-                            onCancel={() => setShowEnrollment(false)}
-                        />
-                    ) : biometricStatus?.hasBiometrics ? (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                    Biometria Cadastrada
-                                </CardTitle>
-                                <CardDescription>
-                                    O paciente pode fazer check-in por reconhecimento facial
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Cadastrado em</p>
-                                        <p className="font-medium">
-                                            {new Date(biometricStatus.biometrics!.created_at).toLocaleDateString('pt-BR')}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Qualidade da detecção</p>
-                                        <p className="font-medium">
-                                            {((biometricStatus.biometrics?.detection_score || 0) * 100).toFixed(0)}%
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Consentimento LGPD</p>
-                                        <Badge variant="default">
-                                            <Shield className="w-3 h-3 mr-1" />
-                                            Concedido
-                                        </Badge>
-                                    </div>
-                                </div>
 
-                                {biometricStatus.biometrics?.reference_image_url && (
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-2">Referência</p>
-                                        <img
-                                            src={biometricStatus.biometrics.reference_image_url}
-                                            alt="Foto de referência"
-                                            className="w-32 h-32 object-cover rounded-lg border"
-                                        />
-                                    </div>
-                                )}
-
-                                <Separator />
-
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setShowEnrollment(true)}
-                                    >
-                                        <Camera className="w-4 h-4 mr-2" />
-                                        Recadastrar
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={handleDeleteBiometrics}
-                                        disabled={isDeleting}
-                                    >
-                                        {isDeleting ? (
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                        )}
-                                        Excluir Biometria
-                                    </Button>
-                                </div>
-
-                                <p className="text-xs text-muted-foreground">
-                                    Conforme LGPD, o paciente pode solicitar a exclusão de sua biometria a qualquer momento.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Cadastro Biométrico</CardTitle>
-                                <CardDescription>
-                                    Cadastre a biometria facial para check-in rápido
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-start gap-4 p-4 bg-muted rounded-lg">
-                                    <Camera className="w-8 h-8 text-primary mt-1" />
-                                    <div>
-                                        <h3 className="font-medium">Check-in por Reconhecimento Facial</h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            Com a biometria cadastrada, o paciente poderá fazer check-in
-                                            apenas olhando para a câmera na recepção. Rápido e seguro.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <Button onClick={() => setShowEnrollment(true)} className="w-full">
-                                    <Camera className="w-4 h-4 mr-2" />
-                                    Iniciar Cadastro Facial
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
-                </TabsContent>
             </Tabs>
         </div>
     );

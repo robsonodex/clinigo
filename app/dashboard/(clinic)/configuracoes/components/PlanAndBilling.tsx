@@ -37,7 +37,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         price: 99,
         features: [
             '1 médico',
-            '50 consultas/mês',
+            'Consultas ilimitadas',
             '200 pacientes',
             '2 GB armazenamento',
             'Agenda anti-overbooking',
@@ -53,7 +53,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         price: 249,
         features: [
             'Até 5 médicos',
-            '500 consultas/mês',
+            'Consultas ilimitadas',
             'Pacientes ilimitados',
             '20 GB armazenamento',
             'Tudo do Básico +',

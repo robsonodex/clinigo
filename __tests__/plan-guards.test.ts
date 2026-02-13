@@ -47,7 +47,7 @@ describe('Plan Guards', () => {
             const limits = PLAN_DEFINITIONS.BASIC.limits
 
             expect(limits.max_doctors).toBe(3)
-            expect(limits.max_appointments_month).toBe(200)
+            expect(limits.max_appointments_month).toBe(-1) // unlimited
             expect(limits.max_patients).toBe(-1) // unlimited
             expect(limits.max_storage_gb).toBe(5)
         })

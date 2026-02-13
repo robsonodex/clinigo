@@ -158,10 +158,6 @@ export function PartnerTermsModal({ open, onOpenChange, onAccept, partnerData }:
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="mt-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                                <p className="text-sm text-amber-300"><strong>BÔNUS ESPECIAL:</strong> Os 10 primeiros vendedores que atingirem 10+ vendas no primeiro mês recebem 40% de comissão em todas as vendas daquele mês.</p>
-                            </div>
-                            <p className="mt-2 text-sm text-slate-400">O bônus é aplicado sobre todas as vendas do mês quando a meta for atingida. A contagem reinicia mensalmente.</p>
                         </div>
 
                         {/* REGRAS DE PAGAMENTO */}
@@ -219,7 +215,7 @@ export function PartnerTermsModal({ open, onOpenChange, onAccept, partnerData }:
                                         <li>• Prestar suporte inicial ao cliente (onboarding)</li>
                                         <li>• Manter sigilo sobre informações comerciais e técnicas</li>
                                         <li>• Reportar vendas semanalmente</li>
-                                        <li>• Emitir nota fiscal ou recibo de suas comissões</li>
+
                                     </ul>
                                 </div>
 
@@ -228,7 +224,7 @@ export function PartnerTermsModal({ open, onOpenChange, onAccept, partnerData }:
                                     <h3 className="text-white font-bold text-base mb-2">O QUE VOCÊ RECEBE</h3>
                                     <ul className="space-y-2 text-slate-300">
                                         <li>• Treinamento completo do produto</li>
-                                        <li>• Materiais de vendas (pitch deck, demos, vídeos)</li>
+                                        <li>• Materiais de vendas (pitch deck, demos)</li>
                                         <li>• Suporte técnico durante vendas</li>
                                         <li>• Ambiente de demonstração funcional</li>
                                         <li>• Relatório mensal de comissões</li>
@@ -253,7 +249,7 @@ export function PartnerTermsModal({ open, onOpenChange, onAccept, partnerData }:
                                         <li>• <strong>Vigência:</strong> Prazo indeterminado</li>
                                         <li>• <strong>Rescisão:</strong> Qualquer parte pode rescindir com 30 dias de aviso prévio</li>
                                         <li>• <strong>Rescisão Imediata:</strong> Por violação de confidencialidade, conduta antiética ou descumprimento de obrigações</li>
-                                        <li>• <strong>Pós-Rescisão:</strong> Comissões recorrentes continuam por 6 meses após rescisão</li>
+                                        <li>• <strong>Pós-Rescisão:</strong> Comissões recorrentes continuam por 2 meses após rescisão</li>
                                     </ul>
                                 </div>
 

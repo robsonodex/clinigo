@@ -8,19 +8,19 @@ import { createClient } from '@/lib/supabase/server'
 const PLAN_LIMITS = {
     BASIC: {
         max_doctors: 3,
-        max_appointments_month: 150,
+        max_appointments_month: -1,
         price: 147,
         features: ['basic_booking', 'email_notifications', 'whatsapp_share', 'mercadopago'],
     },
     STARTER: {
         max_doctors: 1,
-        max_appointments_month: 50,
+        max_appointments_month: -1,
         price: 99,
         features: ['basic_booking', 'email_notifications'],
     },
     PRO: {
         max_doctors: 5,
-        max_appointments_month: 300,
+        max_appointments_month: -1,
         price: 297,
         features: [
             'basic_booking',

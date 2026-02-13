@@ -45,7 +45,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         billing: 'por mês',
         features: [
             { name: '1 médico', included: true },
-            { name: '50 consultas/mês', included: true },
+            { name: 'Consultas ilimitadas', included: true },
             { name: 'Agenda anti-overbooking', included: true },
             { name: 'Prontuário eletrônico', included: true },
             { name: 'Check-in manual', included: true },
@@ -56,7 +56,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         ],
         limits: {
             max_doctors: 1,
-            max_appointments_month: 50,
+            max_appointments_month: -1,
             max_patients: 200,
             max_storage_gb: 2,
             max_units: 1,
@@ -87,7 +87,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         ],
         limits: {
             max_doctors: 5,
-            max_appointments_month: 500,
+            max_appointments_month: -1,
             max_patients: -1,
             max_storage_gb: 20,
             max_units: 1,

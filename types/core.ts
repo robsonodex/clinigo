@@ -192,7 +192,7 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
         tier: 1,
         limits: {
             max_doctors: 2,
-            max_appointments_month: 100,
+            max_appointments_month: -1,
             max_patients: 500,
             max_storage_gb: 5,
             max_units: 1,
@@ -227,7 +227,7 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
         tier: 2,
         limits: {
             max_doctors: 5,
-            max_appointments_month: 500,
+            max_appointments_month: -1,
             max_patients: -1,
             max_storage_gb: 20,
             max_units: 1,

@@ -11,8 +11,8 @@ export interface PlanLimits {
 }
 
 const PLAN_LIMITS = {
-    BASIC: { maxDoctors: 5, maxAppointments: 200, hasAiAccess: false },
-    PRO: { maxDoctors: 15, maxAppointments: 500, hasAiAccess: false },
+    BASIC: { maxDoctors: 5, maxAppointments: Infinity, hasAiAccess: false },
+    PRO: { maxDoctors: 15, maxAppointments: Infinity, hasAiAccess: false },
     ENTERPRISE: { maxDoctors: Infinity, maxAppointments: Infinity, hasAiAccess: true },
 }
 

@@ -32,7 +32,7 @@ const PLAN_DETAILS: Record<PlanType, {
         color: 'from-gray-500 to-slate-500',
         features: [
             '2 médicos',
-            '100 consultas/mês',
+            'Consultas ilimitadas',
             'Check-in QR Code',
             'Teleconsulta',
             'Financeiro básico',
@@ -47,7 +47,7 @@ const PLAN_DETAILS: Record<PlanType, {
         badge: 'Recomendado',
         features: [
             '5 médicos',
-            '500 consultas/mês',
+            'Consultas ilimitadas',
             'Check-in QR Code',
             'Teleconsulta WebRTC',
             'WhatsApp automação',

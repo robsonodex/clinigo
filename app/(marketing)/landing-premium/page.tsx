@@ -438,7 +438,7 @@ export default function LandingPremium() {
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> 1 médico
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> 50 consultas/mês
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Consultas ilimitadas
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Agenda anti-overbooking

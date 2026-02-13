@@ -77,43 +77,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Contar agendamentos do mês atual
-        const currentMonth = new Date()
-        const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-        const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
-
-        const { count: appointmentsThisMonth } = await supabase
-            .from('appointments')
-            .select('id', { count: 'exact', head: true })
-            .eq('clinic_id', profile.clinic_id)
-            .gte('appointment_date', firstDay.toISOString().split('T')[0])
-            .lte('appointment_date', lastDay.toISOString().split('T')[0])
-            .neq('status', 'CANCELLED')
-
-        const monthlyLimit = clinic.plan_limits?.max_appointments_month || 100
-
-        if (appointmentsThisMonth && appointmentsThisMonth >= monthlyLimit) {
-            log.warn('Plan limit reached', {
-                clinic_id: profile.clinic_id,
-                plan_type: clinic.plan_type,
-                appointments_count: appointmentsThisMonth,
-                limit: monthlyLimit
-            })
-
-            return NextResponse.json(
-                {
-                    error: 'Limite do plano atingido',
-                    code: 'PLAN_LIMIT_REACHED',
-                    details: {
-                        current_appointments: appointmentsThisMonth,
-                        plan_limit: monthlyLimit,
-                        plan_type: clinic.plan_type,
-                        upgrade_url: '/dashboard/planos'
-                    }
-                },
-                { status: 402 } // Payment Required
-            )
-        }
+        // Note: Appointment limits have been removed - all plans have unlimited consultations
 
         // 6. ADQUIRIR LOCK DE SLOT (função PostgreSQL)
         const { data: lockResult, error: lockError } = await supabase
@@ -200,9 +164,7 @@ export async function POST(request: NextRequest) {
             expires_in_seconds: 30,
             message: lockData.message,
             plan_usage: {
-                appointments_this_month: appointmentsThisMonth || 0,
-                monthly_limit: monthlyLimit,
-                percentage_used: Math.round(((appointmentsThisMonth || 0) / monthlyLimit) * 100)
+                unlimited: true
             },
             insurance: insuranceEligibility
         })

@@ -58,24 +58,6 @@ export async function checkPlanLimits(
         }
     }
 
-    if (resource === 'appointment') {
-        const firstDayOfMonth = new Date()
-        firstDayOfMonth.setDate(1)
-        firstDayOfMonth.setHours(0, 0, 0, 0)
-
-        const { count } = await supabase
-            .from('appointments')
-            .select('*', { count: 'exact', head: true })
-            .eq('clinic_id', clinicId)
-            .gte('created_at', firstDayOfMonth.toISOString())
-
-        if (count !== null && plan.limits.max_appointments_month !== -1 && count >= plan.limits.max_appointments_month) {
-            throw new PlanLimitError(
-                `Limite de consultas mensais atingido no plano ${plan.name}. Upgrade para ${nextPlanName} para continuar.`,
-                403,
-                'PLAN_LIMIT_EXCEEDED'
-            )
-        }
-    }
+    // Note: Appointment limits have been removed - all plans have unlimited consultations
 }
 
