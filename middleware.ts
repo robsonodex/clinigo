@@ -263,6 +263,34 @@ export async function middleware(request: NextRequest) {
     }
 
     // ----------------------------------------
+    // PARTNER ROUTES (PARTNER role bypass)
+    // Parceiros não têm registro na tabela 'users',
+    // então bypass da verificação de perfil/role padrão
+    // ----------------------------------------
+    const isPartnerDashboardRoute = pathname.startsWith('/partners/') && !pathname.startsWith('/partners/login') && !pathname.startsWith('/partners/register')
+    const isPartnerApiRoute = pathname.startsWith('/api/partners/') && !pathname.startsWith('/api/partners/register') && !pathname.startsWith('/api/partners/validate-code')
+
+    if (isPartnerDashboardRoute || isPartnerApiRoute) {
+        const { supabase: partnerSupabase, response: partnerResponse } = createSupabaseClient(request)
+        const { data: { user: partnerUser } } = await partnerSupabase.auth.getUser()
+
+        if (partnerUser && partnerUser.user_metadata?.role === 'PARTNER') {
+            // Partner authenticated - allow access without users table lookup
+            return partnerResponse
+        }
+
+        if (!partnerUser) {
+            if (isPartnerApiRoute) {
+                return NextResponse.json(
+                    { error: 'Não autorizado', code: 'PARTNER_UNAUTHORIZED' },
+                    { status: 401 }
+                )
+            }
+            return NextResponse.redirect(new URL('/partners/login', request.url))
+        }
+    }
+
+    // ----------------------------------------
     // SUPABASE AUTH (Clinic/Doctor/Admin)
     // ----------------------------------------
     const { supabase, response } = createSupabaseClient(request)
