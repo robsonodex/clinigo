@@ -86,9 +86,14 @@ export default function PainelTVPage() {
     }, [initAudio])
 
     // Professional chime sound using Web Audio API
-    const playCallSound = useCallback(() => {
+    const playCallSound = useCallback(async () => {
         const ctx = audioCtxRef.current
         if (!ctx) return
+
+        // Resume AudioContext if browser suspended it after inactivity
+        if (ctx.state === 'suspended') {
+            await ctx.resume()
+        }
 
         const now = ctx.currentTime
 
@@ -133,7 +138,7 @@ export default function PainelTVPage() {
     }, [])
 
     const fetchAppointments = useCallback(async () => {
-        const today = new Date().toISOString().split('T')[0]
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
         const { data } = await (supabase as any)
             .from('appointments')
@@ -201,11 +206,11 @@ export default function PainelTVPage() {
                 },
                 async (payload: any) => {
                     if (payload.eventType === 'UPDATE') {
-                        // Patient was called (CONFIRMED → WAITING)
-                        if (
-                            payload.new.status === 'WAITING' &&
-                            payload.old?.status !== 'WAITING'
-                        ) {
+                        // Detect patient call: CONFIRMED→WAITING (first call) or WAITING→WAITING with new called_at (re-call)
+                        const isFirstCall = payload.new.status === 'WAITING' && payload.old?.status !== 'WAITING'
+                        const isRecall = payload.new.status === 'WAITING' && payload.old?.status === 'WAITING' && payload.new.called_at !== payload.old?.called_at
+
+                        if (isFirstCall || isRecall) {
                             // Fetch full data with patient/doctor names
                             await fetchAppointments()
                             // Small delay to ensure state is updated
