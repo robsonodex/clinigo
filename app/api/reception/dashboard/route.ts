@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         // Call the database function we created in the migration
         const { data: stats, error } = await supabase.rpc('get_reception_stats', {
             clinic_id_param: clinicId,
-            date_param: new Date().toISOString().split('T')[0]
+            date_param: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
         })
 
         if (error) {
