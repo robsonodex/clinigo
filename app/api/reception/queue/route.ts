@@ -69,16 +69,16 @@ export async function GET(request: Request) {
         urgency_level,
         status,
         reason,
-        patient:patients!inner(id, full_name, cpf, phone),
+        patient:patients(id, full_name, cpf, phone, clinic_id),
         doctor:doctors(id, user:users(full_name))
       `)
-                .eq('patient.clinic_id', clinicId) // 🔒 SECURITY: Filter by patient's clinic
                 .eq('status', status)
                 .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
                 .order('arrival_time', { ascending: true })
 
             if (walkInError) throw walkInError
-            walkIns = data || []
+            // 🔒 SECURITY: Filter by patient's clinic in JS (walk_in_registrations has no clinic_id column)
+            walkIns = (data || []).filter((w: any) => w.patient?.clinic_id === clinicId)
         } catch (e) {
             console.error('[DEBUG] Error fetching queue walk-ins:', e)
         }
