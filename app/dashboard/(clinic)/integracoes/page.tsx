@@ -60,20 +60,7 @@ interface IntegrationConfig {
 
 // Available integrations in the platform
 const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
-    {
-        id: 'mercadopago',
-        name: 'Mercado Pago',
-        description: 'Pagamentos via PIX e cartão de crédito',
-        icon: CreditCard,
-        category: 'payment',
-        requiredPlan: 'BASICO',
-        settingsKey: 'mercadopago_configured',
-        fields: [
-            { key: 'access_token', label: 'Access Token', type: 'password', placeholder: 'APP_USR-...' },
-            { key: 'webhook_secret', label: 'Webhook Secret (opcional)', type: 'password', placeholder: 'Secret para validar webhooks' },
-        ],
-        docsUrl: 'https://www.mercadopago.com.br/developers/pt/docs',
-    },
+
     {
         id: 'google_calendar',
         name: 'Google Calendar',
@@ -115,21 +102,7 @@ const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
         ],
         docsUrl: 'https://resend.com/docs',
     },
-    {
-        id: 'whatsapp',
-        name: 'WhatsApp Business API',
-        description: 'Notificações automáticas via WhatsApp',
-        icon: MessageCircle,
-        category: 'messaging',
-        requiredPlan: 'AVANCADO',
-        settingsKey: 'whatsapp_configured',
-        fields: [
-            { key: 'api_key', label: 'Access Token', type: 'password', placeholder: 'Token do WhatsApp Business' },
-            { key: 'phone_id', label: 'Phone Number ID', type: 'text', placeholder: 'ID do número' },
-            { key: 'business_id', label: 'Business Account ID', type: 'text', placeholder: 'ID da conta business' },
-        ],
-        docsUrl: 'https://developers.facebook.com/docs/whatsapp',
-    },
+
     {
         id: 'rdstation',
         name: 'RD Station',
@@ -401,10 +374,8 @@ export default function IntegracoesPage() {
 
     const categories = [
         { id: 'all', name: 'Todas' },
-        { id: 'payment', name: 'Pagamentos' },
         { id: 'video', name: 'Videochamada' },
         { id: 'email', name: 'Email' },
-        { id: 'messaging', name: 'Mensagens' },
         { id: 'analytics', name: 'Analytics' },
     ]
 

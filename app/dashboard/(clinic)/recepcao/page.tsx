@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle, CheckCircle2, XCircle, AlertTriangle,
     Plus, Search, QrCode, User, UserX, Calendar, Phone, MessageCircle, Settings, FileText,
-    Megaphone, Bell, Loader2, Tv
+    Megaphone, Bell, Loader2, Tv, Monitor
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -394,48 +394,22 @@ export default function RecepcaoPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Users className="w-7 h-7" />
-                        Recepção
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Gestão de fila e check-in de pacientes
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    {/* 📺 TV Panel Link */}
-                    {currentUser?.clinic_id && (
-                        <Button
-                            variant="outline"
-                            className="gap-2"
-                            onClick={() => {
-                                const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
-                                window.open(url, '_blank')
-                            }}
-                        >
-                            <Tv className="w-4 h-4" />
-                            Painel TV
-                        </Button>
-                    )}
-
-                    {/* Check-in Fácil (Pré-Check-in Online) Button */}
-                    <Link href="/dashboard/recepcao/face-checkin">
-                        <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-6 text-base font-semibold shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all">
-                            <CheckCircle2 className="w-5 h-5" />
-                            Check-in Fácil
-                        </Button>
-                    </Link>
-
-                    {/* QR Scanner Button */}
-                    <QRScannerDialog onCheckIn={loadData} />
-
-                    {/* Auto-refresh Settings */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold flex items-center gap-2">
+                            <Users className="w-7 h-7" />
+                            Recepção
+                        </h1>
+                        <p className="text-muted-foreground">
+                            Gestão de fila e check-in de pacientes
+                        </p>
+                    </div>
+                    {/* Settings gear - moved here */}
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" title="Configurar atualização automática">
-                                <Settings className="w-4 h-4" />
+                            <Button variant="ghost" size="icon" title="Configurar atualização automática" className="text-muted-foreground hover:text-foreground">
+                                <Settings className="w-5 h-5" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -475,15 +449,60 @@ export default function RecepcaoPage() {
                             </div>
                         </DialogContent>
                     </Dialog>
+                </div>
 
+                {/* Action Buttons - uniform grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {/* Painel TV */}
+                    {currentUser?.clinic_id && (
+                        <Button
+                            className="h-12 gap-2 text-sm font-medium text-white"
+                            style={{ backgroundColor: '#334155' }}
+                            onClick={() => {
+                                const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
+                                window.open(url, '_blank')
+                            }}
+                        >
+                            <Tv className="w-4 h-4" />
+                            Painel TV
+                        </Button>
+                    )}
+
+                    {/* Auto Atendimento */}
+                    {currentUser?.clinic_id && (
+                        <Button
+                            className="h-12 gap-2 text-sm font-medium text-white"
+                            style={{ backgroundColor: '#475569' }}
+                            onClick={() => {
+                                const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
+                                window.open(url, '_blank')
+                            }}
+                        >
+                            <Monitor className="w-4 h-4" />
+                            Auto Atendimento
+                        </Button>
+                    )}
+
+                    {/* Check-in Fácil */}
+                    <Link href="/dashboard/recepcao/face-checkin">
+                        <Button className="h-12 w-full gap-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Check-in Fácil
+                        </Button>
+                    </Link>
+
+                    {/* QR Scanner */}
+                    <QRScannerDialog onCheckIn={loadData} />
+
+                    {/* Sem Agendamento */}
                     <Dialog open={showWalkInDialog} onOpenChange={(open) => {
                         setShowWalkInDialog(open)
                         if (!open) setIsCreatingPatient(false)
                     }}>
                         <DialogTrigger asChild>
-                            <Button>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Atendimento Sem Agendamento
+                            <Button className="h-12 gap-2 text-sm font-medium text-white" style={{ backgroundColor: '#0284c7' }}>
+                                <Plus className="w-4 h-4" />
+                                Sem Agendamento
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -540,71 +559,28 @@ export default function RecepcaoPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-amber-100 rounded-lg">
-                                <Clock className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-amber-600">
-                                    {stats.waiting_count}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Aguardando</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-blue-100 rounded-lg">
-                                <Users className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-blue-600">
-                                    {stats.in_service_count}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Em Atendimento</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-green-100 rounded-lg">
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-green-600">
-                                    {stats.completed_count}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Atendidos Hoje</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="cursor-pointer hover:bg-muted/50 transition-colors shadow-sm hover:shadow-md" onClick={() => setShowNoShowList(true)} role="button" tabIndex={0}>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-red-100 rounded-lg">
-                                <UserX className="w-5 h-5 text-red-600" />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold text-red-600">
-                                    {stats.no_show_count}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Não Compareceram</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Stats Bar - compact */}
+            <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span className="text-lg font-bold text-amber-600">{stats.waiting_count}</span>
+                    <span className="text-xs text-muted-foreground">Aguardando</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    <span className="text-lg font-bold text-blue-600">{stats.in_service_count}</span>
+                    <span className="text-xs text-muted-foreground">Em Atendimento</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-lg font-bold text-green-600">{stats.completed_count}</span>
+                    <span className="text-xs text-muted-foreground">Atendidos Hoje</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors" onClick={() => setShowNoShowList(true)} role="button" tabIndex={0}>
+                    <UserX className="w-4 h-4 text-red-600" />
+                    <span className="text-lg font-bold text-red-600">{stats.no_show_count}</span>
+                    <span className="text-xs text-muted-foreground">Não Compareceram</span>
+                </div>
             </div>
 
             <Dialog open={showNoShowList} onOpenChange={setShowNoShowList}>

@@ -226,62 +226,6 @@ export function InitialSetup() {
                         </div>
                     </div>
 
-                    <div className="border-t pt-6" />
-
-                    {/* WhatsApp */}
-                    <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                            <MessageSquare className="w-5 h-5 text-green-600 mt-1" />
-                            <div className="flex-1">
-                                <h3 className="font-semibold mb-1">
-                                    WhatsApp Automático
-                                </h3>
-                                <p className="text-sm text-muted-foreground mb-3">
-                                    O envio automático de mensagens via WhatsApp está disponível
-                                    apenas nos planos:
-                                </p>
-
-                                <ul className="text-sm space-y-1 mb-3">
-                                    <li className="flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                        <span><strong>Professional</strong> (R$ 549/mês)</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                        <span><strong>Enterprise</strong> (R$ 799/mês)</span>
-                                    </li>
-                                </ul>
-
-                                {(status.planType === 'BASIC' || status.planType === 'STARTER') ? (
-                                    <Alert>
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertDescription className="text-sm">
-                                            <strong>Seu plano atual: {status.planType}</strong>
-                                            <br />
-                                            Atualize para Professional ou Enterprise e desfrute de
-                                            todos os recursos do CliniGo.
-                                            <div className="mt-3">
-                                                <Link href="/dashboard/planos?upgrade=whatsapp">
-                                                    <Button size="sm" className="w-full sm:w-auto">
-                                                        Atualizar Plano e Desfrutar de Todos os Recursos →
-                                                    </Button>
-                                                </Link>
-                                            </div>
-                                        </AlertDescription>
-                                    </Alert>
-                                ) : (
-                                    <Alert className="bg-green-50 border-green-200">
-                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                        <AlertDescription className="text-green-800">
-                                            <strong>WhatsApp disponível no seu plano!</strong>
-                                            <br />
-                                            Configure em Configurações → Integrações.
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-                            </div>
-                        </div>
-                    </div>
                 </CardContent>
             </Card>
         </div>
