@@ -105,11 +105,11 @@ export default function RecepcaoPage() {
         return () => clearInterval(interval)
     }, [refreshInterval]) // Re-create interval when refreshInterval changes
 
-    // Realtime subscription for pre-check-in notifications
+    // Realtime subscription for pre-check-in notifications AND appointment updates (check-in, status changes)
     useEffect(() => {
         const supabase = createClient()
         const channel = supabase
-            .channel('precheckin_realtime')
+            .channel('reception_realtime')
             .on(
                 'postgres_changes',
                 {
@@ -140,6 +140,19 @@ export default function RecepcaoPage() {
                         })
                         loadData() // Refresh queue
                     }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'appointments',
+                },
+                () => {
+                    // Appointment updated (check-in facial, status change, etc.)
+                    // Refresh queue immediately so the "Chamar" button appears instantly
+                    loadData()
                 }
             )
             .subscribe()
