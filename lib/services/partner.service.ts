@@ -95,14 +95,41 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
             }
         })
 
+        let userId: string
+
         if (authError) {
             console.error('[PARTNER] Auth user creation error:', authError)
 
             if (authError.message.includes('already been registered')) {
-                return { success: false, error: 'Este email já está cadastrado' }
-            }
+                // Look up the existing auth user by email efficiently
+                const { data: existingUsers } = await supabase
+                    .from('partners')
+                    .select('id, referral_code, user_id')
+                    .eq('email', data.email)
+                    .maybeSingle()
 
-            return { success: false, error: 'Erro ao criar conta de usuário' }
+                if (existingUsers) {
+                    return { success: false, error: 'Este email já está cadastrado como parceiro. Faça login na sua conta.' }
+                }
+
+                // Find the auth user id via admin API
+                const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers()
+                const existingAuthUserId = !listError
+                    ? allUsers.users.find((u) => u.email === data.email)?.id || null
+                    : null
+
+                if (!existingAuthUserId) {
+                    return { success: false, error: 'Erro ao localizar conta existente. Tente novamente.' }
+                }
+
+                // Reuse the existing auth user to complete registration
+                console.log('[PARTNER] Reusing existing auth user:', existingAuthUserId)
+                userId = existingAuthUserId
+            } else {
+                return { success: false, error: 'Erro ao criar conta de usuário' }
+            }
+        } else {
+            userId = authUser.user.id
         }
 
         // 3. Create partner record with terms acceptance and user_id
@@ -120,7 +147,7 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
                 referral_code: referralCode,
                 commission_rate: 35.00,
                 status: 'ACTIVE',
-                user_id: authUser.user.id, // Link to auth user
+                user_id: userId, // Link to auth user
                 terms_accepted_at: data.terms_accepted ? new Date().toISOString() : null,
                 terms_version: '1.0',
                 terms_accepted_ip: data.terms_accepted_ip || null
@@ -145,7 +172,7 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
         }
 
         // 4. Update user_metadata to include partner_id for future auth checks
-        await supabase.auth.admin.updateUserById(authUser.user.id, {
+        await supabase.auth.admin.updateUserById(userId, {
             user_metadata: {
                 role: 'PARTNER',
                 full_name: data.full_name,
@@ -186,7 +213,7 @@ export async function registerPartner(data: PartnerRegistration): Promise<{
  * Get partner dashboard data
  */
 export async function getPartnerDashboard(partnerId: string): Promise<PartnerDashboard | null> {
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
 
     const { data, error } = await supabase
         .from('vw_partner_dashboard')
@@ -236,7 +263,7 @@ export async function validateReferralCode(code: string): Promise<{
  * Get clinics linked to a partner
  */
 export async function getPartnerClinics(partnerId: string): Promise<PartnerClinic[]> {
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
 
     const { data, error } = await supabase
         .from('clinic_referrals')
