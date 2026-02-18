@@ -15,6 +15,7 @@ export type FeatureKey =
     // ============================================
     | 'check_in_qr'              // QR Code check-in
     | 'check_in_facial'          // Reconhecimento facial
+    | 'totem'                    // Totem de auto atendimento
     | 'pre_registration'         // Pré-cadastro pelo paciente
     | 'triagem'                  // Fluxo de triagem
 
@@ -81,7 +82,8 @@ const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
     // CHECK-IN & RECEPÇÃO
     // ============================================
     check_in_qr: 1,              // Todos os planos
-    check_in_facial: 2,          // AVANCADO+
+    check_in_facial: 3,          // PROFESSIONAL+
+    totem: 3,                    // PROFESSIONAL+
     pre_registration: 1,         // Todos os planos
     triagem: 1,                  // Todos os planos
 
@@ -192,6 +194,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
     // Check-in
     check_in_qr: 'Check-in QR Code',
     check_in_facial: 'Check-in Facial',
+    totem: 'Totem de Auto Atendimento',
     pre_registration: 'Pré-Cadastro',
     triagem: 'Triagem',
 

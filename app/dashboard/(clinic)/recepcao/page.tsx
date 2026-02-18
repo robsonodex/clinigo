@@ -22,6 +22,8 @@ import { QRScannerDialog } from '@/components/reception/qr-scanner-dialog'
 import { CheckinDocumentsModal } from './components/checkin-documents-modal'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
+import { hasFeature } from '@/lib/constants/plan-features'
+import { type PlanType } from '@/lib/constants/plans'
 
 interface QueueItem {
     id: string
@@ -97,6 +99,7 @@ export default function RecepcaoPage() {
     const [preCheckinCount, setPreCheckinCount] = useState(0)
     const [preCheckinAlerts, setPreCheckinAlerts] = useState<Array<{ id: string; patientName: string; time: string }>>([])
     const [showNoShowList, setShowNoShowList] = useState(false)
+    const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
 
     useEffect(() => {
         loadData()
@@ -104,6 +107,20 @@ export default function RecepcaoPage() {
         const interval = setInterval(loadData, refreshInterval * 1000)
         return () => clearInterval(interval)
     }, [refreshInterval]) // Re-create interval when refreshInterval changes
+
+    // Fetch clinic plan type for feature gating
+    useEffect(() => {
+        async function fetchPlanType() {
+            try {
+                const res = await fetch('/api/setup/status')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.planType) setClinicPlanType(data.planType as PlanType)
+                }
+            } catch { /* silent */ }
+        }
+        fetchPlanType()
+    }, [])
 
     // Realtime subscription for pre-check-in notifications AND appointment updates (check-in, status changes)
     useEffect(() => {
@@ -482,7 +499,7 @@ export default function RecepcaoPage() {
                     )}
 
                     {/* Auto Atendimento */}
-                    {currentUser?.clinic_id && (
+                    {currentUser?.clinic_id && hasFeature(clinicPlanType, 'totem') && (
                         <Button
                             className="h-12 gap-2 text-sm font-medium text-white"
                             style={{ backgroundColor: '#475569' }}

@@ -2,12 +2,14 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isMasterAdmin } from '@/lib/super-admin-middleware'
 
-// Use service role for full access
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-)
+// Lazy init to avoid build-time crash when env vars are not available
+function getSupabaseAdmin() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+}
 
 export async function POST(request: NextRequest) {
     // Verify Super Admin
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify clinic exists
-        const { data: clinic, error: clinicError } = await supabaseAdmin
+        const { data: clinic, error: clinicError } = await getSupabaseAdmin()
             .from('clinics')
             .select('id, name')
             .eq('id', clinicId)
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create impersonation session
-        const { data: session, error: sessionError } = await supabaseAdmin
+        const { data: session, error: sessionError } = await getSupabaseAdmin()
             .from('impersonation_sessions')
             .insert({
                 admin_email: 'robsonfenriz@gmail.com',
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Log the impersonation
-        await supabaseAdmin.from('system_logs').insert({
+        await getSupabaseAdmin().from('system_logs').insert({
             admin_email: 'robsonfenriz@gmail.com',
             action_type: 'IMPERSONATE',
             action_category: 'CLINIC',
@@ -119,7 +121,7 @@ export async function DELETE(request: NextRequest) {
             const decoded = JSON.parse(Buffer.from(impersonationToken, 'base64').toString())
 
             // End the session
-            await supabaseAdmin
+            await getSupabaseAdmin()
                 .from('impersonation_sessions')
                 .update({
                     is_active: false,
@@ -128,7 +130,7 @@ export async function DELETE(request: NextRequest) {
                 .eq('id', decoded.sessionId)
 
             // Log the end
-            await supabaseAdmin.from('system_logs').insert({
+            await getSupabaseAdmin().from('system_logs').insert({
                 admin_email: 'robsonfenriz@gmail.com',
                 action_type: 'END_IMPERSONATE',
                 action_category: 'CLINIC',

@@ -2,12 +2,14 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isMasterAdmin } from '@/lib/super-admin-middleware'
 
-// Use service role for full access
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-)
+// Lazy init to avoid build-time crash when env vars are not available
+function getSupabaseAdmin() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+}
 
 export async function GET(request: NextRequest) {
     // Verify Super Admin
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '50')
 
         // Get AiA decisions from consultation_ai_analyses
-        const { data: analyses, error } = await supabaseAdmin
+        const { data: analyses, error } = await getSupabaseAdmin()
             .from('consultation_ai_analyses')
             .select(`
                 id,
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest) {
         })
 
         // Log this access
-        await supabaseAdmin.from('system_logs').insert({
+        await getSupabaseAdmin().from('system_logs').insert({
             admin_email: 'robsonfenriz@gmail.com',
             action_type: 'VIEW',
             action_category: 'AI',

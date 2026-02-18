@@ -2,12 +2,14 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isMasterAdmin } from '@/lib/super-admin-middleware'
 
-// Use service role for full access
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-)
+// Lazy init to avoid build-time crash when env vars are not available
+function getSupabaseAdmin() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+}
 
 export async function GET(request: NextRequest) {
     // Verify Super Admin
@@ -32,28 +34,28 @@ export async function GET(request: NextRequest) {
             const monthEnd = nextMonth.toISOString().slice(0, 10)
 
             // Get active clinics at end of month
-            const { count: activeClinicCount } = await supabaseAdmin
+            const { count: activeClinicCount } = await getSupabaseAdmin()
                 .from('clinics')
                 .select('*', { count: 'exact', head: true })
                 .eq('is_active', true)
                 .lte('created_at', monthEnd)
 
             // Get new clinics this month
-            const { count: newClinicCount } = await supabaseAdmin
+            const { count: newClinicCount } = await getSupabaseAdmin()
                 .from('clinics')
                 .select('*', { count: 'exact', head: true })
                 .gte('created_at', monthStart)
                 .lt('created_at', monthEnd)
 
             // Get consultations this month
-            const { count: consultationCount } = await supabaseAdmin
+            const { count: consultationCount } = await getSupabaseAdmin()
                 .from('consultations')
                 .select('*', { count: 'exact', head: true })
                 .gte('date', monthStart)
                 .lt('date', monthEnd)
 
             // Calculate MRR (simplified - based on active clinics)
-            const { data: clinicsWithPlans } = await supabaseAdmin
+            const { data: clinicsWithPlans } = await getSupabaseAdmin()
                 .from('clinics')
                 .select('plan_type')
                 .eq('is_active', true)
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
             }, 0) || 0
 
             // Get AI tokens
-            const { data: aiData } = await supabaseAdmin
+            const { data: aiData } = await getSupabaseAdmin()
                 .from('consultation_ai_analyses')
                 .select('tokens_used')
                 .gte('created_at', monthStart)
@@ -92,7 +94,7 @@ export async function GET(request: NextRequest) {
         const mrrGrowth = previousMRR > 0 ? ((latestMRR - previousMRR) / previousMRR) * 100 : 0
 
         // Plan distribution
-        const { data: planDistribution } = await supabaseAdmin
+        const { data: planDistribution } = await getSupabaseAdmin()
             .from('clinics')
             .select('plan_type')
             .eq('is_active', true)
@@ -105,7 +107,7 @@ export async function GET(request: NextRequest) {
         })
 
         // Log analytics access
-        await supabaseAdmin.from('system_logs').insert({
+        await getSupabaseAdmin().from('system_logs').insert({
             admin_email: 'robsonfenriz@gmail.com',
             action_type: 'VIEW',
             action_category: 'ANALYTICS',

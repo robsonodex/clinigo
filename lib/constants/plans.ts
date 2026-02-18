@@ -109,6 +109,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
             { name: 'Até 3 unidades', included: true },
             { name: 'TISS completo', included: true, tooltip: 'Guias, XML ANS, validação XSD, assinatura digital' },
             { name: 'Check-in Facial', included: true },
+            { name: 'Totem de Auto Atendimento', included: true },
             { name: 'Auditoria financeira', included: true },
             { name: 'Dashboards customizados', included: true },
             { name: 'API/Webhooks', included: true },

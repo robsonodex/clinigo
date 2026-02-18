@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor } from 'lucide-react'
+import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor, Tablet } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -405,6 +405,22 @@ export default function LandingPremium() {
                             Exiba a fila de atendimento em tempo real na TV da recepção. Chamada automática por consultório com atualização instantânea.
                         </p>
                     </motion.div>
+
+                    {/* Feature 8 - Totem de Auto Atendimento */}
+                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
+                        <div className="absolute top-4 right-4">
+                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                                Novo
+                            </span>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
+                            <Tablet className="w-6 h-6 text-teal-vibrant" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Totem de Auto Atendimento</h3>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            Seus pacientes fazem check-in sozinhos via QR Code ou reconhecimento facial. Sem filas, sem burocracia na recepção.
+                        </p>
+                    </motion.div>
                 </div>
             </section>
 
@@ -555,6 +571,7 @@ export default function LandingPremium() {
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> TISS completo</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in Facial</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Totem de Auto Atendimento</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Auditoria financeira</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Dashboards customizados</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> API/Webhooks</li>
@@ -663,31 +680,49 @@ export default function LandingPremium() {
                             {/* Testimonial List Map */}
                             {[
                                 {
-                                    quote: "Antes eu perdia 2 horas por dia com papelada. Com o CliniGo, tudo ficou digital e automático.",
-                                    name: "Dra. Juliana Costa",
-                                    role: "Pediatra | SP",
-                                    initials: "JC"
+                                    quote: "O Check-in Facial eliminou as filas da recepção. O paciente chega, olha para a câmera e já está confirmado. Nunca vi nada igual no Brasil.",
+                                    name: "Dr. Marcos Vieira",
+                                    role: "Ortopedista | SP",
+                                    initials: "MV"
                                 },
                                 {
-                                    quote: "O prontuário eletrônico é intuitivo e completo. Meus atendimentos ficaram muito mais profissionais.",
+                                    quote: "Instalamos o Totem de Auto Atendimento e a recepcionista agora foca no acolhimento, não em burocracia. Os pacientes adoram a autonomia.",
+                                    name: "Dra. Carolina Mendes",
+                                    role: "Diretora Clínica | RJ",
+                                    initials: "CM"
+                                },
+                                {
+                                    quote: "O Painel de TV na recepção deu outro nível para a clínica. O paciente vê seu nome na tela e já sabe para qual consultório ir. Zero confusão.",
+                                    name: "Dr. Rafael Duarte",
+                                    role: "Cardiologista | MG",
+                                    initials: "RD"
+                                },
+                                {
+                                    quote: "Com o Check-in por QR Code, 70% dos pacientes já chegam com o pré-cadastro feito. A recepção ficou muito mais ágil e organizada.",
+                                    name: "Dra. Patrícia Nunes",
+                                    role: "Pediatra | PR",
+                                    initials: "PN"
+                                },
+                                {
+                                    quote: "A agenda anti-overbooking acabou com os conflitos de horário. E o prontuário eletrônico é completo e rápido de preencher.",
                                     name: "Dr. André Lima",
                                     role: "Psiquiatra | SP",
                                     initials: "AL"
                                 },
                                 {
-                                    quote: "O controle financeiro me deu visibilidade total. Descobri que estava perdendo 20% em glosas!",
+                                    quote: "O faturamento TISS integrado economiza 3 dias por mês da minha equipe. Gerar XML e validar com a operadora é automático agora.",
                                     name: "Dra. Beatriz Almeida",
                                     role: "Ginecologista | SP",
                                     initials: "BA"
                                 },
                                 {
-                                    quote: "A agenda inteligente reduziu minhas faltas em 40%. O sistema de confirmação é fantástico.",
-                                    name: "Dr. Ricardo Santos",
-                                    role: "Cardiologista | RJ",
-                                    initials: "RS"
+                                    quote: "A teleconsulta WebRTC integrada ao prontuário mudou tudo. Atendo de qualquer lugar com vídeo HD e o histórico do paciente na tela.",
+                                    name: "Dr. Gustavo Ferreira",
+                                    role: "Endocrinologista | RS",
+                                    initials: "GF"
                                 },
                                 {
-                                    quote: "Suporte excelente e migração super tranquila. Melhor investimento que fiz para o consultório.",
+                                    quote: "O controle financeiro com DRE e repasse médico me deu visibilidade total. Descobri que estava perdendo 20% em glosas!",
                                     name: "Dra. Fernanda Oliveira",
                                     role: "Dermatologista | MG",
                                     initials: "FO"
@@ -700,7 +735,7 @@ export default function LandingPremium() {
                                         ))}
                                     </div>
                                     <p className="text-slate-300 text-xs mb-3 italic leading-relaxed">
-                                        "{testimonial.quote}"
+                                        &quot;{testimonial.quote}&quot;
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <div className="w-7 h-7 rounded-full bg-teal-vibrant/20 flex items-center justify-center text-teal-vibrant text-[10px] font-bold">{testimonial.initials}</div>
@@ -715,22 +750,28 @@ export default function LandingPremium() {
                             {/* Duplicates for Loop Effect */}
                             {[
                                 {
-                                    quote: "Antes eu perdia 2 horas por dia com papelada. Com o CliniGo, tudo ficou digital e automático.",
-                                    name: "Dra. Juliana Costa",
-                                    role: "Pediatra | SP",
-                                    initials: "JC"
+                                    quote: "O Check-in Facial eliminou as filas da recepção. O paciente chega, olha para a câmera e já está confirmado. Nunca vi nada igual no Brasil.",
+                                    name: "Dr. Marcos Vieira",
+                                    role: "Ortopedista | SP",
+                                    initials: "MV"
                                 },
                                 {
-                                    quote: "O prontuário eletrônico é intuitivo e completo. Meus atendimentos ficaram muito mais profissionais.",
-                                    name: "Dr. André Lima",
-                                    role: "Psiquiatra | SP",
-                                    initials: "AL"
+                                    quote: "Instalamos o Totem de Auto Atendimento e a recepcionista agora foca no acolhimento, não em burocracia. Os pacientes adoram a autonomia.",
+                                    name: "Dra. Carolina Mendes",
+                                    role: "Diretora Clínica | RJ",
+                                    initials: "CM"
                                 },
                                 {
-                                    quote: "O controle financeiro me deu visibilidade total. Descobri que estava perdendo 20% em glosas!",
-                                    name: "Dra. Beatriz Almeida",
-                                    role: "Ginecologista | SP",
-                                    initials: "BA"
+                                    quote: "O Painel de TV na recepção deu outro nível para a clínica. O paciente vê seu nome na tela e já sabe para qual consultório ir. Zero confusão.",
+                                    name: "Dr. Rafael Duarte",
+                                    role: "Cardiologista | MG",
+                                    initials: "RD"
+                                },
+                                {
+                                    quote: "Com o Check-in por QR Code, 70% dos pacientes já chegam com o pré-cadastro feito. A recepção ficou muito mais ágil e organizada.",
+                                    name: "Dra. Patrícia Nunes",
+                                    role: "Pediatra | PR",
+                                    initials: "PN"
                                 }
                             ].map((testimonial, index) => (
                                 <div key={`dup-${index}`} className="flex-shrink-0 w-[280px] bg-navy-deep-light border border-slate-800 rounded-xl p-4">
@@ -740,7 +781,7 @@ export default function LandingPremium() {
                                         ))}
                                     </div>
                                     <p className="text-slate-300 text-xs mb-3 italic leading-relaxed">
-                                        "{testimonial.quote}"
+                                        &quot;{testimonial.quote}&quot;
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <div className="w-7 h-7 rounded-full bg-teal-vibrant/20 flex items-center justify-center text-teal-vibrant text-[10px] font-bold">{testimonial.initials}</div>
