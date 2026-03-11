@@ -558,9 +558,7 @@ export default function LandingPremium() {
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Tudo do Avançado +
                                 </li>
-                                <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Até 3 unidades
-                                </li>
+
                             </ul>
 
                             <details className="mt-3 group">
@@ -620,9 +618,7 @@ export default function LandingPremium() {
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Tudo do Professional +
                                     </li>
-                                    <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Unidades ilimitadas
-                                    </li>
+
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Portal Super Admin
                                     </li>
@@ -681,9 +677,9 @@ export default function LandingPremium() {
                             {[
                                 {
                                     quote: "O Check-in Facial eliminou as filas da recepção. O paciente chega, olha para a câmera e já está confirmado. Nunca vi nada igual no Brasil.",
-                                    name: "Dr. Marcos Vieira",
-                                    role: "Ortopedista | SP",
-                                    initials: "MV"
+                                    name: "Dr. Henrique Bastos",
+                                    role: "Ortopedista | BA",
+                                    initials: "HB"
                                 },
                                 {
                                     quote: "Instalamos o Totem de Auto Atendimento e a recepcionista agora foca no acolhimento, não em burocracia. Os pacientes adoram a autonomia.",
@@ -705,15 +701,15 @@ export default function LandingPremium() {
                                 },
                                 {
                                     quote: "A agenda anti-overbooking acabou com os conflitos de horário. E o prontuário eletrônico é completo e rápido de preencher.",
-                                    name: "Dr. André Lima",
-                                    role: "Psiquiatra | SP",
-                                    initials: "AL"
+                                    name: "Dr. Thiago Cardoso",
+                                    role: "Psiquiatra | SC",
+                                    initials: "TC"
                                 },
                                 {
                                     quote: "O faturamento TISS integrado economiza 3 dias por mês da minha equipe. Gerar XML e validar com a operadora é automático agora.",
-                                    name: "Dra. Beatriz Almeida",
-                                    role: "Ginecologista | SP",
-                                    initials: "BA"
+                                    name: "Dra. Larissa Monteiro",
+                                    role: "Ginecologista | GO",
+                                    initials: "LM"
                                 },
                                 {
                                     quote: "A teleconsulta WebRTC integrada ao prontuário mudou tudo. Atendo de qualquer lugar com vídeo HD e o histórico do paciente na tela.",
@@ -751,9 +747,9 @@ export default function LandingPremium() {
                             {[
                                 {
                                     quote: "O Check-in Facial eliminou as filas da recepção. O paciente chega, olha para a câmera e já está confirmado. Nunca vi nada igual no Brasil.",
-                                    name: "Dr. Marcos Vieira",
-                                    role: "Ortopedista | SP",
-                                    initials: "MV"
+                                    name: "Dr. Henrique Bastos",
+                                    role: "Ortopedista | BA",
+                                    initials: "HB"
                                 },
                                 {
                                     quote: "Instalamos o Totem de Auto Atendimento e a recepcionista agora foca no acolhimento, não em burocracia. Os pacientes adoram a autonomia.",

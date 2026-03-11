@@ -36,12 +36,12 @@ const PLAN_INFO: Record<string, { name: string; price: number; features: string[
     PROFESSIONAL: {
         name: 'Professional',
         price: 549,
-        features: ['30 Médicos', 'TISS', '3 Unidades', 'Tudo do Avançado'],
+        features: ['30 Médicos', 'TISS', 'Tudo do Avançado'],
     },
     ENTERPRISE: {
         name: 'Enterprise',
         price: 799,
-        features: ['Médicos Ilimitados', 'Unidades Ilimitadas', 'Suporte 24/7', 'Gerente de Conta'],
+        features: ['Médicos Ilimitados', 'Suporte 24/7', 'Gerente de Conta'],
     },
 }
 

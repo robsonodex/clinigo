@@ -45,7 +45,7 @@ const PLAN_FEATURES: Record<string, { name: string; features: string[] }> = {
         features: [
             'Até 30 médicos simultâneos',
             'TISS - Faturamento de convênios',
-            'Até 3 unidades',
+
             'Repasse médico automático',
             'Suporte prioritário',
         ],

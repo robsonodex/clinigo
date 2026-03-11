@@ -429,7 +429,7 @@ export async function middleware(request: NextRequest) {
         if (userRole !== 'SUPER_ADMIN' && userClinicId) {
             const { data: clinic } = await supabase
                 .from('clinics')
-                .select('is_active, plan_type, payment_confirmed, is_demo')
+                .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at')
                 .eq('id', userClinicId)
                 .single()
 
@@ -463,6 +463,28 @@ export async function middleware(request: NextRequest) {
                         )
                     } else if (pathname.startsWith('/dashboard')) {
                         return NextResponse.redirect(new URL('/pagamento-pendente', request.url))
+                    }
+                }
+
+                // TRIAL EXPIRATION CHECK
+                if (clinic.approval_status === 'trial' && clinic.trial_ends_at) {
+                    const trialEnd = new Date(clinic.trial_ends_at)
+                    if (trialEnd < new Date()) {
+                        // Allow billing/plan routes for payment
+                        if (pathname.startsWith('/api/billing') || pathname.startsWith('/dashboard/configuracoes/plano')) {
+                            // Allow through for payment processing
+                        } else if (pathname.startsWith('/api')) {
+                            return NextResponse.json(
+                                {
+                                    error: 'Período de teste expirado',
+                                    code: 'TRIAL_EXPIRED',
+                                    redirect_url: '/dashboard/upgrade-required'
+                                },
+                                { status: 402 }
+                            )
+                        } else if (pathname.startsWith('/dashboard')) {
+                            return NextResponse.redirect(new URL('/dashboard/upgrade-required?reason=trial_expired', request.url))
+                        }
                     }
                 }
 

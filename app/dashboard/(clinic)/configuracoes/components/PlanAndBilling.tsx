@@ -29,6 +29,8 @@ interface ClinicData {
     plan_type: PlanType
     subscription_due_date: string | null
     payment_status: string
+    approval_status: string | null
+    trial_ends_at: string | null
 }
 
 const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: string[] }> = {
@@ -74,7 +76,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
             'Até 30 médicos',
             'Consultas ilimitadas',
             '100 GB armazenamento',
-            'Até 3 unidades',
+
             'Tudo do Avançado +',
             'TISS completo',
             'Check-in Facial',
@@ -92,7 +94,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
             'Médicos ilimitados',
             'Consultas ilimitadas',
             '500 GB armazenamento',
-            'Unidades ilimitadas',
+
             'Tudo do Professional +',
             'Portal Super Admin',
             'Gestão centralizada de clínicas',
@@ -228,6 +230,30 @@ export function PlanAndBilling() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    {/* Trial Info */}
+                    {clinic.approval_status === 'trial' && clinic.trial_ends_at && (() => {
+                        const trialDaysLeft = Math.max(0, Math.ceil((new Date(clinic.trial_ends_at!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+                        const trialDateFormatted = new Date(clinic.trial_ends_at!).toLocaleDateString('pt-BR')
+                        return (
+                            <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                                <CardContent className="p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-semibold text-amber-900 dark:text-amber-200">
+                                                Período de teste grátis
+                                            </p>
+                                            <p className="text-sm text-amber-700 dark:text-amber-300">
+                                                {trialDaysLeft > 0
+                                                    ? `Seu teste expira em ${trialDaysLeft} dia${trialDaysLeft !== 1 ? 's' : ''} (${trialDateFormatted}). Escolha um plano para continuar.`
+                                                    : 'Seu período de teste expirou. Escolha um plano para continuar usando o CliniGo.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })()}
                     {/* Current Plan Info */}
                     <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 flex items-start space-x-4">
                         <Zap className="w-6 h-6 text-primary mt-1" />

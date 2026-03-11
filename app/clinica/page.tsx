@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Mail, Lock, Eye, EyeOff, Building2, Shield, CheckCircle, ArrowRight, Loader2 } from 'lucide-react'
@@ -16,6 +16,7 @@ export default function ClinicaLoginPage() {
         password: '',
         rememberMe: false
     })
+
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -81,6 +82,9 @@ export default function ClinicaLoginPage() {
 
     return (
         <div className="min-h-screen flex">
+            <Suspense fallback={null}>
+                <TrialSuccessToast />
+            </Suspense>
             {/* Left side - Login Form */}
             <div className="flex-1 flex items-center justify-center p-8 bg-white">
                 <div className="w-full max-w-md">
@@ -263,4 +267,15 @@ export default function ClinicaLoginPage() {
             </div>
         </div>
     )
+}
+
+// Separate component for useSearchParams to satisfy Suspense requirement
+function TrialSuccessToast() {
+    const searchParams = useSearchParams()
+    useEffect(() => {
+        if (searchParams.get('trial') === 'success') {
+            toast.success('Conta criada! Seu teste grátis de 7 dias começou. Faça login para acessar.', { duration: 8000 })
+        }
+    }, [searchParams])
+    return null
 }

@@ -20,12 +20,102 @@ export async function OPTIONS(request: NextRequest) {
     return new NextResponse(null, {
         status: 200,
         headers: {
-            'Allow': 'DELETE, GET, OPTIONS',
-            'Access-Control-Allow-Methods': 'DELETE, GET, OPTIONS',
+            'Allow': 'DELETE, GET, PATCH, OPTIONS',
+            'Access-Control-Allow-Methods': 'DELETE, GET, PATCH, OPTIONS',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-user-role, x-clinic-id, x-plan-type'
         },
     })
+}
+
+/**
+ * PATCH /api/super-admin/clinics/[id]
+ * Activate a clinic plan manually (removes trial status)
+ * SUPER_ADMIN only
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+    try {
+        const { id: clinicId } = await params
+        const body = await request.json()
+        const { action } = body
+
+        // Check SUPER_ADMIN access
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (!userData || (userData as { role: string }).role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Forbidden - Super Admin only' }, { status: 403 })
+        }
+
+        const serviceSupabase = createServiceRoleClient()
+
+        if (action === 'activate_plan') {
+            // Get current clinic data
+            const { data: clinic } = await serviceSupabase
+                .from('clinics')
+                .select('name, approval_status, plan_type')
+                .eq('id', clinicId)
+                .single()
+
+            if (!clinic) {
+                return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            const planType = body.plan_type || (clinic as any).plan_type || 'BASICO'
+
+            // Activate the clinic: remove trial, set active
+            const { error: updateError } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    approval_status: 'active',
+                    trial_ends_at: null,
+                    is_active: true,
+                    plan_type: planType,
+                })
+                .eq('id', clinicId)
+
+            if (updateError) {
+                console.error('[PATCH clinics/[id]] Update error:', updateError)
+                return NextResponse.json({ error: 'Failed to activate clinic' }, { status: 500 })
+            }
+
+            // Audit log
+            await serviceSupabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'TRIAL_MANUALLY_ACTIVATED',
+                resource_type: 'CLINIC',
+                resource_id: clinicId,
+                metadata: {
+                    clinic_name: (clinic as any).name,
+                    previous_status: (clinic as any).approval_status,
+                    new_status: 'active',
+                    plan_type: planType,
+                    activated_at: new Date().toISOString(),
+                },
+                created_at: new Date().toISOString(),
+            })
+
+            return NextResponse.json({
+                success: true,
+                message: `Clínica "${(clinic as any).name}" ativada com sucesso. Trial removido.`,
+            })
+        }
+
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    } catch (error) {
+        console.error('[PATCH clinics/[id]] Error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {

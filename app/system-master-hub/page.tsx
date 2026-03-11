@@ -19,6 +19,7 @@ import {
     Clock,
     RefreshCw,
     LogOut,
+    CheckCircle2,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,6 +55,8 @@ interface DashboardData {
         revenue: number
         renewalDate: string
         aiTokensUsed: number
+        approvalStatus: string | null
+        trialEndsAt: string | null
     }>
     users: Array<{
         id: string
@@ -214,6 +217,38 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    const handleActivatePlan = async (clinicId: string, clinicName: string) => {
+        const confirmed = confirm(
+            `Ativar plano da clínica "${clinicName}"?\n\n` +
+            `Isso irá:\n` +
+            `- Remover o período de teste\n` +
+            `- Ativar a clínica como cliente ativo\n` +
+            `- O banner de trial desaparecerá imediatamente\n\n` +
+            `Confirmar?`
+        )
+
+        if (!confirmed) return
+
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'activate_plan' }),
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Failed to activate clinic')
+            }
+
+            alert(`Clínica "${clinicName}" ativada com sucesso! Trial removido.`)
+            loadDashboard()
+        } catch (error) {
+            console.error('Activation error:', error)
+            alert(`Erro ao ativar clínica: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+    }
+
     const getPlanBadge = (plan: string) => {
         const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
             BASIC: 'secondary',
@@ -360,9 +395,21 @@ export default function SuperAdminDashboard() {
                                                 <TableCell className="font-medium">{clinic.name}</TableCell>
                                                 <TableCell>{getPlanBadge(clinic.planType)}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={clinic.isActive ? 'default' : 'destructive'}>
-                                                        {clinic.isActive ? 'Ativo' : 'Inativo'}
-                                                    </Badge>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Badge variant={clinic.isActive ? 'default' : 'destructive'}>
+                                                            {clinic.isActive ? 'Ativo' : 'Inativo'}
+                                                        </Badge>
+                                                        {clinic.approvalStatus === 'trial' && (
+                                                            <Badge variant="outline" className="border-amber-400 text-amber-600 bg-amber-50">
+                                                                Trial
+                                                            </Badge>
+                                                        )}
+                                                        {clinic.approvalStatus === 'expired' && (
+                                                            <Badge variant="destructive">
+                                                                Expirado
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     R$ {clinic.revenue.toLocaleString('pt-BR')}
@@ -399,6 +446,17 @@ export default function SuperAdminDashboard() {
                                                             <AlertTriangle className="h-4 w-4 mr-1" />
                                                             Deletar
                                                         </Button>
+                                                        {clinic.approvalStatus === 'trial' && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleActivatePlan(clinic.id, clinic.name)}
+                                                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                            >
+                                                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                                Ativar Plano
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

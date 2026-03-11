@@ -106,7 +106,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
             { name: 'Até 30 médicos', included: true },
             { name: 'Consultas ilimitadas', included: true },
             { name: 'Tudo do Avançado +', included: true },
-            { name: 'Até 3 unidades', included: true },
+
             { name: 'TISS completo', included: true, tooltip: 'Guias, XML ANS, validação XSD, assinatura digital' },
             { name: 'Check-in Facial', included: true },
             { name: 'Totem de Auto Atendimento', included: true },
@@ -137,7 +137,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         features: [
             { name: 'Médicos ilimitados', included: true, tooltip: 'Quantidade conforme contrato' },
             { name: 'Tudo do Professional +', included: true },
-            { name: 'Unidades ilimitadas', included: true },
+
             { name: 'Portal Super Admin', included: true },
             { name: 'Gestão centralizada de clínicas', included: true },
             { name: 'Analytics global', included: true },

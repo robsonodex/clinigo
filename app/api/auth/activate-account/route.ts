@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { TRIAL_DAYS } from '@/lib/constants/plans'
 
 const activateAccountSchema = z.object({
     token: z.string().min(1, 'Token é obrigatório'),
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
                         .from('clinics')
                         .update({
                             approval_status: 'active',
-                            trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days
+                            trial_ends_at: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
                         })
                         .eq('id', tokenData.clinic_id)
                 }

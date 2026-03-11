@@ -152,6 +152,10 @@ export async function POST(request: NextRequest) {
         }
 
 
+        // Calculate trial end date (7 days from now)
+        const trialEndsAt = new Date()
+        trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+
         // 3. Create clinic (payment_confirmed = true for admin-created clinics)
         const { data: clinic, error: clinicError } = await (supabase
             .from('clinics')
@@ -164,6 +168,9 @@ export async function POST(request: NextRequest) {
                 address: validatedData.address || {},
                 plan_type: validatedData.plan_type,
                 payment_confirmed: true,
+                is_active: true,
+                approval_status: 'trial',
+                trial_ends_at: trialEndsAt.toISOString(),
             } as any) as any)
             .select()
             .single()

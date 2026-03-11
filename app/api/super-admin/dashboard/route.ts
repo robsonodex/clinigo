@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         // Get all clinics
         const { data: clinics } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, created_at')
+            .select('id, name, plan_type, is_active, created_at, approval_status, trial_ends_at')
             .order('created_at', { ascending: false })
 
         // Count metrics
@@ -123,6 +123,8 @@ export async function GET(request: NextRequest) {
             revenue: PLAN_PRICES[c.plan_type as keyof typeof PLAN_PRICES] || 0,
             renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             aiTokensUsed: 0,
+            approvalStatus: c.approval_status || null,
+            trialEndsAt: c.trial_ends_at || null,
         })) || []
 
         // Map logs to match frontend camelCase expectations

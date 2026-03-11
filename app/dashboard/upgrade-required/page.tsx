@@ -31,7 +31,7 @@ const PLAN_FEATURES = {
         features: [
             'Tudo do Avançado +',
             'Faturamento TISS',
-            'Multi-Unidades (até 3)',
+
             '30 Médicos',
             'Suporte Prioritário',
         ],
@@ -42,7 +42,7 @@ const PLAN_FEATURES = {
         features: [
             'Tudo do Professional +',
             'Médicos Ilimitados',
-            'Unidades Ilimitadas',
+
             'Gerente Dedicado',
             'SLA 99.5%',
         ],
