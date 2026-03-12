@@ -1,15 +1,30 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Stethoscope, Lock, Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function RedefinirSenhaPage() {
+const portalMap: Record<string, string> = {
+    clinica: '/clinica',
+    medico: '/medico',
+    paciente: '/paciente',
+    login: '/login',
+}
+
+function getLoginUrl(portal: string | null): string {
+    return (portal && portalMap[portal]) || '/clinica'
+}
+
+function RedefinirSenhaContent() {
     const router = useRouter()
     const params = useParams()
+    const searchParams = useSearchParams()
     const token = params.token as string
+    const portal = searchParams.get('portal')
+    const loginUrl = getLoginUrl(portal)
+    const portalParam = portal ? `?portal=${portal}` : ''
 
     const [isValidating, setIsValidating] = useState(true)
     const [isValid, setIsValid] = useState(false)
@@ -81,7 +96,7 @@ export default function RedefinirSenhaPage() {
             toast.success('Senha alterada com sucesso!')
 
             setTimeout(() => {
-                router.push('/login')
+                router.push(loginUrl)
             }, 3000)
 
         } catch (error) {
@@ -129,7 +144,7 @@ export default function RedefinirSenhaPage() {
                         </p>
 
                         <Link
-                            href="/recuperar-senha"
+                            href={`/recuperar-senha${portalParam}`}
                             className="inline-flex items-center justify-center w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 rounded-xl transition-all"
                         >
                             Solicitar novo link
@@ -270,3 +285,16 @@ export default function RedefinirSenhaPage() {
         </div>
     )
 }
+
+export default function RedefinirSenhaPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-emerald-600 animate-spin" />
+            </div>
+        }>
+            <RedefinirSenhaContent />
+        </Suspense>
+    )
+}
+

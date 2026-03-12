@@ -123,7 +123,7 @@ export default function LoginPage() {
                                 <div className="flex items-center justify-between">
                                     <Label htmlFor="password">Senha</Label>
                                     <Link
-                                        href="/recuperar-senha"
+                                        href="/recuperar-senha?portal=login"
                                         className="text-xs text-primary hover:underline"
                                     >
                                         Esqueceu a senha?

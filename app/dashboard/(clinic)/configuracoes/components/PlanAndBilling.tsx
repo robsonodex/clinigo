@@ -41,7 +41,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
             '1 médico',
             'Consultas ilimitadas',
             '200 pacientes',
-            '2 GB armazenamento',
+
             'Agenda anti-overbooking',
             'Prontuário eletrônico',
             'Check-in manual',
@@ -57,7 +57,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
             'Até 5 médicos',
             'Consultas ilimitadas',
             'Pacientes ilimitados',
-            '20 GB armazenamento',
+
             'Tudo do Básico +',
             'Teleconsulta WebRTC',
             'Check-in QR Code',
@@ -75,12 +75,11 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         features: [
             'Até 30 médicos',
             'Consultas ilimitadas',
-            '100 GB armazenamento',
 
             'Tudo do Avançado +',
             'TISS completo',
             'Check-in Facial',
-            'Transcrição IA',
+
             'Auditoria financeira',
             'Centro de custos',
             'Dashboards customizados',
@@ -93,7 +92,6 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         features: [
             'Médicos ilimitados',
             'Consultas ilimitadas',
-            '500 GB armazenamento',
 
             'Tudo do Professional +',
             'Portal Super Admin',

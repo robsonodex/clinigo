@@ -166,7 +166,7 @@ export default function ClinicaLoginPage() {
                                 />
                                 <span className="text-sm text-gray-600">Lembrar de mim</span>
                             </label>
-                            <Link href="/recuperar-senha" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                            <Link href="/recuperar-senha?portal=clinica" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                                 Esqueci minha senha
                             </Link>
                         </div>

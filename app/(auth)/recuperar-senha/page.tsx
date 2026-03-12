@@ -1,11 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Stethoscope, Mail, ArrowLeft, Loader2, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function RecuperarSenhaPage() {
+const portalMap: Record<string, string> = {
+    clinica: '/clinica',
+    medico: '/medico',
+    paciente: '/paciente',
+    login: '/login',
+}
+
+function getLoginUrl(portal: string | null): string {
+    return (portal && portalMap[portal]) || '/clinica'
+}
+
+function RecuperarSenhaContent() {
+    const searchParams = useSearchParams()
+    const portal = searchParams.get('portal')
+    const loginUrl = getLoginUrl(portal)
+
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
@@ -75,7 +91,7 @@ export default function RecuperarSenhaPage() {
                         </div>
 
                         <Link
-                            href="/login"
+                            href={loginUrl}
                             className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 rounded-xl transition-all"
                         >
                             <ArrowLeft className="h-5 w-5" />
@@ -147,7 +163,7 @@ export default function RecuperarSenhaPage() {
 
                     <div className="mt-6 text-center">
                         <Link
-                            href="/login"
+                            href={loginUrl}
                             className="text-sm text-gray-600 hover:text-emerald-600 inline-flex items-center gap-1"
                         >
                             <ArrowLeft className="w-4 h-4" />
@@ -159,3 +175,16 @@ export default function RecuperarSenhaPage() {
         </div>
     )
 }
+
+export default function RecuperarSenhaPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-emerald-600 animate-spin" />
+            </div>
+        }>
+            <RecuperarSenhaContent />
+        </Suspense>
+    )
+}
+

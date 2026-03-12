@@ -136,7 +136,7 @@ export default function MedicoLoginPage() {
                                 />
                                 <span className="text-sm text-gray-600">Lembrar de mim</span>
                             </label>
-                            <Link href="/recuperar-senha" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                            <Link href="/recuperar-senha?portal=medico" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                                 Esqueci minha senha
                             </Link>
                         </div>
