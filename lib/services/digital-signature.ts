@@ -1,6 +1,8 @@
 /**
- * CLINIGO PREMIUM - Digital Signature Service
- * ICP-Brasil compliant digital signatures for medical records
+ * CLINIGO PREMIUM - Electronic Signature Service
+ * Assinatura eletrônica (Lei 14.063/2020) for medical records
+ * Note: This is NOT ICP-Brasil certified. Uses hash-based electronic signatures.
+ * Compatible with A1/A3 certificates when integrated via tiss-digital-signer.
  */
 
 import { createClient } from '@/lib/supabase/client'

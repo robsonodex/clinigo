@@ -298,10 +298,10 @@ export function DoctorFormDialog({
                         <div className="space-y-2">
                             <Label htmlFor="specialty">Especialidade</Label>
                             <Select
-                                value={watch('specialty')}
+                                value={SPECIALTIES.includes(watch('specialty') || '') ? watch('specialty') : '__custom__'}
                                 onValueChange={(val) => {
                                     if (val === '__custom__') {
-                                        // Don't set value, will use input below
+                                        setValue('specialty', '')
                                         return
                                     }
                                     setValue('specialty', val)
@@ -323,7 +323,7 @@ export function DoctorFormDialog({
                             </Select>
 
                             {/* Custom Specialty Input */}
-                            {!SPECIALTIES.includes(watch('specialty') || '') && watch('specialty') && (
+                            {!SPECIALTIES.includes(watch('specialty') || '') && (
                                 <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                     <Label htmlFor="custom_specialty" className="text-blue-900">
                                         Nova Especialidade (personalizada)

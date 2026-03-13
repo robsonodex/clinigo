@@ -316,9 +316,9 @@ export default function LandingPremium() {
                         <div className="w-12 h-12 rounded-2xl bg-teal-vibrant/10 flex items-center justify-center mb-4 border border-teal-vibrant/20">
                             <Fingerprint className="w-6 h-6 text-teal-vibrant" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Assinatura Digital TISS</h3>
+                        <h3 className="text-lg font-bold text-white mb-2">Assinatura Eletrônica TISS</h3>
                         <p className="text-slate-400 text-sm leading-relaxed flex-1">
-                            Assine lotes TISS com certificado A1/A3 diretamente no navegador. Sem software adicional.
+                            Assinatura eletrônica para lotes TISS com validade jurídica (Lei 14.063/2020). Compatível com certificados A1/A3 quando disponíveis.
                         </p>
                     </div>
                 </div>

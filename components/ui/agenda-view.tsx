@@ -13,7 +13,10 @@ import {
     X,
     CreditCard,
     PlusCircle,
-    Loader2
+    Loader2,
+    Repeat,
+    UserX,
+    Lightbulb,
 } from 'lucide-react'
 import {
     format,
@@ -57,6 +60,9 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
+import { RecurringAppointmentModal } from '@/components/appointments/RecurringAppointmentModal'
+import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenceModal'
+import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
 import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
 import { AlertTriangle } from 'lucide-react'
 import {
@@ -103,6 +109,9 @@ export default function AgendaPage() {
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [view, setView] = useState<'week' | 'day'>('week')
     const [manualAppointmentOpen, setManualAppointmentOpen] = useState(false)
+    const [recurringAppointmentOpen, setRecurringAppointmentOpen] = useState(false)
+    const [absenceModalOpen, setAbsenceModalOpen] = useState(false)
+    const [suggestionModalOpen, setSuggestionModalOpen] = useState(false)
     const [preselectedSlot, setPreselectedSlot] = useState<{ date: string; time: string } | null>(null)
 
     // Details Drawer
@@ -283,6 +292,33 @@ export default function AgendaPage() {
                         <PlusCircle className="h-4 w-4" />
                         Novo Agendamento
                     </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setRecurringAppointmentOpen(true)}
+                    >
+                        <Repeat className="h-4 w-4" />
+                        Recorrente
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setAbsenceModalOpen(true)}
+                    >
+                        <UserX className="h-4 w-4" />
+                        Ausência
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setSuggestionModalOpen(true)}
+                    >
+                        <Lightbulb className="h-4 w-4" />
+                        Sugerir
+                    </Button>
                 </div>
 
                 <div className="flex gap-2">
@@ -410,6 +446,9 @@ export default function AgendaPage() {
                                                                         <div className="flex items-center gap-1 mt-1 text-[11px] font-medium opacity-90">
                                                                             <Clock className="h-3 w-3" />
                                                                             {appointment.appointment_time.substring(0, 5)}
+                                                                            {(appointment as any).series_id && (
+                                                                                <Repeat className="h-3 w-3 ml-1 text-blue-600" />
+                                                                            )}
                                                                             {isOnline && (
                                                                                 <Video className="h-3 w-3 ml-1 text-green-600" />
                                                                             )}
@@ -532,6 +571,27 @@ export default function AgendaPage() {
                     // ✅ Navigate agenda to created appointment date so it appears immediately
                     setSelectedDate(parseISO(appointmentDate))
                 }}
+            />
+
+            <RecurringAppointmentModal
+                open={recurringAppointmentOpen}
+                onOpenChange={setRecurringAppointmentOpen}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+                }}
+            />
+
+            <TherapistAbsenceModal
+                open={absenceModalOpen}
+                onOpenChange={setAbsenceModalOpen}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+                }}
+            />
+
+            <SlotSuggestionModal
+                open={suggestionModalOpen}
+                onOpenChange={setSuggestionModalOpen}
             />
 
             <AppointmentDetailsDrawer

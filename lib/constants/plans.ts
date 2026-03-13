@@ -107,7 +107,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
             { name: 'Consultas ilimitadas', included: true },
             { name: 'Tudo do Avançado +', included: true },
 
-            { name: 'TISS completo', included: true, tooltip: 'Guias, XML ANS, validação XSD, assinatura digital' },
+            { name: 'TISS completo', included: true, tooltip: 'Guias, XML ANS, validação XSD, assinatura eletrônica' },
             { name: 'Check-in Facial', included: true },
             { name: 'Totem de Auto Atendimento', included: true },
             { name: 'Auditoria financeira', included: true },
