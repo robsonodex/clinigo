@@ -7,6 +7,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
 import QRCode from 'qrcode'
 import { generateQRToken } from '@/lib/utils/qr-code'
+import { isWithinSchedule, resolveAppointmentPrice } from '@/lib/utils/schedule-validation'
 
 // Types
 interface QuickPatientRegistration {
@@ -268,6 +269,28 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // TRAVA DE HORÁRIO: Validate appointment time against doctor's configured schedule
+        if (!body.overrides?.ignore_schedule_constraints) {
+            const scheduleCheck = await isWithinSchedule(
+                supabase,
+                body.doctor_id,
+                body.appointment_date,
+                body.appointment_time,
+                body.duration_minutes || 30
+            )
+
+            if (!scheduleCheck.valid) {
+                return NextResponse.json(
+                    {
+                        error: scheduleCheck.message,
+                        code: 'OUTSIDE_SCHEDULE',
+                        message: scheduleCheck.message
+                    },
+                    { status: 400 }
+                )
+            }
+        }
+
         // Check for schedule conflicts (if not overriding and no lock)
         if (!body.overrides?.allow_double_booking && !body.lock_id) {
             const { data: conflicts } = await supabase
@@ -290,8 +313,15 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Calculate price
-        let price = doctor.consultation_price || 0
+        // Calculate price - check schedule_price_ranges first, fallback to doctor default
+        const priceResult = await resolveAppointmentPrice(
+            supabase,
+            body.doctor_id,
+            body.appointment_date,
+            body.appointment_time,
+            doctor.consultation_price || 0
+        )
+        let price = priceResult.price
 
         if (body.payment.type === 'health_insurance' && body.payment.health_insurance_id) {
             // Get insurance price if different

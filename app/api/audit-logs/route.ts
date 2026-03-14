@@ -35,6 +35,12 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const action = searchParams.get('action') || 'all'
         const limit = parseInt(searchParams.get('limit') || '50')
+        const offset = parseInt(searchParams.get('offset') || '0')
+        const userId = searchParams.get('user_id')
+        const dateFrom = searchParams.get('date_from')
+        const dateTo = searchParams.get('date_to')
+        const severity = searchParams.get('severity')
+        const entityType = searchParams.get('entity_type')
 
         try {
             // Build query - using type assertion since table may not exist
@@ -53,6 +59,32 @@ export async function GET(request: Request) {
             if (action !== 'all') {
                 query = query.ilike('action', `%${action}%`)
             }
+
+            // Filter by user_id
+            if (userId) {
+                query = query.eq('user_id', userId)
+            }
+
+            // Filter by date range
+            if (dateFrom) {
+                query = query.gte('created_at', dateFrom)
+            }
+            if (dateTo) {
+                query = query.lte('created_at', dateTo + 'T23:59:59.999Z')
+            }
+
+            // Filter by severity
+            if (severity) {
+                query = query.eq('severity', severity)
+            }
+
+            // Filter by entity_type
+            if (entityType) {
+                query = query.eq('entity_type', entityType)
+            }
+
+            // Apply pagination
+            query = query.range(offset, offset + limit - 1)
 
             const { data: logs, error } = await query as { data: AuditLogRow[] | null, error: unknown }
 

@@ -30,6 +30,8 @@ export type ResourceType =
     | 'USER'
     | 'TELECONSULTA'
     | 'RECORDING'
+    | 'SCHEDULE'
+    | 'SYSTEM'
 
 interface AuditLogEntry {
     userId: string
@@ -37,6 +39,10 @@ interface AuditLogEntry {
     action: AuditAction
     resourceType: ResourceType
     resourceId: string
+    userName?: string
+    userEmail?: string
+    userRole?: string
+    severity?: 'info' | 'low' | 'warning' | 'error' | 'critical'
     metadata?: Record<string, any>
 }
 
@@ -57,8 +63,12 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
             user_id: entry.userId,
             clinic_id: entry.clinicId,
             action: entry.action,
-            resource_type: entry.resourceType,
-            resource_id: entry.resourceId,
+            entity_type: entry.resourceType,
+            entity_id: entry.resourceId,
+            user_name: entry.userName || null,
+            user_email: entry.userEmail || null,
+            user_role: entry.userRole || null,
+            severity: entry.severity || 'info',
             ip_address: ipAddress,
             user_agent: userAgent,
             metadata: entry.metadata || {},
@@ -176,8 +186,8 @@ export async function getAuditLogs(
         .from('audit_logs')
         .select('*')
         .eq('clinic_id', clinicId)
-        .eq('resource_type', resourceType)
-        .eq('resource_id', resourceId)
+        .eq('entity_type', resourceType)
+        .eq('entity_id', resourceId)
         .order('created_at', { ascending: false })
         .limit(limit)
 
@@ -205,4 +215,52 @@ export async function getUserActivity(
         .order('created_at', { ascending: false })
 
     return data || []
+}
+
+/**
+ * Log schedule changes
+ */
+export async function logScheduleChange(
+    userId: string,
+    clinicId: string,
+    doctorId: string,
+    action: 'CREATE' | 'UPDATE' | 'DELETE',
+    metadata?: Record<string, any>
+): Promise<void> {
+    await logAudit({
+        userId,
+        clinicId,
+        action,
+        resourceType: 'SCHEDULE',
+        resourceId: doctorId,
+        severity: 'info',
+        metadata: {
+            ...metadata,
+            changed_at: new Date().toISOString()
+        }
+    })
+}
+
+/**
+ * Log financial actions
+ */
+export async function logFinancialAction(
+    userId: string,
+    clinicId: string,
+    resourceId: string,
+    action: AuditAction,
+    metadata?: Record<string, any>
+): Promise<void> {
+    await logAudit({
+        userId,
+        clinicId,
+        action,
+        resourceType: 'FINANCIAL',
+        resourceId,
+        severity: action === 'DELETE' ? 'warning' : 'info',
+        metadata: {
+            ...metadata,
+            logged_at: new Date().toISOString()
+        }
+    })
 }

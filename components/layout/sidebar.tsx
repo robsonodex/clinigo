@@ -296,6 +296,12 @@ const navigationSections: NavSection[] = [
                     }
                 ]
             },
+            {
+                title: 'Auditoria',
+                href: '/dashboard/logs-auditoria',
+                icon: Shield,
+                roles: ['CLINIC_ADMIN'],
+            },
         ],
     },
     {
@@ -344,6 +350,18 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN'],
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
+            },
+            {
+                title: 'Reembolso',
+                href: '/dashboard/configuracoes/reembolso',
+                icon: Receipt,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
+                title: 'Templates Prontuário',
+                href: '/dashboard/configuracoes/templates-prontuario',
+                icon: FileText,
+                roles: ['CLINIC_ADMIN'],
             },
         ],
     },
