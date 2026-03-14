@@ -282,10 +282,10 @@ export default function ReembolsoConfigPage() {
 
                         <div>
                             <Label>Profissional (opcional)</Label>
-                            <Select value={form.doctor_id} onValueChange={(v) => setForm(f => ({ ...f, doctor_id: v }))}>
+                            <Select value={form.doctor_id || 'all'} onValueChange={(v) => setForm(f => ({ ...f, doctor_id: v === 'all' ? '' : v }))}>
                                 <SelectTrigger><SelectValue placeholder="Todos os profissionais" /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos</SelectItem>
+                                    <SelectItem value="all">Todos</SelectItem>
                                     {doctors.map((d: any) => (
                                         <SelectItem key={d.id} value={d.id}>
                                             {d.user?.full_name || d.name} - {d.specialty}
