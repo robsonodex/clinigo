@@ -154,6 +154,12 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
                 // Acessível a todos os planos (BASICO+)
             },
+            {
+                title: 'Templates Prontuário',
+                href: '/dashboard/configuracoes/templates-prontuario',
+                icon: FileText,
+                roles: ['CLINIC_ADMIN'],
+            },
         ],
     },
     {
@@ -211,6 +217,12 @@ const navigationSections: NavSection[] = [
                 icon: Shield,
                 roles: ['CLINIC_ADMIN'],
                 // Acessível a todos os planos (BASICO+)
+            },
+            {
+                title: 'Reembolso',
+                href: '/dashboard/configuracoes/reembolso',
+                icon: Receipt,
+                roles: ['CLINIC_ADMIN'],
             },
         ],
     },
@@ -351,18 +363,7 @@ const navigationSections: NavSection[] = [
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },
-            {
-                title: 'Reembolso',
-                href: '/dashboard/configuracoes/reembolso',
-                icon: Receipt,
-                roles: ['CLINIC_ADMIN'],
-            },
-            {
-                title: 'Templates Prontuário',
-                href: '/dashboard/configuracoes/templates-prontuario',
-                icon: FileText,
-                roles: ['CLINIC_ADMIN'],
-            },
+
         ],
     },
     // Admin da Plataforma (Super Admin)
