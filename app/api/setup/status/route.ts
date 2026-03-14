@@ -38,12 +38,12 @@ export async function GET() {
         // Verificar horários (via doctors que têm schedules)
         const { data: doctorsWithSchedules } = await supabase
             .from('doctors')
-            .select('id, doctor_schedules(id)')
+            .select('id, schedules(id)')
             .eq('clinic_id', clinicId)
 
         const hasSchedule = doctorsWithSchedules?.some(
-            (doc: { id: string; doctor_schedules: { id: string }[] | null }) =>
-                doc.doctor_schedules && doc.doctor_schedules.length > 0
+            (doc: { id: string; schedules: { id: string }[] | null }) =>
+                doc.schedules && doc.schedules.length > 0
         ) || false
 
         // Verificar SMTP e plano da clínica
