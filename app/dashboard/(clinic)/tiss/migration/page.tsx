@@ -81,9 +81,9 @@ export default function TissMigrationDashboard() {
 
     const stats = adoptionData || {
         total_insurances: 0,
-        v4_01_00_count: 0,
-        v4_02_00_count: 0,
-        adoption_rate: 0
+        insurances_v4_01: 0,
+        insurances_v4_02: 0,
+        percent_insurances_v4_02: 0
     };
 
     return (
@@ -131,7 +131,7 @@ export default function TissMigrationDashboard() {
                     <CardHeader className="pb-2">
                         <CardDescription>Versão 4.01.00 (Legado)</CardDescription>
                         <CardTitle className="text-3xl text-yellow-600">
-                            {loadingAdoption ? <Skeleton className="h-8 w-16" /> : stats.v4_01_00_count}
+                            {loadingAdoption ? <Skeleton className="h-8 w-16" /> : stats.insurances_v4_01}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -144,7 +144,7 @@ export default function TissMigrationDashboard() {
                     <CardHeader className="pb-2">
                         <CardDescription>Versão 4.02.00 (Nova)</CardDescription>
                         <CardTitle className="text-3xl text-green-600">
-                            {loadingAdoption ? <Skeleton className="h-8 w-16" /> : stats.v4_02_00_count}
+                            {loadingAdoption ? <Skeleton className="h-8 w-16" /> : stats.insurances_v4_02}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -152,7 +152,7 @@ export default function TissMigrationDashboard() {
                             {loadingAdoption ? (
                                 <Skeleton className="h-4 w-24" />
                             ) : (
-                                `${stats.adoption_rate.toFixed(1)}% de adoção`
+                                `${(Number(stats.percent_insurances_v4_02) || 0).toFixed(1)}% de adoção`
                             )}
                         </div>
                     </CardContent>

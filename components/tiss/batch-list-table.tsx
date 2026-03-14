@@ -330,7 +330,7 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                     {batch.glosa_value > 0 && (
                                         <div className="text-xs text-destructive mt-1">
                                             Glosa: R$ {new Intl.NumberFormat('pt-BR').format(batch.glosa_value)}
-                                            ({batch.glosa_percentage.toFixed(1)}%)
+                                            ({(batch.glosa_percentage ?? 0).toFixed(1)}%)
                                         </div>
                                     )}
                                 </TableCell>

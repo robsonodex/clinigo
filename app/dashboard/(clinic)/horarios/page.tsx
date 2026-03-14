@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useDoctors, useUpdateSchedules } from '@/lib/hooks/use-doctors'
@@ -22,30 +21,33 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { SavedSchedulesList } from '@/components/doctors/SavedSchedulesList'
 
 const DAYS_OF_WEEK = [
-    { value: 0, label: 'Domingo' },
-    { value: 1, label: 'Segunda-feira' },
-    { value: 2, label: 'Terça-feira' },
-    { value: 3, label: 'Quarta-feira' },
-    { value: 4, label: 'Quinta-feira' },
-    { value: 5, label: 'Sexta-feira' },
-    { value: 6, label: 'Sábado' },
+    { value: 0, label: 'Domingo', short: 'Dom' },
+    { value: 1, label: 'Segunda-feira', short: 'Seg' },
+    { value: 2, label: 'Terça-feira', short: 'Ter' },
+    { value: 3, label: 'Quarta-feira', short: 'Qua' },
+    { value: 4, label: 'Quinta-feira', short: 'Qui' },
+    { value: 5, label: 'Sexta-feira', short: 'Sex' },
+    { value: 6, label: 'Sábado', short: 'Sáb' },
 ]
 
-interface ScheduleFormValues {
-    schedules: {
-        day_of_week: number
-        enabled: boolean
-        start_time: string
-        end_time: string
-        slot_duration_minutes: number
-    }[]
+interface ShiftBlock {
+    id: string
+    day_of_week: number
+    start_time: string
+    end_time: string
+    slot_duration_minutes: number
+}
+
+// Generate a unique ID for each shift block
+let shiftIdCounter = 0
+function generateShiftId(): string {
+    return `shift-${Date.now()}-${++shiftIdCounter}`
 }
 
 export default function SchedulePage() {
@@ -54,83 +56,133 @@ export default function SchedulePage() {
     const updateSchedules = useUpdateSchedules()
 
     const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null)
+    const [shifts, setShifts] = useState<ShiftBlock[]>([])
 
     // Fetch schedules for selected doctor
     const { data: currentSchedules, isLoading: isLoadingSchedules } = useQuery({
         queryKey: ['schedules', selectedDoctorId],
         queryFn: async () => {
             if (!selectedDoctorId) return null
-            // Assuming we have an endpoint for this, or we fetch from doctor details
-            // For now, let's fetch doctor details again or use a dedicated endpoint
-            // We'll assume a dedicated endpoint or mocked property on doctor for now
-            // Actually the backend endpoint for getting schedules is usually GET /doctors/:id/schedules or included in doctor
-            // Based on my backend knowledge, schedules are in the doctor object or separate table.
-            // Let's assume we use the GET /doctors/:id which includes schedules if I implemented it that way,
-            // or I'll just use the empty state for now and let the user create them.
-            // Wait, I implemented `GET /doctors/:id/schedules` in the backend? Let me check.
-            // I implemented `POST /doctors/:id/schedules` but `GET`...
-            // Checking backend... `app/api/doctors/[doctorId]/schedules/route.ts` has POST only.
-            // `app/api/doctors/[doctorId]/route.ts` returns doctor with schedules?
-            // `d:\clinigo\app\app\api\doctors\[doctorId]\route.ts` ->
-            // It does `select('*, schedules(*)')`. Yes!
-
             const doctor = await api.get<any>(`/doctors/detail?id=${selectedDoctorId}&action=profile`)
             return doctor.schedules as any[]
         },
         enabled: !!selectedDoctorId,
     })
 
-    // Form setup
-    const form = useForm<ScheduleFormValues>({
-        defaultValues: {
-            schedules: DAYS_OF_WEEK.map((day) => ({
-                day_of_week: day.value,
-                enabled: false,
-                start_time: '09:00',
-                end_time: '18:00',
-                slot_duration_minutes: 30,
-            })),
-        },
-    })
-
-    const { fields } = useFieldArray({
-        control: form.control,
-        name: 'schedules',
-    })
-
-    // Update form when schedules load
+    // Update local state when schedules load
     useEffect(() => {
-        if (currentSchedules) {
-            const newSchedules = DAYS_OF_WEEK.map((day) => {
-                const existing = currentSchedules.find(
-                    (s: any) => s.day_of_week === day.value
-                )
-                return {
-                    day_of_week: day.value,
-                    enabled: !!existing,
-                    start_time: existing?.start_time || '09:00',
-                    end_time: existing?.end_time || '18:00',
-                    slot_duration_minutes: existing?.slot_duration_minutes || 30,
-                }
-            })
-            form.reset({ schedules: newSchedules })
+        if (currentSchedules && currentSchedules.length > 0) {
+            const loadedShifts: ShiftBlock[] = currentSchedules.map((s: any) => ({
+                id: generateShiftId(),
+                day_of_week: s.day_of_week,
+                start_time: s.start_time?.substring(0, 5) || '09:00',
+                end_time: s.end_time?.substring(0, 5) || '18:00',
+                slot_duration_minutes: s.slot_duration_minutes || 30,
+            }))
+            setShifts(loadedShifts)
+        } else {
+            setShifts([])
         }
-    }, [currentSchedules, form])
+    }, [currentSchedules])
 
-    const onSubmit = (data: ScheduleFormValues) => {
+    // Group shifts by day
+    const shiftsByDay = DAYS_OF_WEEK.map(day => ({
+        ...day,
+        shifts: shifts.filter(s => s.day_of_week === day.value),
+    }))
+
+    // Add a new shift to a specific day
+    const addShift = (dayOfWeek: number) => {
+        const dayShifts = shifts.filter(s => s.day_of_week === dayOfWeek)
+        if (dayShifts.length >= 3) {
+            toast.error('Máximo de 3 turnos por dia')
+            return
+        }
+
+        // Smart default: if already has shifts, pick next logical block
+        let defaultStart = '09:00'
+        let defaultEnd = '18:00'
+        if (dayShifts.length > 0) {
+            const lastShift = dayShifts.sort((a, b) => a.end_time.localeCompare(b.end_time))[dayShifts.length - 1]
+            // Start 1 hour after last shift ends (lunch break pattern)
+            const [h, m] = lastShift.end_time.split(':').map(Number)
+            const newStartMinutes = (h * 60 + m) + 60
+            if (newStartMinutes < 23 * 60) {
+                defaultStart = `${Math.floor(newStartMinutes / 60).toString().padStart(2, '0')}:${(newStartMinutes % 60).toString().padStart(2, '0')}`
+                const newEndMinutes = Math.min(newStartMinutes + 240, 23 * 60) // 4h block or until 23:00
+                defaultEnd = `${Math.floor(newEndMinutes / 60).toString().padStart(2, '0')}:${(newEndMinutes % 60).toString().padStart(2, '0')}`
+            }
+        }
+
+        setShifts(prev => [...prev, {
+            id: generateShiftId(),
+            day_of_week: dayOfWeek,
+            start_time: defaultStart,
+            end_time: defaultEnd,
+            slot_duration_minutes: 30,
+        }])
+    }
+
+    // Remove a shift
+    const removeShift = (shiftId: string) => {
+        setShifts(prev => prev.filter(s => s.id !== shiftId))
+    }
+
+    // Update a shift field
+    const updateShift = (shiftId: string, field: keyof ShiftBlock, value: string | number) => {
+        setShifts(prev => prev.map(s =>
+            s.id === shiftId ? { ...s, [field]: value } : s
+        ))
+    }
+
+    // Validate and submit
+    const onSubmit = () => {
         if (!selectedDoctorId) {
             toast.error('Selecione um médico')
             return
         }
 
-        const schedulesToSave = data.schedules
-            .filter((s) => s.enabled)
-            .map((s) => ({
-                day_of_week: s.day_of_week,
-                start_time: s.start_time,
-                end_time: s.end_time,
-                slot_duration_minutes: s.slot_duration_minutes,
-            }))
+        // Validate: start < end for all shifts
+        for (const shift of shifts) {
+            const [sh, sm] = shift.start_time.split(':').map(Number)
+            const [eh, em] = shift.end_time.split(':').map(Number)
+            if (sh * 60 + sm >= eh * 60 + em) {
+                const dayLabel = DAYS_OF_WEEK.find(d => d.value === shift.day_of_week)?.label
+                toast.error(`${dayLabel}: Hora de início deve ser anterior à hora de término`)
+                return
+            }
+        }
+
+        // Validate: no overlapping shifts on same day
+        for (const day of DAYS_OF_WEEK) {
+            const dayShifts = shifts.filter(s => s.day_of_week === day.value)
+            for (let i = 0; i < dayShifts.length; i++) {
+                for (let j = i + 1; j < dayShifts.length; j++) {
+                    const a = dayShifts[i]
+                    const b = dayShifts[j]
+                    const [ash, asm] = a.start_time.split(':').map(Number)
+                    const [aeh, aem] = a.end_time.split(':').map(Number)
+                    const [bsh, bsm] = b.start_time.split(':').map(Number)
+                    const [beh, bem] = b.end_time.split(':').map(Number)
+                    const aStart = ash * 60 + asm
+                    const aEnd = aeh * 60 + aem
+                    const bStart = bsh * 60 + bsm
+                    const bEnd = beh * 60 + bem
+
+                    if (aStart < bEnd && aEnd > bStart) {
+                        toast.error(`${day.label}: Turnos não podem se sobrepor`)
+                        return
+                    }
+                }
+            }
+        }
+
+        const schedulesToSave = shifts.map(s => ({
+            day_of_week: s.day_of_week,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            slot_duration_minutes: s.slot_duration_minutes,
+        }))
 
         updateSchedules.mutate({
             doctorId: selectedDoctorId,
@@ -143,7 +195,7 @@ export default function SchedulePage() {
             <div>
                 <h1 className="text-2xl font-bold">Configurar Horários</h1>
                 <p className="text-muted-foreground">
-                    Defina a disponibilidade semanal dos médicos
+                    Defina a disponibilidade semanal dos médicos — configure múltiplos turnos por dia
                 </p>
             </div>
 
@@ -183,7 +235,7 @@ export default function SchedulePage() {
                     <CardHeader>
                         <CardTitle>Configurar Agenda Semanal</CardTitle>
                         <CardDescription>
-                            Marque os dias de atendimento e horários
+                            Adicione turnos para cada dia. Use múltiplos turnos para bloquear horário de almoço ou saídas temporárias.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -192,88 +244,124 @@ export default function SchedulePage() {
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                             </div>
                         ) : (
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <div className="space-y-6">
                                 <div className="grid gap-4">
-                                    {fields.map((field, index) => (
+                                    {shiftsByDay.map((day) => (
                                         <div
-                                            key={field.id}
-                                            className="flex items-center gap-4 p-4 border rounded-lg bg-card"
+                                            key={day.value}
+                                            className={`p-4 border rounded-lg transition-colors ${
+                                                day.shifts.length > 0
+                                                    ? 'bg-green-50/50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                                                    : 'bg-card border-border'
+                                            }`}
                                         >
-                                            {/* Checkbox + Day Label */}
-                                            <div className="flex items-center gap-2 w-40">
-                                                <Checkbox
-                                                    id={`day-${index}`}
-                                                    checked={form.watch(`schedules.${index}.enabled`)}
-                                                    onCheckedChange={(checked) =>
-                                                        form.setValue(
-                                                            `schedules.${index}.enabled`,
-                                                            checked as boolean
-                                                        )
-                                                    }
-                                                />
-                                                <Label
-                                                    htmlFor={`day-${index}`}
-                                                    className="font-medium cursor-pointer"
+                                            {/* Day Header */}
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                            day.shifts.length > 0
+                                                                ? 'bg-green-600 text-white'
+                                                                : 'bg-muted text-muted-foreground'
+                                                        }`}
+                                                    >
+                                                        {day.short}
+                                                    </div>
+                                                    <span className="font-medium">{day.label}</span>
+                                                    {day.shifts.length > 0 && (
+                                                        <span className="text-xs text-green-600 font-medium">
+                                                            ({day.shifts.length} {day.shifts.length === 1 ? 'turno' : 'turnos'})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => addShift(day.value)}
+                                                    disabled={day.shifts.length >= 3}
+                                                    className="text-xs"
                                                 >
-                                                    {DAYS_OF_WEEK[field.day_of_week].label}
-                                                </Label>
+                                                    <Plus className="w-3.5 h-3.5 mr-1" />
+                                                    Adicionar turno
+                                                </Button>
                                             </div>
 
-                                            {/* Time Fields */}
-                                            {form.watch(`schedules.${index}.enabled`) ? (
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <div className="grid gap-1.5">
-                                                        <Label className="text-xs text-muted-foreground">
-                                                            Início
-                                                        </Label>
-                                                        <Input
-                                                            type="time"
-                                                            {...form.register(`schedules.${index}.start_time`)}
-                                                            className="w-32"
-                                                        />
-                                                    </div>
-                                                    <div className="grid gap-1.5">
-                                                        <Label className="text-xs text-muted-foreground">
-                                                            Fim
-                                                        </Label>
-                                                        <Input
-                                                            type="time"
-                                                            {...form.register(`schedules.${index}.end_time`)}
-                                                            className="w-32"
-                                                        />
-                                                    </div>
-                                                    <div className="grid gap-1.5">
-                                                        <Label className="text-xs text-muted-foreground">
-                                                            Duração (min)
-                                                        </Label>
-                                                        <Select
-                                                            value={String(
-                                                                form.watch(
-                                                                    `schedules.${index}.slot_duration_minutes`
-                                                                )
-                                                            )}
-                                                            onValueChange={(val) =>
-                                                                form.setValue(
-                                                                    `schedules.${index}.slot_duration_minutes`,
-                                                                    Number(val)
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger className="w-32">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="15">15 min</SelectItem>
-                                                                <SelectItem value="30">30 min</SelectItem>
-                                                                <SelectItem value="45">45 min</SelectItem>
-                                                                <SelectItem value="60">60 min</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
+                                            {/* Shifts list */}
+                                            {day.shifts.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground italic pl-10">
+                                                    Nenhum turno configurado — clique em &quot;Adicionar turno&quot;
+                                                </p>
                                             ) : (
-                                                <div className="flex-1 text-sm text-muted-foreground italic">
-                                                    Indisponível
+                                                <div className="space-y-2 pl-10">
+                                                    {day.shifts
+                                                        .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                                                        .map((shift, idx) => (
+                                                            <div
+                                                                key={shift.id}
+                                                                className="flex items-center gap-3 p-2.5 bg-white dark:bg-gray-900 border rounded-md"
+                                                            >
+                                                                <span className="text-xs text-muted-foreground font-medium w-14">
+                                                                    Turno {idx + 1}
+                                                                </span>
+
+                                                                <div className="grid gap-1">
+                                                                    <Label className="text-xs text-muted-foreground">
+                                                                        Início
+                                                                    </Label>
+                                                                    <Input
+                                                                        type="time"
+                                                                        value={shift.start_time}
+                                                                        onChange={(e) => updateShift(shift.id, 'start_time', e.target.value)}
+                                                                        className="w-28 h-8 text-sm"
+                                                                    />
+                                                                </div>
+
+                                                                <div className="grid gap-1">
+                                                                    <Label className="text-xs text-muted-foreground">
+                                                                        Fim
+                                                                    </Label>
+                                                                    <Input
+                                                                        type="time"
+                                                                        value={shift.end_time}
+                                                                        onChange={(e) => updateShift(shift.id, 'end_time', e.target.value)}
+                                                                        className="w-28 h-8 text-sm"
+                                                                    />
+                                                                </div>
+
+                                                                <div className="grid gap-1">
+                                                                    <Label className="text-xs text-muted-foreground">
+                                                                        Duração
+                                                                    </Label>
+                                                                    <Select
+                                                                        value={String(shift.slot_duration_minutes)}
+                                                                        onValueChange={(val) =>
+                                                                            updateShift(shift.id, 'slot_duration_minutes', Number(val))
+                                                                        }
+                                                                    >
+                                                                        <SelectTrigger className="w-24 h-8 text-sm">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="15">15 min</SelectItem>
+                                                                            <SelectItem value="30">30 min</SelectItem>
+                                                                            <SelectItem value="45">45 min</SelectItem>
+                                                                            <SelectItem value="60">60 min</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 mt-auto"
+                                                                    onClick={() => removeShift(shift.id)}
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
                                                 </div>
                                             )}
                                         </div>
@@ -281,7 +369,12 @@ export default function SchedulePage() {
                                 </div>
 
                                 <div className="flex justify-end">
-                                    <Button type="submit" size="lg" disabled={updateSchedules.isPending}>
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        disabled={updateSchedules.isPending}
+                                        onClick={onSubmit}
+                                    >
                                         {updateSchedules.isPending && (
                                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                         )}
@@ -289,7 +382,7 @@ export default function SchedulePage() {
                                         Salvar Horários
                                     </Button>
                                 </div>
-                            </form>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -297,4 +390,3 @@ export default function SchedulePage() {
         </div>
     )
 }
-

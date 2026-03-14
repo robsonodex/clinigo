@@ -171,7 +171,7 @@ export default function LossAnalysisPage() {
                         <CardHeader className="pb-2">
                             <CardDescription>Índice de Glosa</CardDescription>
                             <CardTitle className={`text-2xl ${data.summary.glosa_rate > 5 ? 'text-red-600' : 'text-green-600'}`}>
-                                {data.summary.glosa_rate.toFixed(1)}%
+                                {(data.summary.glosa_rate ?? 0).toFixed(1)}%
                             </CardTitle>
                         </CardHeader>
                     </Card>
@@ -208,7 +208,7 @@ export default function LossAnalysisPage() {
                                             <TableCell className="font-medium">{ins.name}</TableCell>
                                             <TableCell className="text-right">{formatCurrency(ins.billed)}</TableCell>
                                             <TableCell className="text-right text-red-600">{formatCurrency(ins.glosa)}</TableCell>
-                                            <TableCell className="text-right">{ins.glosa_rate.toFixed(1)}%</TableCell>
+                                            <TableCell className="text-right">{(ins.glosa_rate ?? 0).toFixed(1)}%</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

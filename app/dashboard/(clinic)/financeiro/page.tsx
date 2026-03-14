@@ -206,7 +206,6 @@ export default function FinancialPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold">Financeiro</h1>
-                    <h1 className="text-3xl font-bold">Financeiro</h1>
                     <p className="text-muted-foreground">
                         Contas a pagar, receber e fluxo de caixa
                     </p>

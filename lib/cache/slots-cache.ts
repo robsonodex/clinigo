@@ -64,15 +64,14 @@ async function calculateAvailableSlots(
     const dateObj = new Date(date)
     const dayOfWeek = dateObj.getDay()
 
-    const { data: schedule } = await supabase
+    const { data: schedules } = await supabase
         .from('schedules')
         .select('*')
         .eq('doctor_id', doctorId)
         .eq('day_of_week', dayOfWeek)
         .eq('is_active', true)
-        .single()
 
-    if (!schedule) {
+    if (!schedules || schedules.length === 0) {
         return []
     }
 
@@ -88,21 +87,26 @@ async function calculateAvailableSlots(
         appointments?.map(a => a.scheduled_time) || []
     )
 
-    // Generate time slots
+    // Generate time slots from ALL schedule blocks (multiple shifts)
     const slots: TimeSlot[] = []
-    const startTime = parseTime(schedule.start_time)
-    const endTime = parseTime(schedule.end_time)
-    const slotDuration = schedule.slot_duration_minutes || 30
+    for (const schedule of schedules) {
+        const startTime = parseTime(schedule.start_time)
+        const endTime = parseTime(schedule.end_time)
+        const slotDuration = schedule.slot_duration_minutes || 30
 
-    let currentTime = startTime
-    while (currentTime < endTime) {
-        const timeString = formatTime(currentTime)
-        slots.push({
-            time: timeString,
-            available: !bookedTimes.has(timeString),
-        })
-        currentTime += slotDuration
+        let currentTime = startTime
+        while (currentTime < endTime) {
+            const timeString = formatTime(currentTime)
+            slots.push({
+                time: timeString,
+                available: !bookedTimes.has(timeString),
+            })
+            currentTime += slotDuration
+        }
     }
+
+    // Sort slots by time
+    slots.sort((a, b) => a.time.localeCompare(b.time))
 
     return slots
 }
