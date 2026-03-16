@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { addDays, format } from 'date-fns'
 
@@ -214,7 +214,8 @@ export async function POST(req: NextRequest) {
 
             // 7b. Criar notificação in-app para a clínica
             try {
-                await supabase.from('billing_notifications').insert({
+                const adminSupabase = createServiceRoleClient()
+                await adminSupabase.from('billing_notifications').insert({
                     clinic_id: clinic.id,
                     type: 'PAYMENT_REQUEST',
                     title: '💰 Nova cobrança recebida',
