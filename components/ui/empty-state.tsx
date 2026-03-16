@@ -71,13 +71,16 @@ export function NoPatientsState() {
     )
 }
 
-export function NoDoctorsState() {
+export function NoDoctorsState({ label }: { label?: { plural: string; cadastrar: string } } = {}) {
+    const singular = label?.plural || 'médico'
+    const pluralLabel = label?.plural || 'médicos'
+    const cadastrarLabel = label?.cadastrar || 'Cadastrar Médico'
     return (
         <EmptyState
-            title="Nenhum médico cadastrado"
-            description="Adicione os médicos da sua clínica para habilitar agendamentos."
+            title={`Nenhum ${singular.toLowerCase()} cadastrado`}
+            description={`Adicione os ${pluralLabel.toLowerCase()} da sua clínica para habilitar agendamentos.`}
             action={{
-                label: 'Cadastrar Médico',
+                label: cadastrarLabel,
                 href: '/dashboard/medicos',
             }}
         />

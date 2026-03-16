@@ -17,8 +17,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { CalendarDays, User, Clock, Stethoscope } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
 export default function WalkInAppointmentPage() {
+    const profLabel = useProfessionalLabel();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         patientName: '',
@@ -37,7 +39,7 @@ export default function WalkInAppointmentPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
-    // Buscar médicos
+    // Buscar profissionais
     useEffect(() => {
         fetchDoctors();
     }, []);
@@ -128,7 +130,7 @@ export default function WalkInAppointmentPage() {
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 2 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>2</div>
                             <div>
                                 <h3 className="font-semibold">Consulta</h3>
-                                <p className="text-xs text-muted-foreground">Médico e horário</p>
+                                <p className="text-xs text-muted-foreground">{profLabel.singular} e horário</p>
                             </div>
                         </div>
                     </div>
@@ -184,7 +186,7 @@ export default function WalkInAppointmentPage() {
                             {step === 2 && (
                                 <div className="space-y-4">
                                     <div className="grid gap-2">
-                                        <Label>Médico *</Label>
+                                        <Label>{profLabel.singular} *</Label>
                                         <Select
                                             value={formData.doctorId}
                                             onValueChange={(value) => setFormData({ ...formData, doctorId: value })}
@@ -192,13 +194,13 @@ export default function WalkInAppointmentPage() {
                                             <SelectTrigger>
                                                 <div className="flex items-center gap-2">
                                                     <Stethoscope className="w-4 h-4 text-muted-foreground" />
-                                                    <SelectValue placeholder="Selecione um médico" />
+                                                    <SelectValue placeholder={`Selecione um ${profLabel.singular.toLowerCase()}`} />
                                                 </div>
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {doctors.map((doctor) => (
                                                     <SelectItem key={doctor.id} value={doctor.id}>
-                                                        {doctor.user?.full_name || doctor.full_name || 'Médico'} - {doctor.specialty}
+                                                        {doctor.user?.full_name || doctor.full_name || profLabel.singular} - {doctor.specialty}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

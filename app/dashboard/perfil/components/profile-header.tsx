@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { User } from 'lucide-react'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface ProfileHeaderProps {
     // Optional props for future customization
@@ -14,6 +15,7 @@ interface ProfileHeaderProps {
 export default function ProfileHeader({ }: ProfileHeaderProps) {
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const profLabel = useProfessionalLabel()
 
     useEffect(() => {
         async function loadUser() {
@@ -61,7 +63,7 @@ export default function ProfileHeader({ }: ProfileHeaderProps) {
         const roleLabels: Record<string, string> = {
             SUPER_ADMIN: 'Super Administrador',
             CLINIC_ADMIN: 'Administrador',
-            DOCTOR: 'Médico',
+            DOCTOR: profLabel.singular,
             SECRETARY: 'Secretária',
         }
 

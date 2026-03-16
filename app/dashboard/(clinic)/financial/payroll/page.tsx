@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
 interface Payroll {
     id: string;
@@ -113,6 +114,7 @@ export default function PayrollPage() {
     });
     const [showCloseDialog, setShowCloseDialog] = useState(false);
     const [showApproveAllDialog, setShowApproveAllDialog] = useState(false);
+    const profLabel = useProfessionalLabel();
 
     // Buscar folhas do mês
     const { data, isLoading, refetch } = useQuery({
@@ -219,9 +221,9 @@ export default function PayrollPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold">Repasse Médico</h1>
+                    <h1 className="text-2xl font-bold">{profLabel.repasse}</h1>
                     <p className="text-muted-foreground">
-                        Gestão de repasses e folha de pagamento dos médicos
+                        Gestão de repasses e folha de pagamento dos {profLabel.plural.toLowerCase()}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -275,7 +277,7 @@ export default function PayrollPage() {
                     </Card>
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardDescription>Médicos</CardDescription>
+                            <CardDescription>{profLabel.plural}</CardDescription>
                             <CardTitle className="text-2xl flex items-center gap-2">
                                 <Users className="w-5 h-5 text-muted-foreground" />
                                 {summary?.total_doctors || 0}
@@ -334,7 +336,7 @@ export default function PayrollPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Médico</TableHead>
+                                    <TableHead>{profLabel.singular}</TableHead>
                                     <TableHead className="text-center">Atendimentos</TableHead>
                                     <TableHead className="text-right">Bruto</TableHead>
                                     <TableHead className="text-right">Impostos</TableHead>

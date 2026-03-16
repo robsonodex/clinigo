@@ -644,7 +644,7 @@ export default function IntegracoesPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 relative overflow-hidden">
+                <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 relative overflow-hidden min-h-[200px]">
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
                         <div className="text-center p-6">
                             <Lock className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />

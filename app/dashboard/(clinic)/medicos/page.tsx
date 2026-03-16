@@ -44,6 +44,7 @@ import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog'
 import { type Doctor, api } from '@/lib/api-client'
 import { formatCurrency, getInitials } from '@/lib/utils'
 import Link from 'next/link'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 export default function DoctorsPage() {
     const { clinicId } = useRole()
@@ -54,6 +55,7 @@ export default function DoctorsPage() {
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+    const profLabel = useProfessionalLabel()
 
 
     const { data: response, isLoading, error } = useQuery({
@@ -74,7 +76,7 @@ export default function DoctorsPage() {
             api.patch(`/doctors/detail?id=${id}`, { is_accepting_appointments }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
-            toast.success('Status do médico atualizado')
+            toast.success(`Status do ${profLabel.singular.toLowerCase()} atualizado`)
         },
         onError: (err: any) => {
             toast.error(err.message || 'Erro ao atualizar status')
@@ -87,10 +89,10 @@ export default function DoctorsPage() {
         onSuccess: (data: any) => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
             setSelectedIds([])
-            toast.success(data.message || 'Médicos atualizados com sucesso')
+            toast.success(data.message || `${profLabel.plural} atualizados com sucesso`)
         },
         onError: (err: any) => {
-            toast.error(err.message || 'Erro ao atualizar médicos')
+            toast.error(err.message || `Erro ao atualizar ${profLabel.plural.toLowerCase()}`)
         }
     })
 
@@ -100,10 +102,10 @@ export default function DoctorsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
             setSelectedIds([])
-            toast.success('Médicos removidos com sucesso')
+            toast.success(`${profLabel.plural} removidos com sucesso`)
         },
         onError: (err: any) => {
-            toast.error(err.message || 'Erro ao remover médicos')
+            toast.error(err.message || `Erro ao remover ${profLabel.plural.toLowerCase()}`)
         }
     })
 
@@ -112,10 +114,10 @@ export default function DoctorsPage() {
             api.delete(`/doctors/detail?id=${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
-            toast.success('Médico desativado com sucesso')
+            toast.success(`${profLabel.singular} desativado com sucesso`)
         },
         onError: (err: any) => {
-            toast.error(err.message || 'Erro ao desativar médico')
+            toast.error(err.message || `Erro ao desativar ${profLabel.singular.toLowerCase()}`)
         }
     })
 
@@ -152,14 +154,14 @@ export default function DoctorsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Médicos</h1>
+                    <h1 className="text-2xl font-bold">{profLabel.plural}</h1>
                     <p className="text-muted-foreground">
                         Gerencie o corpo clínico e suas informações
                     </p>
                 </div>
                 <Button onClick={handleCreate}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Novo Médico
+                    {profLabel.novo}
                 </Button>
             </div>
 
@@ -193,7 +195,7 @@ export default function DoctorsPage() {
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => {
-                                    if (confirm('Deseja realmente remover/desativar os médicos selecionados?')) {
+                                    if (confirm(`Deseja realmente remover/desativar os ${profLabel.plural.toLowerCase()} selecionados?`)) {
                                         bulkDeleteMutation.mutate(selectedIds)
                                     }
                                 }}
@@ -294,7 +296,7 @@ export default function DoctorsPage() {
                                             className="h-24 text-center text-muted-foreground"
                                         >
                                             <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                            Nenhum médico encontrado.
+                                            Nenhum ${profLabel.singular.toLowerCase()} encontrado.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -379,7 +381,7 @@ export default function DoctorsPage() {
                                                         <DropdownMenuItem
                                                             className="text-destructive"
                                                             onClick={() => {
-                                                                if (confirm(`Deseja realmente desativar o médico ${doctor.user?.full_name}?`)) {
+                                                                if (confirm(`Deseja realmente desativar o ${profLabel.singular.toLowerCase()} ${doctor.user?.full_name}?`)) {
                                                                     deleteMutation.mutate(doctor.id)
                                                                 }
                                                             }}

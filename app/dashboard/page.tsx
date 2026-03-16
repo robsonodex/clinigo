@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 const statusColors: Record<string, string> = {
     PENDING_PAYMENT: 'warning',
@@ -55,6 +56,7 @@ const statusLabels: Record<string, string> = {
 export default function DashboardPage() {
     const { profile } = useAuth()
     const { role, isDoctor, isClinicAdmin, isSuperAdmin } = useRole()
+    const profLabel = useProfessionalLabel()
 
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -122,7 +124,7 @@ export default function DashboardPage() {
                     {role === 'SUPER_ADMIN' && <Shield className="w-4 h-4 mr-1" />}
                     {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
                     {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
-                    {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : 'Médico'}
+                    {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
                 </Badge>
             </div >
 
@@ -355,7 +357,7 @@ export default function DashboardPage() {
                                         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                                             <Users className="w-6 h-6 text-blue-600" />
                                         </div>
-                                        <p className="font-medium">Médicos</p>
+                                        <p className="font-medium">{profLabel.plural}</p>
                                         <p className="text-xs text-muted-foreground">Gerenciar equipe</p>
                                     </CardContent>
                                 </Card>

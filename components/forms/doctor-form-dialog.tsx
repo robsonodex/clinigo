@@ -29,6 +29,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield } from 'lucide-react'
 import type { Doctor } from '@/lib/api-client'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface DoctorFormDialogProps {
     open: boolean
@@ -78,6 +79,7 @@ export function DoctorFormDialog({
     const updateDoctor = useUpdateDoctor()
     const isEditing = !!doctorToEdit
     const [showDisplaySettings, setShowDisplaySettings] = useState(false)
+    const profLabel = useProfessionalLabel()
 
     const {
         register,
@@ -183,13 +185,13 @@ export function DoctorFormDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogTitle>
-                    {isEditing ? 'Editar Médico' : 'Cadastrar Novo Médico'}
+                    {isEditing ? `Editar ${profLabel.singular}` : profLabel.cadastrarNovo}
                 </DialogTitle>
                 <DialogHeader>
                     <DialogDescription>
                         {isEditing
-                            ? 'Atualize as informações do médico e configure o que será exibido na página pública.'
-                            : 'Preencha os dados para adicionar um novo médico à clínica.'}
+                            ? `Atualize as informações do ${profLabel.singular.toLowerCase()} e configure o que será exibido na página pública.`
+                            : `Preencha os dados para adicionar um novo ${profLabel.singular.toLowerCase()} à clínica.`}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -252,7 +254,7 @@ export function DoctorFormDialog({
                                     error={!!errors.password}
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    O médico deverá alterar esta senha no primeiro acesso.
+                                    O {profLabel.singular.toLowerCase()} deverá alterar esta senha no primeiro acesso.
                                 </p>
                                 {errors.password && (
                                     <p className="text-xs text-destructive">
@@ -336,7 +338,7 @@ export function DoctorFormDialog({
                                         className="mt-2"
                                     />
                                     <p className="text-xs text-blue-700 mt-1">
-                                        Esta especialidade será salva e poderá ser usada para outros médicos.
+                                        Esta especialidade será salva e poderá ser usada para outros ${profLabel.plural.toLowerCase()}.
                                     </p>
                                 </div>
                             )}
@@ -390,7 +392,7 @@ export function DoctorFormDialog({
                             <Textarea
                                 id="bio"
                                 {...register('bio')}
-                                placeholder="Breve descrição sobre o médico..."
+                                placeholder={`Breve descrição sobre o ${profLabel.singular.toLowerCase()}...`}
                                 className="h-24"
                             />
                             {errors.bio && (
@@ -411,7 +413,7 @@ export function DoctorFormDialog({
                                 <div className="text-left">
                                     <p className="font-medium">Configurações de Exibição Pública</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Controle o que aparece no card do médico na página de agendamento
+                                        Controle o que aparece no card do {profLabel.singular.toLowerCase()} na página de agendamento
                                     </p>
                                 </div>
                             </div>
@@ -423,7 +425,7 @@ export function DoctorFormDialog({
                         {showDisplaySettings && (
                             <div className="p-4 space-y-4 border-t bg-background">
                                 <p className="text-sm text-muted-foreground mb-4">
-                                    Escolha quais informações serão exibidas no card público deste médico:
+                                    Escolha quais informações serão exibidas no card público deste {profLabel.singular.toLowerCase()}:
                                 </p>
 
                                 <div className="grid sm:grid-cols-2 gap-4">
@@ -516,7 +518,7 @@ export function DoctorFormDialog({
                         </Button>
                         <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {isEditing ? 'Salvar Alterações' : 'Cadastrar Médico'}
+                            {isEditing ? 'Salvar Alterações' : profLabel.cadastrar}
                         </Button>
                     </DialogFooter>
                 </form>

@@ -12,12 +12,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { Save, CreditCard, Building, ShieldCheck, Zap, Mail } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 import { uploadClinicLogo } from '@/app/actions/white-label'
 import { Sparkles } from 'lucide-react'
 import { PlanAndBilling } from './components/PlanAndBilling'
 import { SMTPSettings } from './components/SMTPSettings'
 import { createClient } from '@/lib/supabase/client'
+import { PROFESSIONAL_LABEL_OPTIONS } from '@/lib/hooks/use-professional-label'
 
 // ... existing code ...
 
@@ -54,6 +56,8 @@ export default function SettingsPage() {
     const [previewLogo, setPreviewLogo] = useState<string | null>(null)
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+    const [professionalLabel, setProfessionalLabel] = useState('Médico(a)')
+    const [customLabel, setCustomLabel] = useState('')
 
     const {
         register,
@@ -109,7 +113,7 @@ export default function SettingsPage() {
                 // Fetch clinic data
                 const { data: clinicData, error } = await supabase
                     .from('clinics')
-                    .select('name, slug, email, phone, address, primary_color, logo_url, cnpj, whatsapp_number')
+                    .select('name, slug, email, phone, address, primary_color, logo_url, cnpj, whatsapp_number, professional_label')
                     .eq('id', userData.clinic_id)
                     .single()
 
@@ -152,6 +156,17 @@ export default function SettingsPage() {
                         whatsapp_number: clinicData.whatsapp_number || '',
                         logo_url: clinicData.logo_url || null,
                     })
+
+                    // Set professional label
+                    const label = (clinicData as any).professional_label || 'Médico(a)'
+                    const isPreset = PROFESSIONAL_LABEL_OPTIONS.some(opt => opt.value === label)
+                    if (isPreset) {
+                        setProfessionalLabel(label)
+                        setCustomLabel('')
+                    } else {
+                        setProfessionalLabel('CUSTOM')
+                        setCustomLabel(label)
+                    }
 
                     // Set logo preview if exists
                     if (clinicData.logo_url) {
@@ -221,6 +236,7 @@ export default function SettingsPage() {
                     cnpj: data.cnpj ? data.cnpj.replace(/\D/g, '') : null,
                     whatsapp_number: data.whatsapp_number,
                     logo_url: data.logo_url,
+                    professional_label: professionalLabel === 'CUSTOM' ? customLabel : professionalLabel,
                 })
                 .eq('id', clinicId)
 
@@ -347,6 +363,54 @@ export default function SettingsPage() {
                                                 <p className="text-xs text-destructive">{errors.primary_color.message}</p>
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Professional Label Section */}
+                                <div className="p-4 bg-muted/30 rounded-lg space-y-4 border">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-primary" />
+                                        Nomenclatura Profissional
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Defina como os profissionais da sua clínica são chamados no sistema.
+                                    </p>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Tipo de Profissional</Label>
+                                            <Select
+                                                value={professionalLabel}
+                                                onValueChange={(v) => {
+                                                    setProfessionalLabel(v)
+                                                    if (v !== 'CUSTOM') setCustomLabel('')
+                                                }}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {PROFESSIONAL_LABEL_OPTIONS.map((opt) => (
+                                                        <SelectItem key={opt.value} value={opt.value}>
+                                                            {opt.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                    <SelectItem value="CUSTOM">✏️ Cadastrar novo termo</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        {professionalLabel === 'CUSTOM' && (
+                                            <div className="space-y-2">
+                                                <Label>Termo Personalizado</Label>
+                                                <Input
+                                                    value={customLabel}
+                                                    onChange={(e) => setCustomLabel(e.target.value)}
+                                                    placeholder="Ex: Nutricionista, Fonoaudiólogo(a)..."
+                                                />
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Este termo será usado em todo o sistema para se referir aos seus profissionais.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

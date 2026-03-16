@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw, Shield } from 'lucide-react'
 import { toast } from 'sonner'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface KPIs {
     total_revenue: number
@@ -48,6 +49,7 @@ export default function ReportsPage() {
     const [insuranceStats, setInsuranceStats] = useState<any[]>([])
     const [dateRange, setDateRange] = useState('month')
     const [exporting, setExporting] = useState(false)
+    const profLabel = useProfessionalLabel()
 
     const getDateRange = () => {
         const now = new Date()
@@ -263,7 +265,7 @@ export default function ReportsPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{kpis?.new_patients || 0}</div>
                         <p className="text-xs text-muted-foreground">
-                            {kpis?.active_doctors || 0}/{kpis?.total_doctors || 0} médicos ativos
+                            {kpis?.active_doctors || 0}/{kpis?.total_doctors || 0} {profLabel.plural.toLowerCase()} ativos
                         </p>
                     </CardContent>
                 </Card>
@@ -274,7 +276,7 @@ export default function ReportsPage() {
                 <TabsList>
                     <TabsTrigger value="revenue" className="gap-2">
                         <BarChart3 className="h-4 w-4" />
-                        Receita por Médico
+                        Receita por {profLabel.singular}
                     </TabsTrigger>
                     <TabsTrigger value="appointments" className="gap-2">
                         <PieChart className="h-4 w-4" />
@@ -289,9 +291,9 @@ export default function ReportsPage() {
                 <TabsContent value="revenue">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Receita por Médico</CardTitle>
+                            <CardTitle>Receita por {profLabel.singular}</CardTitle>
                             <CardDescription>
-                                Ranking de médicos por receita gerada
+                                Ranking de {profLabel.plural.toLowerCase()} por receita gerada
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

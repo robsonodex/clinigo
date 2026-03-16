@@ -25,6 +25,7 @@ import { Loader2, Save, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { SavedSchedulesList } from '@/components/doctors/SavedSchedulesList'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 const DAYS_OF_WEEK = [
     { value: 0, label: 'Domingo', short: 'Dom' },
@@ -54,6 +55,7 @@ export default function SchedulePage() {
     const { clinicId } = useRole()
     const { data: doctors } = useDoctors(clinicId)
     const updateSchedules = useUpdateSchedules()
+    const profLabel = useProfessionalLabel()
 
     const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null)
     const [shifts, setShifts] = useState<ShiftBlock[]>([])
@@ -138,7 +140,7 @@ export default function SchedulePage() {
     // Validate and submit
     const onSubmit = () => {
         if (!selectedDoctorId) {
-            toast.error('Selecione um médico')
+            toast.error(`Selecione um ${profLabel.singular.toLowerCase()}`)
             return
         }
 
@@ -195,7 +197,7 @@ export default function SchedulePage() {
             <div>
                 <h1 className="text-2xl font-bold">Configurar Horários</h1>
                 <p className="text-muted-foreground">
-                    Defina a disponibilidade semanal dos médicos — configure múltiplos turnos por dia
+                    Defina a disponibilidade semanal dos {profLabel.plural.toLowerCase()} — configure múltiplos turnos por dia
                 </p>
             </div>
 
@@ -203,7 +205,7 @@ export default function SchedulePage() {
                 <CardHeader>
                     <CardTitle>Seleção</CardTitle>
                     <CardDescription>
-                        Escolha o médico para configurar a agenda
+                        Escolha o {profLabel.singular.toLowerCase()} para configurar a agenda
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -212,7 +214,7 @@ export default function SchedulePage() {
                         onValueChange={setSelectedDoctorId}
                     >
                         <SelectTrigger className="w-[300px]">
-                            <SelectValue placeholder="Selecione um médico" />
+                            <SelectValue placeholder={`Selecione um ${profLabel.singular.toLowerCase()}`} />
                         </SelectTrigger>
                         <SelectContent>
                             {doctors?.map((d) => (

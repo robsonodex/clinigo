@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle, UserPlus, Users, Clock, Mail, MessageSquare, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface SetupStatus {
     hasDoctor: boolean
@@ -16,6 +17,7 @@ interface SetupStatus {
 }
 
 export function InitialSetup() {
+    const profLabel = useProfessionalLabel()
     const [status, setStatus] = useState<SetupStatus>({
         hasDoctor: false,
         hasPatient: false,
@@ -45,8 +47,8 @@ export function InitialSetup() {
 
     const setupSteps = [
         {
-            title: 'Cadastrar Primeiro Médico',
-            description: 'Adicione os médicos que irão atender na clínica',
+            title: `Cadastrar Primeiro ${profLabel.singular}`,
+            description: `Adicione os ${profLabel.plural.toLowerCase()} que irão atender na clínica`,
             icon: UserPlus,
             completed: status.hasDoctor,
             href: '/dashboard/medicos?action=novo',
@@ -62,7 +64,7 @@ export function InitialSetup() {
         },
         {
             title: 'Configurar Horários de Atendimento',
-            description: 'Defina os horários de cada médico',
+            description: `Defina os horários de cada ${profLabel.singular.toLowerCase()}`,
             icon: Clock,
             completed: status.hasSchedule,
             href: '/dashboard/horarios',

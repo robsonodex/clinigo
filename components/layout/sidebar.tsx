@@ -1,5 +1,7 @@
 'use client'
 
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -112,11 +114,12 @@ const navigationSections: NavSection[] = [
             },
         ],
     },
+    // DYNAMIC: 'Equipe' section uses professionalLabel — injected at render time
     {
         title: 'Equipe',
         items: [
             {
-                title: 'Médicos',
+                title: '__PROFESSIONAL_PLURAL__',
                 href: '/dashboard/medicos',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
@@ -180,7 +183,7 @@ const navigationSections: NavSection[] = [
                 // Acessível a todos os planos - apenas Novo Lançamento (receita/despesa)
             },
             {
-                title: 'Repasse Médico',
+                title: '__REPASSE_LABEL__',
                 href: '/dashboard/financial/payroll',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
@@ -573,17 +576,23 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
     const { role } = useRole()
     const { planType, isLoading } = usePlan()
+    const profLabel = useProfessionalLabel()
 
     // Default to BASIC if loading
     const currentPlan: PlanType = planType || 'BASICO'
 
-    // Filter sections based on role
+    // Filter sections based on role + inject professional labels
     const filteredSections = navigationSections
         .map(section => ({
             ...section,
-            items: section.items.filter(
-                (item) => !item.roles || (role && item.roles.includes(role))
-            ),
+            items: section.items
+                .filter((item) => !item.roles || (role && item.roles.includes(role)))
+                .map(item => ({
+                    ...item,
+                    title: item.title
+                        .replace('__PROFESSIONAL_PLURAL__', profLabel.plural)
+                        .replace('__REPASSE_LABEL__', profLabel.repasse),
+                })),
         }))
         .filter(section => section.items.length > 0)
 
@@ -650,7 +659,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                 )}
                 {role === 'DOCTOR' && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                        <Stethoscope className="w-3 h-3" /> Médico
+                        <Stethoscope className="w-3 h-3" /> {profLabel.singular}
                     </span>
                 )}
             </div>

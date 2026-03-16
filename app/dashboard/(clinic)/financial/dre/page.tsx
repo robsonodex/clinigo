@@ -29,6 +29,7 @@ import {
     FileText,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
 interface DREData {
     period: { start: string; end: string };
@@ -70,6 +71,7 @@ export default function DREPage() {
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
     const [data, setData] = useState<DREData | null>(null);
+    const profLabel = useProfessionalLabel();
 
     const generateMutation = useMutation({
         mutationFn: async () => {
@@ -216,7 +218,7 @@ export default function DREPage() {
                             <CardContent className="space-y-4">
                                 <div className="pb-4 border-b">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm text-muted-foreground">Repasses Médicos</span>
+                                        <span className="text-sm text-muted-foreground">Repasses {profLabel.plural}</span>
                                         <span className="font-medium">{formatCurrency(data.expenses.payroll)}</span>
                                     </div>
                                     {Object.entries(data.expenses.by_category).map(([cat, val]) => (

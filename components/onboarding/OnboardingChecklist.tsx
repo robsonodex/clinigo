@@ -12,6 +12,7 @@ import {
     Award, Clock, HelpCircle
 } from 'lucide-react'
 import Link from 'next/link'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface ChecklistItem {
     id: string
@@ -23,7 +24,7 @@ interface ChecklistItem {
     planRequired?: 'BASIC' | 'STARTER' | 'PRO' | 'ENTERPRISE'
 }
 
-const CHECKLIST_ITEMS: ChecklistItem[] = [
+const getChecklistItems = (profLabel: { singular: string; plural: string }): ChecklistItem[] => [
     {
         id: 'clinic-profile',
         title: 'Configurar Dados da Clínica',
@@ -34,8 +35,8 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
     },
     {
         id: 'first-doctor',
-        title: 'Cadastrar Primeiro Médico',
-        description: 'CRM, especialidade e valor da consulta',
+        title: `Cadastrar Primeiro ${profLabel.singular}`,
+        description: `CRM, especialidade e valor da consulta`,
         icon: Stethoscope,
         link: '/dashboard/medicos',
         required: true,
@@ -43,7 +44,7 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
     {
         id: 'schedule-setup',
         title: 'Configurar Horários de Atendimento',
-        description: 'Dias e horários que o médico atende',
+        description: `Dias e horários que o ${profLabel.singular.toLowerCase()} atende`,
         icon: Calendar,
         link: '/dashboard/horarios',
         required: true,
@@ -51,6 +52,8 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
 ]
 
 export default function OnboardingChecklist() {
+    const profLabel = useProfessionalLabel()
+    const CHECKLIST_ITEMS = getChecklistItems(profLabel)
     const [completed, setCompleted] = useState<string[]>([])
     const [isVisible, setIsVisible] = useState(true)
 

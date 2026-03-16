@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
 interface PayrollItem {
     id: string;
@@ -86,6 +87,7 @@ export default function PayrollDetailPage() {
     const params = useParams();
     const router = useRouter();
     const payrollId = params.id as string;
+    const profLabel = useProfessionalLabel();
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['payroll-detail', payrollId],
@@ -175,7 +177,7 @@ export default function PayrollDetailPage() {
                     <div>
                         <h1 className="text-2xl font-bold flex items-center gap-3">
                             <User className="w-6 h-6" />
-                            {data.doctor?.name || 'Médico'}
+                            {data.doctor?.name || profLabel.singular}
                             <Badge className={status.color}>{status.label}</Badge>
                         </h1>
                         <p className="text-muted-foreground">

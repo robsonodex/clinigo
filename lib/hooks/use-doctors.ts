@@ -50,10 +50,10 @@ export function useCreateDoctor() {
         onSuccess: () => {
             // Use partial match to invalidate ALL doctor queries regardless of params
             queryClient.invalidateQueries({ queryKey: ['doctors'], exact: false })
-            toast.success('Médico cadastrado com sucesso!')
+            toast.success('Profissional cadastrado com sucesso!')
         },
         onError: (error: Error) => {
-            toast.error(error.message || 'Erro ao cadastrar médico')
+            toast.error(error.message || 'Erro ao cadastrar profissional')
         },
     })
 }

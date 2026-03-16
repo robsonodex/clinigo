@@ -24,6 +24,7 @@ import {
 import { Shield, Search, Download, RefreshCw, User, Calendar, Activity, AlertTriangle, Info, AlertCircle, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface AuditLog {
     id: string
@@ -63,7 +64,7 @@ const ENTITY_LABELS: Record<string, string> = {
     'PRONTUARIO': 'Prontuário',
     'APPOINTMENT': 'Agendamento',
     'PATIENT': 'Paciente',
-    'DOCTOR': 'Médico',
+    'DOCTOR': 'Profissional',
     'CLINIC': 'Clínica',
     'FINANCIAL': 'Financeiro',
     'USER': 'Usuário',
@@ -74,6 +75,7 @@ const ENTITY_LABELS: Record<string, string> = {
 }
 
 export default function AuditoriaPage() {
+    const profLabel = useProfessionalLabel()
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [filters, setFilters] = useState({

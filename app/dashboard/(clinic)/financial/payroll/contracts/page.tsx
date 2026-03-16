@@ -43,6 +43,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Plus, FileText, Percent, DollarSign, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
 interface Contract {
     id: string;
@@ -80,6 +81,7 @@ const CONTRACT_TYPES = [
 
 export default function ContractsPage() {
     const [showDialog, setShowDialog] = useState(false);
+    const profLabel = useProfessionalLabel();
     const [formData, setFormData] = useState({
         doctor_id: '',
         contract_type: 'PERCENTAGE_GROSS',
@@ -104,7 +106,7 @@ export default function ContractsPage() {
         },
     });
 
-    // Buscar médicos
+    // Buscar profissionais
     const { data: doctors } = useQuery({
         queryKey: ['doctors-list'],
         queryFn: async () => {
@@ -155,7 +157,7 @@ export default function ContractsPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Contratos de Repasse</h1>
                     <p className="text-muted-foreground">
-                        Configure as regras de repasse para cada médico
+                        Configure as regras de repasse para cada {profLabel.singular.toLowerCase()}
                     </p>
                 </div>
                 <div className="flex gap-3">
@@ -173,20 +175,20 @@ export default function ContractsPage() {
                             <DialogHeader>
                                 <DialogTitle>Novo Contrato de Repasse</DialogTitle>
                                 <DialogDescription>
-                                    Configure as regras de cálculo do repasse do médico
+                                    Configure as regras de cálculo do repasse do {profLabel.singular.toLowerCase()}
                                 </DialogDescription>
                             </DialogHeader>
 
                             <div className="space-y-4 py-4">
-                                {/* Médico */}
+                                {/* Profissional */}
                                 <div className="space-y-2">
-                                    <Label>Médico</Label>
+                                    <Label>{profLabel.singular}</Label>
                                     <Select
                                         value={formData.doctor_id}
                                         onValueChange={(v) => setFormData(prev => ({ ...prev, doctor_id: v }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Selecione o médico" />
+                                            <SelectValue placeholder={`Selecione o ${profLabel.singular.toLowerCase()}`} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {doctors?.map((doc) => (
@@ -365,7 +367,7 @@ export default function ContractsPage() {
                 <CardHeader>
                     <CardTitle>Contratos Ativos</CardTitle>
                     <CardDescription>
-                        Contratos de repasse configurados para cada médico
+                        Contratos de repasse configurados para cada {profLabel.singular.toLowerCase()}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -379,13 +381,13 @@ export default function ContractsPage() {
                         <div className="text-center py-8 text-muted-foreground">
                             <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
                             <p>Nenhum contrato cadastrado</p>
-                            <p className="text-sm">Clique em &quot;Novo Contrato&quot; para configurar um médico</p>
+                            <p className="text-sm">Clique em &quot;Novo Contrato&quot; para configurar um {profLabel.singular.toLowerCase()}</p>
                         </div>
                     ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Médico</TableHead>
+                                    <TableHead>{profLabel.singular}</TableHead>
                                     <TableHead>Tipo</TableHead>
                                     <TableHead className="text-center">Particular</TableHead>
                                     <TableHead className="text-center">Convênio</TableHead>
