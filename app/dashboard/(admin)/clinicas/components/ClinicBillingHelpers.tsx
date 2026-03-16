@@ -25,11 +25,13 @@ export const ButtonManualCharge = ({ clinicId, customPrice }: { clinicId: string
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || 'Erro ao gerar cobrança')
 
-            toast.success('Link de pagamento gerado!')
+            toast.success('Cobrança enviada com sucesso! A clínica receberá uma notificação.')
 
-            // Copiar para área de transferência
-            navigator.clipboard.writeText(data.payment_url)
-            toast.info('Link copiado para a área de transferência!')
+            // Copiar linha digitável se disponível
+            if (data.boleto?.linha_digitavel) {
+                navigator.clipboard.writeText(data.boleto.linha_digitavel)
+                toast.info('Linha digitável copiada para a área de transferência!')
+            }
         } catch (error) {
             toast.error('Erro ao gerar cobrança: ' + (error as Error).message)
         } finally {

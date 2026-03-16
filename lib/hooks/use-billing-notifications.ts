@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 export interface BillingNotification {
     id: string
-    type: 'REMINDER_7D' | 'REMINDER_3D' | 'REMINDER_1D' | 'PAYMENT_RECEIVED' | 'PAYMENT_FAILED' | 'OVERDUE' | 'SUSPENDED'
+    type: 'REMINDER_7D' | 'REMINDER_3D' | 'REMINDER_1D' | 'PAYMENT_RECEIVED' | 'PAYMENT_FAILED' | 'PAYMENT_REQUEST' | 'OVERDUE' | 'SUSPENDED'
     title: string
     message: string
     sent_at: string

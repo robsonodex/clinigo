@@ -212,6 +212,19 @@ export async function POST(req: NextRequest) {
                 console.error('Erro ao salvar payment_request:', insertError)
             }
 
+            // 7b. Criar notificação in-app para a clínica
+            try {
+                await supabase.from('billing_notifications').insert({
+                    clinic_id: clinic.id,
+                    type: 'PAYMENT_REQUEST',
+                    title: '💰 Nova cobrança recebida',
+                    message: `Foi gerada uma cobrança de R$ ${planDetails.price.toFixed(2)} referente ao plano ${planDetails.name}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
+                    priority: 'HIGH'
+                } as any)
+            } catch (notifError) {
+                console.error('Erro ao criar notificação de cobrança:', notifError)
+            }
+
             // 8. Retornar dados do boleto
             return NextResponse.json({
                 success: true,
