@@ -182,8 +182,8 @@ export async function POST(req: NextRequest) {
                     uf: parsedAddress.uf.substring(0, 2),
                     cep: parsedAddress.cep.replace(/\D/g, '').substring(0, 8),
                     email: user.email || '',
-                    ddd: ddd,
-                    telefone: number
+                    ddd: ddd.substring(0, 2),
+                    telefone: number.substring(0, 9)
                 },
                 mensagem: {
                     linha1: `CliniGo - Plano ${planDetails.name}`,
