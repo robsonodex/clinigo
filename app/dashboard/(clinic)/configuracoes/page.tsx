@@ -58,6 +58,8 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true)
     const [professionalLabel, setProfessionalLabel] = useState('Médico(a)')
     const [customLabel, setCustomLabel] = useState('')
+    const [initialProfessionalLabel, setInitialProfessionalLabel] = useState('Médico(a)')
+    const [initialCustomLabel, setInitialCustomLabel] = useState('')
 
     const {
         register,
@@ -162,10 +164,14 @@ export default function SettingsPage() {
                     const isPreset = PROFESSIONAL_LABEL_OPTIONS.some(opt => opt.value === label)
                     if (isPreset) {
                         setProfessionalLabel(label)
+                        setInitialProfessionalLabel(label)
                         setCustomLabel('')
+                        setInitialCustomLabel('')
                     } else {
                         setProfessionalLabel('CUSTOM')
+                        setInitialProfessionalLabel('CUSTOM')
                         setCustomLabel(label)
+                        setInitialCustomLabel(label)
                     }
 
                     // Set logo preview if exists
@@ -248,6 +254,8 @@ export default function SettingsPage() {
 
             toast.success('Configurações salvas com sucesso!')
             reset(data) // Reset form with new values to clear dirty state
+            setInitialProfessionalLabel(professionalLabel)
+            setInitialCustomLabel(customLabel)
         } catch (error) {
             console.error('Error:', error)
             toast.error('Erro ao salvar configurações')
@@ -501,7 +509,10 @@ export default function SettingsPage() {
                                 </div>
 
                                 <div className="pt-4 flex justify-end">
-                                    <Button type="submit" disabled={!isDirty}>
+                                    <Button 
+                                      type="submit" 
+                                      disabled={!isDirty && professionalLabel === initialProfessionalLabel && customLabel === initialCustomLabel}
+                                    >
                                         <Save className="w-4 h-4 mr-2" />
                                         Salvar Alterações
                                     </Button>
