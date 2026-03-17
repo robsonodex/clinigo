@@ -87,7 +87,7 @@ export async function GET(
             )
         }
 
-        console.log('[DEBUG-V2] Appointment found successfully:', appointment.id)
+        console.log('[DEBUG-V2] Appointment found successfully:', (appointment as any).id)
 
         console.log('[DEBUG-V2] Appointment found, fetching QR code...')
         let qrCode = null
@@ -127,8 +127,8 @@ export async function GET(
             }
         }
 
-        return NextResponse.json({
-            appointment,
+        return successResponse({
+            ...(appointment as any),
             qr_code: qrCode,
             video_room: videoRoom
         })
