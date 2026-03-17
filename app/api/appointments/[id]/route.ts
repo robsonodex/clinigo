@@ -130,7 +130,7 @@ export async function GET(
             }
         }
 
-        return NextResponse.json({
+        return successResponse({
             appointment,
             qr_code: qrCode,
             video_room: videoRoom
