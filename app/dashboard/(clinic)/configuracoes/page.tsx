@@ -446,6 +446,54 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
+                                {/* Council Label Section */}
+                                <div className="p-4 bg-muted/30 rounded-lg space-y-4 border">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4 text-primary" />
+                                        Nomenclatura do Registro Profissional
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Defina o termo utilizado para o registro do conselho de classe (CRM, CRP, etc).
+                                    </p>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Conselho de Classe</Label>
+                                            <Select
+                                                value={councilLabel}
+                                                onValueChange={(v) => {
+                                                    setCouncilLabel(v)
+                                                    if (v !== 'CUSTOM') setCustomCouncilLabel('')
+                                                }}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {COUNCIL_LABEL_OPTIONS.map((opt) => (
+                                                        <SelectItem key={opt.value} value={opt.value}>
+                                                            {opt.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                    <SelectItem value="CUSTOM">✏️ Cadastrar novo termo</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        {councilLabel === 'CUSTOM' && (
+                                            <div className="space-y-2">
+                                                <Label>Termo Personalizado</Label>
+                                                <Input
+                                                    value={customCouncilLabel}
+                                                    onChange={(e) => setCustomCouncilLabel(e.target.value)}
+                                                    placeholder="Ex: Conselho de Classe"
+                                                />
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Este termo substituirá o "CRM" em toda a plataforma.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Nome da Clínica</Label>
