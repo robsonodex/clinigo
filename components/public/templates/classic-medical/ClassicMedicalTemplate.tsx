@@ -165,7 +165,7 @@ export function ClassicMedicalTemplate({
                                 </div>
                                 <h3>Dr(a). {doctor.full_name}</h3>
                                 <p className="classic-doctor-specialty">{doctor.specialty}</p>
-                                <p className="classic-doctor-crm">CRM {doctor.crm}</p>
+                                <p className="classic-doctor-crm">{clinic.council_label || 'CRM'} {doctor.crm}</p>
                                 <button className="classic-btn classic-btn-small">
                                     {hero.cta_text || 'Agendar'}
                                 </button>

@@ -192,6 +192,33 @@ export default function AgendaPage() {
         onError: (error: Error) => toast.error(error.message),
     })
 
+    // Cancel recurring series logic (double confirmation)
+    const [cancellingSeriesId, setCancellingSeriesId] = useState<string | null>(null)
+    const [cancelSeriesStep, setCancelSeriesStep] = useState<1 | 2>(1)
+
+    const cancelSeriesMutation = useMutation({
+        mutationFn: async () => {
+            if (!cancellingSeriesId) return
+            const res = await fetch(`/api/appointments/recurring/${cancellingSeriesId}`, {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao cancelar série')
+            return data
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+            setCancellingSeriesId(null)
+            setCancelSeriesStep(1)
+            toast.success(data?.message || 'Série recorrente cancelada com sucesso')
+        },
+        onError: (error: Error) => {
+            toast.error(error.message)
+            setCancellingSeriesId(null)
+            setCancelSeriesStep(1)
+        },
+    })
+
     // Reschedule Mutation
     const rescheduleMutation = useMutation({
         mutationFn: async () => {
@@ -483,6 +510,18 @@ export default function AgendaPage() {
                                                                                             Cancelar
                                                                                         </DropdownMenuItem>
                                                                                     )}
+                                                                                    {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
+                                                                                        <DropdownMenuItem
+                                                                                            className="text-destructive focus:text-destructive"
+                                                                                            onClick={() => {
+                                                                                                setCancellingSeriesId((appointment as any).series_id)
+                                                                                                setCancelSeriesStep(1)
+                                                                                            }}
+                                                                                        >
+                                                                                            <Repeat className="w-4 h-4 mr-2" />
+                                                                                            Cancelar Série
+                                                                                        </DropdownMenuItem>
+                                                                                    )}
                                                                                 </DropdownMenuContent>
                                                                             </DropdownMenu>
                                                                         </div>
@@ -553,6 +592,83 @@ export default function AgendaPage() {
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                             )}
                             Confirmar Cancelamento
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel Series - Step 1: First Confirmation */}
+            <Dialog open={!!cancellingSeriesId && cancelSeriesStep === 1} onOpenChange={(open) => {
+                if (!open) {
+                    setCancellingSeriesId(null)
+                    setCancelSeriesStep(1)
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Repeat className="h-5 w-5 text-destructive" />
+                            Cancelar Série Recorrente
+                        </DialogTitle>
+                        <DialogDescription>
+                            Deseja cancelar a série recorrente inteira? Todos os agendamentos futuros desta série serão cancelados.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <div className="bg-yellow-50 p-3 rounded-lg flex gap-3 border border-yellow-200">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                            <p className="text-sm text-yellow-800">
+                                Apenas os agendamentos futuros com status &quot;Confirmado&quot; ou &quot;Pendente&quot; serão cancelados. Atendimentos já realizados não serão afetados.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                            setCancellingSeriesId(null)
+                            setCancelSeriesStep(1)
+                        }}>Voltar</Button>
+                        <Button variant="destructive" onClick={() => setCancelSeriesStep(2)}>
+                            Sim, cancelar série
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel Series - Step 2: Final Confirmation */}
+            <Dialog open={!!cancellingSeriesId && cancelSeriesStep === 2} onOpenChange={(open) => {
+                if (!open) {
+                    setCancellingSeriesId(null)
+                    setCancelSeriesStep(1)
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="h-5 w-5" />
+                            Confirmação Final
+                        </DialogTitle>
+                        <DialogDescription>
+                            Esta ação é irreversível. Todos os agendamentos futuros desta série serão cancelados permanentemente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                            <p className="text-sm text-red-800 font-medium">
+                                Tem certeza absoluta que deseja prosseguir com o cancelamento de toda a série recorrente?
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCancelSeriesStep(1)}>Voltar</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => cancelSeriesMutation.mutate()}
+                            disabled={cancelSeriesMutation.isPending}
+                        >
+                            {cancelSeriesMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Confirmar Cancelamento da Série
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -163,7 +163,7 @@ export function ModernMinimalTemplate({
                             <div className="modern-doctor-info">
                                 <h3>{doctor.full_name}</h3>
                                 <p className="modern-doctor-specialty">{doctor.specialty}</p>
-                                <p className="modern-doctor-crm">CRM {doctor.crm}</p>
+                                <p className="modern-doctor-crm">{clinic.council_label || 'CRM'} {doctor.crm}</p>
                             </div>
                         </div>
                     ))}

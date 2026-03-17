@@ -168,7 +168,7 @@ export function SwissCleanTemplate({
                                 <div className="swiss-doctor-info">
                                     <h3>{doctor.full_name}</h3>
                                     <p className="swiss-doctor-specialty">{doctor.specialty}</p>
-                                    <p className="swiss-doctor-crm">CRM {doctor.crm}</p>
+                                    <p className="swiss-doctor-crm">{clinic.council_label || 'CRM'} {doctor.crm}</p>
                                 </div>
                             </div>
                         ))}

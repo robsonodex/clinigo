@@ -98,7 +98,7 @@ function DoctorShowcaseCard({
                         {doctor.full_name}
                     </h3>
                     <p className="text-gray-600">{doctor.specialty}</p>
-                    <p className="text-sm text-gray-400">CRM {doctor.crm}{doctor.crm_state && `/${doctor.crm_state}`}</p>
+                    <p className="text-sm text-gray-400">{doctor.crm}{doctor.crm_state && `/${doctor.crm_state}`}</p>
                 </div>
 
                 {/* Rating */}

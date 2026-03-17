@@ -157,7 +157,7 @@ export function GlassmorphismTemplate({
                                         </div>
                                         <div className="glass-doctor-info">
                                             <h4>{doctor.full_name}</h4>
-                                            <p>{doctor.specialty} • CRM {doctor.crm}</p>
+                                            <p>{doctor.specialty} • {clinic.council_label || 'CRM'} {doctor.crm}</p>
                                         </div>
                                         <div className="glass-doctor-rating">★ 4.9</div>
                                     </div>
@@ -232,7 +232,7 @@ export function GlassmorphismTemplate({
                                 <div className="glass-doctor-details">
                                     <h3>Dr(a). {doctor.full_name}</h3>
                                     <p className="glass-doctor-specialty">{doctor.specialty}</p>
-                                    <p className="glass-doctor-crm">CRM {doctor.crm}</p>
+                                    <p className="glass-doctor-crm">{clinic.council_label || 'CRM'} {doctor.crm}</p>
                                     <button className="glass-btn glass-btn-primary glass-btn-small">
                                         {hero.cta_text || 'Agendar Consulta'}
                                     </button>

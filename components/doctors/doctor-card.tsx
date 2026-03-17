@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency, getInitials } from '@/lib/utils'
 import { User, Star } from 'lucide-react'
 import type { Doctor } from '@/lib/api-client'
+import { useCouncilLabel } from '@/lib/hooks/use-council-label'
 
 interface DoctorCardProps {
     doctor: Doctor
@@ -15,6 +16,8 @@ interface DoctorCardProps {
 }
 
 export function DoctorCard({ doctor, onSelect }: DoctorCardProps) {
+    const { councilLabel } = useCouncilLabel()
+
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
@@ -44,7 +47,7 @@ export function DoctorCard({ doctor, onSelect }: DoctorCardProps) {
                             {doctor.user.full_name}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            CRM {doctor.crm}/{doctor.crm_state}
+                            {councilLabel} {doctor.crm}/{doctor.crm_state}
                         </p>
                         <Badge variant="secondary" className="mt-2">
                             {doctor.specialty}

@@ -169,7 +169,7 @@ export function CorporateHealthcareTemplate({
                                 <div className="corp-doctor-info">
                                     <h3>Dr(a). {doctor.full_name}</h3>
                                     <p className="corp-doctor-specialty">{doctor.specialty}</p>
-                                    <p className="corp-doctor-crm">CRM {doctor.crm}</p>
+                                    <p className="corp-doctor-crm">{clinic.council_label || 'CRM'} {doctor.crm}</p>
                                     <button className="corp-btn corp-btn-small">{hero.cta_text || 'Agendar'}</button>
                                 </div>
                             </div>

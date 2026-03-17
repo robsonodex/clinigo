@@ -20,6 +20,7 @@ import { PlanAndBilling } from './components/PlanAndBilling'
 import { SMTPSettings } from './components/SMTPSettings'
 import { createClient } from '@/lib/supabase/client'
 import { PROFESSIONAL_LABEL_OPTIONS } from '@/lib/hooks/use-professional-label'
+import { COUNCIL_LABEL_OPTIONS } from '@/lib/hooks/use-council-label'
 
 // ... existing code ...
 
@@ -60,6 +61,11 @@ export default function SettingsPage() {
     const [customLabel, setCustomLabel] = useState('')
     const [initialProfessionalLabel, setInitialProfessionalLabel] = useState('Médico(a)')
     const [initialCustomLabel, setInitialCustomLabel] = useState('')
+
+    const [councilLabel, setCouncilLabel] = useState('CRM')
+    const [customCouncilLabel, setCustomCouncilLabel] = useState('')
+    const [initialCouncilLabel, setInitialCouncilLabel] = useState('CRM')
+    const [initialCustomCouncilLabel, setInitialCustomCouncilLabel] = useState('')
 
     const {
         register,
@@ -174,6 +180,21 @@ export default function SettingsPage() {
                         setInitialCustomLabel(label)
                     }
 
+                    // Set council label
+                    const confCouncilLabel = (clinicData as any).council_label || 'CRM'
+                    const isCouncilPreset = COUNCIL_LABEL_OPTIONS.some(opt => opt.value === confCouncilLabel)
+                    if (isCouncilPreset) {
+                        setCouncilLabel(confCouncilLabel)
+                        setInitialCouncilLabel(confCouncilLabel)
+                        setCustomCouncilLabel('')
+                        setInitialCustomCouncilLabel('')
+                    } else {
+                        setCouncilLabel('CUSTOM')
+                        setInitialCouncilLabel('CUSTOM')
+                        setCustomCouncilLabel(confCouncilLabel)
+                        setInitialCustomCouncilLabel(confCouncilLabel)
+                    }
+
                     // Set logo preview if exists
                     if (clinicData.logo_url) {
                         setPreviewLogo(clinicData.logo_url)
@@ -243,6 +264,7 @@ export default function SettingsPage() {
                     whatsapp_number: data.whatsapp_number,
                     logo_url: data.logo_url,
                     professional_label: professionalLabel === 'CUSTOM' ? customLabel : professionalLabel,
+                    council_label: councilLabel === 'CUSTOM' ? customCouncilLabel : councilLabel,
                 })
                 .eq('id', clinicId)
 
@@ -256,6 +278,8 @@ export default function SettingsPage() {
             reset(data) // Reset form with new values to clear dirty state
             setInitialProfessionalLabel(professionalLabel)
             setInitialCustomLabel(customLabel)
+            setInitialCouncilLabel(councilLabel)
+            setInitialCustomCouncilLabel(customCouncilLabel)
         } catch (error) {
             console.error('Error:', error)
             toast.error('Erro ao salvar configurações')
@@ -511,7 +535,7 @@ export default function SettingsPage() {
                                 <div className="pt-4 flex justify-end">
                                     <Button 
                                       type="submit" 
-                                      disabled={!isDirty && professionalLabel === initialProfessionalLabel && customLabel === initialCustomLabel}
+                                      disabled={!isDirty && professionalLabel === initialProfessionalLabel && customLabel === initialCustomLabel && councilLabel === initialCouncilLabel && customCouncilLabel === initialCustomCouncilLabel}
                                     >
                                         <Save className="w-4 h-4 mr-2" />
                                         Salvar Alterações

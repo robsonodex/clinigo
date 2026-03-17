@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield } from 'lucide-react'
 import type { Doctor } from '@/lib/api-client'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
+import { useCouncilLabel } from '@/lib/hooks/use-council-label'
 
 interface DoctorFormDialogProps {
     open: boolean
@@ -80,6 +81,7 @@ export function DoctorFormDialog({
     const isEditing = !!doctorToEdit
     const [showDisplaySettings, setShowDisplaySettings] = useState(false)
     const profLabel = useProfessionalLabel()
+    const { councilLabel } = useCouncilLabel()
 
     const {
         register,
@@ -266,7 +268,7 @@ export function DoctorFormDialog({
 
                         {/* Professional Info */}
                         <div className="space-y-2">
-                            <Label htmlFor="crm">CRM</Label>
+                            <Label htmlFor="crm">{councilLabel}</Label>
                             <Input id="crm" {...register('crm')} error={!!errors.crm} />
                             {errors.crm && (
                                 <p className="text-xs text-destructive">{errors.crm.message}</p>
@@ -274,7 +276,7 @@ export function DoctorFormDialog({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="crm_state">Estado (UF)</Label>
+                            <Label htmlFor="crm_state">Estado do {councilLabel} (UF)</Label>
                             <Select
                                 value={watch('crm_state')}
                                 onValueChange={(val) => setValue('crm_state', val)}

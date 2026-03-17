@@ -178,6 +178,7 @@ export default async function ClinicPublicPage({ params }: PageProps) {
             linkedin: sanitizeField(publicProfile?.linkedin),
             youtube: sanitizeField(publicProfile?.youtube),
             opening_hours: sanitizeOpeningHours(publicProfile?.opening_hours),
+            council_label: (clinic as any).council_label || 'CRM',
         },
         doctors: formattedDoctors,
         specialties,

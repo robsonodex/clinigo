@@ -53,6 +53,7 @@ export interface ClinicData {
     linkedin: string | null
     youtube: string | null
     opening_hours: Record<string, string> | null
+    council_label?: string | null
 }
 
 export interface TemplateProps {

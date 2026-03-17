@@ -107,7 +107,7 @@ export function DoctorListingCard({ doctor, clinicSlug, primaryColor }: DoctorLi
                         </div>
 
                         <p className="text-sm text-gray-500">
-                            {doctor.specialty} • CRM {doctor.crm}
+                            {doctor.specialty} • {doctor.crm}
                         </p>
 
                         <div className="flex items-center gap-1">
