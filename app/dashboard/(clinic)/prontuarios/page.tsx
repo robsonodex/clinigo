@@ -26,9 +26,13 @@ import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 export default function ProntuariosPage() {
     const { toast } = useToast()
     const router = useRouter()
+    const profLabel = useProfessionalLabel()
     const [search, setSearch] = useState('')
     const [isLoading, setIsLoading] = useState(true)
     const [records, setRecords] = useState<any[]>([]) // Using any for transformed records
@@ -39,13 +43,28 @@ export default function ProntuariosPage() {
     const [isRegisteringPatient, setIsRegisteringPatient] = useState(false)
     const { user, profile, supabase } = useAuth()
     const [doctorId, setDoctorId] = useState<string | null>(null)
-
+    const [clinicDoctors, setClinicDoctors] = useState<any[]>([])
+    
     // Initialize doctorId from profile
     useEffect(() => {
         if (profile?.role === 'DOCTOR' && user) {
             fetchDoctorId()
+        } else if (profile?.role !== 'DOCTOR' && user) {
+            fetchClinicDoctors()
         }
     }, [profile, user])
+
+    async function fetchClinicDoctors() {
+        try {
+            const { data } = await supabase
+                .from('doctors')
+                .select('id, user:users(full_name)')
+                .eq('clinic_id', profile?.clinic_id)
+            if (data) setClinicDoctors(data)
+        } catch (e) {
+            console.error('Error fetching clinic doctors:', e)
+        }
+    }
 
     async function fetchDoctorId() {
         if (!user) return
@@ -141,12 +160,9 @@ export default function ProntuariosPage() {
             // If doctorId is missing, we should probably throw or ask.
             // For now, if no doctorId, we can't proceed.
             if (!targetDoctorId) {
-                // If we implemented 'ManualAppointmentModal' we'd use that.
-                // But here we are in 'QuickPatientForm'.
-                // Let's check permissions.
                 toast({
-                    title: "Selecione um médico",
-                    description: "Funcionalidade restrita a médicos (ou selecione um médico).",
+                    title: "Selecione um profissional",
+                    description: `Selecione um ${profLabel.singular.toLowerCase()} para iniciar o atendimento.`,
                     variant: "destructive"
                 })
                 setIsCreating(false)
@@ -322,6 +338,28 @@ export default function ProntuariosPage() {
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Select Doctor Option if user is not a Doctor */}
+                                {profile?.role !== 'DOCTOR' && (
+                                    <div className="space-y-2">
+                                        <Label>{profLabel.singular}</Label>
+                                        <Select
+                                            value={doctorId || ''}
+                                            onValueChange={(val) => setDoctorId(val)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={`Selecione o ${profLabel.singular.toLowerCase()}`} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {clinicDoctors.map((doc: any) => (
+                                                    <SelectItem key={doc.id} value={doc.id}>
+                                                        {doc.user?.full_name || 'Profissional'}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
                                 {/* Show selected patient (either from search or quick reg) */}
                                 {(selectedPatientId || quickPatientData) ? (
