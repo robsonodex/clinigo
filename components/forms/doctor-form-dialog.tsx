@@ -340,7 +340,7 @@ export function DoctorFormDialog({
                                         className="mt-2"
                                     />
                                     <p className="text-xs text-blue-700 mt-1">
-                                        Esta especialidade será salva e poderá ser usada para outros ${profLabel.plural.toLowerCase()}.
+                                        Esta especialidade será salva e poderá ser usada para outros {profLabel.plural.toLowerCase()}.
                                     </p>
                                 </div>
                             )}

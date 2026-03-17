@@ -296,7 +296,7 @@ export default function DoctorsPage() {
                                             className="h-24 text-center text-muted-foreground"
                                         >
                                             <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                            Nenhum ${profLabel.singular.toLowerCase()} encontrado.
+                                            Nenhum {profLabel.singular.toLowerCase()} encontrado.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
