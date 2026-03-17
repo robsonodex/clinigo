@@ -187,7 +187,7 @@ export default function ProntuariosPage() {
             })
 
             // Redirect to the new appointment/consultation
-            router.push(`/dashboard/prontuarios/${data.appointment.id}`)
+            router.push(`/dashboard/atendimentos/${data.appointment.id}`)
 
         } catch (error: any) {
             console.error('Error creating record:', error)
