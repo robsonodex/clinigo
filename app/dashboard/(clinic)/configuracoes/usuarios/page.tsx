@@ -214,6 +214,35 @@ export default function UsuariosPermissoesPage() {
         }
     }
 
+    async function handleUpdateUser() {
+        if (!editingUser || !editingUser.name || !editingUser.role) {
+            toast.error('Preencha os campos obrigatórios')
+            return
+        }
+
+        try {
+            const response = await fetch(`/api/users/${editingUser.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: editingUser.name,
+                    role: editingUser.role,
+                })
+            })
+
+            if (!response.ok) {
+                const err = await response.json()
+                throw new Error(err.error || 'Erro ao atualizar usuário')
+            }
+
+            toast.success('Usuário atualizado com sucesso!')
+            setEditingUser(null)
+            loadUsers()
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao atualizar usuário')
+        }
+    }
+
     async function handleToggleUserStatus(userId: string, active: boolean) {
         try {
             const supabase = createClient()
@@ -523,6 +552,65 @@ export default function UsuariosPermissoesPage() {
                     </div>
                 </TabsContent>
             </Tabs>
+
+            <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Editar Acessos do Usuário</DialogTitle>
+                        <DialogDescription>
+                            Altere o nome e o perfil (cargo) para determinar os níveis de acesso deste usuário.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {editingUser && (
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Nome Completo</Label>
+                                <Input
+                                    value={editingUser.name}
+                                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Email (Fixo)</Label>
+                                <Input
+                                    value={editingUser.email}
+                                    disabled
+                                    className="bg-muted"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Perfil de Acesso</Label>
+                                <Select
+                                    value={editingUser.role}
+                                    onValueChange={(value) => setEditingUser({ ...editingUser, role: value as User['role'] })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(ROLES).map(([key, value]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {value.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingUser(null)}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleUpdateUser}>
+                            <Check className="w-4 h-4 mr-2" />
+                            Salvar Alterações
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
