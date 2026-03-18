@@ -70,13 +70,13 @@ export default function ContatoPage() {
         {
             icon: Headphones,
             title: 'Suporte Técnico',
-            value: 'suporte@clinigo.app',
-            href: 'mailto:suporte@clinigo.app',
+            value: '(21) 99040-0577',
+            href: 'https://wa.me/5521990400577?text=Olá!%20👋%20Bem-vindo%20ao%20suporte%20técnico%20do%20*CliniGo*.%0A%0ASou%20o%20assistente%20de%20atendimento%20e%20em%20breve%20um%20membro%20da%20nossa%20equipe%20entrará%20em%20contato%20para%20te%20ajudar.%0A%0APara%20agilizar%20o%20atendimento,%20nos%20informe:%0A%0A1️⃣%20Seu%20nome%20e%20nome%20da%20clínica%0A2️⃣%20Qual%20sistema%20ou%20módulo%20está%20com%20problema%0A3️⃣%20Uma%20breve%20descrição%20do%20que%20está%20acontecendo%0A%0A⏰%20Horário%20de%20atendimento:%20segunda%20a%20sexta,%20das%20*08h%20às%2018h*%0A%0AFicamos%20felizes%20em%20ajudar!%20😊',
             description: 'Ajuda técnica e problemas'
         },
         {
             icon: Phone,
-            title: 'WhatsApp',
+            title: 'Comercial',
             value: '(21) 96553-2247',
             href: 'https://wa.me/5521965532247?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações',
             description: 'Atendimento rápido'
@@ -318,7 +318,7 @@ export default function ContatoPage() {
                                 </div>
                                 <div className="space-y-2 text-white/70">
                                     <p>Segunda a Sexta: 08:00 - 18:00</p>
-                                    <p>Sábado: 09:00 - 13:00</p>
+                                    <p>Sábado: 09:00 - 12:00</p>
                                     <p className="text-emerald-400 text-sm mt-3">
                                         * Suporte técnico 24/7 para clientes ativos
                                     </p>

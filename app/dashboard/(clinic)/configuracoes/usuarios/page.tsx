@@ -193,14 +193,13 @@ export default function UsuariosPermissoesPage() {
         }
 
         try {
-            const response = await fetch('/api/doctors/invite', {
+            const response = await fetch('/api/users/invite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: newUser.email,
                     name: newUser.name,
                     role: newUser.role,
-                    clinic_id: clinicId
                 })
             })
 

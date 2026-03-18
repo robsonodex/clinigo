@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
                 break
 
             case 'doctor_invite':
-                // Doctor activation - create auth user and update status
+            case 'team_invite':
+                // Doctor/Team activation - create auth user and update status
                 if (!userId) {
                     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
                         email: tokenData.email,

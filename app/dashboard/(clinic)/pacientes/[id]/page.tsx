@@ -24,9 +24,17 @@ import {
     Trash2,
     CheckCircle2,
     AlertCircle,
-    Loader2
+    Loader2,
+    Edit2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { FaceEnrollment } from '@/components/face-recognition';
 import { useUser } from '@/hooks/use-user';
 
@@ -53,6 +61,17 @@ interface BiometricStatus {
     };
 }
 
+const PatientFormSchema = z.object({
+    full_name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
+    cpf: z.string().optional(),
+    email: z.string().email('Email inválido').optional().or(z.literal('')),
+    phone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
+    date_of_birth: z.string().optional(),
+    gender: z.enum(['M', 'F', 'O']).optional(),
+    address: z.string().optional(),
+});
+type PatientFormData = z.infer<typeof PatientFormSchema>;
+
 export default function PatientDetailsPage() {
     const params = useParams();
     const router = useRouter();
@@ -64,6 +83,14 @@ export default function PatientDetailsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEnrollment, setShowEnrollment] = useState(false);
+
+    // Edit state
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const form = useForm<PatientFormData>({
+        resolver: zodResolver(PatientFormSchema),
+        defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address: '' },
+    });
 
     const clinicId = user?.clinic_id;
 
@@ -89,7 +116,52 @@ export default function PatientDetailsPage() {
         }
 
         setPatient(data);
+        if (data) {
+            const d = data as any;
+            form.reset({
+                full_name: d.full_name || '',
+                cpf: d.cpf || '',
+                email: d.email || '',
+                phone: d.phone || '',
+                date_of_birth: d.birth_date || d.date_of_birth || '',
+                gender: d.gender || 'M',
+                address: typeof d.address === 'object' ? (JSON.stringify(d.address) === '{}' ? '' : JSON.stringify(d.address)) : (d.address || ''),
+            });
+        }
         setIsLoading(false);
+    };
+
+    const handleEditSubmit = async (data: PatientFormData) => {
+        setIsSaving(true);
+        try {
+            const mappedData: any = { ...data };
+
+            if (!mappedData.date_of_birth) mappedData.date_of_birth = null;
+            if (!mappedData.email) mappedData.email = null;
+            if (!mappedData.address) mappedData.address = null;
+            if (mappedData.cpf) {
+                mappedData.cpf = mappedData.cpf.replace(/\D/g, '');
+            } else {
+                mappedData.cpf = null;
+            }
+
+            const response = await fetch(`/api/patients/${patientId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mappedData),
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Erro ao atualizar paciente');
+            }
+            toast.success('Paciente atualizado com sucesso!');
+            setShowEditModal(false);
+            loadPatient();
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const loadBiometricStatus = async () => {
@@ -158,17 +230,23 @@ export default function PatientDetailsPage() {
     return (
         <div className="container py-8 space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-bold">{patient.full_name}</h1>
-                    <p className="text-muted-foreground">
-                        Cadastrado em {new Date(patient.created_at).toLocaleDateString('pt-BR')}
-                    </p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Voltar
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold">{typeof patient.full_name === 'object' ? '-' : patient.full_name}</h1>
+                        <p className="text-muted-foreground">
+                            Cadastrado em {patient.created_at && typeof patient.created_at !== 'object' ? new Date(patient.created_at).toLocaleDateString('pt-BR') : '-'}
+                        </p>
+                    </div>
                 </div>
+                <Button variant="outline" onClick={() => setShowEditModal(true)}>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar
+                </Button>
             </div>
 
             <Tabs defaultValue="info" className="space-y-4">
@@ -211,18 +289,108 @@ export default function PatientDetailsPage() {
                                     <span>{new Date(patient.birth_date).toLocaleDateString('pt-BR')}</span>
                                 </div>
                             )}
-                            {patient.address && (
+                            {patient.address && typeof patient.address !== 'object' && (
                                 <div className="flex items-center gap-2 md:col-span-2">
                                     <MapPin className="w-4 h-4 text-muted-foreground" />
-                                    <span>{patient.address}</span>
+                                    <span>{String(patient.address)}</span>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
                 </TabsContent>
-
-
             </Tabs>
+
+            {/* Edit Patient Modal */}
+            <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Edit2 className="w-5 h-5" />
+                            Editar Paciente
+                        </DialogTitle>
+                        <DialogDescription>
+                            Atualize os dados do paciente.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-4">
+                        <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="full_name">Nome Completo *</Label>
+                                <Input id="full_name" placeholder="Ex: João da Silva" {...form.register('full_name')} />
+                                {form.formState.errors.full_name && (
+                                    <p className="text-sm text-red-500">{form.formState.errors.full_name.message}</p>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="cpf">CPF</Label>
+                                    <Input id="cpf" placeholder="000.000.000-00" {...form.register('cpf')} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="gender">Sexo</Label>
+                                    <Select 
+                                        defaultValue={form.getValues('gender')} 
+                                        onValueChange={(value) => form.setValue('gender', value as 'M' | 'F' | 'O')}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="M">Masculino</SelectItem>
+                                            <SelectItem value="F">Feminino</SelectItem>
+                                            <SelectItem value="O">Outro</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Telefone *</Label>
+                                <Input id="phone" placeholder="(11) 99999-9999" {...form.register('phone')} />
+                                {form.formState.errors.phone && (
+                                    <p className="text-sm text-red-500">{form.formState.errors.phone.message}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="email">E-mail</Label>
+                                <Input id="email" type="email" placeholder="paciente@email.com" {...form.register('email')} />
+                                {form.formState.errors.email && (
+                                    <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="date_of_birth">Data de Nascimento</Label>
+                                <Input id="date_of_birth" type="date" {...form.register('date_of_birth')} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="address">Endereço</Label>
+                                <Input id="address" type="text" {...form.register('address')} />
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSaving}>
+                                {isSaving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Salvando...
+                                    </>
+                                ) : (
+                                    'Salvar'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
