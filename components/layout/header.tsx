@@ -11,8 +11,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { getInitials } from '@/lib/utils'
-import { Menu, LogOut, User, Bell } from 'lucide-react'
+import { Menu, LogOut, User, Bell, Settings } from 'lucide-react'
 import { NotificationBell } from './notification-bell'
+import Link from 'next/link'
 
 interface HeaderProps {
     onMenuClick?: () => void
@@ -64,12 +65,20 @@ export function Header({ onMenuClick }: HeaderProps) {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                            <User className="w-4 h-4 mr-2" />
-                            Meu Perfil
+                        <DropdownMenuItem asChild>
+                            <Link href="/dashboard/perfil" className="w-full flex items-center cursor-pointer">
+                                <User className="w-4 h-4 mr-2" />
+                                Meu Perfil
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href="/dashboard/configuracoes" className="w-full flex items-center cursor-pointer">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Configurações
+                            </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={signOut} className="text-destructive">
+                        <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
                             <LogOut className="w-4 h-4 mr-2" />
                             Sair
                         </DropdownMenuItem>

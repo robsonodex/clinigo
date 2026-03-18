@@ -61,6 +61,10 @@ export const passwordSchema = z.object({
     path: ['confirmPassword'],
 })
 
+export const emailChangeSchema = z.object({
+    newEmail: z.string().email('Email inválido'),
+})
+
 export const mfaEnableSchema = z.object({
     secret: z.string().min(1),
 })
@@ -177,6 +181,7 @@ export type GeneralInfoFormData = z.infer<typeof generalInfoSchema>
 export type AddressFormData = z.infer<typeof addressSchema>
 export type DoctorInfoFormData = z.infer<typeof doctorInfoSchema>
 export type PasswordFormData = z.infer<typeof passwordSchema>
+export type EmailChangeFormData = z.infer<typeof emailChangeSchema>
 export type MfaEnableFormData = z.infer<typeof mfaEnableSchema>
 export type MfaVerifyFormData = z.infer<typeof mfaVerifySchema>
 export type MfaDisableFormData = z.infer<typeof mfaDisableSchema>

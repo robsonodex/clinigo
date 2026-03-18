@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import { Loader2, Eye, EyeOff, Check, X } from 'lucide-react'
-import { passwordSchema, type PasswordFormData } from '@/lib/validations/profile-schema'
+import { passwordSchema, emailChangeSchema, type PasswordFormData, type EmailChangeFormData } from '@/lib/validations/profile-schema'
 
 export default function SecurityTab() {
     const [loading, setLoading] = useState(false)
+    const [emailLoading, setEmailLoading] = useState(false)
     const [showCurrentPassword, setShowCurrentPassword] = useState(false)
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -24,6 +25,13 @@ export default function SecurityTab() {
             currentPassword: '',
             newPassword: '',
             confirmPassword: '',
+        },
+    })
+
+    const emailForm = useForm<EmailChangeFormData>({
+        resolver: zodResolver(emailChangeSchema),
+        defaultValues: {
+            newEmail: '',
         },
     })
 
@@ -79,8 +87,73 @@ export default function SecurityTab() {
         }
     }
 
+    async function onSubmitEmail(data: EmailChangeFormData) {
+        setEmailLoading(true)
+        try {
+            const res = await fetch('/api/profile/email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            })
+
+            if (res.ok) {
+                toast.success('E-mail atualizado (verifique sua caixa de entrada para confirmar)')
+                emailForm.reset()
+            } else {
+                const error = await res.json()
+                toast.error(error.error || 'Erro ao alterar e-mail')
+            }
+        } catch (error) {
+            toast.error('Erro ao alterar e-mail')
+        } finally {
+            setEmailLoading(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
+            {/* Alterar Email */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Alterar E-mail</CardTitle>
+                    <CardDescription>
+                        Um link de confirmação será enviado para o seu novo endereço de e-mail.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...emailForm}>
+                        <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-4">
+                            <FormField
+                                control={emailForm.control}
+                                name="newEmail"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Novo E-mail *</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                type="email"
+                                                placeholder="novo@email.com"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="flex justify-end gap-2 pt-4">
+                                <Button type="button" variant="outline" onClick={() => emailForm.reset()}>
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" disabled={emailLoading}>
+                                    {emailLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Atualizar E-mail
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+
             {/* Alterar Senha */}
             <Card>
                 <CardHeader>
