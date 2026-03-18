@@ -283,14 +283,16 @@ export default function AssinaturaPage() {
                                 </div>
                             </div>
 
-                            {!clinic?.payment_confirmed ? (
+                            {clinic?.approval_status === 'trial' || !clinic?.payment_confirmed ? (
                                 <div className="mt-6 p-5 bg-amber-50 border border-amber-200 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
                                     <div className="flex items-start gap-3">
                                         <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
                                         <div>
                                             <p className="font-semibold text-amber-900">Período de Teste ou Pagamento Pendente</p>
                                             <p className="text-sm text-amber-800 mt-1">
-                                                Sua clínica aguarda a confirmação de pagamento. Gere seu boleto agora para garantir o acesso contínuo e ativar seu plano oficialmente.
+                                                {clinic?.approval_status === 'trial' 
+                                                    ? 'Sua clínica está em período de teste gratuito. Gere seu boleto agora para garantir o acesso contínuo e ativar seu plano oficialmente.'
+                                                    : 'Sua clínica aguarda a confirmação de pagamento. Gere seu boleto agora para garantir o acesso contínuo e ativar seu plano oficialmente.'}
                                             </p>
                                         </div>
                                     </div>
