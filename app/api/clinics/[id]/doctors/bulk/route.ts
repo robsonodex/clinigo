@@ -101,23 +101,40 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         const userIds = doctors?.map(d => d.user_id) || []
 
-        // Deactivate doctors
-        const { error: doctorError } = await (supabase
+        // Disable doctors
+        const { error: doctorUpdateError } = await (supabase
             .from('doctors') as any)
             .update({ is_accepting_appointments: false })
             .in('id', ids)
             .eq('clinic_id', clinicId)
 
+        if (doctorUpdateError) throw doctorUpdateError
+
+        // Delete from public.doctors
+        const { error: doctorError } = await adminClient
+            .from('doctors')
+            .delete()
+            .in('id', ids)
+            .eq('clinic_id', clinicId)
+
         if (doctorError) throw doctorError
 
-        // Deactivate users
+        // Delete users
         if (userIds.length > 0) {
-            const { error: userError } = await (adminClient
-                .from('users') as any)
-                .update({ is_active: false })
+            const { error: userError } = await adminClient
+                .from('users')
+                .delete()
                 .in('id', userIds)
 
             if (userError) throw userError
+
+            // Hard delete from Auth
+            for (const uid of userIds) {
+                const { error: authError } = await adminClient.auth.admin.deleteUser(uid)
+                if (authError) {
+                    console.error('[DELETE BULK] Auth User deletion failed for user:', uid, authError)
+                }
+            }
         }
 
         return noContentResponse()

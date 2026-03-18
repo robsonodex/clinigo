@@ -131,7 +131,7 @@ export async function GET(
         }
 
         return successResponse({
-            appointment,
+            ...(appointment as any),
             qr_code: qrCode,
             video_room: videoRoom
         })

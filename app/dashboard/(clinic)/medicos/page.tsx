@@ -114,10 +114,10 @@ export default function DoctorsPage() {
             api.delete(`/doctors/detail?id=${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
-            toast.success(`${profLabel.singular} desativado com sucesso`)
+            toast.success(`${profLabel.singular} excluído com sucesso`)
         },
         onError: (err: any) => {
-            toast.error(err.message || `Erro ao desativar ${profLabel.singular.toLowerCase()}`)
+            toast.error(err.message || `Erro ao excluir ${profLabel.singular.toLowerCase()}`)
         }
     })
 
@@ -381,7 +381,7 @@ export default function DoctorsPage() {
                                                         <DropdownMenuItem
                                                             className="text-destructive"
                                                             onClick={() => {
-                                                                if (confirm(`Deseja realmente desativar o ${profLabel.singular.toLowerCase()} ${doctor.user?.full_name}?`)) {
+                                                                if (confirm(`Deseja realmente excluir o ${profLabel.singular.toLowerCase()} ${doctor.user?.full_name}?`)) {
                                                                     deleteMutation.mutate(doctor.id)
                                                                 }
                                                             }}

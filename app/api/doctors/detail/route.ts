@@ -500,27 +500,43 @@ async function handleDeleteDoctor(doctorId: string) {
         return handleApiError(new ForbiddenError('Não autorizado'))
     }
 
-    // Soft delete: set is_accepting_appointments to false
-    const { error: updateError } = await supabase
-        .from('doctors')
-        .update({ is_accepting_appointments: false } as any)
-        .eq('id', doctorId)
-
-    if (updateError) throw updateError
-
-    // Also deactivate user
+    // Get doctor user_id before deleting
     const { data: doctor } = await supabase
         .from('doctors')
         .select('user_id')
         .eq('id', doctorId)
         .single()
-
-    if (doctor) {
-        await supabase
-            .from('users')
-            .update({ is_active: false } as any)
-            .eq('id', (doctor as any).user_id)
+        
+    if (!doctor) {
+        throw new NotFoundError('Médico')
     }
 
-    return successResponse({ message: 'Médico desativado com sucesso' })
+    const adminClient = createServiceRoleClient()
+
+    // Disable doctor immediately
+    await supabase
+        .from('doctors')
+        .update({ is_accepting_appointments: false } as any)
+        .eq('id', doctorId)
+
+    // Delete from public.doctors
+    await adminClient
+        .from('doctors')
+        .delete()
+        .eq('id', doctorId)
+
+    // Delete from public.users
+    await adminClient
+        .from('users')
+        .delete()
+        .eq('id', (doctor as any).user_id)
+
+    // Finally, delete the Auth User so the email can be used again and license is freed
+    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser((doctor as any).user_id)
+    
+    if (authDeleteError) {
+        console.error('[DELETE /api/doctors/detail] Auth User deletion failed:', authDeleteError)
+    }
+
+    return successResponse({ message: 'Médico excluído com sucesso' })
 }

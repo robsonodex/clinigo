@@ -67,6 +67,7 @@ export default function AssinaturaPage() {
     const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
     const [processingCancel, setProcessingCancel] = useState(false)
+    const [generatingPayment, setGeneratingPayment] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -142,6 +143,35 @@ export default function AssinaturaPage() {
             router.push(`/cadastro?plan=${newPlan}&upgrade=true`)
         } catch (error) {
             toast.error('Erro ao processar upgrade')
+        }
+    }
+
+    async function handleGeneratePayment(plan: PlanType) {
+        setGeneratingPayment(true)
+        try {
+            const res = await fetch('/api/billing/generate-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan_type: plan })
+            })
+
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao gerar boleto')
+
+            if (data.boleto?.nosso_numero) {
+                // Abre o PDF do boleto em nova aba
+                const pdfUrl = `/api/billing/boleto-pdf?nossoNumero=${data.boleto.nosso_numero}`
+                window.open(pdfUrl, '_blank')
+                toast.success('Boleto gerado com sucesso!')
+                // Reload data to potentially update the payment requests history if implemented
+                loadData()
+            } else {
+                toast.error('Boleto gerado, mas número não retornado.')
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao processar pagamento')
+        } finally {
+            setGeneratingPayment(false)
         }
     }
 
@@ -252,6 +282,38 @@ export default function AssinaturaPage() {
                                     </ul>
                                 </div>
                             </div>
+
+                            {!clinic?.payment_confirmed ? (
+                                <div className="mt-6 p-5 bg-amber-50 border border-amber-200 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-semibold text-amber-900">Período de Teste ou Pagamento Pendente</p>
+                                            <p className="text-sm text-amber-800 mt-1">
+                                                Sua clínica aguarda a confirmação de pagamento. Gere seu boleto agora para garantir o acesso contínuo e ativar seu plano oficialmente.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+                                        onClick={() => handleGeneratePayment(currentPlan)}
+                                        disabled={generatingPayment}
+                                    >
+                                        {generatingPayment ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <CreditCard className="w-4 h-4 mr-2" />}
+                                        PAGAR MEU PLANO
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                                    <Check className="w-5 h-5 text-green-600 shrink-0" />
+                                    <div>
+                                        <p className="font-medium text-green-900">Assinatura Ativa</p>
+                                        <p className="text-sm text-green-800">
+                                            Recebemos o seu pagamento e o seu plano está ativo! Seu acesso está garantido.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {clinic?.subscription_status === 'cancelled' && (
                                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-3">
