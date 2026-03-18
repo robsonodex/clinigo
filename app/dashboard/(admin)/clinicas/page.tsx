@@ -27,7 +27,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { api } from '@/lib/api-client'
 import { formatDate } from '@/lib/utils'
-import { Plus, Search, Building2, ExternalLink, MoreHorizontal, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react'
+import { Plus, Search, Building2, ExternalLink, MoreHorizontal, ShieldAlert, ShieldCheck, Trash2, FileText, Copy, Download } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,6 +36,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
 interface Clinic {
@@ -67,6 +75,10 @@ export default function ClinicsPage() {
     const [planFilter, setPlanFilter] = useState<string>('all')
     const [statusFilter, setStatusFilter] = useState<string>('true')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+    const [boletoModalOpen, setBoletoModalOpen] = useState(false)
+    const [selectedClinicForBoleto, setSelectedClinicForBoleto] = useState<Clinic | null>(null)
+    const [generatedBoleto, setGeneratedBoleto] = useState<any>(null)
 
     const { data: response, isLoading, error } = useQuery({
         queryKey: ['admin-clinics', page, search, planFilter, statusFilter],
@@ -129,6 +141,41 @@ export default function ClinicsPage() {
             toast.error(error.message || 'Erro ao remover clínica')
         }
     })
+
+    const generateBoletoMutation = useMutation({
+        mutationFn: (clinic: Clinic) =>
+            api.post('/billing/generate-payment', { clinic_id: clinic.id, plan_type: clinic.plan_type }),
+        onSuccess: (data: any) => {
+            if (data.success && data.boleto) {
+                setGeneratedBoleto(data.boleto)
+                toast.success('Boleto gerado com sucesso!')
+            } else {
+                toast.error(data.error || 'Erro ao gerar boleto')
+            }
+        },
+        onError: (error: any) => {
+            toast.error(error.message || 'Erro ao gerar boleto')
+        }
+    })
+
+    const handleOpenBoletoModal = (clinic: Clinic) => {
+        setSelectedClinicForBoleto(clinic)
+        setGeneratedBoleto(null)
+        setBoletoModalOpen(true)
+    }
+
+    const handleCopyLinha = () => {
+        if (generatedBoleto?.linha_digitavel) {
+            navigator.clipboard.writeText(generatedBoleto.linha_digitavel)
+            toast.success('Linha digitável copiada!')
+        }
+    }
+
+    const handleDownloadBoleto = () => {
+        if (generatedBoleto?.nosso_numero) {
+            window.open(`/api/billing/boleto-pdf?nossoNumero=${generatedBoleto.nosso_numero}`, '_blank')
+        }
+    }
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearch(e.target.value)
@@ -435,6 +482,12 @@ export default function ClinicsPage() {
                                                             Ações
                                                         </DropdownMenuLabel>
                                                         <DropdownMenuItem
+                                                            onClick={() => handleOpenBoletoModal(clinic)}
+                                                        >
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            Gerar Boleto
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
                                                             onClick={() =>
                                                                 window.open(
                                                                     `/${clinic.slug}`,
@@ -524,7 +577,57 @@ export default function ClinicsPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <Dialog open={boletoModalOpen} onOpenChange={setBoletoModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Gerar Boleto - {selectedClinicForBoleto?.name}</DialogTitle>
+                        <DialogDescription>
+                            Gere um boleto avulso para esta clínica. A cobrança será baseada no plano atual: {selectedClinicForBoleto?.plan_type}.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {!generatedBoleto ? (
+                        <div className="py-4">
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Clique em "Gerar Boleto" para processar a cobrança via Banco Inter e obter a linha digitável e o PDF. O cliente também receberá uma notificação no painel de faturamento.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="py-4 space-y-4">
+                            <div className="p-3 bg-muted/50 rounded-md border text-center">
+                                <p className="text-sm font-medium mb-2">Linha Digitável:</p>
+                                <p className="text-sm break-all font-mono bg-background p-2 rounded border">
+                                    {generatedBoleto.linha_digitavel}
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" className="w-full" onClick={handleCopyLinha}>
+                                    <Copy className="h-4 w-4 mr-2" /> Copiar Linha
+                                </Button>
+                                <Button className="w-full" onClick={handleDownloadBoleto}>
+                                    <Download className="h-4 w-4 mr-2" /> Baixar PDF
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        {!generatedBoleto ? (
+                            <Button 
+                                onClick={() => selectedClinicForBoleto && generateBoletoMutation.mutate(selectedClinicForBoleto)} 
+                                disabled={generateBoletoMutation.isPending}
+                            >
+                                {generateBoletoMutation.isPending ? 'Gerando...' : 'Gerar Boleto'}
+                            </Button>
+                        ) : (
+                            <Button variant="secondary" onClick={() => setBoletoModalOpen(false)}>
+                                Fechar
+                            </Button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
-
