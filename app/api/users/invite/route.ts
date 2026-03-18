@@ -59,8 +59,22 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
-        // Create temporary user record (without auth - will be created on activation)
-        const tempUserId = crypto.randomUUID()
+        // Create auth user first (required by FK constraint users_id_fkey -> auth.users)
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: data.email.toLowerCase(),
+            email_confirm: true,
+            user_metadata: { full_name: data.name }
+        })
+
+        if (authError) {
+            console.error('[InviteUser] Auth user creation error:', authError)
+            return NextResponse.json({
+                success: false,
+                error: { message: 'Erro ao criar usuário no sistema: ' + authError.message }
+            }, { status: 400 })
+        }
+
+        const tempUserId = authUser.user.id
 
         const { error: userError } = await supabaseAdmin
             .from('users')
@@ -75,6 +89,8 @@ export async function POST(request: NextRequest) {
             })
 
         if (userError) {
+            // Rollback: remove auth user if public.users insert fails
+            await supabaseAdmin.auth.admin.deleteUser(tempUserId)
             console.error('[InviteUser] User creation error:', userError)
             return NextResponse.json({
                 success: false,
@@ -86,7 +102,7 @@ export async function POST(request: NextRequest) {
         const activationToken = crypto.randomBytes(32).toString('hex')
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
 
-        await supabaseAdmin
+        const { error: tokenError } = await supabaseAdmin
             .from('activation_tokens')
             .insert({
                 user_id: tempUserId,
@@ -96,6 +112,17 @@ export async function POST(request: NextRequest) {
                 type: 'team_invite',
                 expires_at: expiresAt.toISOString()
             })
+
+        if (tokenError) {
+            // Rollback user
+            await supabaseAdmin.from('users').delete().eq('id', tempUserId)
+            await supabaseAdmin.auth.admin.deleteUser(tempUserId)
+            console.error('[InviteUser] Token creation error:', tokenError)
+            return NextResponse.json({
+                success: false,
+                error: { message: 'Erro ao gerar link de convite: ' + tokenError.message }
+            }, { status: 400 })
+        }
 
         // Send invitation email
         const { sendMail } = await import('@/lib/services/mail-service')

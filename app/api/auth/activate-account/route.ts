@@ -107,8 +107,23 @@ export async function POST(request: NextRequest) {
 
             case 'doctor_invite':
             case 'team_invite':
-                // Doctor/Team activation - create auth user and update status
-                if (!userId) {
+                // User was already created in auth.users at invite time
+                if (userId) {
+                    // Set the password for the existing auth user
+                    const { error: pwError } = await supabase.auth.admin.updateUserById(
+                        userId,
+                        { password }
+                    )
+
+                    if (pwError) {
+                        console.error('[ActivateAccount] Password update error:', pwError)
+                        return NextResponse.json({
+                            success: false,
+                            error: { message: 'Erro ao definir senha. Tente novamente.' }
+                        }, { status: 500 })
+                    }
+                } else {
+                    // Fallback for legacy tokens without auth user pre-created
                     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
                         email: tokenData.email,
                         password,
@@ -116,7 +131,7 @@ export async function POST(request: NextRequest) {
                     })
 
                     if (authError) {
-                        console.error('[ActivateAccount] Doctor auth creation error:', authError)
+                        console.error('[ActivateAccount] Auth creation error:', authError)
                         return NextResponse.json({
                             success: false,
                             error: { message: 'Erro ao criar conta. Tente novamente.' }
@@ -126,11 +141,12 @@ export async function POST(request: NextRequest) {
                     userId = authUser.user.id
                 }
 
-                // Update user record
+                // Activate user record in public.users
                 await supabase
                     .from('users')
                     .update({
                         id: userId,
+                        is_active: true,
                         activation_status: 'active'
                     })
                     .eq('email', tokenData.email)
