@@ -44,7 +44,9 @@ import {
     X,
     Trash2,
     Key,
-    Edit
+    Edit,
+    Dices,
+    Copy
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -136,6 +138,7 @@ export default function UsuariosPermissoesPage() {
     const [newUser, setNewUser] = useState({
         name: '',
         email: '',
+        password: '',
         role: 'RECEPTIONIST' as User['role'],
         permissions: {} as Record<string, boolean>
     })
@@ -143,6 +146,21 @@ export default function UsuariosPermissoesPage() {
     useEffect(() => {
         loadUsers()
     }, [])
+
+    function generatePassword() {
+        const length = 12
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+        let password = ""
+        for (let i = 0, n = charset.length; i < length; ++i) {
+            password += charset.charAt(Math.floor(Math.random() * n))
+        }
+        setNewUser(prev => ({ ...prev, password }))
+    }
+
+    function copyPassword() {
+        navigator.clipboard.writeText(newUser.password)
+        toast.success("Senha copiada!")
+    }
 
     async function loadUsers() {
         try {
@@ -200,6 +218,7 @@ export default function UsuariosPermissoesPage() {
                     email: newUser.email,
                     name: newUser.name,
                     role: newUser.role,
+                    password: newUser.password || undefined,
                 })
             })
 
@@ -207,7 +226,7 @@ export default function UsuariosPermissoesPage() {
 
             toast.success('Convite enviado com sucesso!')
             setDialogOpen(false)
-            setNewUser({ name: '', email: '', role: 'RECEPTIONIST', permissions: {} })
+            setNewUser({ name: '', email: '', password: '', role: 'RECEPTIONIST', permissions: {} })
             loadUsers()
         } catch (error) {
             toast.error('Erro ao enviar convite')
@@ -324,6 +343,25 @@ export default function UsuariosPermissoesPage() {
                                         placeholder="email@exemplo.com"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Senha Inicial (Opcional)</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="text"
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                        placeholder="Senha de acesso"
+                                    />
+                                    <Button type="button" variant="outline" size="icon" onClick={generatePassword} title="Gerar Senha Aleatória">
+                                        <Dices className="w-4 h-4" />
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={copyPassword} disabled={!newUser.password} title="Copiar Senha">
+                                        <Copy className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Se preenchido, o usuário poderá acessar o sistema imediatamente com essa senha.</p>
                             </div>
 
                             <div className="space-y-2">

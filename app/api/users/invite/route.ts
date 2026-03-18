@@ -7,6 +7,7 @@ const inviteUserSchema = z.object({
     email: z.string().email('Email inválido'),
     name: z.string().min(3, 'Nome é obrigatório'),
     role: z.enum(['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR', 'FINANCIAL', 'READONLY']),
+    password: z.string().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
         // Create auth user first (required by FK constraint users_id_fkey -> auth.users)
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: data.email.toLowerCase(),
+            password: data.password || undefined,
             email_confirm: true,
             user_metadata: { full_name: data.name }
         })

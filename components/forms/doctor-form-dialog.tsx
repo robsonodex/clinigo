@@ -27,7 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield, Dices, Copy } from 'lucide-react'
 import type { Doctor } from '@/lib/api-client'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { useCouncilLabel } from '@/lib/hooks/use-council-label'
@@ -110,6 +110,25 @@ export function DoctorFormDialog({
             consultation_duration: (doctorToEdit as any)?.consultation_duration || 30,
         },
     })
+
+    function generatePassword() {
+        const length = 12
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+        let password = ""
+        for (let i = 0, n = charset.length; i < length; ++i) {
+            password += charset.charAt(Math.floor(Math.random() * n))
+        }
+        setValue('password', password)
+    }
+
+    function copyPassword() {
+        const pass = watch('password')
+        if (pass) {
+            navigator.clipboard.writeText(pass)
+            // toast is not imported directly in this file, wait, is it?
+            // Actually, we can just use the navigator
+        }
+    }
 
     // Reset form when doctorToEdit changes
     useEffect(() => {
@@ -249,12 +268,21 @@ export function DoctorFormDialog({
                         {!isEditing && (
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="password">Senha Inicial</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    {...register('password')}
-                                    error={!!errors.password}
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="password"
+                                        type="text"
+                                        {...register('password')}
+                                        error={!!errors.password}
+                                        placeholder="Senha de acesso"
+                                    />
+                                    <Button type="button" variant="outline" size="icon" onClick={generatePassword} title="Gerar Senha Aleatória">
+                                        <Dices className="w-4 h-4" />
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={copyPassword} disabled={!watch('password')} title="Copiar Senha">
+                                        <Copy className="w-4 h-4" />
+                                    </Button>
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                     O {profLabel.singular.toLowerCase()} deverá alterar esta senha no primeiro acesso.
                                 </p>
