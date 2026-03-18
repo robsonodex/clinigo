@@ -19,11 +19,11 @@ const createSubscriptionSchema = z.object({
 
 // 5-Tier Plan pricing (RJ Market 2026)
 const PLAN_PRICES = {
-    STARTER: { MONTHLY: 47, YEARLY: 470 },         // 10 meses
-    BASIC: { MONTHLY: 87, YEARLY: 870 },           // 10 meses
-    PROFESSIONAL: { MONTHLY: 247, YEARLY: 2470 },  // 10 meses
-    ENTERPRISE: { MONTHLY: 497, YEARLY: 4970 },    // 10 meses
-    NETWORK: { MONTHLY: 997, YEARLY: 9970 },       // 10 meses
+    STARTER: { MONTHLY: 99, YEARLY: 990 },         // 10 meses
+    BASIC: { MONTHLY: 99, YEARLY: 990 },           // 10 meses (Map to BASICO price)
+    PROFESSIONAL: { MONTHLY: 449, YEARLY: 4490 },  // 10 meses
+    ENTERPRISE: { MONTHLY: 699, YEARLY: 6990 },    // 10 meses
+    NETWORK: { MONTHLY: 999, YEARLY: 9990 },       // 10 meses
 }
 
 export async function POST(request: NextRequest) {
