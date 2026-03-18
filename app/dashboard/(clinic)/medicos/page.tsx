@@ -63,7 +63,7 @@ export default function DoctorsPage() {
         queryFn: () =>
             api.getFull<Doctor[]>(`/doctors`, {
                 page: page.toString(),
-                pageSize: '10',
+                pageSize: '100', // Aumentado para 100 para suportar contas Pro que não tem controle de paginação
                 search: search || undefined,
                 is_accepting: statusFilter !== 'all' ? statusFilter : undefined,
             }),
