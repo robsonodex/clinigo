@@ -30,7 +30,7 @@ const nextConfig = {
 
     // External packages that should not be bundled
     // These packages use Node.js APIs and need to run in Node.js runtime
-    serverExternalPackages: ['nodemailer', '@react-email/components', '@react-email/render'],
+    serverExternalPackages: ['nodemailer', '@react-email/components', '@react-email/render', 'whatsapp-web.js'],
 
     // Image optimization
     images: {
