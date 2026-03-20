@@ -391,7 +391,7 @@ export async function middleware(request: NextRequest) {
 
     // Protected dashboard without user = redirect
     if (pathname.startsWith('/dashboard') && !user) {
-        return NextResponse.redirect(new URL('/login', request.url))
+        return NextResponse.redirect(new URL('/clinica', request.url))
     }
 
     // ----------------------------------------
@@ -442,7 +442,7 @@ export async function middleware(request: NextRequest) {
                             { status: 403 }
                         )
                     }
-                    return NextResponse.redirect(new URL('/login?error=clinic_inactive', request.url))
+                    return NextResponse.redirect(new URL('/clinica?error=clinic_inactive', request.url))
                 }
 
                 // PAYMENT REQUIRED CHECK (v3.3.0)

@@ -124,15 +124,17 @@ export default function ReportsPage() {
         fetchData()
     }, [dateRange])
 
-    const formatCurrency = (value: number) => {
+    const formatCurrency = (value: number | string | null | undefined) => {
+        const num = Number(value) || 0
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
-        }).format(value)
+        }).format(num)
     }
 
-    const formatPercent = (value: number) => {
-        return `${value.toFixed(1)}%`
+    const formatPercent = (value: number | string | null | undefined) => {
+        const num = Number(value) || 0
+        return `${num.toFixed(1)}%`
     }
 
     const handleExport = async (format: 'csv' | 'pdf') => {

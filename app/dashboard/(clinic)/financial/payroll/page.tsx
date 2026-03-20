@@ -239,6 +239,12 @@ export default function PayrollPage() {
                             ))}
                         </SelectContent>
                     </Select>
+                    <Link href="/dashboard/financial/payroll/contracts">
+                        <Button variant="outline">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Contratos
+                        </Button>
+                    </Link>
                     <Button
                         variant="outline"
                         onClick={() => calculateMutation.mutate()}

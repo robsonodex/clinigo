@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     Calendar as CalendarIcon,
@@ -17,6 +17,8 @@ import {
     Repeat,
     UserX,
     Lightbulb,
+    LayoutGrid,
+    List,
 } from 'lucide-react'
 import {
     format,
@@ -80,14 +82,20 @@ const TIME_SLOTS = Array.from({ length: 33 }, (_, i) => {
 
 // Doctor color palette for visual distinction
 const DOCTOR_COLORS = [
-    { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-800', accent: 'bg-emerald-500' },
-    { bg: 'bg-sky-100', border: 'border-sky-400', text: 'text-sky-800', accent: 'bg-sky-500' },
-    { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-800', accent: 'bg-amber-500' },
-    { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-800', accent: 'bg-rose-500' },
-    { bg: 'bg-violet-100', border: 'border-violet-400', text: 'text-violet-800', accent: 'bg-violet-500' },
-    { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-800', accent: 'bg-orange-500' },
-    { bg: 'bg-cyan-100', border: 'border-cyan-400', text: 'text-cyan-800', accent: 'bg-cyan-500' },
-    { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800', accent: 'bg-pink-500' },
+    { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-800', accent: 'bg-emerald-500', hex: '#10b981' },
+    { bg: 'bg-sky-100', border: 'border-sky-400', text: 'text-sky-800', accent: 'bg-sky-500', hex: '#0ea5e9' },
+    { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-800', accent: 'bg-amber-500', hex: '#f59e0b' },
+    { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-800', accent: 'bg-rose-500', hex: '#f43f5e' },
+    { bg: 'bg-violet-100', border: 'border-violet-400', text: 'text-violet-800', accent: 'bg-violet-500', hex: '#8b5cf6' },
+    { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-800', accent: 'bg-orange-500', hex: '#f97316' },
+    { bg: 'bg-cyan-100', border: 'border-cyan-400', text: 'text-cyan-800', accent: 'bg-cyan-500', hex: '#06b6d4' },
+    { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800', accent: 'bg-pink-500', hex: '#ec4899' },
+]
+
+// Timeline solid colors for Google Calendar style
+const TIMELINE_COLORS = [
+    'bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-red-500',
+    'bg-indigo-600', 'bg-teal-600', 'bg-orange-500', 'bg-pink-600',
 ]
 
 // Map doctor IDs to colors (cached per render)
@@ -102,12 +110,32 @@ function getDoctorColor(doctorId: string) {
     return doctorColorMap.get(doctorId)!
 }
 
+function getTimelineColor(doctorId: string): string {
+    const keys = Array.from(doctorColorMap.keys())
+    let idx = keys.indexOf(doctorId)
+    if (idx === -1) {
+        getDoctorColor(doctorId) // ensure it's registered
+        idx = Array.from(doctorColorMap.keys()).indexOf(doctorId)
+    }
+    return TIMELINE_COLORS[idx % TIMELINE_COLORS.length]
+}
+
+// Calculate end time from start time and duration in minutes
+function calcEndTime(startTime: string, durationMinutes: number = 60): string {
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const totalMinutes = hours * 60 + minutes + durationMinutes
+    const endHours = Math.floor(totalMinutes / 60) % 24
+    const endMins = totalMinutes % 60
+    return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`
+}
+
 
 export default function AgendaPage() {
     const router = useRouter()
     const { isDoctor } = useRole()
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [view, setView] = useState<'week' | 'day'>('week')
+    const [calendarStyle, setCalendarStyle] = useState<'standard' | 'timeline'>('standard')
     const [manualAppointmentOpen, setManualAppointmentOpen] = useState(false)
     const [recurringAppointmentOpen, setRecurringAppointmentOpen] = useState(false)
     const [absenceModalOpen, setAbsenceModalOpen] = useState(false)
@@ -117,6 +145,7 @@ export default function AgendaPage() {
     // Details Drawer
     const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
     const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false)
+    const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set())
 
     // Drag and Drop
     const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null)
@@ -157,15 +186,24 @@ export default function AgendaPage() {
     // Group appointments by date and time
     // Only exclude cancelled appointments from the agenda view
     // COMPLETED and NO_SHOW are shown (greyed out) so users can see their history
-    const getAppointment = (date: Date, time: string) => {
-        if (!appointments || !Array.isArray(appointments)) return null
+    const getAppointmentsForSlot = (date: Date, time: string): Appointment[] => {
+        if (!appointments || !Array.isArray(appointments)) return []
         const dateStr = format(date, 'yyyy-MM-dd')
-        return appointments.find(
+        return appointments.filter(
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
                 a.status !== 'CANCELLED'
         )
+    }
+
+    // Get all non-cancelled appointments for a given day (for timeline view)
+    const getAppointmentsForDay = (date: Date): Appointment[] => {
+        if (!appointments || !Array.isArray(appointments)) return []
+        const dateStr = format(date, 'yyyy-MM-dd')
+        return appointments.filter(
+            (a) => a.appointment_date === dateStr && a.status !== 'CANCELLED'
+        ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
     }
 
     // Calculate cell height based on duration (simple version: 1 slot = 30min)
@@ -348,7 +386,28 @@ export default function AgendaPage() {
                     </Button>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    <div className="flex border rounded-md overflow-hidden">
+                        <Button
+                            variant={calendarStyle === 'standard' ? 'default' : 'ghost'}
+                            onClick={() => setCalendarStyle('standard')}
+                            size="sm"
+                            className="gap-1 rounded-none"
+                        >
+                            <LayoutGrid className="h-4 w-4" />
+                            Padrão
+                        </Button>
+                        <Button
+                            variant={calendarStyle === 'timeline' ? 'default' : 'ghost'}
+                            onClick={() => setCalendarStyle('timeline')}
+                            size="sm"
+                            className="gap-1 rounded-none"
+                        >
+                            <List className="h-4 w-4" />
+                            Timeline
+                        </Button>
+                    </div>
+                    <div className="w-px h-6 bg-border" />
                     <Button
                         variant={view === 'day' ? 'default' : 'outline'}
                         onClick={() => setView('day')}
@@ -368,6 +427,7 @@ export default function AgendaPage() {
 
             {/* Calendar Grid */}
             <Card className="flex-1 overflow-auto">
+                {calendarStyle === 'standard' ? (
                 <div className="min-w-[800px]">
                     {/* Header Row */}
                     <div className="grid grid-cols-8 border-b sticky top-0 bg-white z-10">
@@ -416,7 +476,8 @@ export default function AgendaPage() {
 
                                 {/* Day Columns */}
                                 {(view === 'week' ? days : [currentDate]).map((day) => {
-                                    const appointment = getAppointment(day, time)
+                                    const slotAppointments = getAppointmentsForSlot(day, time)
+                                    const hasAppointments = slotAppointments.length > 0
 
                                     return (
                                         <div
@@ -426,7 +487,7 @@ export default function AgendaPage() {
                                                 !isSameMonth(day, currentDate) && 'bg-gray-50/50'
                                             )}
                                             onClick={() => {
-                                                if (!appointment) {
+                                                if (!hasAppointments) {
                                                     setPreselectedSlot({
                                                         date: format(day, 'yyyy-MM-dd'),
                                                         time: time
@@ -434,124 +495,149 @@ export default function AgendaPage() {
                                                     setManualAppointmentOpen(true)
                                                 }
                                             }}
-                                            onDragOver={(e) => !appointment && handleDragOver(e, day, time)}
-                                            onDrop={(e) => !appointment && handleDrop(e, day, time)}
+                                            onDragOver={(e) => !hasAppointments && handleDragOver(e, day, time)}
+                                            onDrop={(e) => !hasAppointments && handleDrop(e, day, time)}
                                         >
-                                            {appointment ? (
-                                                <TooltipProvider>
-                                                    <Tooltip delayDuration={200}>
-                                                        <TooltipTrigger asChild>
-                                                            {(() => {
-                                                                const doctorColor = getDoctorColor(appointment.doctor.id)
-                                                                const isOnline = (appointment as any).appointment_type === 'online'
-                                                                const isCancelled = appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'
+                                            {hasAppointments ? (
+                                                <div className="flex flex-col gap-1 h-full">
+                                                    {(expandedSlots.has(`${day.toISOString()}-${time}`) ? slotAppointments : slotAppointments.slice(0, 2)).map((appointment) => {
+                                                        const doctorColor = getDoctorColor(appointment.doctor.id)
+                                                        const isOnline = (appointment as any).appointment_type === 'online'
+                                                        const isCancelled = appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'
+                                                        const duration = (appointment.doctor as any).consultation_duration || 60
+                                                        const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
 
-                                                                return (
-                                                                    <div
-                                                                        draggable={!isCancelled}
-                                                                        onDragStart={(e) => handleDragStart(e, appointment)}
-                                                                        className={cn(
-                                                                            'w-full h-full rounded-lg border-l-4 p-2 text-xs flex flex-col shadow-sm cursor-pointer hover:shadow-lg transition-all',
-                                                                            isCancelled
-                                                                                ? 'bg-gray-100 border-l-gray-400 text-gray-500 opacity-60'
-                                                                                : `${doctorColor.bg} ${doctorColor.text}`,
-                                                                            !isCancelled && doctorColor.border.replace('border-', 'border-l-'),
-                                                                            isOnline && !isCancelled && 'ring-2 ring-green-400 ring-offset-1',
-                                                                            draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
-                                                                        )}
-                                                                        onClick={() => {
-                                                                            setSelectedAppointmentId(appointment.id)
-                                                                            setDetailsDrawerOpen(true)
-                                                                        }}
-                                                                    >
-                                                                        {/* Patient Name */}
-                                                                        <div className="font-bold truncate text-sm leading-tight">
-                                                                            {appointment.patient.full_name}
-                                                                        </div>
-
-                                                                        {/* Time + Video Icon */}
-                                                                        <div className="flex items-center gap-1 mt-1 text-[11px] font-medium opacity-90">
-                                                                            <Clock className="h-3 w-3" />
-                                                                            {appointment.appointment_time.substring(0, 5)}
-                                                                            {(appointment as any).series_id && (
-                                                                                <Repeat className="h-3 w-3 ml-1 text-blue-600" />
+                                                        return (
+                                                            <TooltipProvider key={appointment.id}>
+                                                                <Tooltip delayDuration={200}>
+                                                                    <TooltipTrigger asChild>
+                                                                        <div
+                                                                            draggable={!isCancelled}
+                                                                            onDragStart={(e) => handleDragStart(e, appointment)}
+                                                                            className={cn(
+                                                                                'w-full rounded-lg border-l-4 p-1.5 text-xs flex flex-col shadow-sm cursor-pointer hover:shadow-lg transition-all',
+                                                                                isCancelled
+                                                                                    ? 'bg-gray-100 border-l-gray-400 text-gray-500 opacity-60'
+                                                                                    : `${doctorColor.bg} ${doctorColor.text}`,
+                                                                                !isCancelled && doctorColor.border.replace('border-', 'border-l-'),
+                                                                                isOnline && !isCancelled && 'ring-2 ring-green-400 ring-offset-1',
+                                                                                draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
                                                                             )}
-                                                                            {isOnline && (
-                                                                                <Video className="h-3 w-3 ml-1 text-green-600" />
-                                                                            )}
-                                                                        </div>
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation()
+                                                                                setSelectedAppointmentId(appointment.id)
+                                                                                setDetailsDrawerOpen(true)
+                                                                            }}
+                                                                        >
+                                                                            {/* Patient Name */}
+                                                                            <div className="font-bold truncate text-sm leading-tight">
+                                                                                {appointment.patient.full_name}
+                                                                            </div>
 
-                                                                        {/* Doctor Name */}
-                                                                        <div className="text-[10px] font-medium mt-1 truncate opacity-80">
-                                                                            Dr. {appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
-                                                                        </div>
+                                                                            {/* Start Time - End Time */}
+                                                                            <div className="flex items-center gap-1 mt-0.5 text-[11px] font-medium opacity-90">
+                                                                                <Clock className="h-3 w-3 flex-shrink-0" />
+                                                                                {appointment.appointment_time.substring(0, 5)} - {endTime}
+                                                                                {(appointment as any).series_id && (
+                                                                                    <Repeat className="h-3 w-3 ml-1 text-blue-600" />
+                                                                                )}
+                                                                                {isOnline && (
+                                                                                    <Video className="h-3 w-3 ml-1 text-green-600" />
+                                                                                )}
+                                                                            </div>
 
-                                                                        <div className="flex items-center justify-end mt-2">
-                                                                            <DropdownMenu>
-                                                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1 hover:bg-black/10">
-                                                                                        <MoreVertical className="w-3 h-3" />
-                                                                                    </Button>
-                                                                                </DropdownMenuTrigger>
-                                                                                <DropdownMenuContent align="end">
-                                                                                    <DropdownMenuItem onClick={() => {
-                                                                                        setSelectedAppointmentId(appointment.id)
-                                                                                        setDetailsDrawerOpen(true)
-                                                                                    }}>
-                                                                                        <User className="w-4 h-4 mr-2" />
-                                                                                        Ver Detalhes
-                                                                                    </DropdownMenuItem>
-                                                                                    {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
-                                                                                        <DropdownMenuItem
-                                                                                            className="text-destructive focus:text-destructive"
-                                                                                            onClick={() => setCancellingId(appointment.id)}
-                                                                                        >
-                                                                                            <X className="w-4 h-4 mr-2" />
-                                                                                            Cancelar
+                                                                            {/* Doctor Name */}
+                                                                            <div className="text-[10px] font-medium mt-0.5 truncate opacity-80">
+                                                                                Dr. {appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
+                                                                            </div>
+
+                                                                            <div className="flex items-center justify-end mt-1">
+                                                                                <DropdownMenu>
+                                                                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                                                        <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-black/10">
+                                                                                            <MoreVertical className="w-3 h-3" />
+                                                                                        </Button>
+                                                                                    </DropdownMenuTrigger>
+                                                                                    <DropdownMenuContent align="end">
+                                                                                        <DropdownMenuItem onClick={() => {
+                                                                                            setSelectedAppointmentId(appointment.id)
+                                                                                            setDetailsDrawerOpen(true)
+                                                                                        }}>
+                                                                                            <User className="w-4 h-4 mr-2" />
+                                                                                            Ver Detalhes
                                                                                         </DropdownMenuItem>
-                                                                                    )}
-                                                                                    {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
-                                                                                        <DropdownMenuItem
-                                                                                            className="text-destructive focus:text-destructive"
-                                                                                            onClick={() => {
-                                                                                                setCancellingSeriesId((appointment as any).series_id)
-                                                                                                setCancelSeriesStep(1)
-                                                                                            }}
-                                                                                        >
-                                                                                            <Repeat className="w-4 h-4 mr-2" />
-                                                                                            Cancelar Série
-                                                                                        </DropdownMenuItem>
-                                                                                    )}
-                                                                                </DropdownMenuContent>
-                                                                            </DropdownMenu>
+                                                                                        {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
+                                                                                            <DropdownMenuItem
+                                                                                                className="text-destructive focus:text-destructive"
+                                                                                                onClick={() => setCancellingId(appointment.id)}
+                                                                                            >
+                                                                                                <X className="w-4 h-4 mr-2" />
+                                                                                                Cancelar
+                                                                                            </DropdownMenuItem>
+                                                                                        )}
+                                                                                        {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
+                                                                                            <DropdownMenuItem
+                                                                                                className="text-destructive focus:text-destructive"
+                                                                                                onClick={() => {
+                                                                                                    setCancellingSeriesId((appointment as any).series_id)
+                                                                                                    setCancelSeriesStep(1)
+                                                                                                }}
+                                                                                            >
+                                                                                                <Repeat className="w-4 h-4 mr-2" />
+                                                                                                Cancelar Série
+                                                                                            </DropdownMenuItem>
+                                                                                        )}
+                                                                                    </DropdownMenuContent>
+                                                                                </DropdownMenu>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                )
-                                                            })()}
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="right" className="max-w-xs">
-                                                            <div className="space-y-2">
-                                                                <div>
-                                                                    <p className="font-semibold text-sm">{appointment.patient.full_name}</p>
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        {appointment.patient.phone && `Tel: ${appointment.patient.phone}`}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-xs space-y-1">
-                                                                    <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
-                                                                    <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)}</p>
-                                                                    <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
-                                                                    {(appointment as any).type && (
-                                                                        <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>
-                                                                    )}
-                                                                    {(appointment as any).payment_type && (
-                                                                        <p><strong>Pagamento:</strong> {(appointment as any).payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent side="right" className="max-w-xs">
+                                                                        <div className="space-y-2">
+                                                                            <div>
+                                                                                <p className="font-semibold text-sm">{appointment.patient.full_name}</p>
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    {appointment.patient.phone && `Tel: ${appointment.patient.phone}`}
+                                                                                </p>
+                                                                            </div>
+                                                                            <div className="text-xs space-y-1">
+                                                                                <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
+                                                                                <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
+                                                                                {(appointment as any).type && (
+                                                                                    <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>
+                                                                                )}
+                                                                                {(appointment as any).payment_type && (
+                                                                                    <p><strong>Pagamento:</strong> {(appointment as any).payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}</p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )
+                                                    })}
+                                                    {slotAppointments.length > 2 && (
+                                                        <button
+                                                            className="text-[10px] text-primary font-semibold hover:underline text-left px-1"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                const key = `${day.toISOString()}-${time}`
+                                                                setExpandedSlots(prev => {
+                                                                    const next = new Set(prev)
+                                                                    if (next.has(key)) next.delete(key)
+                                                                    else next.add(key)
+                                                                    return next
+                                                                })
+                                                            }}
+                                                        >
+                                                            {expandedSlots.has(`${day.toISOString()}-${time}`)
+                                                                ? '− mostrar menos'
+                                                                : `+${slotAppointments.length - 2} mais`
+                                                            }
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ) : null}
                                         </div>
                                     )
@@ -560,6 +646,190 @@ export default function AgendaPage() {
                         ))}
                     </div>
                 </div>
+                ) : (
+                /* ============ TIMELINE / GOOGLE CALENDAR STYLE ============ */
+                <div className="min-w-[800px]">
+                    <table className="w-full table-fixed border-collapse">
+                        {/* Header Row */}
+                        <thead className="sticky top-0 bg-white z-10">
+                            <tr className="border-b">
+                                <th className="w-[56px] p-2 text-xs font-medium text-muted-foreground border-r" />
+                                {(view === 'week' ? days : [currentDate]).map((day) => (
+                                    <th
+                                        key={day.toISOString()}
+                                        className={cn(
+                                            'p-2 text-center border-r last:border-r-0',
+                                            isSameDay(day, new Date()) && 'bg-blue-50'
+                                        )}
+                                    >
+                                        <div className="text-xs font-medium text-muted-foreground uppercase">
+                                            {format(day, 'EEE', { locale: ptBR })}
+                                        </div>
+                                        <div
+                                            className={cn(
+                                                'text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center mx-auto mt-1',
+                                                isSameDay(day, new Date())
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'text-foreground'
+                                            )}
+                                        >
+                                            {format(day, 'd')}
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+
+                        {/* Timeline Body */}
+                        <tbody className="relative">
+                            {TIME_SLOTS.map((time) => {
+                                const daysToRender = view === 'week' ? days : [currentDate]
+                                const hasAnyAppointment = daysToRender.some(day => getAppointmentsForSlot(day, time).length > 0)
+
+                                return (
+                                    <tr key={time} className="border-b" style={{ height: '40px' }}>
+                                        {/* Time Label */}
+                                        <td className="w-[56px] py-1 px-1 text-[11px] text-muted-foreground text-right pr-2 border-r font-medium align-middle">
+                                            {time}
+                                        </td>
+
+                                        {/* Day Columns */}
+                                        {daysToRender.map((day) => {
+                                            const slotAppointments = getAppointmentsForSlot(day, time)
+
+                                            return (
+                                                <td
+                                                    key={day.toISOString()}
+                                                    className={cn(
+                                                        'border-r last:border-r-0 p-0 cursor-pointer overflow-hidden h-full',
+                                                        isSameDay(day, new Date()) && 'bg-blue-50/30'
+                                                    )}
+                                                    onClick={() => {
+                                                        if (slotAppointments.length === 0) {
+                                                            setPreselectedSlot({
+                                                                date: format(day, 'yyyy-MM-dd'),
+                                                                time: time
+                                                            })
+                                                            setManualAppointmentOpen(true)
+                                                        }
+                                                    }}
+                                                    onDragOver={(e) => slotAppointments.length === 0 && handleDragOver(e, day, time)}
+                                                    onDrop={(e) => slotAppointments.length === 0 && handleDrop(e, day, time)}
+                                                >
+                                                    {slotAppointments.length > 0 && (
+                                                        <div className="flex items-start gap-0.5 p-0.5 flex-wrap">
+                                                            {slotAppointments.map((appointment) => {
+                                                                const timelineColor = getTimelineColor(appointment.doctor.id)
+                                                                const isCancelled = appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'
+                                                                const duration = (appointment.doctor as any).consultation_duration || 60
+                                                                const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
+                                                                const doctorName = appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'
+                                                                const specialty = (appointment.doctor as any).specialty || ''
+                                                                const specShort = specialty ? specialty.substring(0, 4).toUpperCase() : ''
+
+                                                                return (
+                                                                    <TooltipProvider key={appointment.id}>
+                                                                        <Tooltip delayDuration={200}>
+                                                                            <TooltipTrigger asChild>
+                                                                                <div
+                                                                                    draggable={!isCancelled}
+                                                                                    onDragStart={(e) => handleDragStart(e, appointment)}
+                                                                                    className={cn(
+                                                                                        'px-2 py-0.5 text-white cursor-pointer hover:brightness-110 transition-all flex flex-col justify-center overflow-hidden rounded-sm relative group/item',
+                                                                                        isCancelled ? 'bg-gray-400 opacity-60' : timelineColor,
+                                                                                        draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
+                                                                                    )}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation()
+                                                                                        setSelectedAppointmentId(appointment.id)
+                                                                                        setDetailsDrawerOpen(true)
+                                                                                    }}
+                                                                                >
+                                                                                    <div className="text-[11px] font-bold leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                                                                                        {appointment.patient.full_name.toUpperCase()}({doctorName.toUpperCase()}{specShort ? `-${specShort}` : ''})
+                                                                                    </div>
+                                                                                    <div className="text-[11px] opacity-90 leading-tight">
+                                                                                        {appointment.appointment_time.substring(0, 5)} – {endTime}
+                                                                                    </div>
+                                                                                    {/* Menu de ações */}
+                                                                                    <div className="absolute top-0 right-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                                                        <DropdownMenu>
+                                                                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                                                                <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-black/20 text-white">
+                                                                                                    <MoreVertical className="w-3 h-3" />
+                                                                                                </Button>
+                                                                                            </DropdownMenuTrigger>
+                                                                                            <DropdownMenuContent align="end">
+                                                                                                <DropdownMenuItem onClick={() => {
+                                                                                                    setSelectedAppointmentId(appointment.id)
+                                                                                                    setDetailsDrawerOpen(true)
+                                                                                                }}>
+                                                                                                    <User className="w-4 h-4 mr-2" />
+                                                                                                    Ver Detalhes
+                                                                                                </DropdownMenuItem>
+                                                                                                {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
+                                                                                                    <DropdownMenuItem
+                                                                                                        className="text-destructive focus:text-destructive"
+                                                                                                        onClick={() => setCancellingId(appointment.id)}
+                                                                                                    >
+                                                                                                        <X className="w-4 h-4 mr-2" />
+                                                                                                        Cancelar
+                                                                                                    </DropdownMenuItem>
+                                                                                                )}
+                                                                                                {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
+                                                                                                    <DropdownMenuItem
+                                                                                                        className="text-destructive focus:text-destructive"
+                                                                                                        onClick={() => {
+                                                                                                            setCancellingSeriesId((appointment as any).series_id)
+                                                                                                            setCancelSeriesStep(1)
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        <Repeat className="w-4 h-4 mr-2" />
+                                                                                                        Cancelar Série
+                                                                                                    </DropdownMenuItem>
+                                                                                                )}
+                                                                                            </DropdownMenuContent>
+                                                                                        </DropdownMenu>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="top" className="max-w-xs">
+                                                                                <div className="space-y-2">
+                                                                                    <div>
+                                                                                        <p className="font-semibold text-sm">{appointment.patient.full_name}</p>
+                                                                                        <p className="text-xs text-muted-foreground">
+                                                                                            {appointment.patient.phone && `Tel: ${appointment.patient.phone}`}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                    <div className="text-xs space-y-1">
+                                                                                        <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                        <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
+                                                                                        <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
+                                                                                        {(appointment as any).type && (
+                                                                                            <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>
+                                                                                        )}
+                                                                                        {(appointment as any).payment_type && (
+                                                                                            <p><strong>Pagamento:</strong> {(appointment as any).payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}</p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            )
+                                        })}
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+                )}
             </Card>
 
             {/* Cancel Dialog */}

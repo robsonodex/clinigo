@@ -15,7 +15,7 @@ export default async function DashboardRootLayout({
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        redirect('/login')
+        redirect('/clinica')
     }
 
     // Fetch clinic slug to check if demo

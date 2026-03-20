@@ -85,7 +85,7 @@ export function useAuth() {
         } else if (isPatient) {
             router.push('/paciente')
         } else {
-            router.push('/login')
+            router.push('/clinica')
         }
     }, [supabase.auth, router, state.profile?.role, state.user, state.profile])
 
@@ -145,7 +145,7 @@ export function useAuth() {
 /**
  * Hook to require authentication
  */
-export function useRequireAuth(redirectTo = '/login') {
+export function useRequireAuth(redirectTo = '/clinica') {
     const { user, isLoading } = useAuth()
     const router = useRouter()
 

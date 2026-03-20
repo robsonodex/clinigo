@@ -41,7 +41,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Plus, FileText, Percent, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, FileText, Percent, DollarSign, Loader2, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
@@ -57,6 +57,9 @@ interface Contract {
     inss_rate: number;
     is_active: boolean;
     valid_from: string;
+    weekly_hours_limit: number | null;
+    fixed_salary: number | null;
+    extra_per_appointment: number | null;
     doctor: {
         id: string;
         name: string;
@@ -67,9 +70,11 @@ interface Contract {
 
 interface Doctor {
     id: string;
-    name: string;
     crm: string;
     specialty: string;
+    user?: {
+        full_name: string;
+    };
 }
 
 const CONTRACT_TYPES = [
@@ -77,6 +82,7 @@ const CONTRACT_TYPES = [
     { value: 'PERCENTAGE_NET', label: '% sobre Valor Líquido' },
     { value: 'FIXED_VALUE', label: 'Valor Fixo por Consulta' },
     { value: 'HYBRID', label: 'Híbrido (% + Piso Mínimo)' },
+    { value: 'FIXED_HOURS', label: 'Salário Fixo + Excedente por Atendimento' },
 ];
 
 export default function ContractsPage() {
@@ -93,6 +99,9 @@ export default function ContractsPage() {
         inss_rate: 11,
         irrf_rate: 0,
         iss_rate: 5,
+        weekly_hours_limit: 0,
+        fixed_salary: 0,
+        extra_per_appointment: 0,
     });
 
     // Buscar contratos
@@ -143,6 +152,9 @@ export default function ContractsPage() {
                 inss_rate: 11,
                 irrf_rate: 0,
                 iss_rate: 5,
+                weekly_hours_limit: 0,
+                fixed_salary: 0,
+                extra_per_appointment: 0,
             });
         },
         onError: (error: Error) => {
@@ -193,7 +205,7 @@ export default function ContractsPage() {
                                         <SelectContent>
                                             {doctors?.map((doc) => (
                                                 <SelectItem key={doc.id} value={doc.id}>
-                                                    {doc.name} - CRM {doc.crm}
+                                                    {doc.user?.full_name || `CRM: ${doc.crm}`}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -287,6 +299,68 @@ export default function ContractsPage() {
                                                 />
                                             </div>
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Campos FIXED_HOURS */}
+                                {formData.contract_type === 'FIXED_HOURS' && (
+                                    <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p className="text-sm font-medium text-blue-800">
+                                            <Clock className="w-4 h-4 inline mr-1" />
+                                            Configuração de Horas Contratadas
+                                        </p>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm">Horas Semanais</Label>
+                                                <Input
+                                                    type="number"
+                                                    step="0.5"
+                                                    placeholder="Ex: 18"
+                                                    value={formData.weekly_hours_limit || ''}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        weekly_hours_limit: Number(e.target.value)
+                                                    }))}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-sm">Salário Fixo (R$)</Label>
+                                                <div className="relative">
+                                                    <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        className="pl-8"
+                                                        placeholder="Ex: 3000"
+                                                        value={formData.fixed_salary || ''}
+                                                        onChange={(e) => setFormData(prev => ({
+                                                            ...prev,
+                                                            fixed_salary: Number(e.target.value)
+                                                        }))}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-sm">Por Excedente (R$)</Label>
+                                                <div className="relative">
+                                                    <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        className="pl-8"
+                                                        placeholder="Ex: 40"
+                                                        value={formData.extra_per_appointment || ''}
+                                                        onChange={(e) => setFormData(prev => ({
+                                                            ...prev,
+                                                            extra_per_appointment: Number(e.target.value)
+                                                        }))}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-blue-600">
+                                            Exemplo: 18h semanais = salário fixo. Acima disso, cada atendimento extra é pago individualmente.
+                                        </p>
                                     </div>
                                 )}
 
@@ -410,9 +484,11 @@ export default function ContractsPage() {
                                             {CONTRACT_TYPES.find(t => t.value === contract.contract_type)?.label}
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            {contract.contract_type.includes('PERCENTAGE')
-                                                ? `${contract.percentage_private}%`
-                                                : `R$ ${contract.fixed_value_private}`
+                                            {contract.contract_type === 'FIXED_HOURS'
+                                                ? <span className="text-sm"><Clock className="w-3 h-3 inline mr-1" />{contract.weekly_hours_limit}h/sem • R$ {contract.fixed_salary} + R$ {contract.extra_per_appointment}/exc</span>
+                                                : contract.contract_type.includes('PERCENTAGE')
+                                                    ? `${contract.percentage_private}%`
+                                                    : `R$ ${contract.fixed_value_private}`
                                             }
                                         </TableCell>
                                         <TableCell className="text-center">

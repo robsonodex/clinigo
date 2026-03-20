@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const contractSchema = z.object({
     doctor_id: z.string().uuid(),
-    contract_type: z.enum(['PERCENTAGE_GROSS', 'PERCENTAGE_NET', 'FIXED_VALUE', 'HYBRID']),
+    contract_type: z.enum(['PERCENTAGE_GROSS', 'PERCENTAGE_NET', 'FIXED_VALUE', 'HYBRID', 'FIXED_HOURS']),
     percentage_private: z.number().min(0).max(100).default(70),
     percentage_insurance: z.number().min(0).max(100).default(60),
     insurance_specific_rates: z.record(z.number()).optional(),
@@ -18,6 +18,10 @@ const contractSchema = z.object({
     irrf_rate: z.number().min(0).max(100).default(0),
     iss_rate: z.number().min(0).max(100).default(5),
     valid_from: z.string().optional(),
+    // FIXED_HOURS fields
+    weekly_hours_limit: z.number().min(0).optional(),
+    fixed_salary: z.number().min(0).optional(),
+    extra_per_appointment: z.number().min(0).optional(),
 });
 
 // GET: Lista contratos da clínica

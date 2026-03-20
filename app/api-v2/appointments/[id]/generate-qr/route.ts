@@ -35,7 +35,7 @@ export async function POST(
                 clinic_id,
                 scheduled_at,
                 patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
-                doctor:doctors!appointments_doctor_id_fkey(id, full_name),
+                doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name)),
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug, email, phone)
             `)
             .eq('id', appointmentId)
@@ -149,7 +149,7 @@ export async function POST(
                 id: appointmentData.id,
                 scheduledAt: appointmentData.scheduled_at,
                 patientName: appointmentData.patient?.full_name,
-                doctorName: appointmentData.doctor?.full_name,
+                doctorName: appointmentData.doctor?.user?.full_name,
                 clinicName: appointmentData.clinic?.name
             },
             smtpConfigured,

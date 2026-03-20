@@ -92,42 +92,51 @@ export function AppointmentDetailsDrawer({
             }
 
             const data = await response.json()
+            // API uses successResponse() which wraps in { success, data }
+            const apiData = data.data || data
             console.log('[DEBUG] Appointment loaded successfully:', {
                 appointmentId,
-                hasAppointment: !!data.appointment,
-                hasQrCode: !!data.qr_code,
-                patientName: data.appointment?.patient?.full_name
+                hasAppointment: !!apiData,
+                hasQrCode: !!apiData?.qr_code,
+                patientName: apiData?.patient?.full_name
             })
 
-            setAppointment(data.appointment)
+            setAppointment(apiData)
 
             // If no QR code, generate retroactively
-            if (!data.qr_code) {
+            if (!apiData?.qr_code) {
                 console.log('[DEBUG] No QR code found, generating...')
-                const qrResponse = await fetch(`/api/appointments/${appointmentId}/generate-qr`, {
+                const qrResponse = await fetch(`/api-v2/appointments/${appointmentId}/generate-qr`, {
                     method: 'POST'
                 })
 
                 if (qrResponse.ok) {
                     const qrData = await qrResponse.json()
-                    console.log('[DEBUG] QR code generated successfully')
-                    setQrCode(qrData.qr_code || qrData.qrCode)
+                    console.log('[DEBUG] QR code generated successfully:', qrData)
+                    // generate-qr returns { qrCode: {id,token,...}, qrCodeImage, preRegistrationUrl }
+                    setQrCode({
+                        id: qrData.qrCode?.id,
+                        token: qrData.qrCode?.token,
+                        image: qrData.qrCodeImage,
+                        url: qrData.preRegistrationUrl,
+                        expires_at: qrData.qrCode?.expiresAt
+                    })
                 } else {
                     console.warn('[WARN] Failed to generate QR code:', await qrResponse.text())
                 }
             } else {
                 console.log('[DEBUG] QR code already exists')
-                setQrCode(data.qr_code)
+                setQrCode(apiData.qr_code)
             }
 
             // Load video room from API response (if exists)
             console.log('[DEBUG] Full API response:', data)
-            console.log('[DEBUG] Appointment type:', data.appointment?.type || data.appointment?.appointment_type)
-            console.log('[DEBUG] Video room from API:', data.video_room)
+            console.log('[DEBUG] Appointment type:', apiData?.type || apiData?.appointment_type)
+            console.log('[DEBUG] Video room from API:', apiData?.video_room)
 
-            if (data.video_room) {
-                console.log('[DEBUG] ✅ Video room found:', data.video_room)
-                setVideoRoom(data.video_room)
+            if (apiData?.video_room) {
+                console.log('[DEBUG] ✅ Video room found:', apiData.video_room)
+                setVideoRoom(apiData.video_room)
             } else {
                 console.log('[DEBUG] ❌ No video room in API response')
             }

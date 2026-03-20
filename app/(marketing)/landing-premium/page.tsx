@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor, Tablet } from 'lucide-react'
+import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor, Tablet, Stethoscope } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -21,35 +21,23 @@ export default function LandingPremium() {
                         <Image src="/logo-clinigo.png" alt="CliniGo" width={160} height={40} className="h-10 w-auto" />
                     </Link>
 
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="hidden md:flex items-center gap-6">
                         <a href="#funcionalidades" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Funcionalidades</a>
                         <a href="#planos" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Planos</a>
 
-                        {/* Dropdown Login Minimalista */}
-                        <div className="relative group">
-                            <button className="text-sm font-medium text-white hover:text-teal-vibrant transition-colors flex items-center gap-1 py-2">
-                                Entrar
-                                <ChevronRight className="w-4 h-4 rotate-90 transition-transform group-hover:-rotate-90" />
-                            </button>
-                            <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
-                                <div className="bg-navy-deep-light border border-slate-700 rounded-xl shadow-2xl overflow-hidden w-48 flex flex-col p-1">
-                                    <Link href="/paciente" className="px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-left transition-colors flex items-center gap-2">
-                                        Sou Paciente
-                                    </Link>
-                                    <Link href="/clinica" className="px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-left transition-colors flex items-center gap-2">
-                                        Sou Clínica
-                                    </Link>
-                                    <Link href="/medico" className="px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-left transition-colors flex items-center gap-2">
-                                        Sou Médico
-                                    </Link>
-                                    <Link href="/login" className="px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-left transition-colors flex items-center gap-2">
-                                        Gestão
-                                    </Link>
-                                </div>
-                            </div>
+                        {/* Botões de Acesso - Clínica e Médico */}
+                        <div className="flex items-center gap-3 ml-2">
+                            <Link href="/clinica" className="h-10 px-5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-semibold text-sm hover:bg-emerald-500/25 hover:border-emerald-400/50 hover:text-white transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                                <Building2 className="w-4 h-4" />
+                                Sou Clínica
+                            </Link>
+                            <Link href="/medico" className="h-10 px-5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 font-semibold text-sm hover:bg-cyan-500/25 hover:border-cyan-400/50 hover:text-white transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+                                <Stethoscope className="w-4 h-4" />
+                                Sou Médico
+                            </Link>
                         </div>
 
-                        <Link href="/cadastro" className="h-10 px-6 rounded-full bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 hover:border-teal-vibrant/30 transition-all text-sm flex items-center justify-center hover:shadow-[0_0_20px_rgba(20,184,166,0.1)]">
+                        <Link href="/cadastro" className="h-10 px-6 rounded-full bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-dark hover:text-white transition-all flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.2)] hover:shadow-[0_0_30px_rgba(20,184,166,0.3)]">
                             Criar Conta
                         </Link>
                     </div>
@@ -871,7 +859,10 @@ export default function LandingPremium() {
                     </div>
 
                     <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-slate-800 text-slate-600">
-                        <div>© 2026 CliniGo. Todos os direitos reservados.</div>
+                        <div className="flex items-center gap-3">
+                            <span>© 2026 CliniGo. Todos os direitos reservados.</span>
+                            <Link href="/login" className="text-slate-700 hover:text-slate-500 transition-colors text-xs">Gestão</Link>
+                        </div>
                         <div className="flex items-center gap-2 mt-4 md:mt-0">
                             <div className="w-2 h-2 rounded-full bg-teal-vibrant animate-pulse" />
                             <span className="text-teal-vibrant mr-4">Sistema Online</span>

@@ -19,10 +19,9 @@ const navLinks = [
 ]
 
 const loginPortals = [
-    { label: 'Login Clínica', href: '/clinica', icon: Building2, description: 'Administradores' },
+    { label: 'Login Clínica', href: '/clinica', icon: Building2, description: 'Gestores e proprietários' },
     { label: 'Login Médico', href: '/medico', icon: UserRound, description: 'Profissionais de saúde' },
     { label: 'Login Paciente', href: '/paciente', icon: Users, description: 'Pacientes cadastrados' },
-    { label: 'Super Admin', href: '/login', icon: Shield, description: 'Painel de gestão' },
 ]
 
 export function LandingHeader() {
