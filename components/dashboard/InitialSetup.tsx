@@ -2,8 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle, UserPlus, Users, Clock, Mail, MessageSquare, AlertCircle } from 'lucide-react'
+import { CheckCircle, UserPlus, Users, Clock, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
@@ -86,8 +85,39 @@ export function InitialSetup() {
         )
     }
 
+    // Tudo completo (setup + SMTP) → não renderiza nada
+    if (allCompleted && status.hasSmtp) {
+        return null
+    }
+
+    // Setup completo mas SMTP pendente → apenas banner discreto
+    if (allCompleted && !status.hasSmtp) {
+        return (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800">
+                <Mail className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <p className="text-sm text-amber-800 dark:text-amber-300 flex-1">
+                    Configure o <strong>SMTP</strong> para habilitar envio de e-mails (confirmações, lembretes, consultas).
+                </p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <Link href="/help/smtp">
+                        <Button variant="ghost" size="sm" className="text-xs h-7 px-2">
+                            Tutorial
+                        </Button>
+                    </Link>
+                    <Link href="/dashboard/configuracoes">
+                        <Button variant="outline" size="sm" className="h-7 text-xs">
+                            <Mail className="w-3 h-3 mr-1" />
+                            Configurar
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+        )
+    }
+
+    // Setup incompleto → mostra card principal de configuração + banner SMTP discreto
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-2xl">Configure seu CliniGo</CardTitle>
@@ -96,16 +126,6 @@ export function InitialSetup() {
                     </p>
                 </CardHeader>
                 <CardContent>
-                    {allCompleted && (
-                        <Alert className="mb-6 bg-green-50 border-green-200">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <AlertDescription className="text-green-800">
-                                <strong>Parabéns!</strong> Configuração inicial concluída! Seu
-                                sistema está pronto para uso.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
                     <div className="grid md:grid-cols-3 gap-4">
                         {setupSteps.map((step) => (
                             <Card
@@ -151,85 +171,28 @@ export function InitialSetup() {
                 </CardContent>
             </Card>
 
-            {/* Configurações Opcionais */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5" />
-                        Configurações Opcionais
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* SMTP */}
-                    <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                            <Mail className={`w-5 h-5 mt-1 ${status.hasSmtp ? 'text-green-600' : 'text-blue-600'}`} />
-                            <div className="flex-1">
-                                <h3 className="font-semibold mb-1">
-                                    Configuração de E-mail (SMTP)
-                                </h3>
-
-                                {status.hasSmtp ? (
-                                    <Alert className="bg-green-50 border-green-200">
-                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                        <AlertDescription className="text-green-800">
-                                            <strong>SMTP Configurado com Sucesso!</strong>
-                                            <br />
-                                            Suas configurações de e-mail estão ativas e funcionando.
-                                            <div className="mt-2">
-                                                <Link href="/dashboard/configuracoes">
-                                                    <Button variant="ghost" size="sm" className="text-green-700 hover:text-green-800 p-0 h-auto">
-                                                        Gerenciar Configurações →
-                                                    </Button>
-                                                </Link>
-                                            </div>
-                                        </AlertDescription>
-                                    </Alert>
-                                ) : (
-                                    <>
-                                        <p className="text-sm text-muted-foreground mb-3">
-                                            Para que todas as funcionalidades de envio de e-mail
-                                            funcionem corretamente (confirmações, lembretes, links de
-                                            teleconsulta), é necessário configurar o SMTP.
-                                        </p>
-
-                                        <div className="flex flex-col sm:flex-row gap-2">
-                                            <Link href="/dashboard/configuracoes">
-                                                <Button variant="outline" size="sm">
-                                                    <Mail className="w-4 h-4 mr-2" />
-                                                    Configurar Agora
-                                                </Button>
-                                            </Link>
-                                            <Link href="/help/smtp">
-                                                <Button variant="ghost" size="sm">
-                                                    Ver Tutorial Completo →
-                                                </Button>
-                                            </Link>
-                                        </div>
-
-                                        <Alert className="mt-3">
-                                            <AlertCircle className="h-4 w-4" />
-                                            <AlertDescription className="text-sm">
-                                                <strong>Não sabe como configurar?</strong>
-                                                <br />
-                                                Consulte seu departamento de TI ou{' '}
-                                                <Link
-                                                    href="/help/smtp"
-                                                    className="text-primary underline"
-                                                >
-                                                    veja nosso tutorial passo a passo
-                                                </Link>
-                                                .
-                                            </AlertDescription>
-                                        </Alert>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+            {/* Banner SMTP discreto */}
+            {!status.hasSmtp && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+                    <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <p className="text-sm text-blue-800 dark:text-blue-300 flex-1">
+                        <strong>Opcional:</strong> Configure o SMTP para habilitar envio de e-mails.
+                    </p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <Link href="/help/smtp">
+                            <Button variant="ghost" size="sm" className="text-xs h-7 px-2">
+                                Tutorial
+                            </Button>
+                        </Link>
+                        <Link href="/dashboard/configuracoes">
+                            <Button variant="outline" size="sm" className="h-7 text-xs">
+                                <Mail className="w-3 h-3 mr-1" />
+                                Configurar
+                            </Button>
+                        </Link>
                     </div>
-
-                </CardContent>
-            </Card>
+                </div>
+            )}
         </div>
     )
 }
