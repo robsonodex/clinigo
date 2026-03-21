@@ -227,6 +227,12 @@ const navigationSections: NavSection[] = [
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN'],
             },
+            {
+                title: 'Reembolso Paciente',
+                href: '/dashboard/configuracoes/reembolso-paciente',
+                icon: Users,
+                roles: ['CLINIC_ADMIN'],
+            },
         ],
     },
     {

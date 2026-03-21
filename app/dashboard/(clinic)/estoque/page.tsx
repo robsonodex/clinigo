@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
     Package, Plus, Search, AlertTriangle, TrendingDown,
-    Loader2, ArrowUpCircle, ArrowDownCircle, Box
+    Loader2, ArrowUpCircle, ArrowDownCircle, Box, Upload
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -54,8 +54,15 @@ export default function InventoryPage() {
         cost_price: '',
         sale_price: '',
         min_stock: '5',
-        reorder_point: '10'
+        reorder_point: '10',
+        supplier: '',
+        responsible: '',
     })
+
+    // Import state
+    const [showImport, setShowImport] = useState(false)
+    const [importData, setImportData] = useState<any[]>([])
+    const [importing, setImporting] = useState(false)
 
     // Movement form
     const [movementForm, setMovementForm] = useState({
@@ -125,7 +132,8 @@ export default function InventoryPage() {
             setShowNewProduct(false)
             setProductForm({
                 name: '', sku: '', product_type: 'supply', unit: 'un',
-                cost_price: '', sale_price: '', min_stock: '5', reorder_point: '10'
+                cost_price: '', sale_price: '', min_stock: '5', reorder_point: '10',
+                supplier: '', responsible: '',
             })
             fetchData()
         } catch (error) {
@@ -276,6 +284,24 @@ export default function InventoryPage() {
                                     />
                                 </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Fornecedor</Label>
+                                    <Input
+                                        value={productForm.supplier}
+                                        onChange={(e) => setProductForm(f => ({ ...f, supplier: e.target.value }))}
+                                        placeholder="Nome do fornecedor"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Responsável</Label>
+                                    <Input
+                                        value={productForm.responsible}
+                                        onChange={(e) => setProductForm(f => ({ ...f, responsible: e.target.value }))}
+                                        placeholder="Nome do responsável"
+                                    />
+                                </div>
+                            </div>
                             <Button onClick={handleCreateProduct} disabled={saving} className="w-full">
                                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Criar Produto
@@ -283,7 +309,97 @@ export default function InventoryPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                {/* Botão importar */}
+                <Button variant="outline" onClick={() => setShowImport(true)}>
+                    <Upload className="h-4 w-4 mr-2" />Importar Planilha
+                </Button>
             </div>
+
+            {/* Dialog de importação CSV */}
+            <Dialog open={showImport} onOpenChange={setShowImport}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Importar Produtos via CSV</DialogTitle>
+                        <DialogDescription>
+                            Selecione um arquivo CSV com as colunas: Nome, Quantidade, Preço, Unidade, Fornecedor, Responsável
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <Input
+                            type="file"
+                            accept=".csv,.txt"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                const reader = new FileReader()
+                                reader.onload = (ev) => {
+                                    const text = ev.target?.result as string
+                                    const lines = text.split('\n').filter(l => l.trim())
+                                    if (lines.length < 2) {
+                                        toast.error('Arquivo vazio ou sem dados')
+                                        return
+                                    }
+                                    const headers = lines[0].split(/[;,\t]/).map(h => h.trim().replace(/"/g, ''))
+                                    const rows = lines.slice(1).map(line => {
+                                        const values = line.split(/[;,\t]/).map(v => v.trim().replace(/"/g, ''))
+                                        const obj: any = {}
+                                        headers.forEach((h, i) => { obj[h] = values[i] || '' })
+                                        return obj
+                                    }).filter(r => {
+                                        const name = r.name || r.produto || r.Nome || r.Produto || r.PRODUTO
+                                        return name && name.trim()
+                                    })
+                                    setImportData(rows)
+                                    toast.success(`${rows.length} produto(s) encontrado(s)`)
+                                }
+                                reader.readAsText(file, 'UTF-8')
+                            }}
+                        />
+                        {importData.length > 0 && (
+                            <div className="border rounded p-3 max-h-48 overflow-y-auto text-sm">
+                                <p className="font-semibold mb-2">{importData.length} produto(s) para importar:</p>
+                                {importData.slice(0, 10).map((row, i) => (
+                                    <p key={i} className="text-muted-foreground truncate">
+                                        {row.name || row.produto || row.Nome || row.Produto || row.PRODUTO}
+                                    </p>
+                                ))}
+                                {importData.length > 10 && <p className="text-muted-foreground">...e mais {importData.length - 10}</p>}
+                            </div>
+                        )}
+                        <Button
+                            className="w-full"
+                            disabled={importData.length === 0 || importing}
+                            onClick={async () => {
+                                setImporting(true)
+                                try {
+                                    const res = await fetch('/api/inventory/import', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ csvData: importData })
+                                    })
+                                    const json = await res.json()
+                                    if (json.error) throw new Error(json.error)
+                                    toast.success(json.message)
+                                    if (json.errors?.length > 0) {
+                                        toast.warning(`${json.errors.length} erro(s) durante importação`)
+                                    }
+                                    setShowImport(false)
+                                    setImportData([])
+                                    fetchData()
+                                } catch (err: any) {
+                                    toast.error(err.message || 'Erro na importação')
+                                } finally {
+                                    setImporting(false)
+                                }
+                            }}
+                        >
+                            {importing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Importar {importData.length} Produto(s)
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Summary Cards */}
             {summary && (

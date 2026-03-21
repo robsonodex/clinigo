@@ -71,6 +71,8 @@ interface Contract {
     weekly_hours_limit: number | null;
     fixed_salary: number | null;
     extra_per_appointment: number | null;
+    overtime_start_time: string | null;
+    overtime_days: number[];
     doctor: {
         id: string;
         crm: string;
@@ -98,6 +100,8 @@ const CONTRACT_TYPES = [
     { value: 'FIXED_HOURS', label: 'Salário Fixo + Excedente por Atendimento' },
 ];
 
+const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
 const INITIAL_FORM = {
     doctor_id: '',
     contract_type: 'PERCENTAGE_GROSS',
@@ -112,6 +116,8 @@ const INITIAL_FORM = {
     weekly_hours_limit: 0,
     fixed_salary: 0,
     extra_per_appointment: 0,
+    overtime_start_time: '18:00',
+    overtime_days: [6] as number[],
 };
 
 export default function ContractsPage() {
@@ -225,6 +231,8 @@ export default function ContractsPage() {
             weekly_hours_limit: contract.weekly_hours_limit || 0,
             fixed_salary: contract.fixed_salary || 0,
             extra_per_appointment: contract.extra_per_appointment || 0,
+            overtime_start_time: contract.overtime_start_time || '18:00',
+            overtime_days: contract.overtime_days || [6],
         });
         setShowEditDialog(true);
     };
@@ -448,8 +456,50 @@ export default function ContractsPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-blue-600">
-                                            Exemplo: 18h semanais = salário fixo. Acima disso, cada atendimento extra é pago individualmente.
+                                        <div className="grid grid-cols-2 gap-4 mt-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm">Hora Início Extra</Label>
+                                                <Input
+                                                    type="time"
+                                                    value={formData.overtime_start_time || '18:00'}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        overtime_start_time: e.target.value
+                                                    }))}
+                                                />
+                                                <p className="text-xs text-muted-foreground">Atendimentos após esse horário geram pagamento extra</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-sm">Dias de Pagamento Extra</Label>
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {DAY_LABELS.map((day, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            className={`px-2 py-1 text-xs rounded border transition-colors ${
+                                                                (formData.overtime_days || []).includes(idx)
+                                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                                    : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                                                            }`}
+                                                            onClick={() => {
+                                                                const days = formData.overtime_days || [];
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    overtime_days: days.includes(idx)
+                                                                        ? days.filter((d: number) => d !== idx)
+                                                                        : [...days, idx]
+                                                                }));
+                                                            }}
+                                                        >
+                                                            {day}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">Todos os atendimentos nesses dias geram pagamento extra</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-blue-600 mt-2">
+                                            Exemplo: Seg-Sex até 18h = salário fixo. Após 18h ou aos Sábados = pagamento por atendimento extra.
                                         </p>
                                     </div>
                                 )}
@@ -576,7 +626,7 @@ export default function ContractsPage() {
                                         </TableCell>
                                         <TableCell className="text-center">
                                             {contract.contract_type === 'FIXED_HOURS'
-                                                ? <span className="text-sm"><Clock className="w-3 h-3 inline mr-1" />{contract.weekly_hours_limit}h/sem • R$ {contract.fixed_salary} + R$ {contract.extra_per_appointment}/exc</span>
+                                                ? <span className="text-sm"><Clock className="w-3 h-3 inline mr-1" />R$ {contract.fixed_salary}{contract.overtime_start_time ? ` • Extra após ${contract.overtime_start_time}` : ''}{contract.overtime_days?.length ? ` • ${contract.overtime_days.map((d: number) => DAY_LABELS[d]).join(', ')}` : ''} • R$ {contract.extra_per_appointment}/exc</span>
                                                 : contract.contract_type.includes('PERCENTAGE')
                                                     ? `${contract.percentage_private}%`
                                                     : `R$ ${contract.fixed_value_private}`
@@ -762,7 +812,7 @@ export default function ContractsPage() {
                             </div>
                         )}
 
-                        {/* Campos FIXED_HOURS */}
+                        {/* Campos FIXED_HOURS - Edit */}
                         {editFormData.contract_type === 'FIXED_HOURS' && (
                             <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                                 <p className="text-sm font-medium text-blue-800">
@@ -813,6 +863,48 @@ export default function ContractsPage() {
                                                 }))}
                                             />
                                         </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">Hora Início Extra</Label>
+                                        <Input
+                                            type="time"
+                                            value={editFormData.overtime_start_time || '18:00'}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                overtime_start_time: e.target.value
+                                            }))}
+                                        />
+                                        <p className="text-xs text-muted-foreground">Atendimentos após esse horário geram pagamento extra</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">Dias de Pagamento Extra</Label>
+                                        <div className="flex gap-1 flex-wrap">
+                                            {DAY_LABELS.map((day, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    className={`px-2 py-1 text-xs rounded border transition-colors ${
+                                                        (editFormData.overtime_days || []).includes(idx)
+                                                            ? 'bg-blue-600 text-white border-blue-600'
+                                                            : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                                                    }`}
+                                                    onClick={() => {
+                                                        const days = editFormData.overtime_days || [];
+                                                        setEditFormData(prev => ({
+                                                            ...prev,
+                                                            overtime_days: days.includes(idx)
+                                                                ? days.filter((d: number) => d !== idx)
+                                                                : [...days, idx]
+                                                        }));
+                                                    }}
+                                                >
+                                                    {day}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Todos os atendimentos nesses dias geram pagamento extra</p>
                                     </div>
                                 </div>
                             </div>

@@ -22,6 +22,8 @@ const contractSchema = z.object({
     weekly_hours_limit: z.number().min(0).optional(),
     fixed_salary: z.number().min(0).optional(),
     extra_per_appointment: z.number().min(0).optional(),
+    overtime_start_time: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
+    overtime_days: z.array(z.number().min(0).max(6)).optional(),
 });
 
 // GET: Lista contratos da clínica
