@@ -29,21 +29,21 @@ export async function POST(
         const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
             .select(`
-                id,
-                patient_id,
-                doctor_id,
-                clinic_id,
-                scheduled_at,
+                *,
                 patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
                 doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name)),
-                clinic:clinics!appointments_clinic_id_fkey(id, name, slug, email, phone)
+                clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
             `)
             .eq('id', appointmentId)
             .single()
 
         if (appointmentError || !appointment) {
+            console.error('[FATAL] Error fetching appointment on generate-qr:', appointmentError)
             return NextResponse.json(
-                { error: 'Agendamento não encontrado' },
+                { 
+                    error: 'Agendamento não encontrado',
+                    details: appointmentError
+                },
                 { status: 404 }
             )
         }
@@ -92,6 +92,9 @@ export async function POST(
                 qrCodeImage: qrCodeDataUrl
             }
 
+            // Prevent Unique Constraint Error by deleting any previous (expired) qr code first
+            await supabase.from('appointment_qr_codes').delete().eq('appointment_id', appointmentId)
+
             // Save to database
             const { data: newQr, error: insertError } = await supabase
                 .from('appointment_qr_codes')
@@ -133,6 +136,12 @@ export async function POST(
             )
         }
 
+        // Safe parse stringified JSONB in case Supabase returns it as string
+        let parsedQrData = qrRecord.qr_data;
+        if (typeof parsedQrData === 'string') {
+            try { parsedQrData = JSON.parse(parsedQrData); } catch (e) { }
+        }
+
         return NextResponse.json({
             success: true,
             qrCode: {
@@ -143,9 +152,10 @@ export async function POST(
                 sentViaWhatsApp: qrRecord.sent_via_whatsapp,
                 preRegistrationCompleted: qrRecord.pre_registration_completed
             },
-            preRegistrationUrl: qrRecord.qr_data?.preRegistrationUrl,
-            qrCodeImage: qrRecord.qr_data?.qrCodeImage,
+            preRegistrationUrl: parsedQrData?.preRegistrationUrl || parsedQrData?.checkinUrl,
+            qrCodeImage: parsedQrData?.qrCodeImage || parsedQrData?.qr_code_image,
             appointment: {
+
                 id: appointmentData.id,
                 scheduledAt: appointmentData.scheduled_at,
                 patientName: appointmentData.patient?.full_name,

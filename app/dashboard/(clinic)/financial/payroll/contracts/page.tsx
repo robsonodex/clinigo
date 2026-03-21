@@ -41,7 +41,18 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Plus, FileText, Percent, DollarSign, Loader2, Clock } from 'lucide-react';
+import { Plus, FileText, Percent, DollarSign, Loader2, Clock, Pencil, Trash2, Download } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 
@@ -62,9 +73,11 @@ interface Contract {
     extra_per_appointment: number | null;
     doctor: {
         id: string;
-        name: string;
         crm: string;
         specialty: string;
+        user: {
+            full_name: string;
+        };
     };
 }
 
@@ -85,24 +98,29 @@ const CONTRACT_TYPES = [
     { value: 'FIXED_HOURS', label: 'Salário Fixo + Excedente por Atendimento' },
 ];
 
+const INITIAL_FORM = {
+    doctor_id: '',
+    contract_type: 'PERCENTAGE_GROSS',
+    percentage_private: 70,
+    percentage_insurance: 60,
+    fixed_value_private: 0,
+    fixed_value_insurance: 0,
+    apply_tax_retention: true,
+    inss_rate: 11,
+    irrf_rate: 0,
+    iss_rate: 5,
+    weekly_hours_limit: 0,
+    fixed_salary: 0,
+    extra_per_appointment: 0,
+};
+
 export default function ContractsPage() {
     const [showDialog, setShowDialog] = useState(false);
+    const [editingContract, setEditingContract] = useState<Contract | null>(null);
+    const [showEditDialog, setShowEditDialog] = useState(false);
     const profLabel = useProfessionalLabel();
-    const [formData, setFormData] = useState({
-        doctor_id: '',
-        contract_type: 'PERCENTAGE_GROSS',
-        percentage_private: 70,
-        percentage_insurance: 60,
-        fixed_value_private: 0,
-        fixed_value_insurance: 0,
-        apply_tax_retention: true,
-        inss_rate: 11,
-        irrf_rate: 0,
-        iss_rate: 5,
-        weekly_hours_limit: 0,
-        fixed_salary: 0,
-        extra_per_appointment: 0,
-    });
+    const [formData, setFormData] = useState(INITIAL_FORM);
+    const [editFormData, setEditFormData] = useState(INITIAL_FORM);
 
     // Buscar contratos
     const { data: contracts, isLoading, refetch } = useQuery({
@@ -141,26 +159,98 @@ export default function ContractsPage() {
             toast.success('Contrato criado com sucesso!');
             setShowDialog(false);
             refetch();
-            setFormData({
-                doctor_id: '',
-                contract_type: 'PERCENTAGE_GROSS',
-                percentage_private: 70,
-                percentage_insurance: 60,
-                fixed_value_private: 0,
-                fixed_value_insurance: 0,
-                apply_tax_retention: true,
-                inss_rate: 11,
-                irrf_rate: 0,
-                iss_rate: 5,
-                weekly_hours_limit: 0,
-                fixed_salary: 0,
-                extra_per_appointment: 0,
-            });
+            setFormData(INITIAL_FORM);
         },
         onError: (error: Error) => {
             toast.error(error.message);
         },
     });
+
+    // Atualizar contrato
+    const updateMutation = useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: typeof editFormData }) => {
+            const res = await fetch(`/api/payroll/contracts/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            return json;
+        },
+        onSuccess: () => {
+            toast.success('Contrato atualizado com sucesso!');
+            setShowEditDialog(false);
+            setEditingContract(null);
+            refetch();
+        },
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+
+    // Excluir contrato
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`/api/payroll/contracts/${id}`, {
+                method: 'DELETE',
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            return json;
+        },
+        onSuccess: () => {
+            toast.success('Contrato excluído com sucesso!');
+            refetch();
+        },
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+
+    // Abrir dialog de edição
+    const handleEdit = (contract: Contract) => {
+        setEditingContract(contract);
+        setEditFormData({
+            doctor_id: contract.doctor_id,
+            contract_type: contract.contract_type,
+            percentage_private: contract.percentage_private,
+            percentage_insurance: contract.percentage_insurance,
+            fixed_value_private: contract.fixed_value_private,
+            fixed_value_insurance: contract.fixed_value_insurance,
+            apply_tax_retention: contract.apply_tax_retention,
+            inss_rate: contract.inss_rate,
+            irrf_rate: (contract as any).irrf_rate || 0,
+            iss_rate: (contract as any).iss_rate || 0,
+            weekly_hours_limit: contract.weekly_hours_limit || 0,
+            fixed_salary: contract.fixed_salary || 0,
+            extra_per_appointment: contract.extra_per_appointment || 0,
+        });
+        setShowEditDialog(true);
+    };
+
+    // Download PDF
+    const handleDownloadPdf = async (contractId: string) => {
+        try {
+            const res = await fetch(`/api/payroll/contracts/${contractId}/pdf`);
+            if (!res.ok) {
+                const json = await res.json();
+                throw new Error(json.error || 'Erro ao gerar PDF');
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `contrato_${contractId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('PDF gerado com sucesso!');
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao gerar PDF');
+        }
+    };
 
     return (
         <div className="space-y-6 p-6">
@@ -467,6 +557,7 @@ export default function ContractsPage() {
                                     <TableHead className="text-center">Convênio</TableHead>
                                     <TableHead className="text-center">Impostos</TableHead>
                                     <TableHead className="text-center">Status</TableHead>
+                                    <TableHead className="text-center">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -474,7 +565,7 @@ export default function ContractsPage() {
                                     <TableRow key={contract.id}>
                                         <TableCell>
                                             <div>
-                                                <div className="font-medium">{contract.doctor?.name}</div>
+                                                <div className="font-medium">{contract.doctor?.user?.full_name}</div>
                                                 <div className="text-sm text-muted-foreground">
                                                     CRM {contract.doctor?.crm}
                                                 </div>
@@ -511,6 +602,57 @@ export default function ContractsPage() {
                                                 {contract.is_active ? 'Ativo' : 'Inativo'}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Editar contrato"
+                                                    onClick={() => handleEdit(contract)}
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Baixar PDF"
+                                                    onClick={() => handleDownloadPdf(contract.id)}
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="Excluir contrato"
+                                                            className="text-destructive hover:text-destructive"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Excluir Contrato</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Tem certeza que deseja excluir definitivamente o contrato de{' '}
+                                                                <strong>{contract.doctor?.user?.full_name}</strong>?
+                                                                Esta ação não pode ser desfeita.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => deleteMutation.mutate(contract.id)}
+                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                            >
+                                                                Excluir
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -518,6 +660,236 @@ export default function ContractsPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Dialog de Edição */}
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Editar Contrato</DialogTitle>
+                        <DialogDescription>
+                            {editingContract?.doctor?.user?.full_name} - Altere os dados do contrato de repasse
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Tipo de contrato */}
+                        <div className="space-y-2">
+                            <Label>Tipo de Contrato</Label>
+                            <Select
+                                value={editFormData.contract_type}
+                                onValueChange={(v) => setEditFormData(prev => ({ ...prev, contract_type: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {CONTRACT_TYPES.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                            {type.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Percentuais */}
+                        {editFormData.contract_type.includes('PERCENTAGE') && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>% Particular</Label>
+                                    <div className="relative">
+                                        <Input
+                                            type="number"
+                                            value={editFormData.percentage_private}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                percentage_private: Number(e.target.value)
+                                            }))}
+                                        />
+                                        <Percent className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>% Convênio</Label>
+                                    <div className="relative">
+                                        <Input
+                                            type="number"
+                                            value={editFormData.percentage_insurance}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                percentage_insurance: Number(e.target.value)
+                                            }))}
+                                        />
+                                        <Percent className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Valores fixos */}
+                        {editFormData.contract_type === 'FIXED_VALUE' && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Valor Particular</Label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                        <Input
+                                            type="number"
+                                            className="pl-8"
+                                            value={editFormData.fixed_value_private}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                fixed_value_private: Number(e.target.value)
+                                            }))}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Valor Convênio</Label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                        <Input
+                                            type="number"
+                                            className="pl-8"
+                                            value={editFormData.fixed_value_insurance}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                fixed_value_insurance: Number(e.target.value)
+                                            }))}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Campos FIXED_HOURS */}
+                        {editFormData.contract_type === 'FIXED_HOURS' && (
+                            <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-sm font-medium text-blue-800">
+                                    <Clock className="w-4 h-4 inline mr-1" />
+                                    Configuração de Horas Contratadas
+                                </p>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">Horas Semanais</Label>
+                                        <Input
+                                            type="number"
+                                            step="0.5"
+                                            value={editFormData.weekly_hours_limit || ''}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                weekly_hours_limit: Number(e.target.value)
+                                            }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">Salário Fixo (R$)</Label>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                className="pl-8"
+                                                value={editFormData.fixed_salary || ''}
+                                                onChange={(e) => setEditFormData(prev => ({
+                                                    ...prev,
+                                                    fixed_salary: Number(e.target.value)
+                                                }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">Por Excedente (R$)</Label>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                className="pl-8"
+                                                value={editFormData.extra_per_appointment || ''}
+                                                onChange={(e) => setEditFormData(prev => ({
+                                                    ...prev,
+                                                    extra_per_appointment: Number(e.target.value)
+                                                }))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Impostos */}
+                        <div className="space-y-4 pt-4 border-t">
+                            <div className="flex items-center justify-between">
+                                <Label>Reter Impostos</Label>
+                                <Switch
+                                    checked={editFormData.apply_tax_retention}
+                                    onCheckedChange={(v) => setEditFormData(prev => ({
+                                        ...prev,
+                                        apply_tax_retention: v
+                                    }))}
+                                />
+                            </div>
+
+                            {editFormData.apply_tax_retention && (
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">INSS (%)</Label>
+                                        <Input
+                                            type="number"
+                                            value={editFormData.inss_rate}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                inss_rate: Number(e.target.value)
+                                            }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">IRRF (%)</Label>
+                                        <Input
+                                            type="number"
+                                            value={editFormData.irrf_rate}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                irrf_rate: Number(e.target.value)
+                                            }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm">ISS (%)</Label>
+                                        <Input
+                                            type="number"
+                                            value={editFormData.iss_rate}
+                                            onChange={(e) => setEditFormData(prev => ({
+                                                ...prev,
+                                                iss_rate: Number(e.target.value)
+                                            }))}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={() => editingContract && updateMutation.mutate({
+                                id: editingContract.id,
+                                data: editFormData,
+                            })}
+                            disabled={updateMutation.isPending}
+                        >
+                            {updateMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : null}
+                            Salvar Alterações
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -8,7 +8,7 @@ import { type NextRequest } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, BadRequestError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
-import { encryptPassword, testSMTPConnection } from '@/lib/services/email-multi-tenant'
+import { encryptPassword, decryptPassword, testSMTPConnection } from '@/lib/services/email-multi-tenant'
 import { z } from 'zod'
 
 const smtpConfigSchema = z.object({
@@ -43,15 +43,15 @@ export async function GET(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user || (!(user as any).clinic_id && userRole !== 'SUPER_ADMIN')) {
-            throw new BadRequestError('Clínica não encontrada')
+        // For SUPER_ADMIN without clinic_id, fallback to x-clinic-id header or query param
+        let clinicId = (user as any)?.clinic_id
+        if (!clinicId && userRole === 'SUPER_ADMIN') {
+            clinicId = request.headers.get('x-clinic-id') || request.nextUrl.searchParams.get('clinic_id')
         }
 
-        const clinicId = (user as any).clinic_id
-
-        // SMTP is available for all plans - no feature check needed
-
-        if (!clinicId) throw new BadRequestError('Clínica indefinida')
+        if (!clinicId) {
+            throw new BadRequestError('Clínica não encontrada. Para Super Admin, passe clinic_id como parâmetro.')
+        }
 
         // Get SMTP config (never return password)
         // Note: smtp_secure is not a database column, it's derived from smtp_port
@@ -104,11 +104,15 @@ export async function PATCH(request: NextRequest) {
             .eq('id', userId)
             .single()
 
-        if (!user || !(user as any).clinic_id) {
-            throw new BadRequestError('Clínica não encontrada')
+        // For SUPER_ADMIN without clinic_id, fallback to x-clinic-id header
+        let clinicId = (user as any)?.clinic_id
+        if (!clinicId && userRole === 'SUPER_ADMIN') {
+            clinicId = request.headers.get('x-clinic-id')
         }
 
-        const clinicId = (user as any).clinic_id
+        if (!clinicId) {
+            throw new BadRequestError('Clínica não encontrada')
+        }
 
         // SMTP is available for all plans - no feature check needed
 
@@ -158,12 +162,35 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { smtp_host, smtp_port, smtp_user, smtp_password, test_email } = body
 
-        if (!smtp_host || !smtp_user || !smtp_password) {
-            throw new BadRequestError('Host, usuário e senha são obrigatórios para teste')
+        if (!smtp_host || !smtp_user) {
+            throw new BadRequestError('Host e usuário são obrigatórios para teste')
         }
 
         if (!test_email) {
             throw new BadRequestError('E-mail de destino é obrigatório para o teste')
+        }
+
+        let finalPassword = smtp_password;
+
+        if (!finalPassword) {
+            // we need to get it from the DB
+            const supabase = await createClient()
+            const { data: user } = await (supabase.from('users') as any).select('clinic_id').eq('id', userId).single()
+            let testClinicId = (user as any)?.clinic_id
+            if (!testClinicId && userRole === 'SUPER_ADMIN') {
+                testClinicId = request.headers.get('x-clinic-id')
+            }
+            if (testClinicId) {
+                const serviceClient = createServiceRoleClient()
+                const { data: clinic } = await (serviceClient.from('clinics') as any).select('smtp_password').eq('id', testClinicId).single()
+                if (clinic?.smtp_password) {
+                    finalPassword = decryptPassword(clinic.smtp_password)
+                }
+            }
+        }
+
+        if (!finalPassword) {
+            throw new BadRequestError('Senha do SMTP é obrigatória para teste')
         }
 
         // Test the connection and send test email
@@ -171,7 +198,7 @@ export async function POST(request: NextRequest) {
             host: smtp_host,
             port: smtp_port || 587,
             user: smtp_user,
-            password: smtp_password,
+            password: finalPassword,
             testEmail: test_email,
         })
 

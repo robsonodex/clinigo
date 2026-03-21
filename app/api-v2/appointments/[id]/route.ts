@@ -101,11 +101,16 @@ export async function GET(
 
             if (qrData) {
                 const qr = qrData as any
+                let parsedQrData = qr.qr_data;
+                if (typeof parsedQrData === 'string') {
+                    try { parsedQrData = JSON.parse(parsedQrData); } catch (e) { }
+                }
+
                 qrCode = {
                     id: qr.id,
                     token: qr.qr_token,
-                    image: qr.qr_data?.qrCodeImage || qr.qr_data?.qr_code_image,
-                    url: qr.qr_data?.checkinUrl || qr.qr_data?.checkin_url,
+                    image: parsedQrData?.qrCodeImage || parsedQrData?.qr_code_image,
+                    url: parsedQrData?.checkinUrl || parsedQrData?.checkin_url || parsedQrData?.preRegistrationUrl,
                     expires_at: qr.expires_at
                 }
             }

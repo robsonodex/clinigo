@@ -27,7 +27,7 @@ interface SendEmailParams {
 /**
  * Decrypt SMTP password stored in database
  */
-function decryptPassword(encrypted: string): string {
+export function decryptPassword(encrypted: string): string {
     const encryptionKey = process.env.ENCRYPTION_KEY
     if (!encryptionKey) {
         throw new Error('ENCRYPTION_KEY not configured')
@@ -196,6 +196,9 @@ export async function testSMTPConnection(config: Partial<SMTPConfig> & { testEma
             auth: {
                 user: config.user,
                 pass: config.password,
+            },
+            tls: {
+                rejectUnauthorized: false, // Allow shared hosting certificates (e.g. Locaweb)
             },
         })
 

@@ -82,6 +82,7 @@ const TIME_SLOTS = Array.from({ length: 33 }, (_, i) => {
 
 // Doctor color palette for visual distinction
 const DOCTOR_COLORS = [
+    // Tons claros (100)
     { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-800', accent: 'bg-emerald-500', hex: '#10b981' },
     { bg: 'bg-sky-100', border: 'border-sky-400', text: 'text-sky-800', accent: 'bg-sky-500', hex: '#0ea5e9' },
     { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-800', accent: 'bg-amber-500', hex: '#f59e0b' },
@@ -90,12 +91,49 @@ const DOCTOR_COLORS = [
     { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-800', accent: 'bg-orange-500', hex: '#f97316' },
     { bg: 'bg-cyan-100', border: 'border-cyan-400', text: 'text-cyan-800', accent: 'bg-cyan-500', hex: '#06b6d4' },
     { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800', accent: 'bg-pink-500', hex: '#ec4899' },
+    { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-800', accent: 'bg-blue-500', hex: '#3b82f6' },
+    { bg: 'bg-teal-100', border: 'border-teal-400', text: 'text-teal-800', accent: 'bg-teal-500', hex: '#14b8a6' },
+    { bg: 'bg-indigo-100', border: 'border-indigo-400', text: 'text-indigo-800', accent: 'bg-indigo-500', hex: '#6366f1' },
+    { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-800', accent: 'bg-red-500', hex: '#ef4444' },
+    { bg: 'bg-fuchsia-100', border: 'border-fuchsia-400', text: 'text-fuchsia-800', accent: 'bg-fuchsia-500', hex: '#d946ef' },
+    { bg: 'bg-lime-100', border: 'border-lime-400', text: 'text-lime-800', accent: 'bg-lime-500', hex: '#84cc16' },
+    { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-800', accent: 'bg-green-500', hex: '#22c55e' },
+    { bg: 'bg-slate-100', border: 'border-slate-400', text: 'text-slate-800', accent: 'bg-slate-500', hex: '#64748b' },
+    { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-800', accent: 'bg-yellow-500', hex: '#eab308' },
+    { bg: 'bg-stone-100', border: 'border-stone-400', text: 'text-stone-800', accent: 'bg-stone-500', hex: '#78716c' },
+    { bg: 'bg-zinc-100', border: 'border-zinc-400', text: 'text-zinc-800', accent: 'bg-zinc-500', hex: '#71717a' },
+    { bg: 'bg-neutral-100', border: 'border-neutral-400', text: 'text-neutral-800', accent: 'bg-neutral-500', hex: '#737373' },
+    // Tons um pouco mais fortes (200) para garantir até 35 médicos
+    { bg: 'bg-emerald-200', border: 'border-emerald-500', text: 'text-emerald-900', accent: 'bg-emerald-600', hex: '#10b981' },
+    { bg: 'bg-sky-200', border: 'border-sky-500', text: 'text-sky-900', accent: 'bg-sky-600', hex: '#0ea5e9' },
+    { bg: 'bg-amber-200', border: 'border-amber-500', text: 'text-amber-900', accent: 'bg-amber-600', hex: '#f59e0b' },
+    { bg: 'bg-rose-200', border: 'border-rose-500', text: 'text-rose-900', accent: 'bg-rose-600', hex: '#f43f5e' },
+    { bg: 'bg-violet-200', border: 'border-violet-500', text: 'text-violet-900', accent: 'bg-violet-600', hex: '#8b5cf6' },
+    { bg: 'bg-orange-200', border: 'border-orange-500', text: 'text-orange-900', accent: 'bg-orange-600', hex: '#f97316' },
+    { bg: 'bg-cyan-200', border: 'border-cyan-500', text: 'text-cyan-900', accent: 'bg-cyan-600', hex: '#06b6d4' },
+    { bg: 'bg-pink-200', border: 'border-pink-500', text: 'text-pink-900', accent: 'bg-pink-600', hex: '#ec4899' },
+    { bg: 'bg-blue-200', border: 'border-blue-500', text: 'text-blue-900', accent: 'bg-blue-600', hex: '#3b82f6' },
+    { bg: 'bg-teal-200', border: 'border-teal-500', text: 'text-teal-900', accent: 'bg-teal-600', hex: '#14b8a6' },
+    { bg: 'bg-indigo-200', border: 'border-indigo-500', text: 'text-indigo-900', accent: 'bg-indigo-600', hex: '#6366f1' },
+    { bg: 'bg-red-200', border: 'border-red-500', text: 'text-red-900', accent: 'bg-red-600', hex: '#ef4444' },
+    { bg: 'bg-fuchsia-200', border: 'border-fuchsia-500', text: 'text-fuchsia-900', accent: 'bg-fuchsia-600', hex: '#d946ef' },
+    { bg: 'bg-lime-200', border: 'border-lime-500', text: 'text-lime-900', accent: 'bg-lime-600', hex: '#84cc16' },
+    { bg: 'bg-green-200', border: 'border-green-500', text: 'text-green-900', accent: 'bg-green-600', hex: '#22c55e' }
 ]
 
 // Timeline solid colors for Google Calendar style
 const TIMELINE_COLORS = [
+    // Padrão (600/500)
     'bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-red-500',
     'bg-indigo-600', 'bg-teal-600', 'bg-orange-500', 'bg-pink-600',
+    'bg-sky-600', 'bg-amber-500', 'bg-rose-500', 'bg-violet-600',
+    'bg-cyan-600', 'bg-fuchsia-600', 'bg-lime-600', 'bg-green-600',
+    'bg-slate-600', 'bg-yellow-500', 'bg-stone-600', 'bg-zinc-600',
+    // Tons mais escuros (700) para diferenciar
+    'bg-emerald-700', 'bg-sky-700', 'bg-amber-600', 'bg-rose-700',
+    'bg-violet-700', 'bg-orange-600', 'bg-cyan-700', 'bg-pink-700',
+    'bg-blue-700', 'bg-teal-700', 'bg-indigo-700', 'bg-red-600',
+    'bg-fuchsia-700', 'bg-lime-700', 'bg-green-700'
 ]
 
 // Map doctor IDs to colors (cached per render)

@@ -63,7 +63,7 @@ export function SMTPSettings() {
                 const fetchedConfig = data.data.config
                 setConfig({ ...config, ...fetchedConfig })
                 // Se já existe host configurado, marcar como salvo
-                if (fetchedConfig.smtp_host) {
+                if (fetchedConfig.smtp_host && fetchedConfig.smtp_enabled) {
                     setIsSaved(true)
                 }
             }

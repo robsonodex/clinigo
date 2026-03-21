@@ -1,6 +1,6 @@
 // app/api/payroll/contracts/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 const contractSchema = z.object({
@@ -28,13 +28,14 @@ const contractSchema = z.object({
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
+        const supabaseAdmin = createServiceRoleClient();
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        const { data: profile } = await supabaseAdmin
             .from('users')
             .select('clinic_id, role')
             .eq('id', user.id)
@@ -48,11 +49,11 @@ export async function GET(request: NextRequest) {
         const doctorId = searchParams.get('doctor_id');
         const activeOnly = searchParams.get('active_only') === 'true';
 
-        let query = supabase
+        let query = supabaseAdmin
             .from('doctor_contracts')
             .select(`
         *,
-        doctor:doctors(id, name, crm, specialty)
+        doctor:doctors(id, crm, specialty, user:users(full_name))
       `)
             .eq('clinic_id', profile.clinic_id)
             .order('created_at', { ascending: false });
@@ -81,13 +82,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
+        const supabaseAdmin = createServiceRoleClient();
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        const { data: profile } = await supabaseAdmin
             .from('users')
             .select('clinic_id, role')
             .eq('id', user.id)
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
         const validated = contractSchema.parse(body);
 
         // Desativar contratos anteriores do médico
-        await supabase
+        await supabaseAdmin
             .from('doctor_contracts')
             .update({ is_active: false })
             .eq('clinic_id', profile.clinic_id)
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
             .eq('is_active', true);
 
         // Criar novo contrato
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('doctor_contracts')
             .insert({
                 clinic_id: profile.clinic_id,
