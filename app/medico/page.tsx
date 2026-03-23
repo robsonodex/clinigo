@@ -44,6 +44,7 @@ export default function MedicoLoginPage() {
             }
 
             toast.success('Login realizado com sucesso!')
+
             router.push('/dashboard')
 
         } catch (error) {

@@ -9,6 +9,11 @@ import { cookies } from 'next/headers'
 import { handleApiError } from '@/lib/utils/errors'
 import { z } from 'zod'
 
+// Super Admin email whitelist (same as middleware.ts)
+const SUPER_ADMIN_EMAILS = (
+    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
+).split(',').map(e => e.trim().toLowerCase())
+
 const loginSchema = z.object({
     email: z.string().email('Email inválido'),
     password: z.string().min(1, 'Senha é obrigatória'),

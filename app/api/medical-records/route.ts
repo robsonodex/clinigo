@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
             return errorResponse('Unauthorized', { status: 401 })
         }
 
-        // Only doctors can create medical records
-        if (userRole !== 'DOCTOR') {
-            return errorResponse('Only doctors can create medical records', { status: 403 })
+        // Only doctors and clinic admins can create medical records
+        if (userRole !== 'DOCTOR' && userRole !== 'CLINIC_ADMIN') {
+            return errorResponse('Only doctors and admins can create medical records', { status: 403 })
         }
 
         const body = await request.json()

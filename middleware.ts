@@ -421,8 +421,8 @@ export async function middleware(request: NextRequest) {
 
         if (isSuperAdminEmail) {
             userRole = 'SUPER_ADMIN'
-            userClinicId = undefined
             userPlanType = 'ENTERPRISE' // Super admin has all access
+            userClinicId = undefined
         }
 
         // Get clinic plan type (for non-super admins)

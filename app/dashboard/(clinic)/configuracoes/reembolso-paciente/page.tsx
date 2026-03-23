@@ -39,6 +39,7 @@ interface PatientReimbursementRule {
     id: string
     patient_id: string
     therapy_type: string
+    billing_therapy_type: string | null
     billing_amount: number
     reimbursement_amount: number
     guides_per_session: number
@@ -67,6 +68,7 @@ const THERAPY_TYPES = [
 const INITIAL_FORM = {
     patient_id: '',
     therapy_type: '',
+    billing_therapy_type: '',
     billing_amount: 0,
     reimbursement_amount: 0,
     guides_per_session: 1,
@@ -151,6 +153,7 @@ export default function ReembolsoPacientePage() {
         setForm({
             patient_id: rule.patient_id,
             therapy_type: rule.therapy_type,
+            billing_therapy_type: rule.billing_therapy_type || '',
             billing_amount: rule.billing_amount,
             reimbursement_amount: rule.reimbursement_amount,
             guides_per_session: rule.guides_per_session,
@@ -235,7 +238,8 @@ export default function ReembolsoPacientePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Paciente</TableHead>
-                                    <TableHead>Tipo de Terapia</TableHead>
+                                    <TableHead>Terapia Real</TableHead>
+                                    <TableHead>Cobrar como</TableHead>
                                     <TableHead>Guias/Sessão</TableHead>
                                     <TableHead>Valor Cobrado</TableHead>
                                     <TableHead>Valor Reembolso</TableHead>
@@ -252,6 +256,13 @@ export default function ReembolsoPacientePage() {
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{rule.therapy_type}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {rule.billing_therapy_type ? (
+                                                <Badge variant="secondary">{rule.billing_therapy_type}</Badge>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">Mesma</span>
+                                            )}
                                         </TableCell>
                                         <TableCell>{rule.guides_per_session}</TableCell>
                                         <TableCell>R$ {Number(rule.billing_amount).toFixed(2)}</TableCell>
@@ -304,10 +315,10 @@ export default function ReembolsoPacientePage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Tipo de Terapia *</Label>
+                            <Label>Terapia Real (na Agenda) *</Label>
                             <Select value={form.therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, therapy_type: v }))}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o tipo" />
+                                    <SelectValue placeholder="Selecione a terapia real" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {THERAPY_TYPES.map((t) => (
@@ -315,6 +326,22 @@ export default function ReembolsoPacientePage() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <p className="text-xs text-muted-foreground">Terapia que o paciente realmente faz</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Cobrar como (Terapia para Reembolso)</Label>
+                            <Select value={form.billing_therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, billing_therapy_type: v }))}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione a terapia para faturamento" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {THERAPY_TYPES.map((t) => (
+                                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">Terapia que aparecerá no relatório/guia de reembolso do convênio</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

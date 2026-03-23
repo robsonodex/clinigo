@@ -206,7 +206,20 @@ export default function AgendaPage() {
         else setSelectedDate(addDays(currentDate, -1))
     }
 
-    const goToToday = () => setSelectedDate(new Date())
+    const goToToday = () => {
+        setSelectedDate(new Date())
+        // Scroll to current time
+        setTimeout(() => {
+            const currentHour = new Date().getHours()
+            const currentMinute = new Date().getMinutes()
+            const minuteSlot = currentMinute >= 30 ? '30' : '00'
+            const timeId = `time-slot-${String(currentHour).padStart(2, '0')}:${minuteSlot}`
+            const el = document.getElementById(timeId)
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+    }
 
     // Fetch appointments with caching
     const { data: appointments, isLoading } = useQuery({
@@ -506,7 +519,7 @@ export default function AgendaPage() {
                         )}
 
                         {TIME_SLOTS.map((time) => (
-                            <div key={time} className="grid grid-cols-8 border-b min-h-[80px]">
+                            <div key={time} id={`time-slot-${time}`} className="grid grid-cols-8 border-b min-h-[80px]">
                                 {/* Time Label */}
                                 <div className="p-2 text-xs text-muted-foreground text-center border-r font-medium -mt-2">
                                     {time}
@@ -725,7 +738,7 @@ export default function AgendaPage() {
                                 const hasAnyAppointment = daysToRender.some(day => getAppointmentsForSlot(day, time).length > 0)
 
                                 return (
-                                    <tr key={time} className="border-b" style={{ height: '40px' }}>
+                                    <tr key={time} id={`time-slot-${time}`} className="border-b" style={{ height: '40px' }}>
                                         {/* Time Label */}
                                         <td className="w-[56px] py-1 px-1 text-[11px] text-muted-foreground text-right pr-2 border-r font-medium align-middle">
                                             {time}

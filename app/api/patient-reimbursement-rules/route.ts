@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         if (!profile) return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
 
         const body = await request.json()
-        const { patient_id, therapy_type, billing_amount, reimbursement_amount, guides_per_session, actual_session_duration, guide_session_duration, notes } = body
+        const { patient_id, therapy_type, billing_therapy_type, billing_amount, reimbursement_amount, guides_per_session, actual_session_duration, guide_session_duration, notes } = body
 
         if (!patient_id || !therapy_type) {
             return NextResponse.json({ error: 'Paciente e tipo de terapia são obrigatórios' }, { status: 400 })
@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
                 clinic_id: (profile as any).clinic_id,
                 patient_id,
                 therapy_type,
+                billing_therapy_type: billing_therapy_type || null,
                 billing_amount: billing_amount || 0,
                 reimbursement_amount: reimbursement_amount || 0,
                 guides_per_session: guides_per_session || 1,

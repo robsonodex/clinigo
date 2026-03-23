@@ -8,7 +8,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const MASTER_ADMIN_EMAIL = 'robsonfenriz@gmail.com'
+const MASTER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'robsonfenriz@gmail.com'
+
 const SUPER_ADMIN_ROUTES = [
     '/system-master-hub',
     '/api/super-admin',

@@ -75,8 +75,8 @@ export async function PATCH(
             return errorResponse('Unauthorized', 401)
         }
 
-        if (userRole !== 'DOCTOR') {
-            return errorResponse('Only doctors can update medical records', 403)
+        if (userRole !== 'DOCTOR' && userRole !== 'CLINIC_ADMIN') {
+            return errorResponse('Only doctors and admins can update medical records', 403)
         }
 
         const body = await request.json()
