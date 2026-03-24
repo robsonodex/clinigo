@@ -210,11 +210,18 @@ export default function AgendaPage() {
         setSelectedDate(new Date())
         // Scroll to current time
         setTimeout(() => {
-            const currentHour = new Date().getHours()
+            let currentHour = new Date().getHours()
             const currentMinute = new Date().getMinutes()
+            
+            // Adjust for out-of-bounds hours (calendar starts at 07:00 and ends at 23:00)
+            if (currentHour < 7) currentHour = 7
+            else if (currentHour > 23) currentHour = 23
+                
             const minuteSlot = currentMinute >= 30 ? '30' : '00'
             const timeId = `time-slot-${String(currentHour).padStart(2, '0')}:${minuteSlot}`
-            const el = document.getElementById(timeId)
+            
+            // Fallback to exactly 07:00 if somehow timeId is not found
+            const el = document.getElementById(timeId) || document.getElementById('time-slot-07:00')
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }

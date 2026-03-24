@@ -54,7 +54,7 @@ interface NavItem {
     title: string
     href: string
     icon: React.ComponentType<{ className?: string }>
-    roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR')[]
+    roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF')[]
     badge?: string
     minPlan?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
     children?: NavItem[]
@@ -86,7 +86,7 @@ const navigationSections: NavSection[] = [
                 title: 'Agenda',
                 href: '/dashboard/agenda',
                 icon: Calendar,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
             },
             {
                 title: 'Minha Agenda',
@@ -104,7 +104,7 @@ const navigationSections: NavSection[] = [
                 title: 'Recepção',
                 href: '/dashboard/recepcao',
                 icon: Clipboard,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
             },
             {
                 title: 'Horários',
@@ -128,7 +128,7 @@ const navigationSections: NavSection[] = [
                 title: 'Pacientes',
                 href: '/dashboard/pacientes',
                 icon: UserPlus,
-                roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE', 'STAFF'],
             },
         ],
     },
@@ -154,14 +154,14 @@ const navigationSections: NavSection[] = [
                 title: 'Documentos',
                 href: '/dashboard/documentos',
                 icon: FileArchive,
-                roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
                 // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Templates Prontuário',
                 href: '/dashboard/configuracoes/templates-prontuario',
                 icon: FileText,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'DOCTOR'],
             },
         ],
     },
@@ -172,14 +172,14 @@ const navigationSections: NavSection[] = [
                 title: 'Pagamentos',
                 href: '/dashboard/pagamentos',
                 icon: CreditCard,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
                 // Acessível a todos os planos (BASICO+)
             },
             {
                 title: 'Financeiro',
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
                 // Acessível a todos os planos - apenas Novo Lançamento (receita/despesa)
             },
             {
@@ -242,7 +242,7 @@ const navigationSections: NavSection[] = [
                 title: 'WhatsApp',
                 href: '/dashboard/whatsapp',
                 icon: MessageCircle,
-                roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },
