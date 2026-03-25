@@ -34,6 +34,7 @@ import {
     CheckCircle2,
     Sparkles,
 } from 'lucide-react'
+import { useTherapyTypes } from '@/lib/hooks/use-therapy-types'
 
 interface TherapyEntry {
     id: string
@@ -70,10 +71,7 @@ interface SuggestResponse {
     missing_specialties?: string[]
 }
 
-const SPECIALTIES = [
-    'ABA', 'Fonoaudiologia', 'Terapia Ocupacional', 'Psicologia',
-    'Psicopedagogia', 'Fisioterapia', 'Musicoterapia', 'Neuropediatria',
-]
+// SPECIALTIES agora vem do hook useTherapyTypes()
 
 interface SlotSuggestionModalProps {
     open: boolean
@@ -86,6 +84,7 @@ export function SlotSuggestionModal({
     onOpenChange,
     onSelectOption,
 }: SlotSuggestionModalProps) {
+    const { therapyTypes: SPECIALTIES } = useTherapyTypes()
     const [step, setStep] = useState<'config' | 'results'>('config')
     const [therapies, setTherapies] = useState<TherapyEntry[]>([
         { id: '1', specialty: '', sessions_per_week: 2 },

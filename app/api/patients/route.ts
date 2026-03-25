@@ -54,6 +54,39 @@ export async function GET(request: Request) {
             query = query.eq('clinic_id', userData.clinic_id)
         }
 
+        // DOCTOR não-coordenador: filtrar apenas pacientes com agendamentos do doctor
+        if (userData.role === 'DOCTOR') {
+            const { data: userFull } = await supabase
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', user.id)
+                .single()
+
+            if (!(userFull as any)?.is_coordinator) {
+                // Buscar doctor_id do usuário
+                const { data: doctor } = await supabase
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+
+                if (doctor) {
+                    // Buscar patient_ids dos agendamentos deste doctor
+                    const { data: appointments } = await supabase
+                        .from('appointments')
+                        .select('patient_id')
+                        .eq('doctor_id', doctor.id)
+
+                    const patientIds = [...new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))]
+                    if (patientIds.length > 0) {
+                        query = query.in('id', patientIds)
+                    } else {
+                        return NextResponse.json({ patients: [] })
+                    }
+                }
+            }
+        }
+
         // Search functionality
         if (search) {
             query = query.or(`full_name.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`)

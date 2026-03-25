@@ -34,6 +34,7 @@ import { Receipt, Plus, Pencil, Trash2, Loader2, DollarSign, Users } from 'lucid
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
+import { useTherapyTypes } from '@/lib/hooks/use-therapy-types'
 
 interface PatientReimbursementRule {
     id: string
@@ -53,17 +54,7 @@ interface PatientReimbursementRule {
     }
 }
 
-const THERAPY_TYPES = [
-    'Psicologia',
-    'Terapia Ocupacional',
-    'Fonoaudiologia',
-    'Fisioterapia',
-    'Psicopedagogia',
-    'Musicoterapia',
-    'Neuropsicologia',
-    'ABA',
-    'Outro',
-]
+// THERAPY_TYPES agora vem do hook useTherapyTypes()
 
 const INITIAL_FORM = {
     patient_id: '',
@@ -80,6 +71,7 @@ const INITIAL_FORM = {
 export default function ReembolsoPacientePage() {
     const { profile } = useAuth()
     const profLabel = useProfessionalLabel()
+    const { therapyTypes: THERAPY_TYPES } = useTherapyTypes()
     const [rules, setRules] = useState<PatientReimbursementRule[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)

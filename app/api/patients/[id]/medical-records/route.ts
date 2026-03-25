@@ -45,12 +45,33 @@ export async function GET(
             .eq('patient_id', patientId)
             .order('created_at', { ascending: false })
 
+        // Verificar se DOCTOR não-coordenador e filtrar
+        const { data: profile } = await supabase
+            .from('users')
+            .select('role, is_coordinator')
+            .eq('id', user.id)
+            .single()
+
+        let filteredRecords = records || []
+
+        if ((profile as any)?.role === 'DOCTOR' && !(profile as any)?.is_coordinator) {
+            const { data: doctor } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
+
+            if (doctor) {
+                filteredRecords = filteredRecords.filter((r: any) => r.doctor_id === (doctor as any).id)
+            }
+        }
+
         if (error) {
             console.error('Error fetching medical records:', error)
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        return NextResponse.json({ records })
+        return NextResponse.json({ records: filteredRecords })
     } catch (error) {
         console.error('Error in medical records API:', error)
         return NextResponse.json({ error: 'Erro ao buscar prontuários' }, { status: 500 })

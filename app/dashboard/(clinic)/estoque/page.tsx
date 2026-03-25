@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
     Package, Plus, Search, AlertTriangle, TrendingDown,
-    Loader2, ArrowUpCircle, ArrowDownCircle, Box, Upload
+    Loader2, ArrowUpCircle, ArrowDownCircle, Box, Upload, History, Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -33,6 +33,14 @@ interface StockSummary {
     lowStock: number
     outOfStock: number
     totalValue: number
+}
+
+interface ImportBatch {
+    batch_id: string
+    date: string
+    product_count: number
+    total_value: number
+    products: Array<{ name: string; quantity: number; cost: number }>
 }
 
 export default function InventoryPage() {
@@ -63,6 +71,11 @@ export default function InventoryPage() {
     const [showImport, setShowImport] = useState(false)
     const [importData, setImportData] = useState<any[]>([])
     const [importing, setImporting] = useState(false)
+
+    // Import history state
+    const [imports, setImports] = useState<ImportBatch[]>([])
+    const [loadingImports, setLoadingImports] = useState(false)
+    const [deletingBatch, setDeletingBatch] = useState<string | null>(null)
 
     // Movement form
     const [movementForm, setMovementForm] = useState({
@@ -194,6 +207,47 @@ export default function InventoryPage() {
         return { label: 'OK', color: 'bg-green-500' }
     }
 
+    const fetchImports = async () => {
+        setLoadingImports(true)
+        try {
+            const res = await fetch('/api/inventory/imports')
+            if (res.ok) {
+                const data = await res.json()
+                setImports(data.imports || [])
+            }
+        } catch (error) {
+            console.error('Error fetching imports:', error)
+        } finally {
+            setLoadingImports(false)
+        }
+    }
+
+    const handleDeleteImport = async (batchId: string) => {
+        if (!confirm('Tem certeza que deseja excluir toda esta importação? Todos os produtos serão removidos permanentemente.')) return
+        setDeletingBatch(batchId)
+        try {
+            const res = await fetch(`/api/inventory/imports?batch_id=${encodeURIComponent(batchId)}`, {
+                method: 'DELETE'
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+            toast.success(data.message)
+            fetchImports()
+            fetchData()
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir importação')
+        } finally {
+            setDeletingBatch(null)
+        }
+    }
+
+    const formatDate = (dateStr: string) => {
+        return new Date(dateStr).toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        })
+    }
+
     return (
         <div className="container mx-auto py-8 px-4 space-y-6">
             {/* Header */}
@@ -313,6 +367,9 @@ export default function InventoryPage() {
                 {/* Botão importar */}
                 <Button variant="outline" onClick={() => setShowImport(true)}>
                     <Upload className="h-4 w-4 mr-2" />Importar Planilha
+                </Button>
+                <Button variant="outline" onClick={() => { fetchImports() }}>
+                    <History className="h-4 w-4 mr-2" />Importações
                 </Button>
             </div>
 
@@ -572,6 +629,67 @@ export default function InventoryPage() {
                             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                             Registrar Movimento
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Import History Dialog */}
+            <Dialog open={imports.length > 0} onOpenChange={(v) => { if (!v) setImports([]) }}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5" />
+                            Histórico de Importações
+                        </DialogTitle>
+                        <DialogDescription>
+                            Visualize e exclua importações de planilha realizadas
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto py-2">
+                        {loadingImports ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            </div>
+                        ) : imports.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>Nenhuma importação encontrada</p>
+                            </div>
+                        ) : (
+                            imports.map((batch) => (
+                                <Card key={batch.batch_id} className="hover:shadow-md transition-shadow">
+                                    <CardContent className="py-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-medium">
+                                                    {formatDate(batch.date)}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {batch.product_count} produto(s) • {formatCurrency(batch.total_value)}
+                                                </p>
+                                                <div className="mt-1 text-xs text-muted-foreground">
+                                                    {batch.products.slice(0, 3).map((p, i) => (
+                                                        <span key={i}>{p.name}{i < Math.min(batch.products.length, 3) - 1 ? ', ' : ''}</span>
+                                                    ))}
+                                                    {batch.products.length > 3 && <span> ...e mais {batch.products.length - 3}</span>}
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleDeleteImport(batch.batch_id)}
+                                                disabled={deletingBatch === batch.batch_id}
+                                            >
+                                                {deletingBatch === batch.batch_id
+                                                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                                                    : <Trash2 className="h-4 w-4" />}
+                                                <span className="ml-1">Excluir</span>
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

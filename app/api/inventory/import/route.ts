@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Dados CSV vazios' }, { status: 400 })
         }
 
-        const results = { created: 0, errors: [] as string[] }
+        const results = { created: 0, updated: 0, errors: [] as string[] }
 
         for (const row of csvData) {
             try {
@@ -56,66 +56,137 @@ export async function POST(request: NextRequest) {
                 const responsible = row.responsible || row.responsavel || row.Responsável || ''
                 const minStock = parseInt(row.min_stock || row.estoque_minimo || row['Estoque Mínimo'] || '0') || 0
 
-                // Create product
-                const { data: product, error: prodError } = await (supabase as any)
+                // Verificar se produto com mesmo nome já existe na clínica
+                const { data: existingProduct } = await (supabase as any)
                     .from('products')
-                    .insert({
-                        clinic_id: clinicId,
-                        name: name.trim(),
-                        category_id: categoryId,
-                        cost_price: costPrice,
-                        unit,
-                        min_stock: minStock,
-                        reorder_point: minStock,
-                        supplier,
-                        responsible,
-                        sku: `PRD${Date.now().toString().slice(-8)}${Math.random().toString(36).slice(-3)}`,
-                    })
-                    .select()
-                    .single()
+                    .select('id')
+                    .eq('clinic_id', clinicId)
+                    .ilike('name', name.trim())
+                    .eq('is_active', true)
+                    .maybeSingle()
 
-                if (prodError) {
-                    results.errors.push(`Erro ao criar "${name}": ${prodError.message}`)
-                    continue
-                }
+                let productId: string
 
-                // Create stock record
-                await (supabase as any)
-                    .from('stock')
-                    .insert({
-                        clinic_id: clinicId,
-                        product_id: product.id,
-                        quantity,
-                        available_quantity: quantity,
-                        average_cost: costPrice,
-                    })
+                if (existingProduct) {
+                    // Produto já existe — atualizar estoque
+                    productId = existingProduct.id
 
-                // Create initial movement if quantity > 0
-                if (quantity > 0) {
-                    await (supabase as any)
-                        .from('stock_movements')
+                    if (quantity > 0) {
+                        // Buscar estoque atual
+                        const { data: currentStock } = await (supabase as any)
+                            .from('stock')
+                            .select('quantity, available_quantity')
+                            .eq('product_id', productId)
+                            .eq('clinic_id', clinicId)
+                            .maybeSingle()
+
+                        const currentQty = currentStock?.quantity || 0
+                        const currentAvail = currentStock?.available_quantity || 0
+
+                        if (currentStock) {
+                            await (supabase as any)
+                                .from('stock')
+                                .update({
+                                    quantity: currentQty + quantity,
+                                    available_quantity: currentAvail + quantity,
+                                    average_cost: costPrice || undefined,
+                                })
+                                .eq('product_id', productId)
+                                .eq('clinic_id', clinicId)
+                        } else {
+                            await (supabase as any)
+                                .from('stock')
+                                .insert({
+                                    clinic_id: clinicId,
+                                    product_id: productId,
+                                    quantity,
+                                    available_quantity: quantity,
+                                    average_cost: costPrice,
+                                })
+                        }
+
+                        // Registrar movimento
+                        await (supabase as any)
+                            .from('stock_movements')
+                            .insert({
+                                clinic_id: clinicId,
+                                product_id: productId,
+                                movement_type: 'purchase',
+                                quantity,
+                                unit_cost: costPrice,
+                                total_cost: costPrice * quantity,
+                                reference: 'Importação (atualização)',
+                                notes: 'Importado via planilha',
+                                moved_by: user.id,
+                            })
+                    }
+
+                    results.updated++
+                } else {
+                    // Produto novo — criar
+                    const { data: product, error: prodError } = await (supabase as any)
+                        .from('products')
                         .insert({
                             clinic_id: clinicId,
-                            product_id: product.id,
-                            movement_type: 'purchase',
-                            quantity,
-                            unit_cost: costPrice,
-                            total_cost: costPrice * quantity,
-                            reference: 'Importação inicial',
-                            notes: 'Importado via planilha',
-                            moved_by: user.id,
+                            name: name.trim(),
+                            category_id: categoryId,
+                            cost_price: costPrice,
+                            unit,
+                            min_stock: minStock,
+                            reorder_point: minStock,
+                            supplier,
+                            responsible,
+                            sku: `PRD${Date.now().toString().slice(-8)}${Math.random().toString(36).slice(-3)}`,
                         })
-                }
+                        .select()
+                        .single()
 
-                results.created++
+                    if (prodError) {
+                        results.errors.push(`Erro ao criar "${name}": ${prodError.message}`)
+                        continue
+                    }
+
+                    productId = product.id
+
+                    // Create stock record
+                    await (supabase as any)
+                        .from('stock')
+                        .insert({
+                            clinic_id: clinicId,
+                            product_id: productId,
+                            quantity,
+                            available_quantity: quantity,
+                            average_cost: costPrice,
+                        })
+
+                    // Create initial movement if quantity > 0
+                    if (quantity > 0) {
+                        await (supabase as any)
+                            .from('stock_movements')
+                            .insert({
+                                clinic_id: clinicId,
+                                product_id: productId,
+                                movement_type: 'purchase',
+                                quantity,
+                                unit_cost: costPrice,
+                                total_cost: costPrice * quantity,
+                                reference: 'Importação inicial',
+                                notes: 'Importado via planilha',
+                                moved_by: user.id,
+                            })
+                    }
+
+                    results.created++
+                }
             } catch (rowError: any) {
                 results.errors.push(`Erro: ${rowError.message}`)
             }
         }
 
         return NextResponse.json({
-            message: `${results.created} produto(s) importado(s) com sucesso`,
+            message: `${results.created} produto(s) criado(s), ${results.updated} atualizado(s)`,
             created: results.created,
+            updated: results.updated,
             errors: results.errors,
             total: csvData.length,
         })

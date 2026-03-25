@@ -51,6 +51,28 @@ export async function GET(request: NextRequest) {
             .order('created_at', { ascending: false })
             .limit(100)
 
+        // DOCTOR não-coordenador: filtrar apenas prontuários do próprio doctor
+        if (userRole === 'DOCTOR') {
+            const supabaseAuth = await createClient()
+            const { data: userFull } = await supabaseAuth
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', userId)
+                .single()
+
+            if (!(userFull as any)?.is_coordinator) {
+                const { data: doctor } = await supabaseAuth
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .single()
+
+                if (doctor) {
+                    query = query.eq('doctor_id', doctor.id)
+                }
+            }
+        }
+
         const { data: records, error } = await query
 
         // DEBUG: Log query results

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FileText, Plus, Pencil, Trash2, Loader2, Eye, GripVertical } from 'lucide-react'
+import { useTherapyTypes } from '@/lib/hooks/use-therapy-types'
 import { toast } from 'sonner'
 
 interface TemplateField {
@@ -53,21 +54,10 @@ const FIELD_TYPES = [
     { value: 'checklist', label: 'Checklist' },
 ]
 
-const SPECIALTIES = [
-    'Fonoaudiologia',
-    'Psicologia',
-    'Fisioterapia',
-    'Terapia Ocupacional',
-    'Neuropsicologia',
-    'Psicopedagogia',
-    'Nutrição',
-    'Medicina Geral',
-    'Pediatria',
-    'Psiquiatria',
-    'Outro',
-]
+// SPECIALTIES agora vem do hook useTherapyTypes()
 
 export default function TemplatesProntuarioPage() {
+    const { therapyTypes: SPECIALTIES } = useTherapyTypes()
     const [templates, setTemplates] = useState<Template[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)

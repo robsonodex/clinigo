@@ -353,6 +353,12 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN'],
             },
             {
+                title: 'Terapias',
+                href: '/dashboard/configuracoes/terapias',
+                icon: Stethoscope,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
                 title: 'Assinatura',
                 href: '/dashboard/configuracoes/assinatura',
                 icon: CreditCard,

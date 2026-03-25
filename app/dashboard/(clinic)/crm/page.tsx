@@ -312,6 +312,18 @@ export default function CRMPage() {
                                                 rows={2}
                                             />
                                         </div>
+                                        <div className="space-y-2">
+                                            <Label>Mensagem / Template</Label>
+                                            <Textarea
+                                                value={automationForm.action_template}
+                                                onChange={(e) => setAutomationForm(f => ({ ...f, action_template: e.target.value }))}
+                                                placeholder="Olá {{patient_name}}, feliz aniversário! 🎂 De toda equipe da {{clinic_name}}."
+                                                rows={3}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Use: {'{{patient_name}}'}, {'{{clinic_name}}'}, {'{{doctor_name}}'}
+                                            </p>
+                                        </div>
                                         <Button onClick={handleCreateAutomation} disabled={saving} className="w-full">
                                             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                             Criar Automação

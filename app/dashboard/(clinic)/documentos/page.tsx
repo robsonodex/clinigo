@@ -81,7 +81,7 @@ export default function DocumentsPage() {
 
     const fetchPatients = async () => {
         try {
-            const res = await fetch('/api/clinics/patients?limit=100')
+            const res = await fetch('/api/patients?limit=100')
             if (res.ok) {
                 const data = await res.json()
                 setPatients(data.patients || [])

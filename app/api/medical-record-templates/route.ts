@@ -56,11 +56,18 @@ export async function POST(request: NextRequest) {
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, is_coordinator')
             .eq('id', user.id)
             .single()
 
         if (!profile) return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
+
+        // Apenas CLINIC_ADMIN, SUPER_ADMIN, ou DOCTOR coordenador podem criar templates
+        const role = (profile as any).role
+        const isCoordinator = (profile as any).is_coordinator
+        if (role === 'DOCTOR' && !isCoordinator) {
+            return NextResponse.json({ error: 'Apenas administradores e coordenadores podem criar templates' }, { status: 403 })
+        }
 
         const body = await request.json()
         const { name, specialty, fields, is_default } = body
@@ -117,6 +124,19 @@ export async function PUT(request: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+        // Verificar permissão: apenas CLINIC_ADMIN, SUPER_ADMIN, ou DOCTOR coordenador
+        const { data: profile } = await supabase
+            .from('users')
+            .select('role, is_coordinator')
+            .eq('id', user.id)
+            .single()
+
+        const role = (profile as any)?.role
+        const isCoordinator = (profile as any)?.is_coordinator
+        if (role === 'DOCTOR' && !isCoordinator) {
+            return NextResponse.json({ error: 'Apenas administradores e coordenadores podem editar templates' }, { status: 403 })
+        }
+
         const body = await request.json()
         const { id, ...updateData } = body
 
@@ -143,6 +163,19 @@ export async function DELETE(request: NextRequest) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+        // Verificar permissão: apenas CLINIC_ADMIN, SUPER_ADMIN, ou DOCTOR coordenador
+        const { data: profile } = await supabase
+            .from('users')
+            .select('role, is_coordinator')
+            .eq('id', user.id)
+            .single()
+
+        const role = (profile as any)?.role
+        const isCoordinator = (profile as any)?.is_coordinator
+        if (role === 'DOCTOR' && !isCoordinator) {
+            return NextResponse.json({ error: 'Apenas administradores e coordenadores podem excluir templates' }, { status: 403 })
+        }
 
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
