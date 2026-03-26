@@ -27,8 +27,6 @@ import { toast } from 'sonner'
 
 interface TeleconsultaConfig {
     video_quality: 'auto' | 'hd' | 'sd'
-    recording_enabled: boolean
-    transcription_enabled: boolean
     consent_required: boolean
     consent_text: string
     waiting_room_enabled: boolean
@@ -39,12 +37,10 @@ interface TeleconsultaConfig {
 
 const DEFAULT_CONFIG: TeleconsultaConfig = {
     video_quality: 'auto',
-    recording_enabled: false,
-    transcription_enabled: false,
     consent_required: true,
-    consent_text: 'Autorizo a gravação desta teleconsulta para fins de documentação médica, conforme previsto na Resolução CFM nº 2.314/2022.',
+    consent_text: 'Autorizo a realização desta teleconsulta, conforme previsto na Resolução CFM nº 2.314/2022 e na LGPD.',
     waiting_room_enabled: true,
-    waiting_room_message: 'Aguarde, o médico irá atendê-lo em instantes.',
+    waiting_room_message: 'Aguarde, o profissional irá atendê-lo em instantes.',
     max_duration_minutes: 60,
     early_join_minutes: 15,
 }
@@ -129,7 +125,7 @@ export default function TeleconsultaConfigPage() {
                 <div>
                     <h1 className="text-3xl font-bold">Configurações de Teleconsulta</h1>
                     <p className="text-muted-foreground">
-                        Configure qualidade de vídeo, gravação e sala de espera virtual.
+                        Configure qualidade de vídeo, consentimento e sala de espera virtual.
                     </p>
                 </div>
                 <Button onClick={saveConfig} disabled={saving}>
@@ -143,14 +139,10 @@ export default function TeleconsultaConfigPage() {
             </div>
 
             <Tabs defaultValue="video" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+                <TabsList className="grid w-full grid-cols-3 max-w-xl">
                     <TabsTrigger value="video">
                         <Video className="w-4 h-4 mr-2" />
                         Vídeo
-                    </TabsTrigger>
-                    <TabsTrigger value="gravacao">
-                        <Camera className="w-4 h-4 mr-2" />
-                        Gravação
                     </TabsTrigger>
                     <TabsTrigger value="sala">
                         <Clock className="w-4 h-4 mr-2" />
@@ -239,65 +231,7 @@ export default function TeleconsultaConfigPage() {
                     </Card>
                 </TabsContent>
 
-                {/* TAB: Gravação */}
-                <TabsContent value="gravacao" className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Camera className="w-5 h-5" />
-                                Gravação de Consultas
-                            </CardTitle>
-                            <CardDescription>
-                                Configure a gravação e transcrição automática das teleconsultas
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-1">
-                                    <Label className="text-base">Gravação de Vídeo</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Grava toda a teleconsulta para documentação
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={config.recording_enabled}
-                                    onCheckedChange={(checked) => setConfig({ ...config, recording_enabled: checked })}
-                                />
-                            </div>
 
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <Label className="text-base">Transcrição Automática</Label>
-                                        <Badge variant="secondary">PRO</Badge>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        Converte o áudio em texto automaticamente
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={config.transcription_enabled}
-                                    onCheckedChange={(checked) => setConfig({ ...config, transcription_enabled: checked })}
-                                />
-                            </div>
-
-                            {config.recording_enabled && (
-                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <div className="flex items-start gap-3">
-                                        <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                                        <div>
-                                            <p className="font-medium text-yellow-800">Importante</p>
-                                            <p className="text-sm text-yellow-700">
-                                                A gravação requer consentimento do paciente. Certifique-se de que o
-                                                termo de consentimento está ativado e configurado corretamente.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
 
                 {/* TAB: Sala de Espera */}
                 <TabsContent value="sala" className="space-y-6">
@@ -352,7 +286,7 @@ export default function TeleconsultaConfigPage() {
                                 Termo de Consentimento
                             </CardTitle>
                             <CardDescription>
-                                Configure o termo de consentimento para gravação (LGPD/CFM)
+                                Configure o termo de consentimento para teleconsulta (LGPD/CFM)
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -391,7 +325,7 @@ export default function TeleconsultaConfigPage() {
                                         <p className="font-medium text-blue-800">Conformidade Legal</p>
                                         <p className="text-sm text-blue-700">
                                             De acordo com a Resolução CFM nº 2.314/2022 e a LGPD, o consentimento
-                                            do paciente é obrigatório para teleconsultas e gravações.
+                                            do paciente é obrigatório para teleconsultas.
                                         </p>
                                     </div>
                                 </div>

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
     Package, Plus, Search, AlertTriangle, TrendingDown,
-    Loader2, ArrowUpCircle, ArrowDownCircle, Box, Upload, History, Trash2
+    Loader2, ArrowUpCircle, ArrowDownCircle, Box, Upload, History, Trash2, Pencil
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -52,6 +52,15 @@ export default function InventoryPage() {
     const [showMovement, setShowMovement] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [saving, setSaving] = useState(false)
+
+    // Edit product state
+    const [showEditProduct, setShowEditProduct] = useState(false)
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+    const [editForm, setEditForm] = useState({
+        name: '', sku: '', unit: 'un', cost_price: '', sale_price: '',
+        min_stock: '', reorder_point: '', supplier: '', responsible: '',
+    })
+    const [deletingProduct, setDeletingProduct] = useState<string | null>(null)
 
     // Product form
     const [productForm, setProductForm] = useState({
@@ -238,6 +247,77 @@ export default function InventoryPage() {
             toast.error(err.message || 'Erro ao excluir importação')
         } finally {
             setDeletingBatch(null)
+        }
+    }
+
+    const openEditDialog = (product: Product) => {
+        setEditingProduct(product)
+        setEditForm({
+            name: product.name,
+            sku: product.sku || '',
+            unit: product.unit || 'un',
+            cost_price: String(product.cost_price || ''),
+            sale_price: String(product.sale_price || ''),
+            min_stock: String(product.min_stock || ''),
+            reorder_point: String(product.reorder_point || ''),
+            supplier: (product as any).supplier || '',
+            responsible: (product as any).responsible || '',
+        })
+        setShowEditProduct(true)
+    }
+
+    const handleEditProduct = async () => {
+        if (!editingProduct || !editForm.name) {
+            toast.error('Nome é obrigatório')
+            return
+        }
+        setSaving(true)
+        try {
+            const res = await fetch('/api/inventory/products', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingProduct.id,
+                    name: editForm.name,
+                    sku: editForm.sku,
+                    unit: editForm.unit,
+                    cost_price: parseFloat(editForm.cost_price) || 0,
+                    sale_price: parseFloat(editForm.sale_price) || 0,
+                    min_stock: parseInt(editForm.min_stock) || 0,
+                    reorder_point: parseInt(editForm.reorder_point) || 0,
+                    supplier: editForm.supplier,
+                    responsible: editForm.responsible,
+                })
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                toast.error(data.error || 'Erro ao editar produto')
+                return
+            }
+            toast.success('Produto atualizado!')
+            setShowEditProduct(false)
+            setEditingProduct(null)
+            fetchData()
+        } catch {
+            toast.error('Erro ao salvar')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleDeleteProduct = async (product: Product) => {
+        if (!confirm(`Tem certeza que deseja excluir "${product.name}"? Esta ação é irreversível.`)) return
+        setDeletingProduct(product.id)
+        try {
+            const res = await fetch(`/api/inventory/products?id=${product.id}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+            toast.success(data.message || 'Produto excluído!')
+            fetchData()
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir produto')
+        } finally {
+            setDeletingProduct(null)
         }
     }
 
@@ -563,6 +643,26 @@ export default function InventoryPage() {
                                         >
                                             Movimento
                                         </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => openEditDialog(product)}
+                                            title="Editar produto"
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            onClick={() => handleDeleteProduct(product)}
+                                            disabled={deletingProduct === product.id}
+                                            title="Excluir produto"
+                                        >
+                                            {deletingProduct === product.id
+                                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                                : <Trash2 className="h-4 w-4" />
+                                            }
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -690,6 +790,103 @@ export default function InventoryPage() {
                                 </Card>
                             ))
                         )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Product Dialog */}
+            <Dialog open={showEditProduct} onOpenChange={(v) => { setShowEditProduct(v); if (!v) setEditingProduct(null) }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Produto</DialogTitle>
+                        <DialogDescription>Altere os dados do produto</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                        <div className="space-y-2">
+                            <Label>Nome *</Label>
+                            <Input
+                                value={editForm.name}
+                                onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>SKU</Label>
+                                <Input
+                                    value={editForm.sku}
+                                    onChange={(e) => setEditForm(f => ({ ...f, sku: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Unidade</Label>
+                                <Select value={editForm.unit} onValueChange={(v) => setEditForm(f => ({ ...f, unit: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="un">Unidade</SelectItem>
+                                        <SelectItem value="cx">Caixa</SelectItem>
+                                        <SelectItem value="fr">Frasco</SelectItem>
+                                        <SelectItem value="ml">mL</SelectItem>
+                                        <SelectItem value="g">Gramas</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Custo</Label>
+                                <Input
+                                    type="number" step="0.01"
+                                    value={editForm.cost_price}
+                                    onChange={(e) => setEditForm(f => ({ ...f, cost_price: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Preço Venda</Label>
+                                <Input
+                                    type="number" step="0.01"
+                                    value={editForm.sale_price}
+                                    onChange={(e) => setEditForm(f => ({ ...f, sale_price: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Estoque Mínimo</Label>
+                                <Input
+                                    type="number"
+                                    value={editForm.min_stock}
+                                    onChange={(e) => setEditForm(f => ({ ...f, min_stock: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Ponto de Reposição</Label>
+                                <Input
+                                    type="number"
+                                    value={editForm.reorder_point}
+                                    onChange={(e) => setEditForm(f => ({ ...f, reorder_point: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Fornecedor</Label>
+                                <Input
+                                    value={editForm.supplier}
+                                    onChange={(e) => setEditForm(f => ({ ...f, supplier: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Responsável</Label>
+                                <Input
+                                    value={editForm.responsible}
+                                    onChange={(e) => setEditForm(f => ({ ...f, responsible: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+                        <Button onClick={handleEditProduct} disabled={saving} className="w-full">
+                            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Salvar Alterações
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

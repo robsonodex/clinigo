@@ -3,9 +3,11 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { VideoCallRoom } from '@/components/video-call/VideoCallRoom'
-import { Loader2, Video, Calendar, Clock, User, Stethoscope } from 'lucide-react'
+import { Loader2, Video, Calendar, Clock, User, Stethoscope, Shield, CheckSquare, Square } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+
+const ESPACO_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
 
 interface VideoCallPageProps {
     params: Promise<{ roomId: string }>
@@ -31,12 +33,50 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showStartButton, setShowStartButton] = useState(false)
+    const [showConsent, setShowConsent] = useState(false)
     const [callStarted, setCallStarted] = useState(false)
     const [appointmentInfo, setAppointmentInfo] = useState<AppointmentInfo | null>(null)
     const [userInfo, setUserInfo] = useState<{
         role: 'doctor' | 'patient'
         token: string
     } | null>(null)
+
+    // Consent state
+    const [consentTopics, setConsentTopics] = useState({
+        teleatendimento: false,
+        uso_dados: false,
+        lgpd: false,
+    })
+    const [responsibleName, setResponsibleName] = useState('')
+    const [patientName, setPatientName] = useState('')
+    const [savingConsent, setSavingConsent] = useState(false)
+
+    const allConsentAccepted = consentTopics.teleatendimento && consentTopics.uso_dados && consentTopics.lgpd
+
+    const handleAcceptConsent = async () => {
+        if (!allConsentAccepted || !appointmentInfo) return
+        setSavingConsent(true)
+        try {
+            await fetch('/api/teleconsulta/consent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    appointment_id: appointmentInfo.id,
+                    patient_id: appointmentInfo.patient?.id,
+                    clinic_id: appointmentInfo.clinic?.id,
+                    consent_topics: consentTopics,
+                    responsible_name: responsibleName,
+                    patient_name: patientName || appointmentInfo.patient?.full_name,
+                })
+            })
+            setShowConsent(false)
+            setCallStarted(true)
+        } catch (err) {
+            console.error('Error saving consent:', err)
+        } finally {
+            setSavingConsent(false)
+        }
+    }
 
     useEffect(() => {
         async function validateAccess() {
@@ -231,7 +271,16 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
 
                     {/* Start Button */}
                     <button
-                        onClick={() => setCallStarted(true)}
+                        onClick={() => {
+                            // Se for Espaço Incluir e role paciente, mostrar consentimento
+                            if (appointmentInfo.clinic?.id === ESPACO_INCLUIR_CLINIC_ID && userInfo?.role === 'patient') {
+                                setPatientName(appointmentInfo.patient?.full_name || '')
+                                setShowConsent(true)
+                                setShowStartButton(false)
+                            } else {
+                                setCallStarted(true)
+                            }
+                        }}
                         className="w-full py-4 bg-white text-emerald-900 rounded-xl hover:bg-emerald-50 font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
                     >
                         <Video className="w-6 h-6" />
@@ -241,6 +290,79 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     <p className="text-emerald-200 text-sm mt-4">
                         Certifique-se de que sua câmera e microfone estão funcionando
                     </p>
+                </div>
+            </div>
+        )
+    }
+
+    // Consent screen for Espaço Incluir
+    if (showConsent && appointmentInfo) {
+        return (
+            <div className="fixed inset-0 bg-gradient-to-br from-emerald-900 to-emerald-700 flex items-center justify-center z-50 overflow-y-auto">
+                <div className="text-white max-w-lg w-full px-4 py-8">
+                    <div className="text-center mb-6">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Shield className="w-8 h-8" />
+                        </div>
+                        <h1 className="text-xl font-bold">CONSENTIMENTO PARA TELEATENDIMENTO E TRATAMENTO DE DADOS</h1>
+                        <p className="text-emerald-200 mt-1">{appointmentInfo.clinic?.name}</p>
+                        <p className="text-emerald-300 text-sm mt-2">Antes de iniciar a teleconsulta, solicitamos a leitura e aceite dos termos abaixo:</p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-3">
+                        <p className="font-semibold mb-2">🔹 1. Teleatendimento</p>
+                        <p className="text-sm text-emerald-100 mb-3">Declaro que estou ciente de que o atendimento será realizado de forma online (videochamada), podendo haver limitações técnicas, e concordo com sua realização.</p>
+                        <button onClick={() => setConsentTopics(t => ({ ...t, teleatendimento: !t.teleatendimento }))} className="flex items-center gap-2 text-sm font-medium hover:text-emerald-200 transition-colors">
+                            {consentTopics.teleatendimento ? <CheckSquare className="w-5 h-5 text-emerald-300" /> : <Square className="w-5 h-5" />}
+                            Li e concordo
+                        </button>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-3">
+                        <p className="font-semibold mb-2">🔹 2. Uso de imagem, voz e dados</p>
+                        <p className="text-sm text-emerald-100 mb-3">Autorizo o uso de imagem, voz e dados do paciente exclusivamente para fins assistenciais, garantindo o sigilo e ética profissional.</p>
+                        <button onClick={() => setConsentTopics(t => ({ ...t, uso_dados: !t.uso_dados }))} className="flex items-center gap-2 text-sm font-medium hover:text-emerald-200 transition-colors">
+                            {consentTopics.uso_dados ? <CheckSquare className="w-5 h-5 text-emerald-300" /> : <Square className="w-5 h-5" />}
+                            Li e concordo
+                        </button>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-3">
+                        <p className="font-semibold mb-2">🔹 3. Proteção de dados (LGPD)</p>
+                        <p className="text-sm text-emerald-100 mb-3">Autorizo o tratamento de dados pessoais e dados sensíveis (dados de saúde), conforme a Lei nº 13.709/2018 (LGPD), para fins de atendimento, registro em prontuário e acompanhamento terapêutico.</p>
+                        <button onClick={() => setConsentTopics(t => ({ ...t, lgpd: !t.lgpd }))} className="flex items-center gap-2 text-sm font-medium hover:text-emerald-200 transition-colors">
+                            {consentTopics.lgpd ? <CheckSquare className="w-5 h-5 text-emerald-300" /> : <Square className="w-5 h-5" />}
+                            Li e concordo
+                        </button>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-4">
+                        <p className="font-semibold mb-2">🔹 Declaração final</p>
+                        <p className="text-sm text-emerald-100 mb-3">Declaro que li, compreendi e concordo com os termos acima, fornecendo meu consentimento de forma livre, informada e inequívoca.</p>
+                        <div className="space-y-2">
+                            <div>
+                                <label className="text-xs text-emerald-300">Nome do responsável</label>
+                                <input value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-emerald-300" placeholder="Nome completo do responsável" />
+                            </div>
+                            <div>
+                                <label className="text-xs text-emerald-300">Nome do paciente</label>
+                                <input value={patientName} onChange={(e) => setPatientName(e.target.value)} className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-emerald-300" placeholder="Nome completo do paciente" />
+                            </div>
+                            <div className="flex gap-4 text-sm text-emerald-200">
+                                <span>📅 {format(new Date(), "dd/MM/yyyy", { locale: ptBR })}</span>
+                                <span>🕒 {format(new Date(), "HH:mm")}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleAcceptConsent}
+                        disabled={!allConsentAccepted || savingConsent}
+                        className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-3 ${allConsentAccepted ? 'bg-white text-emerald-900 hover:bg-emerald-50 hover:shadow-xl' : 'bg-white/20 text-white/50 cursor-not-allowed'}`}
+                    >
+                        {savingConsent ? <Loader2 className="w-6 h-6 animate-spin" /> : <Video className="w-6 h-6" />}
+                        ACEITAR E INICIAR TELECONSULTA
+                    </button>
                 </div>
             </div>
         )

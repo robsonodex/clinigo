@@ -179,3 +179,119 @@ export async function POST(request: NextRequest) {
     }
 }
 
+// PUT: Update product
+export async function PUT(request: NextRequest) {
+    try {
+        const supabase = await createClient()
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        }
+
+        const { data: userData } = await supabase
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        const clinicId = (userData as any)?.clinic_id
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        }
+
+        const body = await request.json()
+        const { id, ...updates } = body
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID do produto é obrigatório' }, { status: 400 })
+        }
+
+        const allowedFields: Record<string, any> = {}
+        const fields = ['name', 'sku', 'unit', 'cost_price', 'sale_price', 'min_stock', 'reorder_point', 'supplier', 'responsible', 'description', 'category_id', 'product_type']
+        for (const field of fields) {
+            if (updates[field] !== undefined) {
+                allowedFields[field] = updates[field]
+            }
+        }
+
+        const { data: product, error } = await (supabase as any)
+            .from('products')
+            .update(allowedFields)
+            .eq('id', id)
+            .eq('clinic_id', clinicId)
+            .select('*, category:product_categories(id, name, color), stock(quantity, available_quantity, average_cost)')
+            .single()
+
+        if (error) {
+            console.error('Update product error:', error)
+            return NextResponse.json({ error: 'Erro ao atualizar produto' }, { status: 500 })
+        }
+
+        return NextResponse.json({ product })
+    } catch (error) {
+        console.error('Update product error:', error)
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    }
+}
+
+// DELETE: Delete product (hard delete with stock and movements)
+export async function DELETE(request: NextRequest) {
+    try {
+        const supabase = await createClient()
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        }
+
+        const { data: userData } = await supabase
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        const clinicId = (userData as any)?.clinic_id
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const productId = searchParams.get('id')
+
+        if (!productId) {
+            return NextResponse.json({ error: 'ID do produto é obrigatório' }, { status: 400 })
+        }
+
+        // 1. Delete stock movements
+        await (supabase as any)
+            .from('stock_movements')
+            .delete()
+            .eq('product_id', productId)
+            .eq('clinic_id', clinicId)
+
+        // 2. Delete stock record
+        await (supabase as any)
+            .from('stock')
+            .delete()
+            .eq('product_id', productId)
+            .eq('clinic_id', clinicId)
+
+        // 3. Delete product
+        const { error } = await (supabase as any)
+            .from('products')
+            .delete()
+            .eq('id', productId)
+            .eq('clinic_id', clinicId)
+
+        if (error) {
+            console.error('Delete product error:', error)
+            return NextResponse.json({ error: 'Erro ao excluir produto' }, { status: 500 })
+        }
+
+        return NextResponse.json({ message: 'Produto excluído com sucesso' })
+    } catch (error) {
+        console.error('Delete product error:', error)
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    }
+}
