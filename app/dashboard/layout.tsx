@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
+import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
 
 export default async function DashboardRootLayout({
     children,
@@ -41,12 +42,14 @@ export default async function DashboardRootLayout({
 
     return (
         <>
-            <DashboardLayout>
-                <DemoBanner isDemo={isDemo} />
-                <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
-                {children}
-            </DashboardLayout>
-            <MobileBottomNav />
+            <StaffSignatureGate>
+                <DashboardLayout>
+                    <DemoBanner isDemo={isDemo} />
+                    <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
+                    {children}
+                </DashboardLayout>
+                <MobileBottomNav />
+            </StaffSignatureGate>
         </>
     )
 }

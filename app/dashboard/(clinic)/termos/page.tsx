@@ -19,6 +19,8 @@ import {
     Edit,
     Shield,
     Plus,
+    PenTool,
+    Users,
 } from 'lucide-react'
 
 
@@ -43,6 +45,8 @@ export default function TermosPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [editTerm, setEditTerm] = useState<LegalTerm | null>(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [signatures, setSignatures] = useState<any[]>([])
+    const [loadingSignatures, setLoadingSignatures] = useState(false)
 
     const fetchTerms = async () => {
         setIsLoading(true)
@@ -62,7 +66,23 @@ export default function TermosPage() {
 
     useEffect(() => {
         fetchTerms()
+        fetchSignatures()
     }, [])
+
+    const fetchSignatures = async () => {
+        setLoadingSignatures(true)
+        try {
+            const res = await fetch('/api/legal/staff-signatures')
+            if (res.ok) {
+                const data = await res.json()
+                setSignatures(data.acceptances || [])
+            }
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoadingSignatures(false)
+        }
+    }
 
     const handleEdit = (term: LegalTerm) => {
         setEditTerm(term)
@@ -155,6 +175,9 @@ export default function TermosPage() {
             <Tabs defaultValue="documents" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="documents">Documentos</TabsTrigger>
+                    <TabsTrigger value="signatures">
+                        <PenTool className="w-4 h-4 mr-1" /> Assinaturas ({signatures.length})
+                    </TabsTrigger>
                     <TabsTrigger value="settings">Configurações</TabsTrigger>
                 </TabsList>
 
@@ -224,6 +247,56 @@ export default function TermosPage() {
                             ))}
                         </div>
                     )}
+                </TabsContent>
+
+                {/* TAB: Assinaturas */}
+                <TabsContent value="signatures" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Users className="w-5 h-5" />
+                                Assinaturas Digitais dos Profissionais
+                            </CardTitle>
+                            <CardDescription>
+                                Profissionais que assinaram os termos obrigatórios
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {loadingSignatures ? (
+                                <div className="py-8 text-center">
+                                    <Clock className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                                    <p className="mt-2 text-muted-foreground">Carregando...</p>
+                                </div>
+                            ) : signatures.length === 0 ? (
+                                <div className="py-8 text-center">
+                                    <PenTool className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                                    <h3 className="text-lg font-medium mb-2">Nenhuma assinatura registrada</h3>
+                                    <p className="text-muted-foreground">Quando os profissionais assinarem os termos obrigatórios, as assinaturas aparecerão aqui.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {signatures.map((sig: any) => (
+                                        <div key={sig.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-emerald-100 rounded-full">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">{sig.full_name}</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {sig.cpf ? `CPF: ${sig.cpf} • ` : ''}Assinado em: {new Date(sig.accepted_at).toLocaleString('pt-BR')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Badge variant="success">
+                                                <CheckCircle2 className="w-3 h-3 mr-1" /> Assinado
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
                 <TabsContent value="settings" className="space-y-4">
