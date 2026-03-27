@@ -114,6 +114,11 @@ export async function GET(request: Request) {
             // Sort by priority first
             if (a.isPriority && !b.isPriority) return -1
             if (!a.isPriority && b.isPriority) return 1
+            // Then by status: WAITING (called) before CONFIRMED (not yet called)
+            const statusOrder: Record<string, number> = { 'WAITING': 0, 'CONFIRMED': 1, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
+            const aOrder = statusOrder[a.status] ?? 5
+            const bOrder = statusOrder[b.status] ?? 5
+            if (aOrder !== bOrder) return aOrder - bOrder
             // Then by arrival time
             return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime()
         })
