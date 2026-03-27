@@ -132,7 +132,7 @@ export default function ImportacoesPage() {
                 </Button>
             </div>
 
-            {/* <ImportHistoryTable /> */}
+            <ImportHistoryTable />
         </div>
     );
 }

@@ -79,6 +79,8 @@ export async function parseExcelFile(buffer: Buffer) {
                 if (headerVal.includes('Estado')) rowObj['state'] = cellVal;
                 if (headerVal.includes('Convênio')) rowObj['insurance_name'] = cellVal;
                 if (headerVal.includes('Carteirinha')) rowObj['insurance_card'] = cellVal;
+                if (headerVal.includes('Nome do Titular')) rowObj['insurance_holder_name'] = cellVal;
+                if (headerVal.includes('CPF do Titular') || (headerVal.includes('CPF') && headerVal.includes('Titular'))) rowObj['insurance_holder_cpf'] = cellVal;
 
                 // Doctor mappings
                 if (headerVal.includes('CRM') && !headerVal.includes('Estado')) rowObj['crm'] = cellVal;
@@ -86,6 +88,7 @@ export async function parseExcelFile(buffer: Buffer) {
                 if (headerVal.includes('Especialidade')) rowObj['specialty'] = cellVal;
                 if (headerVal.includes('Valor Consulta')) rowObj['consultation_price'] = cellVal;
                 if (headerVal.includes('Biografia')) rowObj['bio'] = cellVal;
+                if (headerVal.includes('CNPJ')) rowObj['cnpj'] = cellVal;
 
                 // Financial mappings
                 if (headerVal.includes('Data') && !headerVal.includes('Nascimento')) rowObj['date'] = cellVal;

@@ -113,6 +113,7 @@ export const doctorFormSchema = z.object({
         .positive('Preço deve ser positivo')
         .max(10000, 'Preço muito alto'),
     bio: z.string().max(1000, 'Biografia muito longa').optional(),
+    cnpj: z.string().max(18, 'CNPJ inválido').optional().nullable(),
 })
 
 export type DoctorFormData = z.infer<typeof doctorFormSchema>

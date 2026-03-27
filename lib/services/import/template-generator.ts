@@ -20,7 +20,9 @@ export async function generatePatientTemplate(): Promise<Buffer> {
         { header: 'Cidade', key: 'city', width: 25 },
         { header: 'Estado (UF)', key: 'state', width: 12 },
         { header: 'Convênio', key: 'insurance_name', width: 25 },
-        { header: 'Número da Carteirinha', key: 'insurance_card', width: 25 }
+        { header: 'Número da Carteirinha', key: 'insurance_card', width: 25 },
+        { header: 'Nome do Titular do Plano', key: 'insurance_holder_name', width: 30 },
+        { header: 'CPF do Titular do Plano', key: 'insurance_holder_cpf', width: 20 }
     ];
 
     // Linhas de exemplo
@@ -39,7 +41,9 @@ export async function generatePatientTemplate(): Promise<Buffer> {
         city: 'São Paulo',
         state: 'SP',
         insurance_name: 'Unimed',
-        insurance_card: '123456789012345'
+        insurance_card: '123456789012345',
+        insurance_holder_name: 'José da Silva Santos',
+        insurance_holder_cpf: '987.654.321-00'
     });
 
     // Estilizar cabeçalho
@@ -89,9 +93,10 @@ export async function generateDoctorTemplate(): Promise<Buffer> {
         { header: 'Estado CRM* (UF)', key: 'crm_state', width: 10 },
         { header: 'Especialidade*', key: 'specialty', width: 25 },
         { header: 'Valor Consulta', key: 'consultation_price', width: 15 },
+        { header: 'CNPJ', key: 'cnpj', width: 20 },
         { header: 'Biografia', key: 'bio', width: 40 }
     ];
-    dataSheet.addRow({ full_name: 'Dr. João Silva', crm: '123456', crm_state: 'SP', specialty: 'Cardiologia', consultation_price: '350.00', bio: 'Especialista em coração' });
+    dataSheet.addRow({ full_name: 'Dr. João Silva', crm: '123456', crm_state: 'SP', specialty: 'Cardiologia', consultation_price: '350.00', cnpj: '12.345.678/0001-90', bio: 'Especialista em coração' });
     dataSheet.getRow(1).font = { bold: true };
     return await (workbook.xlsx.writeBuffer() as Promise<Buffer>);
 }

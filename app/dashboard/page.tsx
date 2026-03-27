@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,6 +33,9 @@ import {
     Zap,
     Mail,
     CheckCircle2,
+    LayoutList,
+    LayoutGrid,
+    Rows3,
 } from 'lucide-react'
 import Link from 'next/link'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
@@ -57,6 +61,7 @@ export default function DashboardPage() {
     const { profile } = useAuth()
     const { role, isDoctor, isClinicAdmin, isSuperAdmin } = useRole()
     const profLabel = useProfessionalLabel()
+    const [appointmentView, setAppointmentView] = useState<'list' | 'cards' | 'expanded'>('list')
 
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -83,7 +88,7 @@ export default function DashboardPage() {
             return api.get<Appointment[]>('/appointments', {
                 date_from: today,
                 status: 'CONFIRMED',
-                page_size: '5',
+                page_size: '20',
             })
         },
     })
@@ -104,6 +109,30 @@ export default function DashboardPage() {
             ? `Olá ${patientName.split(' ')[0]}! Lembrete da sua consulta. Acesse o link: ${videoLink}`
             : `Olá ${patientName.split(' ')[0]}! Aqui é da clínica.`
         window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank')
+    }
+
+    // Group appointments by date for organized display
+    const groupedAppointments = (() => {
+        if (!upcomingAppointments || upcomingAppointments.length === 0) return []
+        const groups: Record<string, Appointment[]> = {}
+        for (const apt of upcomingAppointments) {
+            const date = apt.appointment_date || 'unknown'
+            if (!groups[date]) groups[date] = []
+            groups[date].push(apt)
+        }
+        return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
+    })()
+
+    // Format date label (Hoje, Amanhã, or formatted date)
+    const getDateLabel = (dateStr: string) => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const date = new Date(dateStr + 'T00:00:00')
+        if (date.getTime() === today.getTime()) return '📅 Hoje'
+        if (date.getTime() === tomorrow.getTime()) return '📅 Amanhã'
+        return `📅 ${formatDate(dateStr)}`
     }
 
     return (
@@ -244,100 +273,268 @@ export default function DashboardPage() {
                 )
             }
 
-            {/* Upcoming Appointments with WhatsApp */}
+            {/* Upcoming Appointments - Compact Table with Day Grouping */}
             {
                 (isClinicAdmin || isDoctor) && (
                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
+                        <CardHeader className="flex flex-row items-center justify-between pb-3">
                             <div>
-                                <CardTitle>Próximas Consultas</CardTitle>
-                                <CardDescription>Consultas confirmadas para hoje e próximos dias</CardDescription>
+                                <CardTitle className="text-lg">Próximas Consultas</CardTitle>
+                                <CardDescription>
+                                    {upcomingAppointments && upcomingAppointments.length > 0
+                                        ? `${upcomingAppointments.length} consulta${upcomingAppointments.length > 1 ? 's' : ''} confirmada${upcomingAppointments.length > 1 ? 's' : ''}`
+                                        : 'Consultas confirmadas para hoje e próximos dias'
+                                    }
+                                </CardDescription>
                             </div>
-                            <Link href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
-                                <Button variant="outline" size="sm">
-                                    Ver todas
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </Link>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center border rounded-lg p-0.5">
+                                    <Button
+                                        variant={appointmentView === 'list' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => setAppointmentView('list')}
+                                        title="Lista compacta"
+                                    >
+                                        <LayoutList className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button
+                                        variant={appointmentView === 'cards' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => setAppointmentView('cards')}
+                                        title="Mini cards"
+                                    >
+                                        <LayoutGrid className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button
+                                        variant={appointmentView === 'expanded' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => setAppointmentView('expanded')}
+                                        title="Visão detalhada"
+                                    >
+                                        <Rows3 className="w-3.5 h-3.5" />
+                                    </Button>
+                                </div>
+                                <Link href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
+                                    <Button variant="outline" size="sm">
+                                        Ver todas
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Button>
+                                </Link>
+                            </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-0">
                             {appointmentsLoading ? (
-                                <div className="space-y-3">
-                                    {Array.from({ length: 3 }).map((_, i) => (
-                                        <Skeleton key={i} className="h-20" />
+                                <div className="space-y-2">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <Skeleton key={i} className="h-10" />
                                     ))}
                                 </div>
-                            ) : upcomingAppointments && upcomingAppointments.length > 0 ? (
-                                <div className="space-y-3">
-                                    {upcomingAppointments.map((appointment) => (
-                                        <div
-                                            key={appointment.id}
-                                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-center min-w-[70px] p-2 bg-primary/10 rounded-lg">
-                                                    <p className="text-lg font-bold text-primary">
-                                                        {appointment.appointment_time?.substring(0, 5) || '--:--'}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {appointment.appointment_date ? formatDate(appointment.appointment_date) : '--/--'}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium">
-                                                        {appointment.patient?.full_name || 'Paciente'}
-                                                    </p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {!isDoctor && appointment.doctor?.user?.full_name && `Dr. ${appointment.doctor.user.full_name} • `}
-                                                        {appointment.doctor?.specialty || 'Especialidade'}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                                        <Phone className="w-3 h-3" />
-                                                        {appointment.patient?.phone || 'Sem telefone'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Badge
-                                                    variant={statusColors[appointment.status] as 'success' | 'warning' | 'destructive'}
-                                                >
-                                                    {statusLabels[appointment.status] || appointment.status}
+                            ) : groupedAppointments.length > 0 ? (
+                                <div className="max-h-[400px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                                    {groupedAppointments.map(([date, appointments], groupIdx) => (
+                                        <div key={date} className={groupIdx > 0 ? 'mt-4' : ''}>
+                                            {/* Day Header */}
+                                            <div className="sticky top-0 z-10 flex items-center gap-2 py-1.5 px-2 mb-1.5 bg-muted/80 backdrop-blur-sm rounded-md border-b">
+                                                <span className="text-sm font-semibold text-foreground">{getDateLabel(date)}</span>
+                                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                                    {appointments.length}
                                                 </Badge>
-
-                                                {/* WhatsApp Button - only show if has phone */}
-                                                {appointment.patient?.phone && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                                                        onClick={() => openWhatsApp(
-                                                            appointment.patient?.phone || '',
-                                                            appointment.patient?.full_name || 'Paciente',
-                                                            appointment.video_link
-                                                        )}
-                                                    >
-                                                        <MessageCircle className="w-4 h-4 mr-1" />
-                                                        WhatsApp
-                                                    </Button>
-                                                )}
-
-                                                {appointment.video_link && (
-                                                    <Link href={`/dashboard/consultas/${appointment.id}`}>
-                                                        <Button size="sm">
-                                                            <Video className="w-4 h-4 mr-1" />
-                                                            Iniciar
-                                                        </Button>
-                                                    </Link>
-                                                )}
                                             </div>
+
+                                            {/* === VIEW: LIST (tabela compacta) === */}
+                                            {appointmentView === 'list' && (
+                                                <div className="divide-y divide-border/50">
+                                                    {appointments.map((appointment) => (
+                                                        <div
+                                                            key={appointment.id}
+                                                            className="flex items-center gap-3 py-2 px-2 hover:bg-muted/30 rounded-sm transition-colors group/row"
+                                                        >
+                                                            <span className="text-sm font-bold text-primary min-w-[45px] tabular-nums">
+                                                                {appointment.appointment_time?.substring(0, 5) || '--:--'}
+                                                            </span>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm font-medium truncate">
+                                                                    {appointment.patient?.full_name || 'Paciente'}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {!isDoctor && appointment.doctor?.user?.full_name && `Dr. ${appointment.doctor.user.full_name} • `}
+                                                                    {appointment.doctor?.specialty || 'Especialidade'}
+                                                                    {appointment.patient?.phone && ` • ${appointment.patient.phone}`}
+                                                                </p>
+                                                            </div>
+                                                            <Badge
+                                                                variant={statusColors[appointment.status] as 'success' | 'warning' | 'destructive'}
+                                                                className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+                                                            >
+                                                                {statusLabels[appointment.status] || appointment.status}
+                                                            </Badge>
+                                                            <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover/row:opacity-100 transition-opacity">
+                                                                {appointment.patient?.phone && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                        onClick={() => openWhatsApp(
+                                                                            appointment.patient?.phone || '',
+                                                                            appointment.patient?.full_name || 'Paciente',
+                                                                            appointment.video_link
+                                                                        )}
+                                                                        title="Enviar WhatsApp"
+                                                                    >
+                                                                        <MessageCircle className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                )}
+                                                                {appointment.video_link && (
+                                                                    <Link href={`/dashboard/consultas/${appointment.id}`}>
+                                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Iniciar teleconsulta">
+                                                                            <Video className="w-3.5 h-3.5" />
+                                                                        </Button>
+                                                                    </Link>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* === VIEW: CARDS (mini-cards em grid) === */}
+                                            {appointmentView === 'cards' && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    {appointments.map((appointment) => (
+                                                        <div
+                                                            key={appointment.id}
+                                                            className="flex items-start gap-3 p-3 border rounded-lg hover:shadow-sm hover:border-primary/30 transition-all group/card bg-background"
+                                                        >
+                                                            {/* Time block */}
+                                                            <div className="flex items-center justify-center min-w-[56px] py-2 px-2 bg-primary/10 rounded-md">
+                                                                <span className="text-lg font-bold text-primary tabular-nums">
+                                                                    {appointment.appointment_time?.substring(0, 5) || '--:--'}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Info */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold truncate">
+                                                                    {appointment.patient?.full_name || 'Paciente'}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {!isDoctor && appointment.doctor?.user?.full_name && `Dr. ${appointment.doctor.user.full_name} • `}
+                                                                    {appointment.doctor?.specialty || 'Especialidade'}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                    <Phone className="w-3 h-3" />
+                                                                    {appointment.patient?.phone || 'Sem telefone'}
+                                                                </p>
+                                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                                    <Badge
+                                                                        variant={statusColors[appointment.status] as 'success' | 'warning' | 'destructive'}
+                                                                        className="text-[10px] px-1.5 py-0 h-4"
+                                                                    >
+                                                                        {statusLabels[appointment.status] || appointment.status}
+                                                                    </Badge>
+                                                                    {appointment.patient?.phone && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            className="h-5 px-1.5 text-[10px] bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                                                            onClick={() => openWhatsApp(
+                                                                                appointment.patient?.phone || '',
+                                                                                appointment.patient?.full_name || 'Paciente',
+                                                                                appointment.video_link
+                                                                            )}
+                                                                        >
+                                                                            <MessageCircle className="w-3 h-3 mr-0.5" />
+                                                                            WhatsApp
+                                                                        </Button>
+                                                                    )}
+                                                                    {appointment.video_link && (
+                                                                        <Link href={`/dashboard/consultas/${appointment.id}`}>
+                                                                            <Button size="sm" className="h-5 px-1.5 text-[10px]">
+                                                                                <Video className="w-3 h-3 mr-0.5" />
+                                                                                Iniciar
+                                                                            </Button>
+                                                                        </Link>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* === VIEW: EXPANDED (layout original organizado por dia) === */}
+                                            {appointmentView === 'expanded' && (
+                                                <div className="space-y-2">
+                                                    {appointments.map((appointment) => (
+                                                        <div
+                                                            key={appointment.id}
+                                                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="text-center min-w-[60px] py-1.5 px-2 bg-primary/10 rounded-lg">
+                                                                    <p className="text-base font-bold text-primary leading-tight">
+                                                                        {appointment.appointment_time?.substring(0, 5) || '--:--'}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium text-sm">
+                                                                        {appointment.patient?.full_name || 'Paciente'}
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {!isDoctor && appointment.doctor?.user?.full_name && `Dr. ${appointment.doctor.user.full_name} • `}
+                                                                        {appointment.doctor?.specialty || 'Especialidade'}
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                        <Phone className="w-3 h-3" />
+                                                                        {appointment.patient?.phone || 'Sem telefone'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge
+                                                                    variant={statusColors[appointment.status] as 'success' | 'warning' | 'destructive'}
+                                                                >
+                                                                    {statusLabels[appointment.status] || appointment.status}
+                                                                </Badge>
+                                                                {appointment.patient?.phone && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                                                        onClick={() => openWhatsApp(
+                                                                            appointment.patient?.phone || '',
+                                                                            appointment.patient?.full_name || 'Paciente',
+                                                                            appointment.video_link
+                                                                        )}
+                                                                    >
+                                                                        <MessageCircle className="w-4 h-4 mr-1" />
+                                                                        WhatsApp
+                                                                    </Button>
+                                                                )}
+                                                                {appointment.video_link && (
+                                                                    <Link href={`/dashboard/consultas/${appointment.id}`}>
+                                                                        <Button size="sm">
+                                                                            <Video className="w-4 h-4 mr-1" />
+                                                                            Iniciar
+                                                                        </Button>
+                                                                    </Link>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                    <p className="font-medium">Nenhuma consulta confirmada</p>
-                                    <p className="text-sm">As consultas aparecem aqui após o pagamento</p>
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <Calendar className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                                    <p className="font-medium text-sm">Nenhuma consulta confirmada</p>
+                                    <p className="text-xs">As consultas aparecem aqui após o pagamento</p>
                                 </div>
                             )}
                         </CardContent>

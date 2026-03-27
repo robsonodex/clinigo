@@ -309,6 +309,7 @@ async function handlePatchDoctor(request: NextRequest, doctorId: string) {
     if (body.display_settings !== undefined) doctorFields.display_settings = body.display_settings
     if (body.bio !== undefined) doctorFields.bio = body.bio
     if (body.is_accepting_appointments !== undefined) doctorFields.is_accepting_appointments = body.is_accepting_appointments
+    if (body.cnpj !== undefined) doctorFields.cnpj = body.cnpj
 
     if (body.full_name !== undefined) userFields.full_name = body.full_name
     if (body.avatar_url !== undefined) userFields.avatar_url = body.avatar_url

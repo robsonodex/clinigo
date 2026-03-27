@@ -61,6 +61,11 @@ export const createDoctorSchema = z.object({
         .min(15, 'Duração mínima de 15 minutos')
         .max(120, 'Duração máxima de 120 minutos')
         .optional(),
+    cnpj: z
+        .string()
+        .max(18, 'CNPJ inválido')
+        .optional()
+        .nullable(),
 })
 
 /**
@@ -113,6 +118,11 @@ export const updateDoctorSchema = z.object({
     phone: z
         .string()
         .regex(/^\d{10,11}$/)
+        .optional()
+        .nullable(),
+    cnpj: z
+        .string()
+        .max(18, 'CNPJ inválido')
         .optional()
         .nullable(),
 })

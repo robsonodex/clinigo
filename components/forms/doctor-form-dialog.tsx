@@ -67,6 +67,7 @@ const extendedDoctorFormSchema = doctorFormSchema.extend({
     show_teleconsulta_badge: z.boolean().default(true),
     show_convenio_badge: z.boolean().default(false),
     consultation_duration: z.number().min(15).max(120).optional(),
+    cnpj: z.string().max(18).optional().nullable(),
 })
 
 type ExtendedDoctorFormData = z.infer<typeof extendedDoctorFormSchema>
@@ -108,6 +109,7 @@ export function DoctorFormDialog({
             show_teleconsulta_badge: (doctorToEdit as any)?.display_settings?.show_teleconsulta ?? true,
             show_convenio_badge: (doctorToEdit as any)?.display_settings?.show_convenio ?? false,
             consultation_duration: (doctorToEdit as any)?.consultation_duration || 30,
+            cnpj: (doctorToEdit as any)?.cnpj || '',
         },
     })
 
@@ -149,6 +151,7 @@ export function DoctorFormDialog({
                 show_teleconsulta_badge: (doctorToEdit as any)?.display_settings?.show_teleconsulta ?? true,
                 show_convenio_badge: (doctorToEdit as any)?.display_settings?.show_convenio ?? false,
                 consultation_duration: (doctorToEdit as any)?.consultation_duration || 30,
+                cnpj: (doctorToEdit as any)?.cnpj || '',
             })
         }
     }, [open, doctorToEdit, reset])
@@ -176,7 +179,8 @@ export function DoctorFormDialog({
                         is_accepting_appointments: data.is_accepting_appointments,
                         consultation_duration: data.consultation_duration,
                         display_settings: displaySettings,
-                    },
+                        cnpj: data.cnpj || null,
+                    } as any,
                 },
                 {
                     onSuccess: () => {
@@ -427,6 +431,22 @@ export function DoctorFormDialog({
                             />
                             {errors.bio && (
                                 <p className="text-xs text-destructive">{errors.bio.message}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="cnpj">CNPJ (Opcional)</Label>
+                            <Input
+                                id="cnpj"
+                                {...register('cnpj')}
+                                placeholder="00.000.000/0000-00"
+                                maxLength={18}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                CNPJ da pessoa jurídica do {profLabel.singular.toLowerCase()}, se houver.
+                            </p>
+                            {errors.cnpj && (
+                                <p className="text-xs text-destructive">{errors.cnpj.message}</p>
                             )}
                         </div>
                     </div>

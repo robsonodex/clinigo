@@ -41,7 +41,9 @@ export async function importPatients(
                     zip_code: row.cep?.replace(/\D/g, '') || ''
                 },
                 insurance_company_id: insuranceId,
-                insurance_card_number: row.insurance_card || null
+                insurance_card_number: row.insurance_card || null,
+                insurance_holder_name: row.insurance_holder_name?.trim() || null,
+                insurance_holder_cpf: row.insurance_holder_cpf ? String(row.insurance_holder_cpf).replace(/\D/g, '') : null
             };
 
             // Check existence

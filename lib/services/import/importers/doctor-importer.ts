@@ -18,7 +18,8 @@ export async function importDoctors(
                 crm_state: row.crm_state,
                 specialty: row.specialty,
                 bio: row.bio,
-                consultation_price: row.consultation_price ? parseFloat(row.consultation_price) : null
+                consultation_price: row.consultation_price ? parseFloat(row.consultation_price) : null,
+                cnpj: row.cnpj ? String(row.cnpj).replace(/\D/g, '') : null
             };
 
             const { data: existing } = await supabase.from('doctors')
