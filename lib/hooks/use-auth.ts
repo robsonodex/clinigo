@@ -9,7 +9,7 @@ interface UserProfile {
     id: string
     email: string
     full_name: string
-    role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR'
+    role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST'
     clinic_id?: string
     avatar_url?: string
 }
@@ -169,6 +169,7 @@ export function useRole() {
         isSuperAdmin: profile?.role === 'SUPER_ADMIN',
         isClinicAdmin: profile?.role === 'CLINIC_ADMIN',
         isDoctor: profile?.role === 'DOCTOR',
+        isReceptionist: profile?.role === 'RECEPTIONIST',
         clinicId: profile?.clinic_id,
     }
 }

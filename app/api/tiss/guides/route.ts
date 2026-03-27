@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
         let query = supabase
             .from('tiss_guides')
-            .select('*', { count: 'exact' })
+            .select('*, batch:tiss_batches!batch_id(insurance_company_name)', { count: 'exact' })
             .eq('clinic_id', clinicId)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
@@ -52,8 +52,20 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Erro ao buscar guias' }, { status: 500 })
         }
 
+        // Map DB fields to frontend TissGuia interface
+        const mappedGuides = (guides || []).map((g: any) => ({
+            ...g,
+            numero: g.guide_number,
+            tipo: g.guide_type === 'SP_SADT' ? 'sadt' : g.guide_type === 'CONSULTA' ? 'consulta' : (g.guide_type || 'sadt').toLowerCase(),
+            paciente: g.patient_name,
+            procedimento: g.procedure_name,
+            operadora: g.batch?.insurance_company_name || '',
+            valor: parseFloat(g.total_value) || 0,
+            data_criacao: g.created_at ? new Date(g.created_at).toLocaleDateString('pt-BR') : '',
+        }))
+
         return NextResponse.json({
-            guides,
+            guides: mappedGuides,
             total: count || 0,
             page,
             limit,

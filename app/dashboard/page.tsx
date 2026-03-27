@@ -59,7 +59,7 @@ const statusLabels: Record<string, string> = {
 
 export default function DashboardPage() {
     const { profile } = useAuth()
-    const { role, isDoctor, isClinicAdmin, isSuperAdmin } = useRole()
+    const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
     const profLabel = useProfessionalLabel()
     const [appointmentView, setAppointmentView] = useState<'list' | 'cards' | 'expanded'>('list')
 
@@ -147,6 +147,7 @@ export default function DashboardPage() {
                         {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
                         {isDoctor && 'Acompanhe suas consultas e pacientes.'}
                         {isSuperAdmin && 'Monitore a plataforma CliniGo.'}
+                        {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
                     </p>
                 </div>
                 <Badge variant="secondary" className="px-3 py-1">
@@ -166,7 +167,7 @@ export default function DashboardPage() {
 
             {/* Stats Cards - Clinic Admin & Doctor */}
             {
-                (isClinicAdmin || isDoctor) && (
+                (isClinicAdmin || isDoctor || isReceptionist) && (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <Link href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
                             <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group">
@@ -275,7 +276,7 @@ export default function DashboardPage() {
 
             {/* Upcoming Appointments - Compact Table with Day Grouping */}
             {
-                (isClinicAdmin || isDoctor) && (
+                (isClinicAdmin || isDoctor || isReceptionist) && (
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-3">
                             <div>
@@ -544,7 +545,7 @@ export default function DashboardPage() {
 
             {/* Quick Actions - Clinic Admin */}
             {
-                isClinicAdmin && (
+                (isClinicAdmin || isReceptionist) && (
                     <div>
                         <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
