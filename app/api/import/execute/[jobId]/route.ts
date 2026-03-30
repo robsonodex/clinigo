@@ -13,11 +13,13 @@ export async function POST(
 
     const supabase = await createClient();
 
-    const { data: job } = await supabase
+    const { data: rawJob } = await supabase
         .from('import_jobs')
         .select('*')
         .eq('id', jobId)
         .single();
+    
+    const job = rawJob as any;
 
     if (!job || (job.status !== 'validated' && job.status !== 'failed')) { // Allow failed if user wants to proceed with partial? No, strictly validated for now or per requirements.
         // User requirement: "status: 'validated'"
@@ -39,7 +41,7 @@ export async function POST(
         .update({
             status: 'processing',
             started_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', jobId);
 
     // Trigger background process
@@ -71,6 +73,8 @@ async function processImportInBackground(jobId: string, job: any) {
             case 'financial':
                 await importFinancial(jobId, rows, job.field_mapping || {}, supabase, job.clinic_id);
                 break;
+            default:
+                throw new Error(`Tipo de importação '${job.import_type}' não suportado ou não implementado.`);
         }
 
         // Notification logic here (optional for now)

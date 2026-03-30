@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 
 interface ImportProgressProps {
     jobId: string;
@@ -71,16 +71,42 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
         if (data) updateState(data);
     }
 
-    if (status === 'completed') {
+    if (status === 'completed' || status === 'partial') {
+        const isCompleted = status === 'completed';
+        const Icon = isCompleted ? CheckCircle2 : AlertTriangle;
         return (
-            <div className="space-y-4 p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100">
-                <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle2 className="h-6 w-6" />
-                    <span className="font-semibold text-lg">Importação concluída!</span>
+            <div className={`space-y-4 p-6 ${isCompleted ? 'bg-green-50 dark:bg-green-900/20 border-green-100' : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100'} rounded-lg border`}>
+                <div className={`flex items-center gap-2 ${isCompleted ? 'text-green-600' : 'text-yellow-600'}`}>
+                    <Icon className="h-6 w-6" />
+                    <span className="font-semibold text-lg">
+                        {isCompleted ? 'Importação concluída!' : 'Importação concluída com algumas falhas'}
+                    </span>
+                </div>
+                <div className="text-sm text-foreground space-y-1">
+                    <p>Foram processados <b>{stats.processed}</b> registros no total.</p>
+                    <p>
+                        <span className="text-green-600 font-medium">{stats.successful} importados com sucesso</span>
+                        {stats.failed > 0 && <span className="text-red-500 font-medium ml-3">({stats.failed} falhas)</span>}
+                    </p>
+                    {stats.failed > 0 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Acesse o Histórico para verificar os detalhes das falhas.
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    if (status === 'failed') {
+        return (
+            <div className="space-y-4 p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100">
+                <div className="flex items-center gap-2 text-red-600">
+                    <XCircle className="h-6 w-6" />
+                    <span className="font-semibold text-lg">Falha na importação</span>
                 </div>
                 <div className="text-sm text-foreground">
-                    Foram importados <b>{stats.successful}</b> registros com sucesso.
-                    {stats.failed > 0 && <span className="text-red-500 ml-2">({stats.failed} falhas)</span>}
+                    Ocorreu um erro crítico que impediu o processo. Por favor, tente enviar o arquivo novamente.
                 </div>
             </div>
         );

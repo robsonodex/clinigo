@@ -221,33 +221,6 @@ export default function AgendaPage() {
         enabled: showFreeSlots,
     })
 
-    // Check if a time slot is within working hours for any (or filtered) doctor
-    const getSlotFreeStatus = useMemo(() => {
-        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false })
-        return (day: Date, time: string) => {
-            const dayOfWeek = day.getDay() // 0=Sunday
-            const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
-            const relevantSchedules = (schedulesData as any[]).filter((s: any) => {
-                if (!s.is_active) return false
-                if (s.day_of_week !== dayOfWeek) return false
-                if (selectedDoctorFilter !== 'all' && s.doctor_id !== selectedDoctorFilter) return false
-                const startMin = parseInt(s.start_time.split(':')[0]) * 60 + parseInt(s.start_time.split(':')[1])
-                const endMin = parseInt(s.end_time.split(':')[0]) * 60 + parseInt(s.end_time.split(':')[1])
-                return timeMinutes >= startMin && timeMinutes < endMin
-            })
-            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false }
-            // Within working hours — check if free
-            const dateStr = format(day, 'yyyy-MM-dd')
-            const hasAppointment = appointments && Array.isArray(appointments) && appointments.some(
-                (a: any) => a.appointment_date === dateStr &&
-                    a.appointment_time?.substring(0, 5) === time &&
-                    a.status !== 'CANCELLED' &&
-                    (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
-            )
-            return { isWorking: true, isFree: !hasAppointment }
-        }
-    }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter])
-
     // Drag and Drop
     const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null)
     const [dropTarget, setDropTarget] = useState<{ date: Date; time: string } | null>(null)
@@ -303,6 +276,33 @@ export default function AgendaPage() {
         staleTime: 60 * 1000, // 1 minute cache
         refetchOnWindowFocus: false,
     })
+
+    // Check if a time slot is within working hours for any (or filtered) doctor (Agenda Inversa)
+    const getSlotFreeStatus = useMemo(() => {
+        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false })
+        return (day: Date, time: string) => {
+            const dayOfWeek = day.getDay() // 0=Sunday
+            const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
+            const relevantSchedules = (schedulesData as any[]).filter((s: any) => {
+                if (!s.is_active) return false
+                if (s.day_of_week !== dayOfWeek) return false
+                if (selectedDoctorFilter !== 'all' && s.doctor_id !== selectedDoctorFilter) return false
+                const startMin = parseInt(s.start_time.split(':')[0]) * 60 + parseInt(s.start_time.split(':')[1])
+                const endMin = parseInt(s.end_time.split(':')[0]) * 60 + parseInt(s.end_time.split(':')[1])
+                return timeMinutes >= startMin && timeMinutes < endMin
+            })
+            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false }
+            // Within working hours — check if free
+            const dateStr = format(day, 'yyyy-MM-dd')
+            const hasAppointment = appointments && Array.isArray(appointments) && appointments.some(
+                (a: any) => a.appointment_date === dateStr &&
+                    a.appointment_time?.substring(0, 5) === time &&
+                    a.status !== 'CANCELLED' &&
+                    (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
+            )
+            return { isWorking: true, isFree: !hasAppointment }
+        }
+    }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter])
 
     // Group appointments by date and time
     // Only exclude cancelled appointments from the agenda view
