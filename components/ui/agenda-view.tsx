@@ -22,6 +22,7 @@ import {
     Stethoscope,
     Users,
     UserPlus,
+    EyeOff,
 } from 'lucide-react'
 import {
     format,
@@ -195,6 +196,8 @@ export default function AgendaPage() {
 
     // Doctor filter
     const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('all')
+    // Free slots toggle (Agenda Inversa)
+    const [showFreeSlots, setShowFreeSlots] = useState(false)
 
     // Fetch doctors for filter
     const { data: doctorsList } = useQuery({
@@ -203,6 +206,47 @@ export default function AgendaPage() {
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     })
+
+    // Fetch schedules for free slots view (Agenda Inversa)
+    const { data: schedulesData } = useQuery({
+        queryKey: ['schedules-for-agenda'],
+        queryFn: async () => {
+            const res = await fetch('/api/doctors/schedules')
+            if (!res.ok) return []
+            const data = await res.json()
+            return data.schedules || data || []
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        enabled: showFreeSlots,
+    })
+
+    // Check if a time slot is within working hours for any (or filtered) doctor
+    const getSlotFreeStatus = useMemo(() => {
+        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false })
+        return (day: Date, time: string) => {
+            const dayOfWeek = day.getDay() // 0=Sunday
+            const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
+            const relevantSchedules = (schedulesData as any[]).filter((s: any) => {
+                if (!s.is_active) return false
+                if (s.day_of_week !== dayOfWeek) return false
+                if (selectedDoctorFilter !== 'all' && s.doctor_id !== selectedDoctorFilter) return false
+                const startMin = parseInt(s.start_time.split(':')[0]) * 60 + parseInt(s.start_time.split(':')[1])
+                const endMin = parseInt(s.end_time.split(':')[0]) * 60 + parseInt(s.end_time.split(':')[1])
+                return timeMinutes >= startMin && timeMinutes < endMin
+            })
+            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false }
+            // Within working hours — check if free
+            const dateStr = format(day, 'yyyy-MM-dd')
+            const hasAppointment = appointments && Array.isArray(appointments) && appointments.some(
+                (a: any) => a.appointment_date === dateStr &&
+                    a.appointment_time?.substring(0, 5) === time &&
+                    a.status !== 'CANCELLED' &&
+                    (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
+            )
+            return { isWorking: true, isFree: !hasAppointment }
+        }
+    }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter])
 
     // Drag and Drop
     const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null)
@@ -475,6 +519,18 @@ export default function AgendaPage() {
                             <UserPlus className="h-4 w-4" />
                             Encaixe
                         </Button>
+                        <Button
+                            size="sm"
+                            variant={showFreeSlots ? 'default' : 'outline'}
+                            className={cn(
+                                'gap-2',
+                                showFreeSlots && 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            )}
+                            onClick={() => setShowFreeSlots(!showFreeSlots)}
+                        >
+                            <EyeOff className="h-4 w-4" />
+                            {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
+                        </Button>
                         <div className="w-px h-6 bg-border mx-1" />
                         <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter}>
                             <SelectTrigger className="w-[220px] md:w-[320px] lg:w-[350px] h-8 text-sm">
@@ -671,7 +727,13 @@ export default function AgendaPage() {
                                             key={day.toISOString()}
                                             className={cn(
                                                 'border-r last:border-r-0 p-1 relative group hover:bg-muted/30 transition-colors cursor-pointer',
-                                                !isSameMonth(day, currentDate) && 'bg-gray-50/50'
+                                                !isSameMonth(day, currentDate) && 'bg-gray-50/50',
+                                                showFreeSlots && (() => {
+                                                    const status = getSlotFreeStatus(day, time)
+                                                    if (status.isFree) return 'bg-emerald-50/80 hover:bg-emerald-100/80 ring-1 ring-inset ring-emerald-200'
+                                                    if (status.isWorking) return 'bg-orange-50/40'
+                                                    return 'bg-gray-50/60'
+                                                })()
                                             )}
                                             onClick={() => {
                                                 if (!hasAppointments) {
@@ -685,6 +747,12 @@ export default function AgendaPage() {
                                             onDragOver={(e) => !hasAppointments && handleDragOver(e, day, time)}
                                             onDrop={(e) => !hasAppointments && handleDrop(e, day, time)}
                                         >
+                                            {/* Free slot indicator */}
+                                            {showFreeSlots && !hasAppointments && getSlotFreeStatus(day, time).isFree && (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <span className="text-[10px] font-semibold text-emerald-500/70 uppercase tracking-wider">Livre</span>
+                                                </div>
+                                            )}
                                             {hasAppointments ? (
                                                 <div className="flex flex-col gap-1 h-full">
                                                     {(expandedSlots.has(`${day.toISOString()}-${time}`) ? slotAppointments : slotAppointments.slice(0, 2)).map((appointment) => {
@@ -898,7 +966,13 @@ export default function AgendaPage() {
                                                     key={day.toISOString()}
                                                     className={cn(
                                                         'border-r last:border-r-0 p-0 cursor-pointer overflow-hidden h-full',
-                                                        isSameDay(day, new Date()) && 'bg-blue-50/30'
+                                                        isSameDay(day, new Date()) && 'bg-blue-50/30',
+                                                        showFreeSlots && (() => {
+                                                            const status = getSlotFreeStatus(day, time)
+                                                            if (status.isFree) return 'bg-emerald-50/80'
+                                                            if (status.isWorking) return 'bg-orange-50/40'
+                                                            return 'bg-gray-50/60'
+                                                        })()
                                                     )}
                                                     onClick={() => {
                                                         if (slotAppointments.length === 0) {
