@@ -85,10 +85,9 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-const TIME_SLOTS = Array.from({ length: 33 }, (_, i) => {
-    const hour = Math.floor(i / 2) + 7 // Start at 07:00
-    const minute = i % 2 === 0 ? '00' : '30'
-    return `${String(hour).padStart(2, '0')}:${minute}`
+const TIME_SLOTS = Array.from({ length: 17 }, (_, i) => {
+    const hour = i + 7 // Start at 07:00, end at 23:00
+    return `${String(hour).padStart(2, '0')}:00`
 })
 
 // Doctor color palette for visual distinction
@@ -253,8 +252,7 @@ export default function AgendaPage() {
             if (currentHour < 7) currentHour = 7
             else if (currentHour > 23) currentHour = 23
                 
-            const minuteSlot = currentMinute >= 30 ? '30' : '00'
-            const timeId = `time-slot-${String(currentHour).padStart(2, '0')}:${minuteSlot}`
+            const timeId = `time-slot-${String(currentHour).padStart(2, '0')}:00`
             
             // Fallback to exactly 07:00 if somehow timeId is not found
             const el = document.getElementById(timeId) || document.getElementById('time-slot-07:00')
@@ -278,8 +276,9 @@ export default function AgendaPage() {
     })
 
     // Check if a time slot is within working hours for any (or filtered) doctor (Agenda Inversa)
+    // Returns which specific therapists are free at each slot
     const getSlotFreeStatus = useMemo(() => {
-        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false })
+        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false, freeDoctors: [] as { id: string; name: string }[] })
         return (day: Date, time: string) => {
             const dayOfWeek = day.getDay() // 0=Sunday
             const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
@@ -291,18 +290,29 @@ export default function AgendaPage() {
                 const endMin = parseInt(s.end_time.split(':')[0]) * 60 + parseInt(s.end_time.split(':')[1])
                 return timeMinutes >= startMin && timeMinutes < endMin
             })
-            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false }
-            // Within working hours — check if free
+            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false, freeDoctors: [] as { id: string; name: string }[] }
+            // For each schedule in this slot, check which doctors are free
             const dateStr = format(day, 'yyyy-MM-dd')
-            const hasAppointment = appointments && Array.isArray(appointments) && appointments.some(
-                (a: any) => a.appointment_date === dateStr &&
-                    a.appointment_time?.substring(0, 5) === time &&
-                    a.status !== 'CANCELLED' &&
-                    (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
-            )
-            return { isWorking: true, isFree: !hasAppointment }
+            const freeDoctors: { id: string; name: string }[] = []
+            const seenDoctorIds = new Set<string>()
+            for (const schedule of relevantSchedules) {
+                if (seenDoctorIds.has(schedule.doctor_id)) continue
+                seenDoctorIds.add(schedule.doctor_id)
+                const doctorHasAppointment = appointments && Array.isArray(appointments) && appointments.some(
+                    (a: any) => a.appointment_date === dateStr &&
+                        a.appointment_time?.substring(0, 5) === time &&
+                        a.status !== 'CANCELLED' &&
+                        a.doctor?.id === schedule.doctor_id
+                )
+                if (!doctorHasAppointment) {
+                    const doctorInfo = doctorsList?.find((d: any) => d.id === schedule.doctor_id)
+                    const name = doctorInfo?.user?.full_name || 'Profissional'
+                    freeDoctors.push({ id: schedule.doctor_id, name })
+                }
+            }
+            return { isWorking: true, isFree: freeDoctors.length > 0, freeDoctors }
         }
-    }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter])
+    }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter, doctorsList])
 
     // Group appointments by date and time
     // Only exclude cancelled appointments from the agenda view
@@ -334,7 +344,7 @@ export default function AgendaPage() {
         if (!doctorsList || !appointments || !Array.isArray(appointments)) return []
         const now = new Date()
         const todayStr = format(now, 'yyyy-MM-dd')
-        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${now.getMinutes() >= 30 ? '30' : '00'}`
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:00`
         return doctorsList.filter((d: any) => d.id && d.user).map((doctor: any) => {
             const hasAppointmentNow = appointments.some(
                 (a: any) =>
@@ -355,7 +365,7 @@ export default function AgendaPage() {
         })
     }, [doctorsList, appointments])
 
-    // Calculate cell height based on duration (simple version: 1 slot = 30min)
+    // Calculate cell height based on duration (1 slot = 1 hour)
     // For now we just show slot by slot. 
 
     // Cancellation logic
@@ -747,12 +757,38 @@ export default function AgendaPage() {
                                             onDragOver={(e) => !hasAppointments && handleDragOver(e, day, time)}
                                             onDrop={(e) => !hasAppointments && handleDrop(e, day, time)}
                                         >
-                                            {/* Free slot indicator */}
-                                            {showFreeSlots && !hasAppointments && getSlotFreeStatus(day, time).isFree && (
-                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                    <span className="text-[10px] font-semibold text-emerald-500/70 uppercase tracking-wider">Livre</span>
-                                                </div>
-                                            )}
+                                            {/* Free slot indicator - shows which therapists are free */}
+                                            {showFreeSlots && !hasAppointments && (() => {
+                                                const status = getSlotFreeStatus(day, time)
+                                                if (!status.isFree) return null
+                                                return (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-0.5 overflow-hidden">
+                                                        <div className="flex flex-wrap gap-0.5 justify-center items-center max-w-full">
+                                                            {status.freeDoctors.slice(0, 3).map((doc) => {
+                                                                const color = getDoctorColor(doc.id)
+                                                                const firstName = doc.name.split(' ')[0]
+                                                                return (
+                                                                    <span
+                                                                        key={doc.id}
+                                                                        className={cn(
+                                                                            'text-[9px] font-semibold px-1.5 py-0.5 rounded-full truncate max-w-[80px]',
+                                                                            color.bg, color.text
+                                                                        )}
+                                                                        title={doc.name}
+                                                                    >
+                                                                        {firstName}
+                                                                    </span>
+                                                                )
+                                                            })}
+                                                            {status.freeDoctors.length > 3 && (
+                                                                <span className="text-[9px] font-medium text-muted-foreground">
+                                                                    +{status.freeDoctors.length - 3}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })()}
                                             {hasAppointments ? (
                                                 <div className="flex flex-col gap-1 h-full">
                                                     {(expandedSlots.has(`${day.toISOString()}-${time}`) ? slotAppointments : slotAppointments.slice(0, 2)).map((appointment) => {
