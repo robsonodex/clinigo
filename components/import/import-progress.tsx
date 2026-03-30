@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, CheckCircle2, AlertTriangle, XCircle, Clock, ShieldCheck, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface ImportProgressProps {
     jobId: string;
@@ -11,7 +13,7 @@ interface ImportProgressProps {
 
 export function ImportProgress({ jobId }: ImportProgressProps) {
     const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState('processing');
+    const [status, setStatus] = useState('loading');
     const [stats, setStats] = useState({
         total: 0,
         processed: 0,
@@ -20,6 +22,7 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
     });
 
     const supabase = createClient();
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         fetchStatus();
@@ -41,24 +44,36 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
             )
             .subscribe();
 
+        // Polling fallback every 5s for status that should be progressing
+        pollingRef.current = setInterval(() => {
+            fetchStatus();
+        }, 5000);
+
         return () => {
             supabase.removeChannel(channel);
+            if (pollingRef.current) clearInterval(pollingRef.current);
         };
     }, [jobId]);
 
     function updateState(job: any) {
-        // Avoid division by zero
         const total = job.total_rows || 1;
-        const pct = Math.round((job.processed_rows / total) * 100);
+        const pct = Math.round(((job.processed_rows || 0) / total) * 100);
 
         setStatus(job.status);
         setStats({
-            total: job.total_rows,
-            processed: job.processed_rows,
-            successful: job.successful_rows,
-            failed: job.failed_rows
+            total: job.total_rows || 0,
+            processed: job.processed_rows || 0,
+            successful: job.successful_rows || 0,
+            failed: job.failed_rows || 0
         });
         setProgress(pct);
+
+        // Stop polling when in a final state
+        const finalStatuses = ['completed', 'partial', 'failed'];
+        if (finalStatuses.includes(job.status) && pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
     }
 
     async function fetchStatus() {
@@ -71,6 +86,7 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
         if (data) updateState(data);
     }
 
+    // ── STATE: Completed / Partial ──
     if (status === 'completed' || status === 'partial') {
         const isCompleted = status === 'completed';
         const Icon = isCompleted ? CheckCircle2 : AlertTriangle;
@@ -98,6 +114,7 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
         );
     }
 
+    // ── STATE: Failed ──
     if (status === 'failed') {
         return (
             <div className="space-y-4 p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100">
@@ -108,10 +125,81 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
                 <div className="text-sm text-foreground">
                     Ocorreu um erro crítico que impediu o processo. Por favor, tente enviar o arquivo novamente.
                 </div>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/dashboard/importacao/novo">Nova Importação</Link>
+                </Button>
             </div>
         );
     }
 
+    // ── STATE: Pending ──
+    if (status === 'pending') {
+        return (
+            <div className="space-y-4 p-6 bg-slate-50 dark:bg-slate-900/20 rounded-lg border border-slate-200">
+                <div className="flex items-center gap-2 text-slate-600">
+                    <Clock className="h-6 w-6" />
+                    <span className="font-semibold text-lg">Aguardando processamento</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                    O arquivo foi enviado e está aguardando validação.
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    {stats.total} registros encontrados
+                </div>
+            </div>
+        );
+    }
+
+    // ── STATE: Validating ──
+    if (status === 'validating') {
+        return (
+            <div className="space-y-6 text-center py-8">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                    <h3 className="text-xl font-semibold">Validando dados...</h3>
+                    <p className="text-muted-foreground m-0">Verificando a integridade dos registros do arquivo.</p>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                    {stats.total} registros para validar
+                </div>
+            </div>
+        );
+    }
+
+    // ── STATE: Validated (ready to execute) ──
+    if (status === 'validated') {
+        return (
+            <div className="space-y-4 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 text-blue-600">
+                    <ShieldCheck className="h-6 w-6" />
+                    <span className="font-semibold text-lg">Dados validados</span>
+                </div>
+                <div className="text-sm text-foreground">
+                    Os dados foram validados com sucesso. Retorne ao assistente de importação para iniciar o processo.
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    {stats.total} registros prontos para importação
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/dashboard/importacao/novo">Ir para Importação</Link>
+                </Button>
+            </div>
+        );
+    }
+
+    // ── STATE: Loading (initial) ──
+    if (status === 'loading') {
+        return (
+            <div className="space-y-6 text-center py-8">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                    <h3 className="text-xl font-semibold">Carregando informações...</h3>
+                </div>
+            </div>
+        );
+    }
+
+    // ── STATE: Processing (default active state) ──
     return (
         <div className="space-y-6 text-center py-8">
             <div className="flex flex-col items-center gap-4">
