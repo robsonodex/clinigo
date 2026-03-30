@@ -2,7 +2,38 @@ import ExcelJS from 'exceljs';
 
 export async function parseExcelFile(buffer: Buffer) {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    
+    // Tentar carregar como .xlsx primeiro, depois como .csv
+    try {
+        await workbook.xlsx.load(buffer as unknown as Buffer);
+    } catch (xlsxError: any) {
+        // Se falhar, tentar como CSV
+        try {
+            const textContent = buffer.toString('utf-8');
+            // Verificar se parece ser CSV/texto
+            if (textContent.includes(',') || textContent.includes(';') || textContent.includes('\t')) {
+                const csvStream = require('stream');
+                const readable = new csvStream.Readable();
+                readable.push(buffer);
+                readable.push(null);
+                await workbook.csv.read(readable, {
+                    parserOptions: { delimiter: textContent.includes(';') ? ';' : ',' }
+                });
+            } else {
+                throw xlsxError;
+            }
+        } catch {
+            // Erro definitivo — formato não suportado
+            const isXlsFormat = xlsxError.message?.includes('central directory') || xlsxError.message?.includes('zip');
+            if (isXlsFormat) {
+                throw new Error(
+                    'Formato .xls (Excel 97-2003) não é suportado. ' +
+                    'Por favor, abra o arquivo no Excel e salve como .xlsx (Excel Workbook) antes de importar.'
+                );
+            }
+            throw new Error(`Erro ao processar arquivo: ${xlsxError.message}`);
+        }
+    }
 
     const worksheet = workbook.getWorksheet('Dados') || workbook.worksheets[0];
     const rows: any[] = [];

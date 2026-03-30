@@ -108,7 +108,14 @@ export async function POST(request: Request) {
 
         const supabase = await createClient()
 
-        const body = await request.json()
+        let body: any
+        try {
+            body = await request.json()
+        } catch (parseError) {
+            return NextResponse.json({
+                error: 'Corpo da requisição inválido. JSON malformado.'
+            }, { status: 400 })
+        }
 
         // Validate request body with Zod
         const validationResult = uploadDocumentSchema.safeParse(body)

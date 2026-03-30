@@ -100,6 +100,7 @@ export default function RecepcaoPage() {
     const [preCheckinAlerts, setPreCheckinAlerts] = useState<Array<{ id: string; patientName: string; time: string }>>([])
     const [showNoShowList, setShowNoShowList] = useState(false)
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
+    const [isPlanLoading, setIsPlanLoading] = useState(true)
 
     useEffect(() => {
         loadData()
@@ -117,7 +118,9 @@ export default function RecepcaoPage() {
                     const data = await res.json()
                     if (data.planType) setClinicPlanType(data.planType as PlanType)
                 }
-            } catch { /* silent */ }
+            } catch { /* silent */ } finally {
+                setIsPlanLoading(false)
+            }
         }
         fetchPlanType()
     }, [])
@@ -483,109 +486,119 @@ export default function RecepcaoPage() {
 
                 {/* Action Buttons - uniform grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {/* Painel TV */}
-                    {currentUser?.clinic_id && (
-                        <Button
-                            className="h-12 gap-2 text-sm font-medium text-white"
-                            style={{ backgroundColor: '#334155' }}
-                            onClick={() => {
-                                const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
-                                window.open(url, '_blank')
-                            }}
-                        >
-                            <Tv className="w-4 h-4" />
-                            Painel TV
-                        </Button>
-                    )}
-
-                    {/* Auto Atendimento */}
-                    {currentUser?.clinic_id && hasFeature(clinicPlanType, 'totem') && (
-                        <Button
-                            className="h-12 gap-2 text-sm font-medium text-white"
-                            style={{ backgroundColor: '#475569' }}
-                            onClick={() => {
-                                const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
-                                window.open(url, '_blank')
-                            }}
-                        >
-                            <Monitor className="w-4 h-4" />
-                            Auto Atendimento
-                        </Button>
-                    )}
-
-                    {/* Check-in Fácil */}
-                    <Link href="/dashboard/recepcao/face-checkin">
-                        <Button className="h-12 w-full gap-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Check-in Fácil
-                        </Button>
-                    </Link>
-
-                    {/* QR Scanner */}
-                    <QRScannerDialog onCheckIn={loadData} />
-
-                    {/* Sem Agendamento */}
-                    <Dialog open={showWalkInDialog} onOpenChange={(open) => {
-                        setShowWalkInDialog(open)
-                        if (!open) setIsCreatingPatient(false)
-                    }}>
-                        <DialogTrigger asChild>
-                            <Button className="h-12 gap-2 text-sm font-medium text-white" style={{ backgroundColor: '#0284c7' }}>
-                                <Plus className="w-4 h-4" />
-                                Sem Agendamento
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
-                                </DialogTitle>
-                            </DialogHeader>
-
-                            {isCreatingPatient ? (
-                                <QuickPatientForm
-                                    onSubmit={handleCreatePatient}
-                                    onBack={() => setIsCreatingPatient(false)}
-                                    isSubmitting={isSubmittingPatient}
-                                />
-                            ) : (
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label>Paciente</Label>
-                                        <PatientSelector
-                                            value={selectedPatientId}
-                                            onChange={setSelectedPatientId}
-                                            onNewPatient={() => setIsCreatingPatient(true)}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Urgência</Label>
-                                        <Select value={urgency} onValueChange={setUrgency}>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="normal">Normal</SelectItem>
-                                                <SelectItem value="priority">Prioridade</SelectItem>
-                                                <SelectItem value="urgent">Urgente</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Motivo</Label>
-                                        <Input
-                                            placeholder="Motivo da consulta..."
-                                            value={reason}
-                                            onChange={(e) => setReason(e.target.value)}
-                                        />
-                                    </div>
-                                    <Button className="w-full" onClick={handleCreateWalkIn}>
-                                        Adicionar à Fila
-                                    </Button>
-                                </div>
+                    {currentUser === undefined || isPlanLoading ? (
+                        <>
+                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
+                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
+                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
+                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
+                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
+                        </>
+                    ) : (
+                        <>
+                            {/* Painel TV */}
+                            {currentUser?.clinic_id && (
+                                <Button
+                                    className="h-12 gap-2 text-sm font-medium text-white border border-slate-600/50 bg-gradient-to-br from-slate-700 to-slate-900 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5"
+                                    onClick={() => {
+                                        const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
+                                        window.open(url, '_blank')
+                                    }}
+                                >
+                                    <Tv className="w-4 h-4" />
+                                    Painel TV
+                                </Button>
                             )}
-                        </DialogContent>
-                    </Dialog>
+
+                            {/* Auto Atendimento */}
+                            {currentUser?.clinic_id && hasFeature(clinicPlanType, 'totem') && (
+                                <Button
+                                    className="h-12 gap-2 text-sm font-medium text-white border border-cyan-600/50 bg-gradient-to-br from-cyan-700 to-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5"
+                                    onClick={() => {
+                                        const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
+                                        window.open(url, '_blank')
+                                    }}
+                                >
+                                    <Monitor className="w-4 h-4" />
+                                    Auto Atendimento
+                                </Button>
+                            )}
+
+                            {/* Check-in Fácil */}
+                            <Link href="/dashboard/recepcao/face-checkin">
+                                <Button className="h-12 w-full gap-2 text-sm font-medium text-white border border-emerald-500/50 bg-gradient-to-br from-emerald-600 to-teal-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Check-in Fácil
+                                </Button>
+                            </Link>
+
+                            {/* QR Scanner */}
+                            <QRScannerDialog onCheckIn={loadData} />
+
+                            {/* Sem Agendamento */}
+                            <Dialog open={showWalkInDialog} onOpenChange={(open) => {
+                                setShowWalkInDialog(open)
+                                if (!open) setIsCreatingPatient(false)
+                            }}>
+                                <DialogTrigger asChild>
+                                    <Button className="h-12 gap-2 text-sm font-medium text-white border border-sky-400/50 bg-gradient-to-br from-sky-500 to-blue-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5">
+                                        <Plus className="w-4 h-4" />
+                                        Sem Agendamento
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    {isCreatingPatient ? (
+                                        <QuickPatientForm
+                                            onSubmit={handleCreatePatient}
+                                            onBack={() => setIsCreatingPatient(false)}
+                                            isSubmitting={isSubmittingPatient}
+                                        />
+                                    ) : (
+                                        <div className="space-y-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label>Paciente</Label>
+                                                <PatientSelector
+                                                    value={selectedPatientId}
+                                                    onChange={setSelectedPatientId}
+                                                    onNewPatient={() => setIsCreatingPatient(true)}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Urgência</Label>
+                                                <Select value={urgency} onValueChange={setUrgency}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="normal">Normal</SelectItem>
+                                                        <SelectItem value="priority">Prioridade</SelectItem>
+                                                        <SelectItem value="urgent">Urgente</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Motivo</Label>
+                                                <Input
+                                                    placeholder="Motivo da consulta..."
+                                                    value={reason}
+                                                    onChange={(e) => setReason(e.target.value)}
+                                                />
+                                            </div>
+                                            <Button className="w-full hover:shadow-md transition-all duration-300" onClick={handleCreateWalkIn}>
+                                                Adicionar à Fila
+                                            </Button>
+                                        </div>
+                                    )}
+                                </DialogContent>
+                            </Dialog>
+                        </>
+                    )}
                 </div>
             </div>
 

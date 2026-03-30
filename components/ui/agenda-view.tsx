@@ -19,6 +19,9 @@ import {
     Lightbulb,
     LayoutGrid,
     List,
+    Stethoscope,
+    Users,
+    UserPlus,
 } from 'lucide-react'
 import {
     format,
@@ -59,6 +62,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
@@ -98,11 +108,8 @@ const DOCTOR_COLORS = [
     { bg: 'bg-fuchsia-100', border: 'border-fuchsia-400', text: 'text-fuchsia-800', accent: 'bg-fuchsia-500', hex: '#d946ef' },
     { bg: 'bg-lime-100', border: 'border-lime-400', text: 'text-lime-800', accent: 'bg-lime-500', hex: '#84cc16' },
     { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-800', accent: 'bg-green-500', hex: '#22c55e' },
-    { bg: 'bg-slate-100', border: 'border-slate-400', text: 'text-slate-800', accent: 'bg-slate-500', hex: '#64748b' },
     { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-800', accent: 'bg-yellow-500', hex: '#eab308' },
-    { bg: 'bg-stone-100', border: 'border-stone-400', text: 'text-stone-800', accent: 'bg-stone-500', hex: '#78716c' },
-    { bg: 'bg-zinc-100', border: 'border-zinc-400', text: 'text-zinc-800', accent: 'bg-zinc-500', hex: '#71717a' },
-    { bg: 'bg-neutral-100', border: 'border-neutral-400', text: 'text-neutral-800', accent: 'bg-neutral-500', hex: '#737373' },
+    // Cores cinzas removidas a pedido do usuário
     // Tons um pouco mais fortes (200) para garantir até 35 médicos
     { bg: 'bg-emerald-200', border: 'border-emerald-500', text: 'text-emerald-900', accent: 'bg-emerald-600', hex: '#10b981' },
     { bg: 'bg-sky-200', border: 'border-sky-500', text: 'text-sky-900', accent: 'bg-sky-600', hex: '#0ea5e9' },
@@ -128,7 +135,7 @@ const TIMELINE_COLORS = [
     'bg-indigo-600', 'bg-teal-600', 'bg-orange-500', 'bg-pink-600',
     'bg-sky-600', 'bg-amber-500', 'bg-rose-500', 'bg-violet-600',
     'bg-cyan-600', 'bg-fuchsia-600', 'bg-lime-600', 'bg-green-600',
-    'bg-slate-600', 'bg-yellow-500', 'bg-stone-600', 'bg-zinc-600',
+    'bg-yellow-500',
     // Tons mais escuros (700) para diferenciar
     'bg-emerald-700', 'bg-sky-700', 'bg-amber-600', 'bg-rose-700',
     'bg-violet-700', 'bg-orange-600', 'bg-cyan-700', 'bg-pink-700',
@@ -175,6 +182,7 @@ export default function AgendaPage() {
     const [view, setView] = useState<'week' | 'day'>('week')
     const [calendarStyle, setCalendarStyle] = useState<'standard' | 'timeline'>('standard')
     const [manualAppointmentOpen, setManualAppointmentOpen] = useState(false)
+    const [isEncaixeMode, setIsEncaixeMode] = useState(false)
     const [recurringAppointmentOpen, setRecurringAppointmentOpen] = useState(false)
     const [absenceModalOpen, setAbsenceModalOpen] = useState(false)
     const [suggestionModalOpen, setSuggestionModalOpen] = useState(false)
@@ -184,6 +192,17 @@ export default function AgendaPage() {
     const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
     const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false)
     const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set())
+
+    // Doctor filter
+    const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('all')
+
+    // Fetch doctors for filter
+    const { data: doctorsList } = useQuery({
+        queryKey: ['doctors-for-agenda-filter'],
+        queryFn: () => api.get<any[]>('/doctors'),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    })
 
     // Drag and Drop
     const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null)
@@ -251,7 +270,8 @@ export default function AgendaPage() {
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
-                a.status !== 'CANCELLED'
+                a.status !== 'CANCELLED' &&
+                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
         )
     }
 
@@ -260,9 +280,36 @@ export default function AgendaPage() {
         if (!appointments || !Array.isArray(appointments)) return []
         const dateStr = format(date, 'yyyy-MM-dd')
         return appointments.filter(
-            (a) => a.appointment_date === dateStr && a.status !== 'CANCELLED'
+            (a) => a.appointment_date === dateStr && a.status !== 'CANCELLED' &&
+                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
     }
+
+    // Professional availability for current time
+    const professionalAvailability = useMemo(() => {
+        if (!doctorsList || !appointments || !Array.isArray(appointments)) return []
+        const now = new Date()
+        const todayStr = format(now, 'yyyy-MM-dd')
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${now.getMinutes() >= 30 ? '30' : '00'}`
+        return doctorsList.filter((d: any) => d.id && d.user).map((doctor: any) => {
+            const hasAppointmentNow = appointments.some(
+                (a: any) =>
+                    a.appointment_date === todayStr &&
+                    a.doctor?.id === doctor.id &&
+                    a.status !== 'CANCELLED' &&
+                    a.status !== 'NO_SHOW' &&
+                    a.appointment_time?.substring(0, 5) <= currentTime &&
+                    calcEndTime(a.appointment_time?.substring(0, 5), (a.doctor as any)?.consultation_duration || 60) > currentTime
+            )
+            return {
+                id: doctor.id,
+                name: doctor.user?.full_name?.split(' ')[0] || 'N/A',
+                fullName: doctor.user?.full_name || 'N/A',
+                specialty: doctor.specialty || '',
+                isBusy: hasAppointmentNow,
+            }
+        })
+    }, [doctorsList, appointments])
 
     // Calculate cell height based on duration (simple version: 1 slot = 30min)
     // For now we just show slot by slot. 
@@ -370,118 +417,200 @@ export default function AgendaPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-6rem)]">
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold">Agenda</h1>
-                    <div className="flex items-center border rounded-md bg-white">
+            {/* Toolbar */}
+            <div className="flex flex-col gap-4 mb-4">
+                
+                {/* Linha 1: Título e Ações Principais */}
+                <div className="flex flex-wrap items-center gap-6">
+                    <h1 className="text-xl md:text-2xl font-bold">Agenda</h1>
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={prevPeriod}
-                            className="h-8 w-8"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => {
+                                setPreselectedSlot(null)
+                                setManualAppointmentOpen(true)
+                            }}
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            <PlusCircle className="h-4 w-4" />
+                            Novo Agendamento
                         </Button>
-                        <span className="px-3 text-sm font-medium min-w-[140px] text-center">
-                            {view === 'week' ? (
-                                <>
-                                    {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
-                                    {format(weekEnd, 'd MMM', { locale: ptBR })}
-                                </>
-                            ) : (
-                                format(currentDate, "d 'de' MMMM", { locale: ptBR })
-                            )}
-                        </span>
                         <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={nextPeriod}
-                            className="h-8 w-8"
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => setRecurringAppointmentOpen(true)}
                         >
-                            <ChevronRight className="h-4 w-4" />
+                            <Repeat className="h-4 w-4" />
+                            Recorrente
                         </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => setAbsenceModalOpen(true)}
+                        >
+                            <UserX className="h-4 w-4" />
+                            Ausência
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => setSuggestionModalOpen(true)}
+                        >
+                            <Lightbulb className="h-4 w-4" />
+                            Sugerir
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+                            onClick={() => {
+                                setPreselectedSlot(null)
+                                setIsEncaixeMode(true)
+                                setManualAppointmentOpen(true)
+                            }}
+                        >
+                            <UserPlus className="h-4 w-4" />
+                            Encaixe
+                        </Button>
+                        <div className="w-px h-6 bg-border mx-1" />
+                        <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter}>
+                            <SelectTrigger className="w-[220px] md:w-[320px] lg:w-[350px] h-8 text-sm">
+                                <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
+                                <div className="flex-1 truncate text-left">
+                                    <SelectValue placeholder="Profissional" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Profissionais</SelectItem>
+                                {doctorsList?.filter((d: any) => d.id && d.user).map((doctor: any) => {
+                                    const avail = professionalAvailability.find((p) => p.id === doctor.id)
+                                    return (
+                                        <SelectItem key={doctor.id} value={doctor.id}>
+                                            <div className="flex items-center gap-2 overflow-hidden w-full">
+                                                <span className={cn(
+                                                    'w-2 h-2 rounded-full shrink-0',
+                                                    avail?.isBusy ? 'bg-red-500' : 'bg-green-500'
+                                                )} />
+                                                <span className="truncate min-w-0 font-medium">
+                                                    {doctor.user?.full_name || 'Profissional'}{' '}
+                                                    <span className="text-muted-foreground text-xs font-normal">
+                                                        ({doctor.specialty || 'Geral'})
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <Button variant="outline" size="sm" onClick={goToToday}>
-                        Hoje
-                    </Button>
-                    <Button
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => {
-                            setPreselectedSlot(null)
-                            setManualAppointmentOpen(true)
-                        }}
-                    >
-                        <PlusCircle className="h-4 w-4" />
-                        Novo Agendamento
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => setRecurringAppointmentOpen(true)}
-                    >
-                        <Repeat className="h-4 w-4" />
-                        Recorrente
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => setAbsenceModalOpen(true)}
-                    >
-                        <UserX className="h-4 w-4" />
-                        Ausência
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => setSuggestionModalOpen(true)}
-                    >
-                        <Lightbulb className="h-4 w-4" />
-                        Sugerir
-                    </Button>
                 </div>
 
-                <div className="flex gap-2 items-center">
-                    <div className="flex border rounded-md overflow-hidden">
-                        <Button
-                            variant={calendarStyle === 'standard' ? 'default' : 'ghost'}
-                            onClick={() => setCalendarStyle('standard')}
-                            size="sm"
-                            className="gap-1 rounded-none"
-                        >
-                            <LayoutGrid className="h-4 w-4" />
-                            Padrão
+                {/* Linha 2: Navegação de Data e Visualizações */}
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-muted/20 p-2 rounded-lg border">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center border rounded-md bg-white shadow-sm">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={prevPeriod}
+                                className="h-8 w-8"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="px-3 text-sm font-medium min-w-[140px] text-center">
+                                {view === 'week' ? (
+                                    <>
+                                        {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
+                                        {format(weekEnd, 'd MMM', { locale: ptBR })}
+                                    </>
+                                ) : (
+                                    format(currentDate, "d 'de' MMMM", { locale: ptBR })
+                                )}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={nextPeriod}
+                                className="h-8 w-8"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={goToToday} className="bg-white shadow-sm h-8">
+                            Hoje
                         </Button>
-                        <Button
-                            variant={calendarStyle === 'timeline' ? 'default' : 'ghost'}
-                            onClick={() => setCalendarStyle('timeline')}
-                            size="sm"
-                            className="gap-1 rounded-none"
-                        >
-                            <List className="h-4 w-4" />
-                            Timeline
-                        </Button>
+                        
+                        <div className="w-px h-6 bg-border mx-2 hidden sm:block" />
+
+                        <div className="flex border rounded-md overflow-hidden bg-white shadow-sm">
+                            <Button
+                                variant={view === 'day' ? 'outline' : 'ghost'}
+                                onClick={() => setView('day')}
+                                size="sm"
+                                className={cn(
+                                    "h-8 rounded-none border-0",
+                                    view === 'day' && "bg-muted font-medium px-3"
+                                )}
+                            >
+                                Dia
+                            </Button>
+                            <Button
+                                variant={view === 'week' ? 'default' : 'ghost'}
+                                onClick={() => setView('week')}
+                                size="sm"
+                                className={cn(
+                                    "h-8 rounded-none bg-emerald-500 text-white hover:bg-emerald-600 px-3",
+                                    view !== 'week' && "bg-transparent text-foreground hover:bg-muted"
+                                )}
+                            >
+                                Semana
+                            </Button>
+                        </div>
                     </div>
-                    <div className="w-px h-6 bg-border" />
-                    <Button
-                        variant={view === 'day' ? 'default' : 'outline'}
-                        onClick={() => setView('day')}
-                        size="sm"
-                    >
-                        Dia
-                    </Button>
-                    <Button
-                        variant={view === 'week' ? 'default' : 'outline'}
-                        onClick={() => setView('week')}
-                        size="sm"
-                    >
-                        Semana
-                    </Button>
+
+                    <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                            <div className="flex border rounded-md overflow-hidden bg-white shadow-sm">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant={calendarStyle === 'standard' ? 'default' : 'ghost'}
+                                            onClick={() => setCalendarStyle('standard')}
+                                            size="icon"
+                                            className="h-8 w-8 rounded-none bg-emerald-500 text-white"
+                                        >
+                                            <LayoutGrid className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Modo Padrão</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant={calendarStyle === 'timeline' ? 'ghost' : 'ghost'}
+                                            onClick={() => setCalendarStyle('timeline')}
+                                            size="icon"
+                                            className={cn(
+                                                "h-8 w-8 rounded-none",
+                                                calendarStyle === 'timeline' && "bg-emerald-500 text-white"
+                                            )}
+                                        >
+                                            <List className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Modo Timeline</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </TooltipProvider>
+                    </div>
                 </div>
             </div>
+
+
 
             {/* Calendar Grid */}
             <Card className="flex-1 overflow-auto">
@@ -608,6 +737,12 @@ export default function AgendaPage() {
                                                                             <div className="text-[10px] font-medium mt-0.5 truncate opacity-80">
                                                                                 Dr. {appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
                                                                             </div>
+                                                                            {/* No Show Reason */}
+                                                                            {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
+                                                                                <div className="text-[9px] mt-0.5 px-1 py-0.5 bg-red-200 text-red-800 rounded truncate">
+                                                                                    ⚠ {(appointment as any).no_show_reason}
+                                                                                </div>
+                                                                            )}
 
                                                                             <div className="flex items-center justify-end mt-1">
                                                                                 <DropdownMenu>
@@ -662,6 +797,9 @@ export default function AgendaPage() {
                                                                                 <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
                                                                                 <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                 <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
+                                                                                {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
+                                                                                    <p className="text-red-600"><strong>Motivo falta:</strong> {(appointment as any).no_show_reason}</p>
+                                                                                )}
                                                                                 {(appointment as any).type && (
                                                                                     <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>
                                                                                 )}
@@ -863,6 +1001,9 @@ export default function AgendaPage() {
                                                                                         <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
                                                                                         <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                         <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
+                                                                                        {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
+                                                                                            <p className="text-red-600"><strong>Motivo falta:</strong> {(appointment as any).no_show_reason}</p>
+                                                                                        )}
                                                                                         {(appointment as any).type && (
                                                                                             <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>
                                                                                         )}
@@ -1005,9 +1146,13 @@ export default function AgendaPage() {
             {/* Manual Appointment Modal */}
             <ManualAppointmentModal
                 open={manualAppointmentOpen}
+                isEncaixe={isEncaixeMode}
                 onOpenChange={(open) => {
                     setManualAppointmentOpen(open)
-                    if (!open) setPreselectedSlot(null)
+                    if (!open) {
+                        setPreselectedSlot(null)
+                        setIsEncaixeMode(false)
+                    }
                 }}
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}

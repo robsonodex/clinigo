@@ -89,8 +89,9 @@ interface ManualAppointmentModalProps {
     preselectedDate?: string
     preselectedTime?: string
     preselectedDoctorId?: string
-    appointmentToEdit?: any // Typed as any to avoid circular deps for now, but should be Appointment
-    onSuccess?: (appointmentDate: string) => void // ✅ Callback to navigate agenda to created appointment
+    appointmentToEdit?: any
+    onSuccess?: (appointmentDate: string) => void
+    isEncaixe?: boolean
 }
 
 export function ManualAppointmentModal({
@@ -101,6 +102,7 @@ export function ManualAppointmentModal({
     preselectedDoctorId,
     appointmentToEdit,
     onSuccess,
+    isEncaixe,
 }: ManualAppointmentModalProps) {
     const queryClient = useQueryClient()
     const [step, setStep] = useState<'search' | 'register' | 'form'>('search')
@@ -161,8 +163,10 @@ export function ManualAppointmentModal({
             if (preselectedDate) setValue('appointment_date', preselectedDate)
             if (preselectedTime) setValue('appointment_time', preselectedTime)
             if (preselectedDoctorId) setValue('doctor_id', preselectedDoctorId)
+            setValue('ignore_schedule_constraints', !!isEncaixe)
+            if (isEncaixe) setValue('override_reason', 'Encaixe de Emergência / Extra')
         }
-    }, [open, appointmentToEdit, preselectedDate, preselectedTime, preselectedDoctorId, reset, setValue])
+    }, [open, appointmentToEdit, preselectedDate, preselectedTime, preselectedDoctorId, isEncaixe, reset, setValue])
 
     // Fetch doctors with caching
     const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useQuery({
@@ -325,10 +329,12 @@ export function ManualAppointmentModal({
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Calendar className="h-5 w-5" />
-                            Novo Agendamento Manual
+                            {isEditing ? 'Editar Agendamento' : isEncaixe ? 'Encaixe Extra / Emergência' : 'Novo Agendamento Manual'}
                         </DialogTitle>
                         <DialogDescription>
-                            Crie um agendamento manual selecionando o paciente, médico e horário desejado
+                            {isEncaixe 
+                                ? 'Crie um encaixe que ignora bloqueios ou limite de horários do médico. Confirme com o profissional antes de realizar o encaixe.'
+                                : 'Crie um agendamento manual selecionando o paciente, médico e horário desejado.'}
                         </DialogDescription>
                     </DialogHeader>
 

@@ -134,7 +134,7 @@ export function MarkNoShowButton({
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="reason">Motivo (opcional)</Label>
+                            <Label htmlFor="reason">Motivo do não comparecimento <span className="text-red-500">*</span></Label>
                             <Textarea
                                 id="reason"
                                 placeholder="Ex: Não atendeu telefone, paciente informou imprevisto..."
@@ -159,7 +159,7 @@ export function MarkNoShowButton({
                         <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleMarkNoShow}
-                            disabled={loading}
+                            disabled={loading || !reason.trim()}
                             className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
                         >
                             {loading ? (

@@ -69,6 +69,8 @@ const PatientFormSchema = z.object({
     date_of_birth: z.string().optional(),
     gender: z.enum(['M', 'F', 'O']).optional(),
     address: z.string().optional(),
+    insurance_holder_name: z.string().optional(),
+    insurance_holder_cpf: z.string().optional(),
 });
 type PatientFormData = z.infer<typeof PatientFormSchema>;
 
@@ -89,7 +91,7 @@ export default function PatientDetailsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const form = useForm<PatientFormData>({
         resolver: zodResolver(PatientFormSchema),
-        defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address: '' },
+        defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address: '', insurance_holder_name: '', insurance_holder_cpf: '' },
     });
 
     const clinicId = user?.clinic_id;
@@ -126,6 +128,8 @@ export default function PatientDetailsPage() {
                 date_of_birth: d.birth_date || d.date_of_birth || '',
                 gender: d.gender || 'M',
                 address: typeof d.address === 'object' ? (JSON.stringify(d.address) === '{}' ? '' : JSON.stringify(d.address)) : (d.address || ''),
+                insurance_holder_name: d.insurance_holder_name || '',
+                insurance_holder_cpf: d.insurance_holder_cpf || '',
             });
         }
         setIsLoading(false);
@@ -295,6 +299,18 @@ export default function PatientDetailsPage() {
                                     <span>{String(patient.address)}</span>
                                 </div>
                             )}
+                            {(patient as any).insurance_holder_name && (
+                                <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-muted-foreground" />
+                                    <span><strong>Titular:</strong> {(patient as any).insurance_holder_name}</span>
+                                </div>
+                            )}
+                            {(patient as any).insurance_holder_cpf && (
+                                <div className="flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4 text-muted-foreground" />
+                                    <span><strong>CPF Titular:</strong> {(patient as any).insurance_holder_cpf}</span>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -370,6 +386,25 @@ export default function PatientDetailsPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="address">Endereço</Label>
                                 <Input id="address" type="text" {...form.register('address')} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="insurance_holder_name">Nome do Titular do Plano</Label>
+                                    <Input
+                                        id="insurance_holder_name"
+                                        placeholder="Nome do titular"
+                                        {...form.register('insurance_holder_name')}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="insurance_holder_cpf">CPF do Titular</Label>
+                                    <Input
+                                        id="insurance_holder_cpf"
+                                        placeholder="000.000.000-00"
+                                        {...form.register('insurance_holder_cpf')}
+                                    />
+                                </div>
                             </div>
                         </div>
 

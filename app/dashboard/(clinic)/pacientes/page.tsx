@@ -72,6 +72,8 @@ const PatientFormSchema = z.object({
     phone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
     date_of_birth: z.string().optional(),
     gender: z.enum(['M', 'F', 'O']).optional(),
+    insurance_holder_name: z.string().optional(),
+    insurance_holder_cpf: z.string().optional(),
 })
 
 type PatientFormData = z.infer<typeof PatientFormSchema>
@@ -514,6 +516,25 @@ export default function PacientesPage() {
                                     type="date"
                                     {...form.register('date_of_birth')}
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="insurance_holder_name">Nome do Titular do Plano</Label>
+                                    <Input
+                                        id="insurance_holder_name"
+                                        placeholder="Nome do titular"
+                                        {...form.register('insurance_holder_name')}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="insurance_holder_cpf">CPF do Titular</Label>
+                                    <Input
+                                        id="insurance_holder_cpf"
+                                        placeholder="000.000.000-00"
+                                        {...form.register('insurance_holder_cpf')}
+                                    />
+                                </div>
                             </div>
                         </div>
 

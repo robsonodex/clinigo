@@ -137,6 +137,8 @@ export async function POST(
                 status: 'NO_SHOW',
                 marked_no_show_at: new Date().toISOString(),
                 marked_no_show_by: user.id,
+                no_show: true,
+                no_show_reason: reason || null,
                 notes: reason
                     ? `${appointment.notes || ''}\n[FALTA - ${new Date().toLocaleString('pt-BR')}] ${reason}`.trim()
                     : appointment.notes

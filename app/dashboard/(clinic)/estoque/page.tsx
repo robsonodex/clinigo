@@ -210,9 +210,12 @@ export default function InventoryPage() {
 
     const getStockStatus = (product: Product) => {
         const qty = product.stock?.[0]?.quantity || 0
+        const minStock = product.min_stock || 0
+        const reorderPoint = product.reorder_point || 0
         if (qty <= 0) return { label: 'Sem Estoque', color: 'bg-red-500' }
-        if (qty <= (product.min_stock || 0)) return { label: 'Crítico', color: 'bg-red-500' }
-        if (qty <= (product.reorder_point || 0)) return { label: 'Baixo', color: 'bg-yellow-500' }
+        if (minStock > 0 && qty <= minStock) return { label: 'Crítico', color: 'bg-red-500' }
+        if (reorderPoint > 0 && qty <= reorderPoint) return { label: 'Baixo', color: 'bg-yellow-500' }
+        if (minStock === 0 && reorderPoint === 0) return { label: 'Configurar', color: 'bg-blue-500' }
         return { label: 'OK', color: 'bg-green-500' }
     }
 

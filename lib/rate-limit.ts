@@ -71,9 +71,11 @@ export async function checkRateLimit(
         }
 
         return { success: true, remaining, reset }
-    } catch (error) {
+    } catch (error: any) {
         // If Redis fails, allow the request (fail-open)
-        console.error('Rate limit check failed:', error)
+        // Only log a brief warning, not the full stack trace
+        const msg = error?.cause?.code || error?.message || 'unknown'
+        console.warn(`⚠️ Rate limit check skipped (${category}): ${msg}`)
         return { success: true, remaining: -1, reset: 0 }
     }
 }
