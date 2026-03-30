@@ -758,7 +758,7 @@ export default function AgendaPage() {
                                             onDrop={(e) => !hasAppointments && handleDrop(e, day, time)}
                                         >
                                             {/* Free slot indicator - shows which therapists are free */}
-                                            {showFreeSlots && !hasAppointments && (() => {
+                                            {showFreeSlots && (() => {
                                                 const status = getSlotFreeStatus(day, time)
                                                 if (!status.isFree) return null
                                                 return (
@@ -789,7 +789,7 @@ export default function AgendaPage() {
                                                     </div>
                                                 )
                                             })()}
-                                            {hasAppointments ? (
+                                            {!showFreeSlots && hasAppointments ? (
                                                 <div className="flex flex-col gap-1 h-full">
                                                     {(expandedSlots.has(`${day.toISOString()}-${time}`) ? slotAppointments : slotAppointments.slice(0, 2)).map((appointment) => {
                                                         const doctorColor = getDoctorColor(appointment.doctor.id)
