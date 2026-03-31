@@ -14,23 +14,56 @@ interface ValidationReportProps {
 export function ValidationReport({ jobId, onValidationComplete }: ValidationReportProps) {
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         validate();
     }, []);
 
     async function validate() {
-        const response = await fetch(`/api/import/validate/${jobId}`, {
-            method: 'POST'
-        });
-        const data = await response.json();
-        setReport(data);
-        setLoading(false);
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch(`/api/import/validate/${jobId}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
 
-        // Auto-proceed if no critical errors? No, user must see result first.
+            if (!response.ok) {
+                setError(data.details || data.error || 'Erro na validação');
+                setLoading(false);
+                return;
+            }
+
+            setReport(data);
+            setLoading(false);
+        } catch (e: any) {
+            console.error('[ValidationReport] Error:', e);
+            setError(e.message || 'Erro de conexão com o servidor');
+            setLoading(false);
+        }
     }
 
     if (loading) return <div className="p-8 text-center">Validando dados...</div>;
+
+    if (error) {
+        return (
+            <div className="space-y-4">
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro na Validação</AlertTitle>
+                    <AlertDescription>
+                        {error}
+                    </AlertDescription>
+                </Alert>
+                <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => validate()}>
+                        Tentar Novamente
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     if (!report) return <div>Erro ao validar</div>;
 

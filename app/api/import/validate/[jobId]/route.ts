@@ -115,6 +115,23 @@ export async function POST(
         });
     } catch (error: any) {
         console.error('[Import Validate] Unexpected error:', error);
+
+        // Atualizar o status do job para 'failed' para não ficar travado em 'validating'
+        try {
+            const supabase = await createClient();
+            const resolvedParams = await (params as any);
+            const failedJobId = resolvedParams?.jobId || (params as any).jobId;
+            await supabase
+                .from('import_jobs')
+                .update({
+                    status: 'failed',
+                    validation_errors: [{ row: 0, errors: [{ field: 'system', message: error.message, severity: 'CRITICAL' }] }]
+                })
+                .eq('id', failedJobId);
+        } catch (updateError) {
+            console.error('[Import Validate] Failed to update job status after error:', updateError);
+        }
+
         return Response.json({
             error: 'Erro inesperado na validação',
             details: error.message

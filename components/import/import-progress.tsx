@@ -11,6 +11,43 @@ interface ImportProgressProps {
     jobId: string;
 }
 
+// Sub-component for detecting stuck jobs in 'validating' state
+function StuckJobRetry({ jobId, onRetry }: { jobId: string; onRetry: () => void }) {
+    const [showRetry, setShowRetry] = useState(false);
+    const supabase = createClient();
+
+    useEffect(() => {
+        // After 90 seconds in validating, offer retry
+        const timer = setTimeout(() => {
+            setShowRetry(true);
+        }, 90000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    async function handleRetry() {
+        await supabase
+            .from('import_jobs')
+            .update({ status: 'pending' } as any)
+            .eq('id', jobId);
+        setShowRetry(false);
+        onRetry();
+    }
+
+    if (!showRetry) return null;
+
+    return (
+        <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2 text-yellow-600 mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium text-sm">A validação parece estar demorando mais que o esperado.</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+                Tentar novamente
+            </Button>
+        </div>
+    );
+}
+
 export function ImportProgress({ jobId }: ImportProgressProps) {
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState('loading');
@@ -146,11 +183,14 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
                 <div className="text-xs text-muted-foreground">
                     {stats.total} registros encontrados
                 </div>
+                <Button variant="default" size="sm" asChild>
+                    <Link href="/dashboard/importacao/novo">Iniciar Nova Importação</Link>
+                </Button>
             </div>
         );
     }
 
-    // ── STATE: Validating ──
+    // ── STATE: Validating (with stuck detection) ──
     if (status === 'validating') {
         return (
             <div className="space-y-6 text-center py-8">
@@ -162,6 +202,7 @@ export function ImportProgress({ jobId }: ImportProgressProps) {
                 <div className="text-sm text-muted-foreground">
                     {stats.total} registros para validar
                 </div>
+                <StuckJobRetry jobId={jobId} onRetry={fetchStatus} />
             </div>
         );
     }
