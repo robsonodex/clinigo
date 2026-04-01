@@ -47,7 +47,7 @@ import {
     Upload,
     Bot,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
 
 interface NavItem {
@@ -608,6 +608,44 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
         }))
         .filter(section => section.items.length > 0)
 
+    // State for collapsible sections
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+
+    // Auto-expand active section on navigation + load from localStorage
+    useEffect(() => {
+        setOpenSections(prev => {
+            let base = { ...prev }
+            // On first render, load from localStorage
+            if (Object.keys(base).length === 0) {
+                try {
+                    const saved = localStorage.getItem('clinigo-sidebar-sections')
+                    if (saved) base = JSON.parse(saved)
+                } catch {}
+            }
+            // Always auto-expand section containing active route
+            const activeSection = filteredSections.find(section =>
+                section.items.some(item =>
+                    pathname === item.href || pathname.startsWith(`${item.href}/`)
+                )
+            )
+            if (activeSection && activeSection.title !== 'Principal') {
+                base[activeSection.title] = true
+            }
+            return base
+        })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname])
+
+    const toggleSection = (title: string) => {
+        setOpenSections(prev => {
+            const next = { ...prev, [title]: !prev[title] }
+            try {
+                localStorage.setItem('clinigo-sidebar-sections', JSON.stringify(next))
+            } catch {}
+            return next
+        })
+    }
+
     return (
         <aside className={cn(
             "flex flex-col bg-white border-r h-full",
@@ -630,31 +668,103 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
 
             {/* Navigation */}
             <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto">
-                {filteredSections.map((section) => (
-                    <div key={section.title}>
-                        <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            {section.title}
-                        </h3>
-                        <div className="space-y-1">
-                            {section.items.map((item) => {
-                                // Special cases for exact matching to avoid multiple active items
-                                const exactMatchRoutes = ['/dashboard', '/dashboard/configuracoes']
-                                const isActive = exactMatchRoutes.includes(item.href)
-                                    ? pathname === item.href
-                                    : pathname === item.href || pathname.startsWith(`${item.href}/`)
-                                return (
-                                    <NavItemComponent
-                                        key={item.href}
-                                        item={item}
-                                        isActive={isActive}
-                                        currentPlan={currentPlan}
-                                        isMobile={isMobile}
-                                    />
-                                )
-                            })}
+                {filteredSections.map((section) => {
+                    const isPrincipal = section.title === 'Principal'
+                    const isOpen = isPrincipal || (openSections[section.title] ?? false)
+
+                    // Section theme config: icon + color
+                    const sectionTheme: Record<string, { icon: React.ComponentType<{className?: string}>, bg: string, text: string, border: string, headerBg: string }> = {
+                        'Agendamento': { icon: Calendar, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-400', headerBg: 'hover:bg-blue-50/60' },
+                        'Equipe': { icon: Users2, bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-400', headerBg: 'hover:bg-teal-50/60' },
+                        'Prontuário': { icon: HeartPulse, bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-400', headerBg: 'hover:bg-amber-50/60' },
+                        'Financeiro': { icon: DollarSign, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', headerBg: 'hover:bg-emerald-50/60' },
+                        'Comunicação': { icon: MessageCircle, bg: 'bg-sky-50', text: 'text-sky-600', border: 'border-sky-400', headerBg: 'hover:bg-sky-50/60' },
+                        'Gestão': { icon: BarChart3, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-400', headerBg: 'hover:bg-orange-50/60' },
+                        'Configurações': { icon: Settings, bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-400', headerBg: 'hover:bg-slate-50/60' },
+                        'Administração': { icon: Shield, bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-400', headerBg: 'hover:bg-red-50/60' },
+                    }
+                    const theme = sectionTheme[section.title]
+                    const SectionIcon = theme?.icon
+
+                    return (
+                        <div key={section.title}>
+                            {isPrincipal ? (
+                                <div className="space-y-1">
+                                    {section.items.map((item) => {
+                                        const isActive = pathname === item.href
+                                        return (
+                                            <NavItemComponent
+                                                key={item.href}
+                                                item={item}
+                                                isActive={isActive}
+                                                currentPlan={currentPlan}
+                                                isMobile={isMobile}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            ) : (
+                                <div className={cn(
+                                    "rounded-lg transition-all duration-200",
+                                    isOpen && theme ? `${theme.bg} border ${theme.border}/20` : ""
+                                )}>
+                                    <button
+                                        onClick={() => toggleSection(section.title)}
+                                        className={cn(
+                                            "flex items-center justify-between w-full px-3 py-2 rounded-lg group cursor-pointer transition-all duration-200",
+                                            theme?.headerBg || 'hover:bg-muted/50',
+                                            isOpen && theme ? theme.text : ''
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {SectionIcon && (
+                                                <SectionIcon className={cn(
+                                                    "w-4 h-4 transition-colors duration-200",
+                                                    isOpen && theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
+                                                )} />
+                                            )}
+                                            <span className={cn(
+                                                "text-xs font-semibold uppercase tracking-wider transition-colors duration-200",
+                                                isOpen && theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
+                                            )}>
+                                                {section.title}
+                                            </span>
+                                        </div>
+                                        <ChevronDown className={cn(
+                                            "w-3.5 h-3.5 transition-all duration-200",
+                                            isOpen && theme ? theme.text : "text-muted-foreground group-hover:text-foreground",
+                                            !isOpen && "-rotate-90"
+                                        )} />
+                                    </button>
+                                    <div
+                                        className={cn(
+                                            "overflow-hidden transition-all duration-200 ease-in-out",
+                                            isOpen ? "max-h-[800px] opacity-100 pb-1.5 px-1" : "max-h-0 opacity-0"
+                                        )}
+                                    >
+                                        <div className="space-y-0.5">
+                                            {section.items.map((item) => {
+                                                const exactMatchRoutes = ['/dashboard', '/dashboard/configuracoes']
+                                                const isActive = exactMatchRoutes.includes(item.href)
+                                                    ? pathname === item.href
+                                                    : pathname === item.href || pathname.startsWith(`${item.href}/`)
+                                                return (
+                                                    <NavItemComponent
+                                                        key={item.href}
+                                                        item={item}
+                                                        isActive={isActive}
+                                                        currentPlan={currentPlan}
+                                                        isMobile={isMobile}
+                                                    />
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </nav>
 
             {/* Role indicator */}
