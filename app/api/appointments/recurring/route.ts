@@ -193,6 +193,22 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Remove CANCELLED appointments that would conflict with the new series
+        // The UNIQUE constraint (doctor_id, appointment_date, appointment_time) blocks inserts
+        // even when the existing appointment is cancelled
+        const { error: cleanupError } = await supabase
+            .from('appointments')
+            .delete()
+            .eq('doctor_id', body.doctor_id)
+            .eq('appointment_time', body.appointment_time)
+            .in('appointment_date', allDates)
+            .eq('status', 'CANCELLED')
+
+        if (cleanupError) {
+            console.error('Error cleaning up cancelled appointments:', cleanupError)
+            // Non-blocking: proceed anyway, individual inserts may still succeed
+        }
+
         // Generate all appointments in batch
         const appointmentRecords = allDates.map(date => ({
             id: uuidv4(),
