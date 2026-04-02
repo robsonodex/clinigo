@@ -3,6 +3,7 @@ import { parseExcelFile } from '@/lib/services/import/file-parser';
 import { importPatients } from '@/lib/services/import/importers/patient-importer';
 import { importDoctors } from '@/lib/services/import/importers/doctor-importer';
 import { importFinancial } from '@/lib/services/import/importers/financial-importer';
+import { after } from 'next/server';
 
 export async function POST(
     request: Request,
@@ -21,17 +22,12 @@ export async function POST(
     
     const job = rawJob as any;
 
-    if (!job || (job.status !== 'validated' && job.status !== 'failed')) { // Allow failed if user wants to proceed with partial? No, strictly validated for now or per requirements.
-        // User requirement: "status: 'validated'"
-        if (job.status !== 'validated' && job.status !== 'failed') { // failed usually blocks, but maybe warnings only?
-            // If criticalErrors > 0, status is failed.
-            // User might re-upload.
-            // If status is 'failed', block execution.
+    if (!job || (job.status !== 'validated' && job.status !== 'failed')) {
+        if (job.status !== 'validated' && job.status !== 'failed') {
         }
     }
 
     if (job.status !== 'validated') {
-        // if failed, return error
         return Response.json({ error: 'Job não está pronto para execução. Corrija os erros.' }, { status: 400 });
     }
 
@@ -44,9 +40,11 @@ export async function POST(
         } as any)
         .eq('id', jobId);
 
-    // Trigger background process
-    // Note: relying on un-awaited promise for background work
-    processImportInBackground(jobId, job);
+    // Use after() to keep the serverless function alive on Vercel
+    // The import runs after the response is sent, but the function stays alive
+    after(async () => {
+        await processImportInBackground(jobId, job);
+    });
 
     return Response.json({
         message: 'Importação iniciada',
