@@ -46,10 +46,8 @@ export async function POST(
         let fileBuffer: Buffer;
         try {
             console.log('[Import Validate] Fetching file from:', importJob.file_url);
-            const fileResponse = await fetch(importJob.file_url);
-            if (!fileResponse.ok) throw new Error('Failed to fetch file: ' + fileResponse.status);
-            const arrayBuffer = await fileResponse.arrayBuffer();
-            fileBuffer = Buffer.from(arrayBuffer);
+            const { downloadImportFile } = await import('@/lib/services/import/file-downloader');
+            fileBuffer = await downloadImportFile(importJob.file_url, supabase);
             console.log('[Import Validate] File fetched, size:', fileBuffer.length);
         } catch (e: any) {
             console.error('[Import Validate] Error fetching file:', e);

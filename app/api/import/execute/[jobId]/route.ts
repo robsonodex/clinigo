@@ -59,9 +59,9 @@ async function processImportInBackground(jobId: string, job: any) {
     const supabase = createServiceRoleClient();
 
     try {
-        const fileResponse = await fetch(job.file_url);
-        const fileBuffer = await fileResponse.arrayBuffer();
-        const { rows } = await parseExcelFile(Buffer.from(fileBuffer));
+        const { downloadImportFile } = await import('@/lib/services/import/file-downloader');
+        const fileBuffer = await downloadImportFile(job.file_url, supabase);
+        const { rows } = await parseExcelFile(fileBuffer);
 
         switch (job.import_type) {
             case 'patients':

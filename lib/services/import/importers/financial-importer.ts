@@ -22,7 +22,7 @@ export async function importFinancial(
                 date: date,
                 type: type,
                 category: row.category,
-                amount: parseFloat(String(row.amount || '0').replace(',', '.')),
+                amount: Math.abs(parseFloat(String(row.amount || '0').replace(',', '.'))),
                 description: row.description,
                 payment_method: row.payment_method,
                 status: row.status === 'pago' ? 'PAID' : 'PENDING' // Simple map

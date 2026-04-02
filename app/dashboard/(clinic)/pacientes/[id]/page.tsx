@@ -17,6 +17,7 @@ import {
     Phone,
     Mail,
     Calendar,
+    CalendarDays,
     MapPin,
     CreditCard,
     Camera,
@@ -25,7 +26,11 @@ import {
     CheckCircle2,
     AlertCircle,
     Loader2,
-    Edit2
+    Edit2,
+    XCircle,
+    Clock,
+    CheckSquare,
+    Square
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -86,6 +91,13 @@ export default function PatientDetailsPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEnrollment, setShowEnrollment] = useState(false);
 
+    // Appointments state
+    const [appointments, setAppointments] = useState<any[]>([]);
+    const [loadingAppointments, setLoadingAppointments] = useState(false);
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [cancellingBulk, setCancellingBulk] = useState(false);
+
     // Edit state
     const [showEditModal, setShowEditModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -100,8 +112,111 @@ export default function PatientDetailsPage() {
         if (patientId) {
             loadPatient();
             loadBiometricStatus();
+            loadAppointments();
         }
     }, [patientId]);
+
+    const loadAppointments = async () => {
+        setLoadingAppointments(true);
+        try {
+            const supabase = createClient();
+            const { data, error } = await supabase
+                .from('appointments')
+                .select('*, doctors!inner(id, user_id, specialty, users:user_id(full_name))')
+                .eq('patient_id', patientId)
+                .order('appointment_date', { ascending: false })
+                .order('appointment_time', { ascending: false });
+
+            if (error) {
+                console.error('[PatientDetail] Error loading appointments:', error);
+                // Fallback without join
+                const { data: fallbackData } = await supabase
+                    .from('appointments')
+                    .select('*')
+                    .eq('patient_id', patientId)
+                    .order('appointment_date', { ascending: false });
+                setAppointments(fallbackData || []);
+            } else {
+                setAppointments(data || []);
+            }
+        } catch (err) {
+            console.error('[PatientDetail] Unexpected error loading appointments:', err);
+        } finally {
+            setLoadingAppointments(false);
+        }
+    };
+
+    const handleCancelAppointment = async (appointmentId: string) => {
+        if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
+        setCancellingId(appointmentId);
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from('appointments')
+                .update({ status: 'CANCELLED' })
+                .eq('id', appointmentId);
+            if (error) throw error;
+            toast.success('Agendamento cancelado com sucesso!');
+            loadAppointments();
+        } catch (err: any) {
+            toast.error('Erro ao cancelar agendamento: ' + err.message);
+        } finally {
+            setCancellingId(null);
+        }
+    };
+
+    const cancellableAppointments = appointments.filter(a => a.status === 'CONFIRMED' || a.status === 'PENDING_PAYMENT');
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === cancellableAppointments.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(cancellableAppointments.map(a => a.id)));
+        }
+    };
+
+    const handleBulkCancel = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Tem certeza que deseja cancelar ${selectedIds.size} agendamento(s) selecionado(s)?`)) return;
+        setCancellingBulk(true);
+        try {
+            const supabase = createClient();
+            const ids = Array.from(selectedIds);
+            const { error } = await supabase
+                .from('appointments')
+                .update({ status: 'CANCELLED' })
+                .in('id', ids);
+            if (error) throw error;
+            toast.success(`${ids.length} agendamento(s) cancelado(s) com sucesso!`);
+            setSelectedIds(new Set());
+            loadAppointments();
+        } catch (err: any) {
+            toast.error('Erro ao cancelar agendamentos: ' + err.message);
+        } finally {
+            setCancellingBulk(false);
+        }
+    };
+
+    const getStatusBadge = (status: string) => {
+        const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+            'CONFIRMED': { label: 'Confirmado', variant: 'default' },
+            'PENDING_PAYMENT': { label: 'Pendente', variant: 'secondary' },
+            'COMPLETED': { label: 'Realizado', variant: 'outline' },
+            'CANCELLED': { label: 'Cancelado', variant: 'destructive' },
+            'NO_SHOW': { label: 'Não compareceu', variant: 'destructive' },
+        };
+        const s = map[status] || { label: status, variant: 'secondary' as const };
+        return <Badge variant={s.variant}>{s.label}</Badge>;
+    };
 
     const loadPatient = async () => {
         const supabase = createClient();
@@ -259,7 +374,10 @@ export default function PatientDetailsPage() {
                         <User className="w-4 h-4" />
                         Informações
                     </TabsTrigger>
-
+                    <TabsTrigger value="appointments" className="gap-2">
+                        <CalendarDays className="w-4 h-4" />
+                        Agendamentos
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* Tab: Informações */}
@@ -309,6 +427,136 @@ export default function PatientDetailsPage() {
                                 <div className="flex items-center gap-2">
                                     <CreditCard className="w-4 h-4 text-muted-foreground" />
                                     <span><strong>CPF Titular:</strong> {(patient as any).insurance_holder_cpf}</span>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Tab: Agendamentos */}
+                <TabsContent value="appointments">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <CalendarDays className="w-5 h-5" />
+                                        Agendamentos do Paciente
+                                    </CardTitle>
+                                    <CardDescription className="mt-1">
+                                        {appointments.length} agendamento(s) encontrado(s)
+                                        {selectedIds.size > 0 && (
+                                            <span className="ml-2 font-medium text-destructive">
+                                                • {selectedIds.size} selecionado(s)
+                                            </span>
+                                        )}
+                                    </CardDescription>
+                                </div>
+                                {cancellableAppointments.length > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={toggleSelectAll}
+                                            className="gap-1.5"
+                                        >
+                                            {selectedIds.size === cancellableAppointments.length ? (
+                                                <CheckSquare className="w-4 h-4" />
+                                            ) : (
+                                                <Square className="w-4 h-4" />
+                                            )}
+                                            {selectedIds.size === cancellableAppointments.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                        </Button>
+                                        {selectedIds.size > 0 && (
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={handleBulkCancel}
+                                                disabled={cancellingBulk}
+                                                className="gap-1.5"
+                                            >
+                                                {cancellingBulk ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <XCircle className="w-4 h-4" />
+                                                )}
+                                                Cancelar {selectedIds.size}
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {loadingAppointments ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                </div>
+                            ) : appointments.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                    <p>Nenhum agendamento encontrado para este paciente.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {appointments.map((apt) => {
+                                        const doctorName = apt.doctors?.users?.full_name || apt.doctors?.specialty || 'Profissional';
+                                        const canCancel = apt.status === 'CONFIRMED' || apt.status === 'PENDING_PAYMENT';
+                                        return (
+                                            <div
+                                                key={apt.id}
+                                                className={`flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors ${selectedIds.has(apt.id) ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    {canCancel && (
+                                                        <button
+                                                            onClick={() => toggleSelect(apt.id)}
+                                                            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                                        >
+                                                            {selectedIds.has(apt.id) ? (
+                                                                <CheckSquare className="w-5 h-5 text-destructive" />
+                                                            ) : (
+                                                                <Square className="w-5 h-5" />
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                    <div className="flex flex-col items-center justify-center w-14 h-14 bg-primary/10 rounded-lg">
+                                                        <span className="text-xs font-medium text-primary">
+                                                            {new Date(apt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            {new Date(apt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR', { year: 'numeric' })}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium">{doctorName}</p>
+                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                            <Clock className="w-3 h-3" />
+                                                            <span>{apt.appointment_time?.substring(0, 5) || '--:--'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {getStatusBadge(apt.status)}
+                                                    {canCancel && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            disabled={cancellingId === apt.id}
+                                                            onClick={() => handleCancelAppointment(apt.id)}
+                                                        >
+                                                            {cancellingId === apt.id ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <XCircle className="w-4 h-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </CardContent>

@@ -96,7 +96,12 @@ export async function parseExcelFile(buffer: Buffer) {
 
                 // Also try to map to internal keys if it matches our template headers
                 if (headerVal.includes('Nome Completo')) rowObj['full_name'] = cellVal;
-                if (headerVal.includes('CPF')) rowObj['cpf'] = cellVal;
+                // CPF do Titular must be checked BEFORE generic CPF to avoid overwriting patient CPF
+                if (headerVal.includes('CPF do Titular') || (headerVal.includes('CPF') && headerVal.includes('Titular'))) {
+                    rowObj['insurance_holder_cpf'] = cellVal;
+                } else if (headerVal.includes('CPF')) {
+                    rowObj['cpf'] = cellVal;
+                }
                 if (headerVal.includes('Data de Nascimento')) rowObj['date_of_birth'] = cellVal;
                 if (headerVal.includes('Telefone')) rowObj['phone'] = cellVal;
                 if (headerVal.includes('Email')) rowObj['email'] = cellVal;
@@ -111,7 +116,6 @@ export async function parseExcelFile(buffer: Buffer) {
                 if (headerVal.includes('Convênio')) rowObj['insurance_name'] = cellVal;
                 if (headerVal.includes('Carteirinha')) rowObj['insurance_card'] = cellVal;
                 if (headerVal.includes('Nome do Titular')) rowObj['insurance_holder_name'] = cellVal;
-                if (headerVal.includes('CPF do Titular') || (headerVal.includes('CPF') && headerVal.includes('Titular'))) rowObj['insurance_holder_cpf'] = cellVal;
 
                 // Doctor mappings
                 if (headerVal.includes('CRM') && !headerVal.includes('Estado')) rowObj['crm'] = cellVal;

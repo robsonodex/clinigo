@@ -23,6 +23,7 @@ import {
     Users,
     UserPlus,
     EyeOff,
+    Search,
 } from 'lucide-react'
 import {
     format,
@@ -195,6 +196,8 @@ export default function AgendaPage() {
 
     // Doctor filter
     const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('all')
+    // Patient search filter
+    const [patientSearch, setPatientSearch] = useState('')
     // Free slots toggle (Agenda Inversa)
     const [showFreeSlots, setShowFreeSlots] = useState(false)
 
@@ -320,12 +323,14 @@ export default function AgendaPage() {
     const getAppointmentsForSlot = (date: Date, time: string): Appointment[] => {
         if (!appointments || !Array.isArray(appointments)) return []
         const dateStr = format(date, 'yyyy-MM-dd')
+        const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
                 a.status !== 'CANCELLED' &&
-                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
+                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         )
     }
 
@@ -333,9 +338,11 @@ export default function AgendaPage() {
     const getAppointmentsForDay = (date: Date): Appointment[] => {
         if (!appointments || !Array.isArray(appointments)) return []
         const dateStr = format(date, 'yyyy-MM-dd')
+        const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) => a.appointment_date === dateStr && a.status !== 'CANCELLED' &&
-                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter)
+                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
     }
 
@@ -572,6 +579,24 @@ export default function AgendaPage() {
                                 })}
                             </SelectContent>
                         </Select>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Buscar paciente..."
+                                value={patientSearch}
+                                onChange={(e) => setPatientSearch(e.target.value)}
+                                className="h-8 w-[180px] md:w-[220px] pl-8 pr-8 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                            />
+                            {patientSearch && (
+                                <button
+                                    onClick={() => setPatientSearch('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
