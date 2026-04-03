@@ -68,7 +68,7 @@ async function getFinancialSummary(supabase: any, clinicId: string, startDate: s
     // Fallback to manual calculation
     const { data: entries } = await supabase
         .from('financial_entries')
-        .select('entry_type, status, amount, amount_paid, discount')
+        .select('entry_type, status, amount')
         .eq('clinic_id', clinicId)
         .gte('due_date', startDate)
         .lte('due_date', endDate)
@@ -85,17 +85,17 @@ async function getFinancialSummary(supabase: any, clinicId: string, startDate: s
 
     for (const entry of entries || []) {
         const isIncome = entry.entry_type === 'INCOME'
-        const netAmount = entry.amount - (entry.discount || 0)
+        const entryAmount = Number(entry.amount) || 0
 
         if (entry.status === 'PAID') {
-            if (isIncome) summary.total_income += entry.amount_paid
-            else summary.total_expense += entry.amount_paid
+            if (isIncome) summary.total_income += entryAmount
+            else summary.total_expense += entryAmount
         } else if (entry.status === 'PENDING') {
-            if (isIncome) summary.pending_income += netAmount
-            else summary.pending_expense += netAmount
+            if (isIncome) summary.pending_income += entryAmount
+            else summary.pending_expense += entryAmount
         } else if (entry.status === 'OVERDUE') {
-            if (isIncome) summary.overdue_income += netAmount
-            else summary.overdue_expense += netAmount
+            if (isIncome) summary.overdue_income += entryAmount
+            else summary.overdue_expense += entryAmount
         }
     }
 
