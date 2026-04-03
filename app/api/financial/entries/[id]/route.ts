@@ -19,11 +19,7 @@ export async function GET(
             .from('financial_entries')
             .select(`
         *,
-        category:financial_categories(id, name, color),
-        patient:patients(id, full_name, cpf),
-        doctor:doctors(id, users(full_name)),
-        account:financial_accounts(id, name),
-        payments:financial_entry_payments(*)
+        category:financial_categories(id, name, color)
       `)
             .eq('id', id)
             .single()

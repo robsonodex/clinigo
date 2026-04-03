@@ -13,8 +13,10 @@ import { Textarea } from '@/components/ui/textarea'
 import {
     TrendingUp, TrendingDown, DollarSign, CreditCard, Calendar,
     Plus, Filter, Loader2, ArrowUpCircle, ArrowDownCircle,
-    AlertTriangle, CheckCircle, Clock, RefreshCcw
+    AlertTriangle, CheckCircle, Clock, RefreshCcw, Pencil, Trash2, MoreHorizontal
 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -53,6 +55,11 @@ export default function FinancialPage() {
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [showNewDialog, setShowNewDialog] = useState(false)
     const [saving, setSaving] = useState(false)
+    const [editingEntry, setEditingEntry] = useState<any>(null)
+    const [showEditDialog, setShowEditDialog] = useState(false)
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     // Form state
     const [form, setForm] = useState({
@@ -63,6 +70,18 @@ export default function FinancialPage() {
         due_date: new Date().toISOString().split('T')[0],
         notes: '',
         category_id: ''
+    })
+
+    // Edit form state
+    const [editForm, setEditForm] = useState({
+        entry_type: 'INCOME' as 'INCOME' | 'EXPENSE',
+        description: '',
+        amount: '',
+        due_date: '',
+        payment_date: '',
+        payment_method: '',
+        category: '',
+        status: 'PENDING'
     })
 
     const getDateRange = () => {
@@ -174,6 +193,78 @@ export default function FinancialPage() {
             notes: '',
             category_id: ''
         })
+    }
+
+    const openEditDialog = (entry: any) => {
+        setEditingEntry(entry)
+        setEditForm({
+            entry_type: entry.entry_type || 'EXPENSE',
+            description: entry.description || '',
+            amount: String(entry.amount || ''),
+            due_date: entry.due_date || '',
+            payment_date: entry.payment_date || '',
+            payment_method: entry.payment_method || '',
+            category: entry.category_text || entry.category || '',
+            status: entry.status || 'PENDING'
+        })
+        setShowEditDialog(true)
+    }
+
+    const handleUpdate = async () => {
+        if (!editingEntry) return
+        setSaving(true)
+        try {
+            const res = await fetch(`/api/financial/entries/${editingEntry.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    entry_type: editForm.entry_type,
+                    description: editForm.description,
+                    amount: parseFloat(editForm.amount),
+                    due_date: editForm.due_date,
+                    payment_date: editForm.payment_date || null,
+                    payment_method: editForm.payment_method,
+                    category: editForm.category,
+                    status: editForm.status
+                })
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                toast.error(data.error || 'Erro ao atualizar')
+                return
+            }
+            toast.success('Lançamento atualizado com sucesso!')
+            setShowEditDialog(false)
+            setEditingEntry(null)
+            fetchData()
+        } catch (error) {
+            toast.error('Erro ao atualizar lançamento')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!deletingId) return
+        setDeleting(true)
+        try {
+            const res = await fetch(`/api/financial/entries/${deletingId}`, {
+                method: 'DELETE'
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                toast.error(data.error || 'Erro ao excluir')
+                return
+            }
+            toast.success('Lançamento excluído com sucesso!')
+            setShowDeleteDialog(false)
+            setDeletingId(null)
+            fetchData()
+        } catch (error) {
+            toast.error('Erro ao excluir lançamento')
+        } finally {
+            setDeleting(false)
+        }
     }
 
     const formatCurrency = (value: number) => {
@@ -520,19 +611,34 @@ export default function FinancialPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3">
                                                 <div className="text-right">
                                                     <p className={`font-bold ${entry.entry_type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
                                                         {entry.entry_type === 'EXPENSE' && '-'}
                                                         {formatCurrency(entry.amount)}
                                                     </p>
-                                                    {entry.discount > 0 && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Desconto: {formatCurrency(entry.discount)}
-                                                        </p>
-                                                    )}
                                                 </div>
                                                 {getStatusBadge(entry.status)}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => openEditDialog(entry)}>
+                                                            <Pencil className="h-4 w-4 mr-2" />
+                                                            Editar
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-red-600"
+                                                            onClick={() => { setDeletingId(entry.id); setShowDeleteDialog(true) }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                            Excluir
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </div>
                                     ))}
@@ -542,6 +648,100 @@ export default function FinancialPage() {
                     </Card>
                 </>
             )}
+            {/* Edit Dialog */}
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Editar Lançamento</DialogTitle>
+                        <DialogDescription>Altere os dados do lançamento</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="flex gap-2">
+                            <Button
+                                type="button"
+                                variant={editForm.entry_type === 'INCOME' ? 'default' : 'outline'}
+                                className={editForm.entry_type === 'INCOME' ? 'bg-green-600 hover:bg-green-700' : ''}
+                                onClick={() => setEditForm(f => ({ ...f, entry_type: 'INCOME' }))}
+                            >
+                                <ArrowUpCircle className="h-4 w-4 mr-2" /> Receita
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={editForm.entry_type === 'EXPENSE' ? 'default' : 'outline'}
+                                className={editForm.entry_type === 'EXPENSE' ? 'bg-red-600 hover:bg-red-700' : ''}
+                                onClick={() => setEditForm(f => ({ ...f, entry_type: 'EXPENSE' }))}
+                            >
+                                <ArrowDownCircle className="h-4 w-4 mr-2" /> Despesa
+                            </Button>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Descrição *</Label>
+                            <Input value={editForm.description} onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Valor *</Label>
+                                <Input type="number" step="0.01" value={editForm.amount} onChange={(e) => setEditForm(f => ({ ...f, amount: e.target.value }))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Status</Label>
+                                <Select value={editForm.status} onValueChange={(v) => setEditForm(f => ({ ...f, status: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PENDING">Pendente</SelectItem>
+                                        <SelectItem value="PAID">Pago</SelectItem>
+                                        <SelectItem value="OVERDUE">Vencido</SelectItem>
+                                        <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Data Vencimento *</Label>
+                                <Input type="date" value={editForm.due_date} onChange={(e) => setEditForm(f => ({ ...f, due_date: e.target.value }))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Data Pagamento</Label>
+                                <Input type="date" value={editForm.payment_date} onChange={(e) => setEditForm(f => ({ ...f, payment_date: e.target.value }))} />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Categoria</Label>
+                                <Input value={editForm.category} onChange={(e) => setEditForm(f => ({ ...f, category: e.target.value }))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Método Pagamento</Label>
+                                <Input value={editForm.payment_method} onChange={(e) => setEditForm(f => ({ ...f, payment_method: e.target.value }))} placeholder="Pix, Cartão..." />
+                            </div>
+                        </div>
+                        <Button onClick={handleUpdate} disabled={saving} className="w-full">
+                            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Salvar Alterações
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation */}
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Lançamento</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700">
+                            {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Excluir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
