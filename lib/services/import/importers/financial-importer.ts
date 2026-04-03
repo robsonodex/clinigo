@@ -25,10 +25,10 @@ export async function importFinancial(
                 due_date: date,
                 payment_date: status === 'PAID' ? date : null,
                 type: type,
-                category: row.category,
+                category: row.category || '',
                 amount: Math.abs(parseCurrencyStr(row.amount)),
-                description: row.description,
-                payment_method: row.payment_method,
+                description: row.description || '',
+                payment_method: row.payment_method || '',
                 status: status
             };
 
