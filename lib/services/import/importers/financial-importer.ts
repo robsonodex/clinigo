@@ -24,7 +24,7 @@ export async function importFinancial(
                 clinic_id: clinicId,
                 due_date: date,
                 payment_date: status === 'PAID' ? date : null,
-                type: type,
+                entry_type: type,
                 category: row.category || '',
                 amount: Math.abs(parseCurrencyStr(row.amount)),
                 description: row.description || '',
