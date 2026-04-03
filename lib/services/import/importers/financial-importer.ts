@@ -17,8 +17,10 @@ export async function importFinancial(
             let date = null;
             if (parts.length === 3) date = `${parts[2]}-${parts[1]}-${parts[0]}`;
 
-            const type = (row.type === 'RECEITA' || row.type === 'INCOME') ? 'INCOME' : 'EXPENSE';
-            const status = row.status?.trim().toLowerCase() === 'pago' ? 'PAID' : 'PENDING';
+            const rawType = (row.type || row.Type || '').trim().toUpperCase();
+            const type = (rawType === 'RECEITA' || rawType === 'INCOME') ? 'INCOME' : 'EXPENSE';
+            const rawStatus = (row.status || row.Status || '').trim().toLowerCase();
+            const status = rawStatus === 'pago' ? 'PAID' : 'PENDING';
 
             const financialData = {
                 clinic_id: clinicId,
