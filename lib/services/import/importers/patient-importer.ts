@@ -25,12 +25,17 @@ export async function importPatients(
 
             const cleanCpf = row.cpf ? String(row.cpf).replace(/\D/g, '') : '';
             
-            let rawEmail = row.email?.trim() || '';
+            let rawEmail = (row.email || row.e_mail || row['e-mail'] || '').trim();
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (rawEmail && !emailRegex.test(rawEmail)) {
                 rawEmail = ''; 
             }
             const finalEmail = rawEmail || `paciente_${cleanCpf || Date.now()}@clinigo.app`;
+
+            // Try to extract insurance holder name and cpf correctly
+            const holderName = (row.insurance_holder_name || row.holder_name || row.titular || row.nome_titular || '').trim() || null;
+            const rawHolderCpf = (row.insurance_holder_cpf || row.holder_cpf || row.cpf_titular || '');
+            const holderCpf = rawHolderCpf ? String(rawHolderCpf).replace(/\D/g, '') : null;
 
             const patientData = {
                 clinic_id: clinicId,
@@ -54,8 +59,8 @@ export async function importPatients(
                     name: row.insurance_name?.trim() || null,
                     card_number: row.insurance_card?.trim() || null
                 } : null,
-                insurance_holder_name: row.insurance_holder_name?.trim() || null,
-                insurance_holder_cpf: row.insurance_holder_cpf ? String(row.insurance_holder_cpf).replace(/\D/g, '') : null
+                insurance_holder_name: holderName,
+                insurance_holder_cpf: holderCpf
             };
 
             // Check existence

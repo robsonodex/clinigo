@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileText, ArrowRight, Loader2 } from 'lucide-react';
+import { FileText, ArrowRight, Loader2, Trash2 } from 'lucide-react';
 
 export function ImportHistoryTable() {
     const [jobs, setJobs] = useState<any[]>([]);
@@ -72,11 +72,32 @@ export function ImportHistoryTable() {
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm" asChild>
-                                        <Link href={`/dashboard/importacao/${job.id}`}>
-                                            Detalhes <ArrowRight className="ml-2 h-4 w-4" />
-                                        </Link>
-                                    </Button>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <Link href={`/dashboard/importacao/${job.id}`}>
+                                                Detalhes <ArrowRight className="ml-2 h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            onClick={async () => {
+                                                if (confirm('Tem certeza que deseja excluir esta importação? Todos os dados importados vinculados a ela serão removidos.')) {
+                                                    try {
+                                                        const res = await fetch(`/api/import/jobs/${job.id}`, { method: 'DELETE' });
+                                                        if (!res.ok) throw new Error('Erro ao excluir importação');
+                                                        fetchJobs();
+                                                    } catch (err) {
+                                                        alert('Erro ao excluir a importação.');
+                                                    }
+                                                }
+                                            }}
+                                            title="Excluir Importação e Desfazer"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))

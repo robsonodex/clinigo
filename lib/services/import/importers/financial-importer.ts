@@ -17,20 +17,22 @@ export async function importFinancial(
             let date = null;
             if (parts.length === 3) date = `${parts[2]}-${parts[1]}-${parts[0]}`;
 
-            const rawType = (row.type || row.Type || '').trim().toUpperCase();
-            const type = (rawType === 'RECEITA' || rawType === 'INCOME') ? 'INCOME' : 'EXPENSE';
+            const rawType = (row.type || row.Type || row.tipo || row.Tipo || row['Tipo* (RECEITA/DESPESA)'] || row['tipo de lançamento'] || row['natureza'] || '').trim().toUpperCase();
+            const type = (rawType === 'RECEITA' || rawType === 'INCOME' || rawType === 'ENTRADA' || rawType === 'VENDAS' || rawType === 'RECEBIMENTO' || rawType === 'CRÉDITO' || rawType === 'CREDITO') ? 'INCOME' : 'EXPENSE';
             const rawStatus = (row.status || row.Status || '').trim().toLowerCase();
-            const status = rawStatus === 'pago' ? 'PAID' : 'PENDING';
+            const status = (rawStatus === 'pago' || rawStatus === 'concluído' || rawStatus === 'concluido' || rawStatus === 'paid') ? 'PAID' : 'PENDING';
+
+            const description = (row.description || row.Description || row.descrição || row.Descrição || row.descricao || row.Descricao || row['Descrição'] || row['Descricao'] || row['Descrição*'] || row['observação'] || '').trim();
 
             const financialData = {
                 clinic_id: clinicId,
                 due_date: date,
                 payment_date: status === 'PAID' ? date : null,
                 entry_type: type,
-                category: row.category || '',
-                amount: Math.abs(parseCurrencyStr(row.amount)),
-                description: row.description || '',
-                payment_method: row.payment_method || '',
+                category: row.category || row.categoria || row.Categoria || row['Categoria*'] || '',
+                amount: Math.abs(parseCurrencyStr(row.amount || row.valor || row.Valor || row['Valor*'])),
+                description: description,
+                payment_method: row.payment_method || row.metodo_pagamento || row['Método Pagamento'] || '',
                 status: status
             };
 

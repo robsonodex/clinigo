@@ -235,6 +235,36 @@ export default function PatientDetailsPage() {
         setPatient(data);
         if (data) {
             const d = data as any;
+            
+            // Helper to format the address object to a readable string
+            const formatAddress = (addr: any) => {
+                if (!addr) return '';
+                if (typeof addr === 'string') return addr;
+                if (typeof addr === 'object') {
+                    const parts = [];
+                    if (addr.street) {
+                       const streetParts = [addr.street];
+                       if (addr.number) streetParts.push(addr.number);
+                       parts.push(streetParts.join(', '));
+                    }
+                    if (addr.complement && addr.complement !== 'N/A') parts.push(addr.complement);
+                    if (addr.neighborhood) parts.push(addr.neighborhood);
+                    if (addr.city) parts.push(`${addr.city} - ${addr.state}`);
+                    if (addr.zip_code) {
+                       const zip = addr.zip_code.replace(/\D/g, '');
+                       if (zip.length === 8) {
+                           parts.push(`CEP: ${zip.slice(0, 5)}-${zip.slice(5)}`);
+                       } else {
+                           parts.push(`CEP: ${zip}`);
+                       }
+                    }
+                    return parts.join(', ');
+                }
+                return String(addr);
+            };
+
+            const formattedAddress = formatAddress(d.address);
+
             form.reset({
                 full_name: d.full_name || '',
                 cpf: d.cpf || '',
@@ -242,10 +272,16 @@ export default function PatientDetailsPage() {
                 phone: d.phone || '',
                 date_of_birth: d.birth_date || d.date_of_birth || '',
                 gender: d.gender || 'M',
-                address: typeof d.address === 'object' ? (JSON.stringify(d.address) === '{}' ? '' : JSON.stringify(d.address)) : (d.address || ''),
+                address: formattedAddress,
                 insurance_holder_name: d.insurance_holder_name || '',
                 insurance_holder_cpf: d.insurance_holder_cpf || '',
             });
+            // Update the display address so the tab also shows the formatted version
+            if (d.address && typeof d.address === 'object') {
+                d.addressText = formattedAddress;
+            } else {
+                d.addressText = d.address;
+            }
         }
         setIsLoading(false);
     };
@@ -411,10 +447,10 @@ export default function PatientDetailsPage() {
                                     <span>{new Date(patient.birth_date).toLocaleDateString('pt-BR')}</span>
                                 </div>
                             )}
-                            {patient.address && typeof patient.address !== 'object' && (
+                            {(patient as any).addressText && (
                                 <div className="flex items-center gap-2 md:col-span-2">
                                     <MapPin className="w-4 h-4 text-muted-foreground" />
-                                    <span>{String(patient.address)}</span>
+                                    <span>{(patient as any).addressText}</span>
                                 </div>
                             )}
                             {(patient as any).insurance_holder_name && (
