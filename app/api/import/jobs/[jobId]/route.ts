@@ -3,10 +3,12 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { jobId: string } }
+    { params }: { params: Promise<{ jobId: string }> | { jobId: string } }
 ) {
     try {
-        const jobId = params.jobId;
+        const resolvedParams = await (params as any);
+        const jobId = resolvedParams?.jobId || (params as any).jobId;
+        
         if (!jobId) {
             return NextResponse.json({ error: 'Job ID missing' }, { status: 400 });
         }
