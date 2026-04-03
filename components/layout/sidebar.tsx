@@ -46,6 +46,7 @@ import {
     ShieldAlert,
     Upload,
     Bot,
+    MessagesSquare,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
@@ -238,6 +239,14 @@ const navigationSections: NavSection[] = [
     {
         title: 'Comunicação',
         items: [
+            {
+                title: 'Chat Interno',
+                href: '/dashboard/chat',
+                icon: MessagesSquare,
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
+            },
             {
                 title: 'WhatsApp',
                 href: '/dashboard/whatsapp',

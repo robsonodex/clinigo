@@ -850,6 +850,81 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['tiss_validation_errors']['Insert']>
       }
+      chat_conversations: {
+        Row: {
+          id: string
+          clinic_id: string | null
+          type: 'internal' | 'admin_to_clinic' | 'support'
+          title: string | null
+          created_by: string | null
+          last_message_at: string
+          last_message_preview: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id?: string | null
+          type?: 'internal' | 'admin_to_clinic' | 'support'
+          title?: string | null
+          created_by?: string | null
+          last_message_at?: string
+          last_message_preview?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['chat_conversations']['Insert']>
+      }
+      chat_participants: {
+        Row: {
+          id: string
+          conversation_id: string
+          user_id: string
+          role: 'member' | 'admin'
+          last_read_at: string
+          joined_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          user_id: string
+          role?: 'member' | 'admin'
+          last_read_at?: string
+          joined_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['chat_participants']['Insert']>
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          content: string | null
+          message_type: 'text' | 'image' | 'document' | 'audio'
+          attachment_url: string | null
+          attachment_name: string | null
+          attachment_size: number | null
+          is_edited: boolean
+          is_deleted: boolean
+          edited_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          content?: string | null
+          message_type?: 'text' | 'image' | 'document' | 'audio'
+          attachment_url?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
+          is_edited?: boolean
+          is_deleted?: boolean
+          edited_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['chat_messages']['Insert']>
+      }
     },
     Views: {
       [_ in never]: never

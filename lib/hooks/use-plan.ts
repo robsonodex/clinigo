@@ -74,7 +74,7 @@ export function usePlan(): UsePlanResult {
         // AVANCADO+: crm, dre, whatsapp_evolution, importacao, check_in_facial
         // PROFESSIONAL+: tiss, multi_units
 
-        const avancadoFeatures = ['crm', 'dre', 'whatsapp_evolution', 'importacao', 'check_in_facial', 'auditoria', 'repasse_medico']
+        const avancadoFeatures = ['crm', 'dre', 'whatsapp_evolution', 'importacao', 'check_in_facial', 'auditoria', 'repasse_medico', 'chat_interno']
         const professionalFeatures = ['tiss', 'multi_units']
 
         if (avancadoFeatures.includes(feature)) {

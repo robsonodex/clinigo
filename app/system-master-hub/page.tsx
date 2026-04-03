@@ -20,6 +20,7 @@ import {
     RefreshCw,
     LogOut,
     CheckCircle2,
+    MessageCircle,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -295,6 +296,10 @@ export default function SuperAdminDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/chat')}>
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Chat
+                        </Button>
                         <Button variant="outline" size="sm" onClick={loadDashboard}>
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Atualizar
