@@ -18,16 +18,18 @@ export async function importFinancial(
             if (parts.length === 3) date = `${parts[2]}-${parts[1]}-${parts[0]}`;
 
             const type = (row.type === 'RECEITA' || row.type === 'INCOME') ? 'INCOME' : 'EXPENSE';
+            const status = row.status?.trim().toLowerCase() === 'pago' ? 'PAID' : 'PENDING';
 
             const financialData = {
                 clinic_id: clinicId,
-                date: date,
+                due_date: date,
+                payment_date: status === 'PAID' ? date : null,
                 type: type,
                 category: row.category,
                 amount: Math.abs(parseCurrencyStr(row.amount)),
                 description: row.description,
                 payment_method: row.payment_method,
-                status: row.status === 'pago' ? 'PAID' : 'PENDING' // Simple map
+                status: status
             };
 
             const { data, error } = await supabase.from('financial_entries').insert(financialData).select('id').single();

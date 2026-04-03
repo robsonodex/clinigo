@@ -69,9 +69,15 @@ export async function importPatients(
             let entityId;
 
             if (existing) {
+                // If it's an update, don't overwrite the email if it wasn't provided in the spreadsheet
+                const updatePayload = { ...patientData };
+                if (!rawEmail) {
+                    delete (updatePayload as any).email;
+                }
+                
                 const { data, error } = await supabase
                     .from('patients')
-                    .update(patientData)
+                    .update(updatePayload)
                     .eq('id', existing.id)
                     .select('id')
                     .single();
