@@ -38,10 +38,7 @@ export async function GET(request: NextRequest) {
             .from('financial_entries')
             .select(`
         *,
-        category:financial_categories(id, name, color),
-        patient:patients(id, full_name),
-        doctor:doctors(id, users(full_name)),
-        account:financial_accounts(id, name)
+        category:financial_categories(id, name, color)
       `, { count: 'exact' })
             .eq('clinic_id', clinicId)
             .order('due_date', { ascending: false })
