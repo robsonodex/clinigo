@@ -40,8 +40,11 @@ export async function importPatients(
                     state: row.state || '',
                     zip_code: row.cep?.replace(/\D/g, '') || ''
                 },
-                insurance_company_id: insuranceId,
-                insurance_card_number: row.insurance_card || null,
+                health_insurance: (insuranceId || row.insurance_name || row.insurance_card) ? {
+                    id: insuranceId,
+                    name: row.insurance_name?.trim() || null,
+                    card_number: row.insurance_card?.trim() || null
+                } : null,
                 insurance_holder_name: row.insurance_holder_name?.trim() || null,
                 insurance_holder_cpf: row.insurance_holder_cpf ? String(row.insurance_holder_cpf).replace(/\D/g, '') : null
             };
