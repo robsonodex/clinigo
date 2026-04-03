@@ -1,3 +1,5 @@
+import { parseCurrencyStr } from '../validators/financial-validator';
+
 export async function importFinancial(
     jobId: string,
     rows: any[],
@@ -22,7 +24,7 @@ export async function importFinancial(
                 date: date,
                 type: type,
                 category: row.category,
-                amount: Math.abs(parseFloat(String(row.amount || '0').replace(',', '.'))),
+                amount: Math.abs(parseCurrencyStr(row.amount)),
                 description: row.description,
                 payment_method: row.payment_method,
                 status: row.status === 'pago' ? 'PAID' : 'PENDING' // Simple map

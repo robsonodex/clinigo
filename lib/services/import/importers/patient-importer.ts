@@ -23,13 +23,22 @@ export async function importPatients(
                 if (ins) insuranceId = ins.id;
             }
 
+            const cleanCpf = row.cpf ? String(row.cpf).replace(/\D/g, '') : '';
+            
+            let rawEmail = row.email?.trim() || '';
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (rawEmail && !emailRegex.test(rawEmail)) {
+                rawEmail = ''; 
+            }
+            const finalEmail = rawEmail || `paciente_${cleanCpf || Date.now()}@clinigo.app`;
+
             const patientData = {
                 clinic_id: clinicId,
                 full_name: row.full_name?.trim() || '',
-                cpf: row.cpf ? String(row.cpf).replace(/\D/g, '') : '',
+                cpf: cleanCpf,
                 date_of_birth: row.date_of_birth ? convertToISODate(row.date_of_birth) : null,
                 phone: row.phone ? String(row.phone).replace(/\D/g, '') : '',
-                email: row.email?.trim() || '',
+                email: finalEmail,
                 gender: row.gender || null, // Should normalize 'M'/'F' if needed or match DB constraints
                 address: {
                     street: row.street || '',
