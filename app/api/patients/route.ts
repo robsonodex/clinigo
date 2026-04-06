@@ -116,7 +116,9 @@ const createPatientSchema = z.object({
     phone: z.string().optional(),
     date_of_birth: z.string().optional(),
     gender: z.string().optional(),
-    address: z.any().optional(),
+    address: z.string().optional().or(z.literal('')),
+    insurance_holder_name: z.string().optional().or(z.literal('')),
+    insurance_holder_cpf: z.string().optional().or(z.literal('')),
     clinic_id: z.string().optional()
 })
 

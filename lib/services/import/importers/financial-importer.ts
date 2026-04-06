@@ -22,7 +22,23 @@ export async function importFinancial(
             const rawStatus = (row.status || row.Status || '').trim().toLowerCase();
             const status = (rawStatus === 'pago' || rawStatus === 'concluído' || rawStatus === 'concluido' || rawStatus === 'paid') ? 'PAID' : 'PENDING';
 
-            const description = (row.description || row.Description || row.descrição || row.Descrição || row.descricao || row.Descricao || row['Descrição'] || row['Descricao'] || row['Descrição*'] || row['observação'] || '').trim();
+            let description = '';
+            if (fieldMapping && fieldMapping['description'] && row[fieldMapping['description']]) {
+                description = String(row[fieldMapping['description']]);
+            } else {
+                const descKeys = ['description', 'Description', 'descrição', 'Descrição', 'descricao', 'Descricao', 'Descrição*', 'observação', 'Observação', 'historico', 'Histórico', 'Historico', 'histórico'];
+                for (const key of descKeys) {
+                    if (row[key] !== undefined && row[key] !== null) {
+                        description = String(row[key]);
+                        break;
+                    }
+                }
+                if (!description) {
+                    const keyMatch = Object.keys(row).find(k => k.toLowerCase().includes('descri') || k.toLowerCase().includes('hist'));
+                    if (keyMatch) description = String(row[keyMatch]);
+                }
+            }
+            description = description.trim();
 
             const financialData = {
                 clinic_id: clinicId,

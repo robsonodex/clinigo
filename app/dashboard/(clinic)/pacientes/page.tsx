@@ -74,6 +74,7 @@ const PatientFormSchema = z.object({
     gender: z.enum(['M', 'F', 'O']).optional(),
     insurance_holder_name: z.string().optional(),
     insurance_holder_cpf: z.string().optional(),
+    address: z.string().optional(),
 })
 
 type PatientFormData = z.infer<typeof PatientFormSchema>
@@ -515,6 +516,15 @@ export default function PacientesPage() {
                                     id="date_of_birth"
                                     type="date"
                                     {...form.register('date_of_birth')}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="address">Endereço (opcional)</Label>
+                                <Input
+                                    id="address"
+                                    placeholder="Rua, Número, Complemento, Bairro - Cidade/UF"
+                                    {...form.register('address')}
                                 />
                             </div>
 

@@ -108,17 +108,60 @@ export async function POST(request: Request) {
 
         const supabase = await createClient()
 
-        let body: any
+        let bodyToValidate: any = {}
         try {
-            body = await request.json()
+            const formData = await request.formData()
+            const file = formData.get('file') as File
+            const patient_id = formData.get('patient_id') as string
+            const category = formData.get('document_type') as string || 'OTHER'
+            const description = (formData.get('notes') as string) || ''
+            
+            if (!file || !patient_id) {
+                return NextResponse.json({ error: 'Faltam campos obrigatórios (file e patient_id)' }, { status: 400 })
+            }
+
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${patient_id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+
+            // Convert to array buffer for upload
+            const arrayBuffer = await file.arrayBuffer()
+            const buffer = Buffer.from(arrayBuffer)
+
+            const { error: uploadError } = await supabase.storage
+                .from('patient-documents')
+                .upload(fileName, buffer, {
+                    contentType: file.type,
+                    upsert: false
+                })
+
+            if (uploadError) {
+                console.error('Storage upload error:', uploadError)
+                return NextResponse.json({ error: 'Erro ao salvar arquivo no storage.' }, { status: 500 })
+            }
+
+            const { data: publicUrlData } = supabase.storage
+                .from('patient-documents')
+                .getPublicUrl(fileName)
+
+            bodyToValidate = {
+                patient_id,
+                file_name: file.name,
+                file_url: publicUrlData.publicUrl,
+                file_size: file.size,
+                file_type: file.type,
+                category,
+                description,
+                tags: []
+            }
         } catch (parseError) {
+            console.error('FormData Parse Error:', parseError)
             return NextResponse.json({
-                error: 'Corpo da requisição inválido. JSON malformado.'
+                error: 'Corpo da requisição inválido. Falha ao ler multipart form data.'
             }, { status: 400 })
         }
 
         // Validate request body with Zod
-        const validationResult = uploadDocumentSchema.safeParse(body)
+        const validationResult = uploadDocumentSchema.safeParse(bodyToValidate)
 
         if (!validationResult.success) {
             return NextResponse.json({
