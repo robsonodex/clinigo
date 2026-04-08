@@ -36,6 +36,7 @@ export async function GET(request: Request) {
                 .select(`
         id,
         appointment_date,
+        appointment_time,
         status,
         checked_in_at,
         priority_level,
@@ -95,6 +96,7 @@ export async function GET(request: Request) {
                 patient: a.patient,
                 doctor: a.doctor,
                 arrivalTime: a.checked_in_at,
+                scheduledTime: (a.appointment_date && a.appointment_time ? `${a.appointment_date}T${a.appointment_time}` : a.checked_in_at),
                 isPriority: a.priority_level > 0,
                 status: a.status,
                 notes: a.waiting_room_notes,
@@ -106,6 +108,7 @@ export async function GET(request: Request) {
                 patient: w.patient,
                 doctor: w.doctor,
                 arrivalTime: w.arrival_time,
+                scheduledTime: w.arrival_time,
                 isPriority: w.urgency_level !== 'normal',
                 status: w.status,
                 notes: w.reason
@@ -114,13 +117,24 @@ export async function GET(request: Request) {
             // Sort by priority first
             if (a.isPriority && !b.isPriority) return -1
             if (!a.isPriority && b.isPriority) return 1
+
+            // For Espaço Incluir, sort strictly by scheduled appointment time ignoring standard statusOrder
+            if (clinicId === '5163c916-8b82-4d80-8a71-01726836ee46') {
+                const timeA = a.scheduledTime ? new Date(a.scheduledTime).getTime() : (a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0)
+                const timeB = b.scheduledTime ? new Date(b.scheduledTime).getTime() : (b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0)
+                if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) return timeA - timeB
+            }
+
             // Then by status: WAITING (called) before CONFIRMED (not yet called)
             const statusOrder: Record<string, number> = { 'WAITING': 0, 'CONFIRMED': 1, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
             const aOrder = statusOrder[a.status] ?? 5
             const bOrder = statusOrder[b.status] ?? 5
             if (aOrder !== bOrder) return aOrder - bOrder
-            // Then by arrival time
-            return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime()
+            
+            // Then by arrival time (default)
+            const timeArrA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0
+            const timeArrB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0
+            return timeArrA - timeArrB
         })
 
         return NextResponse.json({ queue })

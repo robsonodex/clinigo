@@ -18,15 +18,29 @@ export async function POST(
         }
 
         const appointmentId = id
+        
+        let notes = ''
+        try {
+            const body = await request.json()
+            notes = body?.notes || ''
+        } catch (e) {
+            // body pode vir vazio nos check-ins antigos
+        }
+
+        const updateData: any = {
+            checked_in_at: new Date().toISOString(),
+            checked_in_by: user.id,
+            status: 'CONFIRMED'
+        }
+        
+        if (notes) {
+            updateData.waiting_room_notes = notes
+        }
 
         // Update appointment with check-in timestamp
         const { data: appointment, error } = await (supabase
             .from('appointments') as any)
-            .update({
-                checked_in_at: new Date().toISOString(),
-                checked_in_by: user.id,
-                status: 'CONFIRMED'
-            })
+            .update(updateData)
             .eq('id', appointmentId)
             .select()
             .single()

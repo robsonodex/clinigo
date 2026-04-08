@@ -40,6 +40,7 @@ interface QueueItem {
         }
     }
     arrivalTime: string
+    scheduledTime?: string
     isPriority: boolean
     status: string
     notes?: string
@@ -101,6 +102,10 @@ export default function RecepcaoPage() {
     const [showNoShowList, setShowNoShowList] = useState(false)
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
+    
+    // Espaço Incluir
+    const isEspacoIncluir = currentUser?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+    const [checkInModal, setCheckInModal] = useState<{ open: boolean, appointmentId: string | null, notes: string }>({ open: false, appointmentId: null, notes: '' })
 
     useEffect(() => {
         loadData()
@@ -309,10 +314,12 @@ export default function RecepcaoPage() {
         }
     }
 
-    async function handleCheckIn(appointmentId: string) {
+    async function handleCheckIn(appointmentId: string, notes: string = '') {
         try {
             const res = await fetch(`/api/reception/checkin/${appointmentId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes })
             })
 
             if (res.ok) {
@@ -320,6 +327,7 @@ export default function RecepcaoPage() {
                     title: 'Check-in realizado',
                     description: 'Paciente confirmado na fila de atendimento'
                 })
+                setCheckInModal({ open: false, appointmentId: null, notes: '' })
                 loadData()
             } else {
                 throw new Error('Falha no check-in')
@@ -626,6 +634,27 @@ export default function RecepcaoPage() {
                 </div>
             </div>
 
+            <Dialog open={checkInModal.open} onOpenChange={(open) => setCheckInModal({ ...checkInModal, open })}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Check-in</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Observação (Falta justificada/Cobrada ou notas)</Label>
+                            <Input
+                                placeholder="Adicione uma observação (opcional)..."
+                                value={checkInModal.notes}
+                                onChange={(e) => setCheckInModal({ ...checkInModal, notes: e.target.value })}
+                            />
+                        </div>
+                        <Button className="w-full" onClick={() => checkInModal.appointmentId && handleCheckIn(checkInModal.appointmentId, checkInModal.notes)}>
+                            Confirmar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={showNoShowList} onOpenChange={setShowNoShowList}>
                 <DialogContent>
                     <DialogHeader>
@@ -721,7 +750,12 @@ export default function RecepcaoPage() {
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                         <Clock className="w-3 h-3" />
-                                                        {getTimeWaiting(item.arrivalTime)}
+                                                        {item.arrivalTime 
+                                                            ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
+                                                            : item.scheduledTime 
+                                                                ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+                                                                : 'Sem horário definido'
+                                                        }
                                                     </span>
                                                     {item.status === 'WAITING' && (
                                                         <Badge className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0">Chamado</Badge>
@@ -734,7 +768,7 @@ export default function RecepcaoPage() {
                                                 <FileText className="w-3.5 h-3.5" />
                                             </Button>
                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleCheckIn(item.id)}>
+                                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => isEspacoIncluir ? setCheckInModal({ open: true, appointmentId: item.id, notes: '' }) : handleCheckIn(item.id)}>
                                                     <CheckCircle className="w-3.5 h-3.5 mr-1" />
                                                     Check-in
                                                 </Button>
@@ -749,9 +783,15 @@ export default function RecepcaoPage() {
                                                     <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                         {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                     </Button>
-                                                    <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStartService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
-                                                        {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>🩺 Em Atend.</>}
-                                                    </Button>
+                                                    {!isEspacoIncluir ? (
+                                                        <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStartService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
+                                                            {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>🩺 Em Atend.</>}
+                                                        </Button>
+                                                    ) : (
+                                                        <Button size="sm" className="h-8 text-xs bg-gray-600 hover:bg-gray-700 text-white" onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
+                                                            {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>✅ Concluir</>}
+                                                        </Button>
+                                                    )}
                                                 </>
                                             )}
                                             <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">

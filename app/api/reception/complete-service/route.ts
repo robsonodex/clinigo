@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', appointmentId)
             .eq('clinic_id', currentUser.clinic_id)
-            .in('status', ['IN_PROGRESS'])
+            .in('status', ['IN_PROGRESS', 'WAITING', 'CONFIRMED'])
             .select(`id, status, patient:patients(full_name)`)
             .single()
 
