@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clinic not found' }, { status: 403 })
         }
 
-        const { appointmentId } = await request.json()
+        const { appointmentId, notes } = await request.json()
         if (!appointmentId) {
             return NextResponse.json({ error: 'appointmentId is required' }, { status: 400 })
         }
@@ -40,13 +40,19 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
         }
 
+        const updateData: any = {
+            status: 'NO_SHOW',
+            updated_at: new Date().toISOString()
+        }
+        
+        if (notes) {
+            updateData.waiting_room_notes = notes
+        }
+
         // Update to NO_SHOW
         const { error: updateError } = await (supabase as any)
             .from('appointments')
-            .update({
-                status: 'NO_SHOW',
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('id', appointmentId)
 
         if (updateError) {

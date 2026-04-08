@@ -106,6 +106,7 @@ export default function RecepcaoPage() {
     // Espaço Incluir
     const isEspacoIncluir = currentUser?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
     const [checkInModal, setCheckInModal] = useState<{ open: boolean, appointmentId: string | null, notes: string }>({ open: false, appointmentId: null, notes: '' })
+    const [noShowModal, setNoShowModal] = useState<{ open: boolean, appointmentId: string | null, patientName: string, notes: string }>({ open: false, appointmentId: null, patientName: '', notes: '' })
 
     useEffect(() => {
         loadData()
@@ -292,16 +293,17 @@ export default function RecepcaoPage() {
         }
     }
 
-    async function handleNoShow(appointmentId: string, patientName: string) {
+    async function handleNoShow(appointmentId: string, patientName: string, notes: string = '') {
         setActionId(appointmentId)
         try {
             const res = await fetch('/api/reception/no-show', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ appointmentId })
+                body: JSON.stringify({ appointmentId, notes })
             })
             if (res.ok) {
                 toast({ title: 'Não Compareceu', description: `${patientName} marcado como não compareceu.` })
+                setNoShowModal({ open: false, appointmentId: null, patientName: '', notes: '' })
                 loadData()
             } else {
                 const errData = await res.json()
@@ -655,6 +657,28 @@ export default function RecepcaoPage() {
                 </DialogContent>
             </Dialog>
 
+            <Dialog open={noShowModal.open} onOpenChange={(open) => setNoShowModal({ ...noShowModal, open })}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Marcar como Não Compareceu</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <p className="text-sm text-muted-foreground">Paciente: <span className="font-medium text-foreground">{noShowModal.patientName}</span></p>
+                        <div className="space-y-2">
+                            <Label>Observação (Falta justificada, cobrada, motivo, etc.)</Label>
+                            <Input
+                                placeholder="Adicione uma observação (opcional)..."
+                                value={noShowModal.notes}
+                                onChange={(e) => setNoShowModal({ ...noShowModal, notes: e.target.value })}
+                            />
+                        </div>
+                        <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => noShowModal.appointmentId && handleNoShow(noShowModal.appointmentId, noShowModal.patientName, noShowModal.notes)}>
+                            Confirmar Não Comparecimento
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={showNoShowList} onOpenChange={setShowNoShowList}>
                 <DialogContent>
                     <DialogHeader>
@@ -794,7 +818,7 @@ export default function RecepcaoPage() {
                                                     )}
                                                 </>
                                             )}
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
                                                 <UserX className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
