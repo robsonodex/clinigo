@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle, CheckCircle2, XCircle, AlertTriangle,
     Plus, Search, QrCode, User, UserX, Calendar, Phone, MessageCircle, Settings, FileText,
-    Megaphone, Bell, Loader2, Tv, Monitor
+    Megaphone, Bell, Loader2, Tv, Monitor, Undo2
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -311,6 +311,28 @@ export default function RecepcaoPage() {
             }
         } catch (error) {
             toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao marcar não comparecimento' })
+        } finally {
+            setActionId(null)
+        }
+    }
+
+    async function handleRevertStatus(appointmentId: string, patientName: string) {
+        setActionId(appointmentId)
+        try {
+            const res = await fetch('/api/reception/revert-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId })
+            })
+            if (res.ok) {
+                toast({ title: '↩️ Desfeito', description: `Ação revertida para ${patientName}.` })
+                loadData()
+            } else {
+                const errData = await res.json()
+                throw new Error(errData.error || 'Falha ao desfazer')
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao desfazer ação' })
         } finally {
             setActionId(null)
         }
@@ -695,10 +717,17 @@ export default function RecepcaoPage() {
                                             <p className="font-medium text-sm">{item.patient.full_name}</p>
                                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                                 <Clock className="w-3 h-3" />
-                                                Chegada original: {getTimeWaiting(item.arrivalTime)}
+                                                {item.arrivalTime ? `Chegada original: ${getTimeWaiting(item.arrivalTime)}` : 'Sem registro de chegada'}
                                             </p>
                                         </div>
-                                        <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Ausente</Badge>
+                                        <div className="flex items-center gap-2">
+                                            {isEspacoIncluir && (
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                    <Undo2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            )}
+                                            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Ausente</Badge>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -818,6 +847,11 @@ export default function RecepcaoPage() {
                                                     )}
                                                 </>
                                             )}
+                                            {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                    <Undo2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            )}
                                             <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
                                                 <UserX className="w-3.5 h-3.5" />
                                             </Button>
@@ -857,9 +891,16 @@ export default function RecepcaoPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <Button size="sm" className="h-8 text-xs bg-gray-600 hover:bg-gray-700 text-white shrink-0" onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
-                                                {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>✅ Concluir</>}
-                                            </Button>
+                                            <div className="flex gap-1 shrink-0">
+                                                <Button size="sm" className="h-8 text-xs bg-gray-600 hover:bg-gray-700 text-white" onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
+                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>✅ Concluir</>}
+                                                </Button>
+                                                {isEspacoIncluir && (
+                                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                        <Undo2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -886,13 +927,20 @@ export default function RecepcaoPage() {
                             <div className="space-y-2">
                                 {queue.filter(i => i.status === 'COMPLETED').map((item) => (
                                     <div key={item.id} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
-                                        <div className="min-w-0">
-                                            <h4 className="font-medium text-sm text-gray-600 truncate">{item.patient?.full_name || 'Paciente'}</h4>
-                                            {item.doctor && (
-                                                <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                    <User className="w-3 h-3" />
-                                                    {item.doctor.user.name}
-                                                </span>
+                                        <div className="flex items-center justify-between">
+                                            <div className="min-w-0">
+                                                <h4 className="font-medium text-sm text-gray-600 truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                                {item.doctor && (
+                                                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                        <User className="w-3 h-3" />
+                                                        {item.doctor.user.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {isEspacoIncluir && (
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                    <Undo2 className="w-3.5 h-3.5" />
+                                                </Button>
                                             )}
                                         </div>
                                     </div>
