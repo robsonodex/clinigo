@@ -615,7 +615,12 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         .replace('__REPASSE_LABEL__', profLabel.repasse),
                 })),
         }))
-        .filter(section => section.items.length > 0)
+        .filter(section => {
+            // STRICT BLOCK: Remove 'Financeiro' entirely for Receptionists/Staff
+            if (section.title === 'Financeiro' && (role === 'RECEPTIONIST' || role === 'STAFF')) return false;
+            
+            return section.items.length > 0;
+        })
 
     // State for collapsible sections
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({})

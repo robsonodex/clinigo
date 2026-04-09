@@ -53,6 +53,11 @@ export default function DocumentsPage() {
     const [filterType, setFilterType] = useState<string>('all')
     const [showUploadDialog, setShowUploadDialog] = useState(false)
     const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+    const [isEditing, setIsEditing] = useState(false)
+    const [editName, setEditName] = useState('')
+    const [editDocType, setEditDocType] = useState('')
+    const [editNotes, setEditNotes] = useState('')
+    const [isDeleting, setIsDeleting] = useState(false)
 
     // Upload form state
     const [uploadFile, setUploadFile] = useState<File | null>(null)
@@ -146,6 +151,55 @@ export default function DocumentsPage() {
         setUploadDocType('')
         setUploadNotes('')
         setRunOcr(true)
+    }
+
+    const handleOpenDocument = (doc: Document) => {
+        setSelectedDocument(doc)
+        setEditName(doc.name || '')
+        setEditDocType(doc.document_type || '')
+        setEditNotes(doc.notes || '')
+        setIsEditing(false)
+    }
+
+    const handleSaveEdit = async () => {
+        if (!selectedDocument) return
+        try {
+            const res = await fetch(`/api/documents/${selectedDocument.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: editName,
+                    document_type: editDocType,
+                    notes: editNotes
+                })
+            })
+            if (!res.ok) throw new Error('Falha ao salvar')
+            toast.success('Documento atualizado com sucesso')
+            fetchDocuments()
+            setIsEditing(false)
+            setSelectedDocument({ ...selectedDocument, name: editName, document_type: editDocType, notes: editNotes })
+        } catch (error) {
+            toast.error('Erro ao editar documento')
+        }
+    }
+
+    const handleDelete = async (docId: string) => {
+        if (!confirm('Tem certeza que deseja excluir este documento permanentemente?')) return
+        setIsDeleting(true)
+        try {
+            const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' })
+            if (!res.ok) {
+                const errorData = await res.json()
+                throw new Error(errorData.error || 'Falha ao excluir')
+            }
+            toast.success('Documento excluído com sucesso')
+            if (selectedDocument?.id === docId) setSelectedDocument(null)
+            fetchDocuments()
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao excluir documento')
+        } finally {
+            setIsDeleting(false)
+        }
     }
 
     const getDocTypeLabel = (type: string) => {
@@ -275,16 +329,7 @@ export default function DocumentsPage() {
                                 />
                             </div>
 
-                            {/* OCR Toggle */}
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                    <Label>Processar OCR (IA)</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Extrair texto automaticamente
-                                    </p>
-                                </div>
-                                <Switch checked={runOcr} onCheckedChange={setRunOcr} />
-                            </div>
+                            {/* Campo de OCR Ocultado. Funcionalidade futura. */}
 
                             <Button onClick={handleUpload} disabled={uploading} className="w-full">
                                 {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -355,7 +400,6 @@ export default function DocumentsPage() {
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className="font-medium truncate">{doc.name}</h3>
                                             <Badge variant="outline">{getDocTypeLabel(doc.document_type)}</Badge>
-                                            {getOcrStatusBadge(doc.ocr_status)}
                                         </div>
 
                                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -386,11 +430,16 @@ export default function DocumentsPage() {
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => setSelectedDocument(doc)}>
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDocument(doc)}>
                                             <Eye className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon">
-                                            <Download className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon" asChild>
+                                            <a href={doc.storage_path || '#'} target="_blank" rel="noopener noreferrer">
+                                                <Download className="h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                                            <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>
                                 </div>
@@ -404,17 +453,52 @@ export default function DocumentsPage() {
             <Dialog open={!!selectedDocument} onOpenChange={() => setSelectedDocument(null)}>
                 <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{selectedDocument?.name}</DialogTitle>
-                        <DialogDescription>
-                            {getDocTypeLabel(selectedDocument?.document_type || '')} • {selectedDocument?.patients?.full_name}
-                        </DialogDescription>
+                        <div className="flex justify-between items-start pr-6">
+                            <div>
+                                {isEditing ? (
+                                    <Input value={editName} onChange={e => setEditName(e.target.value)} className="mb-2 w-full max-w-sm" />
+                                ) : (
+                                    <DialogTitle>{selectedDocument?.name}</DialogTitle>
+                                )}
+                                <DialogDescription className="mt-2">
+                                    {isEditing ? (
+                                        <Select value={editDocType} onValueChange={setEditDocType}>
+                                            <SelectTrigger className="w-48 h-8 text-xs">
+                                                <SelectValue placeholder="Selecione o tipo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="exam">Exame</SelectItem>
+                                                <SelectItem value="prescription">Receita</SelectItem>
+                                                <SelectItem value="certificate">Atestado</SelectItem>
+                                                <SelectItem value="report">Laudo</SelectItem>
+                                                <SelectItem value="referral">Encaminhamento</SelectItem>
+                                                <SelectItem value="consent">Termo de Consentimento</SelectItem>
+                                                <SelectItem value="other">Outro</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <>{getDocTypeLabel(selectedDocument?.document_type || '')} • {selectedDocument?.patients?.full_name}</>
+                                    )}
+                                </DialogDescription>
+                            </div>
+                            <div className="flex gap-2">
+                                {isEditing ? (
+                                    <Button size="sm" onClick={handleSaveEdit}>Salvar</Button>
+                                ) : (
+                                    <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>Editar</Button>
+                                )}
+                                <Button size="sm" variant="destructive" onClick={() => selectedDocument?.id && handleDelete(selectedDocument.id)} disabled={isDeleting}>
+                                    Excluir
+                                </Button>
+                            </div>
+                        </div>
                     </DialogHeader>
 
                     {selectedDocument?.ocr_text && (
-                        <Tabs defaultValue="ocr">
+                        <Tabs defaultValue="metadata">
                             <TabsList>
+                                <TabsTrigger value="metadata">Informações</TabsTrigger>
                                 <TabsTrigger value="ocr">Texto Extraído</TabsTrigger>
-                                <TabsTrigger value="metadata">Metadados</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="ocr" className="mt-4">
@@ -426,17 +510,62 @@ export default function DocumentsPage() {
                             </TabsContent>
 
                             <TabsContent value="metadata" className="mt-4">
-                                <div className="space-y-2 text-sm">
-                                    <div><strong>Arquivo:</strong> {selectedDocument.original_name}</div>
-                                    <div><strong>Tipo:</strong> {selectedDocument.file_type}</div>
-                                    <div><strong>Tamanho:</strong> {formatFileSize(selectedDocument.file_size)}</div>
-                                    <div><strong>Upload por:</strong> {selectedDocument.users?.full_name || 'N/A'}</div>
-                                    {selectedDocument.notes && (
-                                        <div><strong>Observações:</strong> {selectedDocument.notes}</div>
-                                    )}
+                                <div className="space-y-4 text-sm">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><strong>Arquivo:</strong> {selectedDocument.original_name}</div>
+                                        <div><strong>Tipo Original:</strong> {selectedDocument.file_type}</div>
+                                        <div><strong>Tamanho:</strong> {formatFileSize(selectedDocument.file_size)}</div>
+                                        <div><strong>Upload por:</strong> {selectedDocument.users?.full_name || 'N/A'}</div>
+                                    </div>
+                                    
+                                    <div className="flex flex-col gap-2">
+                                        <strong>Observações:</strong>
+                                        {isEditing ? (
+                                            <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} />
+                                        ) : (
+                                            <div className="bg-muted p-3 rounded-md min-h-[60px]">{selectedDocument.notes || 'Nenhuma observação.'}</div>
+                                        )}
+                                    </div>
+                                    
+                                    {selectedDocument.file_type.startsWith('image/') || selectedDocument.file_type === 'application/pdf' ? (
+                                        <div className="mt-4 flex justify-center p-4 bg-muted/50 rounded-lg">
+                                            <Button asChild variant="outline">
+                                                <a href={selectedDocument.storage_path || '#'} target="_blank" rel="noopener noreferrer">
+                                                    Abrir Documento Original
+                                                </a>
+                                            </Button>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </TabsContent>
                         </Tabs>
+                    )}
+                    
+                    {!selectedDocument?.ocr_text && (
+                        <div className="space-y-4 text-sm mt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><strong>Arquivo:</strong> {selectedDocument?.original_name}</div>
+                                <div><strong>Tamanho:</strong> {formatFileSize(selectedDocument?.file_size || 0)}</div>
+                                <div><strong>Upload por:</strong> {selectedDocument?.users?.full_name || 'N/A'}</div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-2">
+                                <strong>Observações:</strong>
+                                {isEditing ? (
+                                    <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} />
+                                ) : (
+                                    <div className="bg-muted p-3 rounded-md min-h-[60px]">{selectedDocument?.notes || 'Nenhuma observação.'}</div>
+                                )}
+                            </div>
+
+                            <div className="mt-6 flex justify-center">
+                                <Button asChild variant="outline">
+                                    <a href={selectedDocument?.storage_path || '#'} target="_blank" rel="noopener noreferrer">
+                                        Abrir / Visualizar Original Externo
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
                     )}
                 </DialogContent>
             </Dialog>
