@@ -173,15 +173,15 @@ const navigationSections: NavSection[] = [
                 title: 'Pagamentos',
                 href: '/dashboard/pagamentos',
                 icon: CreditCard,
-                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
-                // Acessível a todos os planos (BASICO+)
+                roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos (BASICO+) - Apenas admin
             },
             {
                 title: 'Financeiro',
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
-                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
-                // Acessível a todos os planos - apenas Novo Lançamento (receita/despesa)
+                roles: ['CLINIC_ADMIN'],
+                // Acessível a todos os planos - apenas Novo Lançamento (receita/despesa) - Apenas admin
             },
             {
                 title: '__REPASSE_LABEL__',
