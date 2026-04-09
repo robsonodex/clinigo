@@ -57,6 +57,99 @@ const statusLabels: Record<string, string> = {
     NO_SHOW: 'Não compareceu',
 }
 
+function SuperAdminStats() {
+    const { data: superData, isLoading } = useQuery({
+        queryKey: ['super-admin-dashboard'],
+        queryFn: async () => {
+            const res = await fetch('/api/super-admin/dashboard')
+            if (!res.ok) return null
+            const result = await res.json()
+            return result.data || result
+        },
+        staleTime: 1000 * 60 * 2,
+    })
+
+    return (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Link href="/system-master-hub">
+                <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-all cursor-pointer group">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-indigo-900">
+                            Clínicas Ativas
+                        </CardTitle>
+                        <Building2 className="h-4 w-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <Skeleton className="h-8 w-16" />
+                        ) : (
+                            <div className="text-2xl font-bold text-indigo-900">
+                                {superData?.metrics?.activeClinics ?? 0}
+                            </div>
+                        )}
+                        <p className="text-xs text-indigo-700 mt-1">
+                            de {superData?.metrics?.totalClinics ?? 0} cadastradas
+                        </p>
+                    </CardContent>
+                </Card>
+            </Link>
+
+            <Link href="/system-master-hub">
+                <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:shadow-lg transition-all cursor-pointer group">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-cyan-900">MRR</CardTitle>
+                        <DollarSign className="h-4 w-4 text-cyan-600 group-hover:scale-110 transition-transform" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <Skeleton className="h-8 w-16" />
+                        ) : (
+                            <div className="text-2xl font-bold text-cyan-900">
+                                R$ {(superData?.metrics?.mrr ?? 0).toLocaleString('pt-BR')}
+                            </div>
+                        )}
+                        <p className="text-xs text-cyan-700 mt-1">Receita Mensal Recorrente</p>
+                    </CardContent>
+                </Card>
+            </Link>
+
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-green-900">Total Clínicas</CardTitle>
+                    <Building2 className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <Skeleton className="h-8 w-16" />
+                    ) : (
+                        <div className="text-2xl font-bold text-green-900">
+                            {superData?.metrics?.totalClinics ?? 0}
+                        </div>
+                    )}
+                    <p className="text-xs text-green-700 mt-1">Cadastradas na plataforma</p>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-amber-900">Churn Rate</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-amber-600" />
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <Skeleton className="h-8 w-16" />
+                    ) : (
+                        <div className="text-2xl font-bold text-amber-900">
+                            {(superData?.metrics?.churnRate ?? 0).toFixed(1)}%
+                        </div>
+                    )}
+                    <p className="text-xs text-amber-700 mt-1">Meta: &lt; 5%</p>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
 export default function DashboardPage() {
     const { profile } = useAuth()
     const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
@@ -244,33 +337,7 @@ export default function DashboardPage() {
             {/* Stats Cards - Super Admin */}
             {
                 isSuperAdmin && (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-indigo-900">
-                                    Clínicas Ativas
-                                </CardTitle>
-                                <Building2 className="h-4 w-4 text-indigo-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-indigo-900">-</div>
-                                <p className="text-xs text-indigo-700">Ver em Clínicas</p>
-                            </CardContent>
-                        </Card>
-
-
-
-                        <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-cyan-900">MRR</CardTitle>
-                                <DollarSign className="h-4 w-4 text-cyan-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-cyan-900">-</div>
-                                <p className="text-xs text-cyan-700">Ver em Relatórios</p>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <SuperAdminStats />
                 )
             }
 

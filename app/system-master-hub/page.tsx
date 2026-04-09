@@ -21,6 +21,8 @@ import {
     LogOut,
     CheckCircle2,
     MessageCircle,
+    Send,
+    Loader2,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,6 +60,7 @@ interface DashboardData {
         aiTokensUsed: number
         approvalStatus: string | null
         trialEndsAt: string | null
+        subscriptionDueDate: string | null
     }>
     users: Array<{
         id: string
@@ -84,6 +87,7 @@ export default function SuperAdminDashboard() {
     const [isImpersonating, setIsImpersonating] = useState<string | null>(null)
     const [users, setUsers] = useState<DashboardData['users']>([])
     const [loadingUsers, setLoadingUsers] = useState(false)
+    const [sendingBilling, setSendingBilling] = useState<string | null>(null)
 
     useEffect(() => {
         loadDashboard()
@@ -247,6 +251,40 @@ export default function SuperAdminDashboard() {
         } catch (error) {
             console.error('Activation error:', error)
             alert(`Erro ao ativar clínica: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+    }
+
+    const handleSendBilling = async (clinicId: string, clinicName: string, dueDate: string | null) => {
+        const confirmed = confirm(
+            `Enviar lembrete de cobrança para "${clinicName}"?\n\n` +
+            `Uma notificação profissional será enviada para o(s) administrador(es) da clínica ` +
+            `informando sobre o vencimento da mensalidade` +
+            (dueDate ? ` em ${new Date(dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}.` : '.') +
+            `\n\nConfirmar envio?`
+        )
+
+        if (!confirmed) return
+
+        setSendingBilling(clinicId)
+        try {
+            const res = await fetch('/api/super-admin/clinics/send-billing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinicId, clinicName, dueDate }),
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Falha ao enviar cobrança')
+            }
+
+            const result = await res.json()
+            alert(`✅ ${result.data?.message || 'Notificação de cobrança enviada com sucesso!'}`)
+        } catch (error) {
+            console.error('Billing notification error:', error)
+            alert(`Erro ao enviar cobrança: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setSendingBilling(null)
         }
     }
 
@@ -462,6 +500,20 @@ export default function SuperAdminDashboard() {
                                                                 Ativar Plano
                                                             </Button>
                                                         )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleSendBilling(clinic.id, clinic.name, clinic.subscriptionDueDate)}
+                                                            disabled={sendingBilling === clinic.id}
+                                                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                        >
+                                                            {sendingBilling === clinic.id ? (
+                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                            ) : (
+                                                                <Send className="h-4 w-4 mr-1" />
+                                                            )}
+                                                            Cobrar
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

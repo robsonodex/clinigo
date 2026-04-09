@@ -7,11 +7,16 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-const PLAN_PRICES = {
+const PLAN_PRICES: Record<string, number> = {
+    FREE: 0,
     STARTER: 149,
+    BASIC: 199,
     BASICO: 299,
+    PROFESSIONAL: 449,
+    PRO: 399,
     AVANCADO: 549,
     ENTERPRISE: 799,
+    NETWORK: 999,
 }
 
 export async function GET(request: NextRequest) {
@@ -39,17 +44,18 @@ export async function GET(request: NextRequest) {
         // Get all clinics
         const { data: clinics } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, created_at, approval_status, trial_ends_at')
+            .select('id, name, plan_type, is_active, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price')
             .order('created_at', { ascending: false })
 
         // Count metrics
         const totalClinics = clinics?.length || 0
         const activeClinics = clinics?.filter(c => c.is_active).length || 0
 
-        // MRR calculation
+        // MRR calculation - custom_price has priority over default plan prices
         const mrr = clinics?.reduce((sum, c) => {
             if (!c.is_active) return sum
-            return sum + (PLAN_PRICES[c.plan_type as keyof typeof PLAN_PRICES] || 0)
+            const price = c.custom_price ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
+            return sum + price
         }, 0) || 0
 
         // Clinics by plan
@@ -114,18 +120,25 @@ export async function GET(request: NextRequest) {
             // Table might not exist, ignore
         }
 
-        // Mock data for frontend (while we transition)
-        const mockClinics = clinics?.map(c => ({
-            id: c.id,
-            name: c.name,
-            planType: c.plan_type,
-            isActive: c.is_active,
-            revenue: PLAN_PRICES[c.plan_type as keyof typeof PLAN_PRICES] || 0,
-            renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            aiTokensUsed: 0,
-            approvalStatus: c.approval_status || null,
-            trialEndsAt: c.trial_ends_at || null,
-        })) || []
+        // Clinic data for frontend
+        const mockClinics = clinics?.map(c => {
+            const price = c.custom_price ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
+            const renewalDate = c.subscription_due_date
+                ? new Date(c.subscription_due_date + 'T00:00:00').toISOString()
+                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            return {
+                id: c.id,
+                name: c.name,
+                planType: c.plan_type,
+                isActive: c.is_active,
+                revenue: price,
+                renewalDate,
+                aiTokensUsed: 0,
+                approvalStatus: c.approval_status || null,
+                trialEndsAt: c.trial_ends_at || null,
+                subscriptionDueDate: c.subscription_due_date || null,
+            }
+        }) || []
 
         // Map logs to match frontend camelCase expectations
         const mappedLogs = recentLogs?.map((log: any) => ({
