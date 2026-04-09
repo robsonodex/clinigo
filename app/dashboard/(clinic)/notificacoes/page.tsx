@@ -3,13 +3,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/hooks/use-notifications'
-import { Bell, Check, ExternalLink, MailOpen } from 'lucide-react'
+import { Bell, Check, ExternalLink, MailOpen, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function NotificationsPage() {
-    const { notifications, isLoading, markAsRead, markAllAsRead } = useNotifications()
+    const { notifications, isLoading, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } = useNotifications()
 
     return (
         <div className="space-y-6">
@@ -23,16 +23,33 @@ export default function NotificationsPage() {
                         Histórico de alertas e mensagens do sistema
                     </p>
                 </div>
-                {notifications.some(n => !n.read) && (
-                    <Button
-                        variant="outline"
-                        onClick={() => markAllAsRead.mutate()}
-                        disabled={markAllAsRead.isPending}
-                    >
-                        <MailOpen className="w-4 h-4 mr-2" />
-                        Marcar todas como lidas
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                    {notifications.length > 0 && (
+                        <Button
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                                if (confirm('Tem certeza que deseja excluir TODAS as notificações? Esta ação não pode ser desfeita.')) {
+                                    deleteAllNotifications.mutate()
+                                }
+                            }}
+                            disabled={deleteAllNotifications.isPending}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Limpar Histórico
+                        </Button>
+                    )}
+                    {notifications.some(n => !n.read) && (
+                        <Button
+                            variant="outline"
+                            onClick={() => markAllAsRead.mutate()}
+                            disabled={markAllAsRead.isPending}
+                        >
+                            <MailOpen className="w-4 h-4 mr-2" />
+                            Marcar lidas
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <Card>
@@ -90,7 +107,7 @@ export default function NotificationsPage() {
                                             </span>
                                         </div>
 
-                                        <p className="text-sm text-muted-foreground mb-2">
+                                        <p className="text-sm text-muted-foreground mb-2 whitespace-pre-line">
                                             {notification.message}
                                         </p>
 
@@ -116,6 +133,21 @@ export default function NotificationsPage() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Botão de excluir individual */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 -mt-2 -mr-2 opacity-50 hover:opacity-100 transition-opacity"
+                                        onClick={() => {
+                                            if (confirm('Excluir esta notificação permanentemente?')) {
+                                                deleteNotification.mutate(notification.id)
+                                            }
+                                        }}
+                                        title="Excluir notificação"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
                                 </div>
                             ))}
                         </div>

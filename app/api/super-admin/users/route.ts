@@ -3,11 +3,12 @@
  * List all users in the system
  */
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function GET() {
     try {
         const supabase = await createClient()
+        const supabaseAdmin = createServiceRoleClient()
 
         // Verify super admin access
         const { data: { user } } = await supabase.auth.getUser()
@@ -15,8 +16,18 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Fetch all users with their clinic information
-        const { data: users, error } = await supabase
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Super admin only' }, { status: 403 })
+        }
+
+        // Fetch all users with their clinic information using admin client
+        const { data: users, error } = await supabaseAdmin
             .from('users')
             .select(`
                 id,

@@ -109,11 +109,50 @@ export function useNotifications() {
         }
     })
 
+    // Delete notification
+    const deleteNotification = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await (supabase as any)
+                .from('notifications')
+                .delete()
+                .eq('id', id)
+            if (error) throw error
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] })
+            toast.success('Notificação excluída com sucesso')
+        },
+        onError: () => {
+            toast.error('Erro ao excluir notificação')
+        }
+    })
+
+    // Delete all notifications
+    const deleteAllNotifications = useMutation({
+        mutationFn: async () => {
+            if (!user?.id) return
+            const { error } = await (supabase as any)
+                .from('notifications')
+                .delete()
+                .eq('user_id', user.id)
+            if (error) throw error
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] })
+            toast.success('Todas as notificações foram excluídas')
+        },
+        onError: () => {
+            toast.error('Erro ao excluir notificações')
+        }
+    })
+
     return {
         notifications,
         unreadCount,
         isLoading,
         markAsRead,
         markAllAsRead,
+        deleteNotification,
+        deleteAllNotifications,
     }
 }

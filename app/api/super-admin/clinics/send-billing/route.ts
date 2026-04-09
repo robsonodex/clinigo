@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
             .from('users')
             .select('id')
             .eq('clinic_id', clinicId)
-            .in('role', ['CLINIC_ADMIN', 'OWNER'])
+            .eq('role', 'CLINIC_ADMIN')
 
         if (!clinicUsers || clinicUsers.length === 0) {
             return new Response(JSON.stringify({ error: 'Nenhum administrador encontrado para esta clínica' }), {
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Create notification message - professional and discreet
-        const title = '📋 Lembrete de Faturamento'
-        const message = `Prezado(a) administrador(a),\n\nInformamos que a mensalidade referente ao plano da ${clinicName} tem vencimento previsto para ${formattedDate}.\n\nPara garantir a continuidade dos serviços sem interrupção, solicitamos que o pagamento seja efetuado até a data indicada.\n\nEm caso de dúvidas ou necessidade de suporte, entre em contato conosco pelo e-mail contato@clinigo.app.\n\nAtenciosamente,\nEquipe CliniGo`
+        const title = 'Aviso de Faturamento: CliniGo'
+        const message = `A mensalidade do plano ${clinicName} vence em ${formattedDate}. Por favor, regularize o pagamento para manter seu acesso ativo.\n\nSuporte: suporte@clinigo.app`
 
         // Insert notification for each clinic admin
         const notifications = clinicUsers.map((u: any) => ({

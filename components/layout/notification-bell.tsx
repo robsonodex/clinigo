@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/hooks/use-notifications'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 // Simple date formatter to avoid dependency issues if date-fns is missing or not configured
 function formatTimeAgo(dateString: string) {
@@ -27,6 +28,7 @@ function formatTimeAgo(dateString: string) {
 export function NotificationBell() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
     const [open, setOpen] = useState(false)
+    const router = useRouter()
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -65,16 +67,23 @@ export function NotificationBell() {
                                 <div
                                     key={notification.id}
                                     className={cn(
-                                        "p-4 hover:bg-muted/50 transition-colors relative group",
+                                        "p-4 hover:bg-muted/50 transition-colors relative group cursor-pointer",
                                         !notification.read ? "bg-blue-50/50" : "bg-background"
                                     )}
+                                    onClick={() => {
+                                        if (!notification.read) {
+                                            markAsRead.mutate(notification.id)
+                                        }
+                                        setOpen(false)
+                                        router.push('/dashboard/notificacoes')
+                                    }}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className="flex-1 space-y-1">
                                             <p className={cn("text-sm", !notification.read ? "font-semibold text-foreground" : "font-medium text-muted-foreground")}>
                                                 {notification.title}
                                             </p>
-                                            <p className="text-xs text-muted-foreground line-clamp-2">
+                                            <p className="text-xs text-muted-foreground line-clamp-2 whitespace-pre-line">
                                                 {notification.message}
                                             </p>
                                             <div className="flex items-center gap-2 pt-1">
