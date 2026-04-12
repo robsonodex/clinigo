@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
             throw new ForbiddenError('Super admin only')
         }
 
-        const { clinicId, clinicName, dueDate } = await request.json()
+        const { clinicId, clinicName, dueDate, customMessage, customTitle } = await request.json()
 
         if (!clinicId || !clinicName) {
             return new Response(JSON.stringify({ error: 'clinicId and clinicName are required' }), {
@@ -58,9 +58,11 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // Create notification message - professional and discreet
-        const title = 'Aviso de Faturamento: CliniGo'
-        const message = `A mensalidade do plano ${clinicName} vence em ${formattedDate}. Por favor, regularize o pagamento para manter seu acesso ativo.\n\nSuporte: suporte@clinigo.app`
+        // Create notification - use custom title/message if provided, otherwise defaults
+        const title = customTitle?.trim() || 'Aviso de Faturamento: CliniGo'
+        const message = customMessage
+            ? customMessage
+            : `A mensalidade do plano ${clinicName} vence em ${formattedDate}. Por favor, regularize o pagamento para manter seu acesso ativo.\n\nSuporte: suporte@clinigo.app`
 
         // Insert notification for each clinic admin
         const notifications = clinicUsers.map((u: any) => ({

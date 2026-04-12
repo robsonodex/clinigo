@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -30,6 +30,16 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import {
     Table,
     TableBody,
@@ -88,6 +98,14 @@ export default function SuperAdminDashboard() {
     const [users, setUsers] = useState<DashboardData['users']>([])
     const [loadingUsers, setLoadingUsers] = useState(false)
     const [sendingBilling, setSendingBilling] = useState<string | null>(null)
+    const [billingModal, setBillingModal] = useState<{
+        open: boolean
+        clinicId: string
+        clinicName: string
+        dueDate: string | null
+    }>({ open: false, clinicId: '', clinicName: '', dueDate: null })
+    const [billingMessage, setBillingMessage] = useState('')
+    const [billingTitle, setBillingTitle] = useState('Aviso de Faturamento: CliniGo')
 
     useEffect(() => {
         loadDashboard()
@@ -254,23 +272,31 @@ export default function SuperAdminDashboard() {
         }
     }
 
-    const handleSendBilling = async (clinicId: string, clinicName: string, dueDate: string | null) => {
-        const confirmed = confirm(
-            `Enviar lembrete de cobrança para "${clinicName}"?\n\n` +
-            `Uma notificação profissional será enviada para o(s) administrador(es) da clínica ` +
-            `informando sobre o vencimento da mensalidade` +
-            (dueDate ? ` em ${new Date(dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}.` : '.') +
-            `\n\nConfirmar envio?`
-        )
+    const openBillingModal = (clinicId: string, clinicName: string, dueDate: string | null) => {
+        setBillingModal({ open: true, clinicId, clinicName, dueDate })
+        setBillingMessage('')
+        setBillingTitle('Aviso de Faturamento: CliniGo')
+    }
 
-        if (!confirmed) return
+    const closeBillingModal = () => {
+        setBillingModal({ open: false, clinicId: '', clinicName: '', dueDate: null })
+        setBillingMessage('')
+        setBillingTitle('Aviso de Faturamento: CliniGo')
+    }
 
+    const confirmSendBilling = async () => {
+        if (!billingMessage.trim()) {
+            alert('Por favor, escreva uma mensagem antes de enviar.')
+            return
+        }
+
+        const { clinicId, clinicName, dueDate } = billingModal
         setSendingBilling(clinicId)
         try {
             const res = await fetch('/api/super-admin/clinics/send-billing', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clinicId, clinicName, dueDate }),
+                body: JSON.stringify({ clinicId, clinicName, dueDate, customMessage: billingMessage.trim(), customTitle: billingTitle.trim() }),
             })
 
             if (!res.ok) {
@@ -280,6 +306,7 @@ export default function SuperAdminDashboard() {
 
             const result = await res.json()
             alert(`✅ ${result.data?.message || 'Notificação de cobrança enviada com sucesso!'}`)
+            closeBillingModal()
         } catch (error) {
             console.error('Billing notification error:', error)
             alert(`Erro ao enviar cobrança: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
@@ -503,7 +530,7 @@ export default function SuperAdminDashboard() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => handleSendBilling(clinic.id, clinic.name, clinic.subscriptionDueDate)}
+                                                            onClick={() => openBillingModal(clinic.id, clinic.name, clinic.subscriptionDueDate)}
                                                             disabled={sendingBilling === clinic.id}
                                                             className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                                         >
@@ -633,6 +660,66 @@ export default function SuperAdminDashboard() {
                     </TabsContent>
                 </Tabs>
             </main>
+            {/* Billing Modal */}
+            <Dialog open={billingModal.open} onOpenChange={(open) => { if (!open) closeBillingModal() }}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Send className="h-5 w-5 text-amber-600" />
+                            Enviar Cobrança
+                        </DialogTitle>
+                        <DialogDescription>
+                            Enviar notificação para <strong>{billingModal.clinicName}</strong>
+                            {billingModal.dueDate && (
+                                <> — Vencimento: {new Date(billingModal.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</>  
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="billing-title">Título da notificação</Label>
+                            <input
+                                id="billing-title"
+                                type="text"
+                                value={billingTitle}
+                                onChange={(e) => setBillingTitle(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                placeholder="Ex: Aviso de Faturamento: CliniGo"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="billing-message">Mensagem para a clínica</Label>
+                            <Textarea
+                                id="billing-message"
+                                placeholder="Digite aqui a mensagem que será enviada para o administrador da clínica..."
+                                value={billingMessage}
+                                onChange={(e) => setBillingMessage(e.target.value)}
+                                rows={6}
+                                className="resize-y"
+                            />
+                            <p className="text-xs text-gray-500">
+                                Esta mensagem aparecerá na notificação que o administrador da clínica receberá.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={closeBillingModal} disabled={sendingBilling === billingModal.clinicId}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={confirmSendBilling}
+                            disabled={sendingBilling === billingModal.clinicId || !billingMessage.trim()}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                            {sendingBilling === billingModal.clinicId ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
+                            ) : (
+                                <><Send className="h-4 w-4 mr-2" /> Enviar Cobrança</>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
