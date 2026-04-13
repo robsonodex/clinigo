@@ -23,6 +23,8 @@ import {
     MessageCircle,
     Send,
     Loader2,
+    Lock,
+    Unlock,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -272,6 +274,63 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    const handleBlockClinic = async (clinicId: string, clinicName: string) => {
+        const reason = prompt(
+            `Bloquear acesso da clínica "${clinicName}"?\n\n` +
+            `Isso irá IMPEDIR todos os usuários de acessar o sistema.\n\n` +
+            `Digite o motivo do bloqueio:`
+        )
+
+        if (reason === null) return // cancelled
+
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'block_clinic', reason: reason || 'Bloqueio manual' }),
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Failed to block clinic')
+            }
+
+            alert(`🔒 Clínica "${clinicName}" bloqueada com sucesso!`)
+            loadDashboard()
+        } catch (error) {
+            console.error('Block error:', error)
+            alert(`Erro ao bloquear: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        }
+    }
+
+    const handleUnblockClinic = async (clinicId: string, clinicName: string) => {
+        const confirmed = confirm(
+            `Desbloquear acesso da clínica "${clinicName}"?\n\n` +
+            `Isso irá RESTAURAR o acesso de todos os usuários ao sistema.`
+        )
+
+        if (!confirmed) return
+
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'unblock_clinic' }),
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Failed to unblock clinic')
+            }
+
+            alert(`🔓 Clínica "${clinicName}" desbloqueada com sucesso!`)
+            loadDashboard()
+        } catch (error) {
+            console.error('Unblock error:', error)
+            alert(`Erro ao desbloquear: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        }
+    }
+
     const openBillingModal = (clinicId: string, clinicName: string, dueDate: string | null) => {
         setBillingModal({ open: true, clinicId, clinicName, dueDate })
         setBillingMessage('')
@@ -467,8 +526,14 @@ export default function SuperAdminDashboard() {
                                                 <TableCell>
                                                     <div className="flex items-center gap-1.5">
                                                         <Badge variant={clinic.isActive ? 'default' : 'destructive'}>
-                                                            {clinic.isActive ? 'Ativo' : 'Inativo'}
+                                                            {clinic.isActive ? 'Ativo' : 'Bloqueado'}
                                                         </Badge>
+                                                        {!clinic.isActive && (
+                                                            <Badge variant="outline" className="border-red-400 text-red-600 bg-red-50">
+                                                                <Lock className="h-3 w-3 mr-1" />
+                                                                Sem Acesso
+                                                            </Badge>
+                                                        )}
                                                         {clinic.approvalStatus === 'trial' && (
                                                             <Badge variant="outline" className="border-amber-400 text-amber-600 bg-amber-50">
                                                                 Trial
@@ -525,6 +590,27 @@ export default function SuperAdminDashboard() {
                                                             >
                                                                 <CheckCircle2 className="h-4 w-4 mr-1" />
                                                                 Ativar Plano
+                                                            </Button>
+                                                        )}
+                                                        {clinic.isActive ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleBlockClinic(clinic.id, clinic.name)}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            >
+                                                                <Lock className="h-4 w-4 mr-1" />
+                                                                Bloquear
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleUnblockClinic(clinic.id, clinic.name)}
+                                                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                            >
+                                                                <Unlock className="h-4 w-4 mr-1" />
+                                                                Desbloquear
                                                             </Button>
                                                         )}
                                                         <Button

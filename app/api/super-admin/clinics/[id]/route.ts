@@ -111,6 +111,133 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             })
         }
 
+        // ============================================
+        // BLOCK CLINIC (manual by super admin)
+        // ============================================
+        if (action === 'block_clinic') {
+            const reason = body.reason || 'Bloqueio manual pelo administrador'
+
+            const { data: clinic } = await serviceSupabase
+                .from('clinics')
+                .select('name, is_active')
+                .eq('id', clinicId)
+                .single()
+
+            if (!clinic) {
+                return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            if (!(clinic as any).is_active) {
+                return NextResponse.json({ error: 'Clínica já está bloqueada' }, { status: 400 })
+            }
+
+            const { error: updateError } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    is_active: false,
+                    blocked_at: new Date().toISOString(),
+                    blocked_reason: reason,
+                    blocked_by: user.id,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', clinicId)
+
+            if (updateError) {
+                console.error('[PATCH clinics/[id]] Block error:', updateError)
+                return NextResponse.json({ error: 'Failed to block clinic' }, { status: 500 })
+            }
+
+            // Notify clinic
+            await serviceSupabase.from('billing_notifications').insert({
+                clinic_id: clinicId,
+                type: 'ACCESS_BLOCKED',
+                title: '⚠️ Acesso ao sistema bloqueado',
+                message: `O acesso da sua clínica ao CliniGo foi suspenso. Motivo: ${reason}. Entre em contato para regularizar sua situação.`,
+                priority: 'URGENT',
+            } as any)
+
+            // Audit log
+            await serviceSupabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'CLINIC_BLOCKED',
+                resource_type: 'CLINIC',
+                resource_id: clinicId,
+                metadata: {
+                    clinic_name: (clinic as any).name,
+                    reason,
+                    blocked_at: new Date().toISOString(),
+                },
+                created_at: new Date().toISOString(),
+            })
+
+            return NextResponse.json({
+                success: true,
+                message: `Clínica "${(clinic as any).name}" bloqueada com sucesso.`,
+            })
+        }
+
+        // ============================================
+        // UNBLOCK CLINIC (manual by super admin)
+        // ============================================
+        if (action === 'unblock_clinic') {
+            const { data: clinic } = await serviceSupabase
+                .from('clinics')
+                .select('name, is_active')
+                .eq('id', clinicId)
+                .single()
+
+            if (!clinic) {
+                return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            if ((clinic as any).is_active) {
+                return NextResponse.json({ error: 'Clínica já está ativa' }, { status: 400 })
+            }
+
+            const { error: updateError } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    is_active: true,
+                    blocked_at: null,
+                    blocked_reason: null,
+                    blocked_by: null,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', clinicId)
+
+            if (updateError) {
+                console.error('[PATCH clinics/[id]] Unblock error:', updateError)
+                return NextResponse.json({ error: 'Failed to unblock clinic' }, { status: 500 })
+            }
+
+            // Notify clinic
+            await serviceSupabase.from('billing_notifications').insert({
+                clinic_id: clinicId,
+                type: 'ACCESS_RESTORED',
+                title: '✅ Acesso ao sistema restaurado',
+                message: 'O acesso da sua clínica ao CliniGo foi restaurado. Obrigado por regularizar sua situação!',
+                priority: 'HIGH',
+            } as any)
+
+            // Audit log
+            await serviceSupabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'CLINIC_UNBLOCKED',
+                resource_type: 'CLINIC',
+                resource_id: clinicId,
+                metadata: {
+                    clinic_name: (clinic as any).name,
+                    unblocked_at: new Date().toISOString(),
+                },
+                created_at: new Date().toISOString(),
+            })
+
+            return NextResponse.json({
+                success: true,
+                message: `Clínica "${(clinic as any).name}" desbloqueada com sucesso.`,
+            })
+        }
+
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     } catch (error) {
         console.error('[PATCH clinics/[id]] Error:', error)

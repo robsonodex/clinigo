@@ -107,13 +107,68 @@ export async function GET(request: Request) {
             }
         }
 
+        // --------------------------------------------------------
+        // CHECK 3: AUTO-BLOCK after 3 days overdue
+        // Block clinics that are 3+ days past due and still active
+        // Skip demo clinics (is_demo = true)
+        // --------------------------------------------------------
+        const threeDaysAgo = new Date()
+        threeDaysAgo.setDate(today.getDate() - 3)
+        const endOf3DaysAgo = new Date(threeDaysAgo)
+        endOf3DaysAgo.setHours(23, 59, 59, 999)
+
+        const { data: clinicsToBlock } = await supabase
+            .from('clinics')
+            .select('id, name, subscription_due_date, plan_type, is_demo')
+            .lte('subscription_due_date', endOf3DaysAgo.toISOString())
+            .eq('is_active', true)
+
+        let blockedCount = 0
+        if (clinicsToBlock) {
+            for (const clinic of clinicsToBlock) {
+                // Skip demo clinics
+                if (clinic.is_demo) continue
+
+                // Block the clinic
+                const { error: blockError } = await supabase
+                    .from('clinics')
+                    .update({
+                        is_active: false,
+                        blocked_at: new Date().toISOString(),
+                        blocked_reason: 'auto_overdue',
+                        blocked_by: null, // null = automatic
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', clinic.id)
+
+                if (blockError) {
+                    console.error(`Failed to block clinic ${clinic.id}:`, blockError)
+                    continue
+                }
+
+                // Send suspension notification
+                await supabase.from('billing_notifications').insert({
+                    clinic_id: clinic.id,
+                    type: 'ACCESS_SUSPENDED',
+                    title: '🔒 Acesso suspenso por inadimplência',
+                    message: `O acesso da sua clínica "${clinic.name}" ao CliniGo foi suspenso automaticamente por atraso no pagamento (vencimento: ${new Date(clinic.subscription_due_date).toLocaleDateString('pt-BR')}). Realize o pagamento para restaurar o acesso automaticamente, ou entre em contato conosco.`,
+                    priority: 'URGENT',
+                })
+
+                console.log(`🔒 [CRON] Auto-blocked clinic: ${clinic.name} (${clinic.id}) - overdue since ${clinic.subscription_due_date}`)
+                blockedCount++
+            }
+        }
+
         return NextResponse.json({
             success: true,
             processed: {
                 reminder_7d: clinics7?.length || 0,
                 sent_7d: sent7,
                 overdue_check: clinicsOverdue?.length || 0,
-                sent_overdue: sentOverdue
+                sent_overdue: sentOverdue,
+                auto_block_candidates: clinicsToBlock?.length || 0,
+                auto_blocked: blockedCount,
             }
         })
 
