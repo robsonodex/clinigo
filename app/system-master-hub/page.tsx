@@ -138,6 +138,23 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    // Silent refresh - atualiza dados sem mostrar tela de loading
+    const silentRefresh = async () => {
+        try {
+            const res = await fetch('/api/super-admin/dashboard')
+            if (res.ok) {
+                const result = await res.json()
+                if (result.data) {
+                    setData(result.data)
+                } else {
+                    setData(result)
+                }
+            }
+        } catch (error) {
+            console.error('Silent refresh error:', error)
+        }
+    }
+
     const loadUsers = async () => {
         setLoadingUsers(true)
         try {
@@ -521,7 +538,20 @@ export default function SuperAdminDashboard() {
                                     <TableBody>
                                         {data.clinics.map((clinic) => (
                                             <TableRow key={clinic.id} className="border-gray-200 hover:bg-gray-50">
-                                                <TableCell className="font-medium">{clinic.name}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {clinic.name}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={silentRefresh}
+                                                            className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+                                                            title="Atualizar dados"
+                                                        >
+                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell>{getPlanBadge(clinic.planType)}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1.5">

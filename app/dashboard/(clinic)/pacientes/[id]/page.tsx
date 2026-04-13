@@ -73,7 +73,13 @@ const PatientFormSchema = z.object({
     phone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
     date_of_birth: z.string().optional(),
     gender: z.enum(['M', 'F', 'O']).optional(),
-    address: z.string().optional(),
+    address_street: z.string().optional(),
+    address_number: z.string().optional(),
+    address_complement: z.string().optional(),
+    address_neighborhood: z.string().optional(),
+    address_city: z.string().optional(),
+    address_state: z.string().max(2).optional(),
+    address_zip_code: z.string().optional(),
     insurance_holder_name: z.string().optional(),
     insurance_holder_cpf: z.string().optional(),
 });
@@ -103,7 +109,7 @@ export default function PatientDetailsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const form = useForm<PatientFormData>({
         resolver: zodResolver(PatientFormSchema),
-        defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address: '', insurance_holder_name: '', insurance_holder_cpf: '' },
+        defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address_street: '', address_number: '', address_complement: '', address_neighborhood: '', address_city: '', address_state: '', address_zip_code: '', insurance_holder_name: '', insurance_holder_cpf: '' },
     });
 
     const clinicId = user?.clinic_id;
@@ -265,6 +271,8 @@ export default function PatientDetailsPage() {
 
             const formattedAddress = formatAddress(d.address);
 
+            // Extract address fields from JSONB or separate columns
+            const addr = d.address && typeof d.address === 'object' ? d.address : {};
             form.reset({
                 full_name: d.full_name || '',
                 cpf: d.cpf || '',
@@ -272,7 +280,13 @@ export default function PatientDetailsPage() {
                 phone: d.phone || '',
                 date_of_birth: d.birth_date || d.date_of_birth || '',
                 gender: d.gender || 'M',
-                address: formattedAddress,
+                address_street: addr.street || '',
+                address_number: addr.number || d.address_number || '',
+                address_complement: (addr.complement && addr.complement !== 'N/A' ? addr.complement : '') || d.address_complement || '',
+                address_neighborhood: addr.neighborhood || d.neighborhood || '',
+                address_city: addr.city || d.city || '',
+                address_state: addr.state || d.state || '',
+                address_zip_code: addr.zip_code || d.zip_code || '',
                 insurance_holder_name: d.insurance_holder_name || '',
                 insurance_holder_cpf: d.insurance_holder_cpf || '',
             });
@@ -289,16 +303,27 @@ export default function PatientDetailsPage() {
     const handleEditSubmit = async (data: PatientFormData) => {
         setIsSaving(true);
         try {
-            const mappedData: any = { ...data };
+            // Build address JSONB object from separate fields
+            const addressObj: any = {};
+            if (data.address_street) addressObj.street = data.address_street;
+            if (data.address_number) addressObj.number = data.address_number;
+            if (data.address_complement) addressObj.complement = data.address_complement;
+            if (data.address_neighborhood) addressObj.neighborhood = data.address_neighborhood;
+            if (data.address_city) addressObj.city = data.address_city;
+            if (data.address_state) addressObj.state = data.address_state;
+            if (data.address_zip_code) addressObj.zip_code = data.address_zip_code.replace(/\D/g, '');
 
-            if (!mappedData.date_of_birth) mappedData.date_of_birth = null;
-            if (!mappedData.email) mappedData.email = null;
-            if (!mappedData.address) mappedData.address = null;
-            if (mappedData.cpf) {
-                mappedData.cpf = mappedData.cpf.replace(/\D/g, '');
-            } else {
-                mappedData.cpf = null;
-            }
+            const mappedData: any = {
+                full_name: data.full_name,
+                cpf: data.cpf ? data.cpf.replace(/\D/g, '') : null,
+                email: data.email || null,
+                phone: data.phone,
+                date_of_birth: data.date_of_birth || null,
+                gender: data.gender,
+                address: Object.keys(addressObj).length > 0 ? addressObj : null,
+                insurance_holder_name: data.insurance_holder_name || null,
+                insurance_holder_cpf: data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null,
+            };
 
             const response = await fetch(`/api/patients/${patientId}`, {
                 method: 'PATCH',
@@ -423,19 +448,20 @@ export default function PatientDetailsPage() {
                             <CardTitle>Dados Pessoais</CardTitle>
                         </CardHeader>
                         <CardContent className="grid gap-4 md:grid-cols-2">
-                            {patient.email && (
+                            {/* Dados sensíveis ocultos para terapeutas (DOCTOR) */}
+                            {user?.role !== 'DOCTOR' && patient.email && (
                                 <div className="flex items-center gap-2">
                                     <Mail className="w-4 h-4 text-muted-foreground" />
                                     <span>{patient.email}</span>
                                 </div>
                             )}
-                            {patient.phone && (
+                            {user?.role !== 'DOCTOR' && patient.phone && (
                                 <div className="flex items-center gap-2">
                                     <Phone className="w-4 h-4 text-muted-foreground" />
                                     <span>{patient.phone}</span>
                                 </div>
                             )}
-                            {patient.cpf && (
+                            {user?.role !== 'DOCTOR' && patient.cpf && (
                                 <div className="flex items-center gap-2">
                                     <CreditCard className="w-4 h-4 text-muted-foreground" />
                                     <span>{patient.cpf}</span>
@@ -447,7 +473,7 @@ export default function PatientDetailsPage() {
                                     <span>{new Date(patient.birth_date).toLocaleDateString('pt-BR')}</span>
                                 </div>
                             )}
-                            {(patient as any).addressText && (
+                            {user?.role !== 'DOCTOR' && (patient as any).addressText && (
                                 <div className="flex items-center gap-2 md:col-span-2">
                                     <MapPin className="w-4 h-4 text-muted-foreground" />
                                     <span>{(patient as any).addressText}</span>
@@ -459,7 +485,7 @@ export default function PatientDetailsPage() {
                                     <span><strong>Titular:</strong> {(patient as any).insurance_holder_name}</span>
                                 </div>
                             )}
-                            {(patient as any).insurance_holder_cpf && (
+                            {user?.role !== 'DOCTOR' && (patient as any).insurance_holder_cpf && (
                                 <div className="flex items-center gap-2">
                                     <CreditCard className="w-4 h-4 text-muted-foreground" />
                                     <span><strong>CPF Titular:</strong> {(patient as any).insurance_holder_cpf}</span>
@@ -667,9 +693,43 @@ export default function PatientDetailsPage() {
                                 <Input id="date_of_birth" type="date" {...form.register('date_of_birth')} />
                             </div>
 
+                            {/* Endereço - Campos separados */}
                             <div className="space-y-2">
-                                <Label htmlFor="address">Endereço</Label>
-                                <Input id="address" type="text" {...form.register('address')} />
+                                <Label className="font-semibold">Endereço</Label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="col-span-2 space-y-1">
+                                        <Label htmlFor="address_street" className="text-xs text-muted-foreground">Rua</Label>
+                                        <Input id="address_street" placeholder="Nome da rua" {...form.register('address_street')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_number" className="text-xs text-muted-foreground">Número</Label>
+                                        <Input id="address_number" placeholder="Nº" {...form.register('address_number')} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_complement" className="text-xs text-muted-foreground">Complemento</Label>
+                                        <Input id="address_complement" placeholder="Apto, Bloco..." {...form.register('address_complement')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_neighborhood" className="text-xs text-muted-foreground">Bairro</Label>
+                                        <Input id="address_neighborhood" placeholder="Bairro" {...form.register('address_neighborhood')} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                    <div className="col-span-2 space-y-1">
+                                        <Label htmlFor="address_city" className="text-xs text-muted-foreground">Cidade</Label>
+                                        <Input id="address_city" placeholder="Cidade" {...form.register('address_city')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_state" className="text-xs text-muted-foreground">UF</Label>
+                                        <Input id="address_state" placeholder="SP" maxLength={2} {...form.register('address_state')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_zip_code" className="text-xs text-muted-foreground">CEP</Label>
+                                        <Input id="address_zip_code" placeholder="00000-000" {...form.register('address_zip_code')} />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
