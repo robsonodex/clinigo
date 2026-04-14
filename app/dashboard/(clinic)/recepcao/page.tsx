@@ -200,7 +200,7 @@ export default function RecepcaoPage() {
 
                 // Calculate stats from queue (Dashboard API is redundant for counts)
                 setStats({
-                    waiting_count: q.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).length,
+                    waiting_count: q.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length,
                     in_service_count: q.filter(i => i.status === 'IN_PROGRESS').length,
                     completed_count: q.filter(i => i.status === 'COMPLETED').length,
                     no_show_count: q.filter(i => i.status === 'NO_SHOW').length
@@ -781,18 +781,18 @@ export default function RecepcaoPage() {
                             <Clock className="w-5 h-5 text-amber-600" />
                             Aguardando
                             <Badge className="bg-amber-100 text-amber-800">
-                                {queue.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).length}
+                                {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length}
                             </Badge>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
                         {loading ? (
                             <p className="text-center py-6 text-muted-foreground text-sm">Carregando...</p>
-                        ) : queue.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).length === 0 ? (
+                        ) : queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length === 0 ? (
                             <p className="text-center py-6 text-muted-foreground text-sm">Nenhum paciente aguardando</p>
                         ) : (
                             <div className="space-y-2">
-                                {queue.filter(i => ['CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
+                                {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
                                     <div key={item.id} className={`p-3 rounded-lg border ${item.isPriority ? 'border-red-200 bg-red-50' : 'border-border'}`}>
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-bold text-sm shrink-0">

@@ -48,7 +48,7 @@ export async function GET(request: Request) {
       `)
                 .eq('clinic_id', clinicId)
                 .eq('appointment_date', new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }))
-                .in('status', ['CONFIRMED', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW'])
+                .in('status', ['SCHEDULED', 'CONFIRMED', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW'])
                 .order('priority_level', { ascending: false })
                 .order('checked_in_at', { ascending: true, nullsFirst: false })
 
