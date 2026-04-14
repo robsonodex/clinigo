@@ -44,15 +44,14 @@ export async function POST(request: NextRequest) {
               })
             : 'em breve'
 
-        // Get the clinic admin user(s) to notify
+        // Get all clinic user(s) to notify
         const { data: clinicUsers } = await supabaseAdmin
             .from('users')
             .select('id')
             .eq('clinic_id', clinicId)
-            .eq('role', 'CLINIC_ADMIN')
 
         if (!clinicUsers || clinicUsers.length === 0) {
-            return new Response(JSON.stringify({ error: 'Nenhum administrador encontrado para esta clínica' }), {
+            return new Response(JSON.stringify({ error: 'Nenhum usuário encontrado para esta clínica' }), {
                 status: 404,
                 headers: { 'Content-Type': 'application/json' },
             })
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
             ? customMessage
             : `A mensalidade do plano ${clinicName} vence em ${formattedDate}. Por favor, regularize o pagamento para manter seu acesso ativo.\n\nSuporte: suporte@clinigo.app`
 
-        // Insert notification for each clinic admin
+        // Insert notification for each clinic user
         const notifications = clinicUsers.map((u: any) => ({
             user_id: u.id,
             clinic_id: clinicId,
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
         return successResponse({
             success: true,
             notifiedUsers: clinicUsers.length,
-            message: `Notificação de cobrança enviada para ${clinicUsers.length} administrador(es) da ${clinicName}`,
+            message: `Notificação de cobrança enviada para ${clinicUsers.length} usuário(s) da ${clinicName}`,
         })
     } catch (error) {
         return handleApiError(error)

@@ -807,14 +807,14 @@ export default function SuperAdminDashboard() {
                             <Label htmlFor="billing-message">Mensagem para a clínica</Label>
                             <Textarea
                                 id="billing-message"
-                                placeholder="Digite aqui a mensagem que será enviada para o administrador da clínica..."
+                                placeholder="Digite aqui a mensagem que será enviada para os usuários da clínica..."
                                 value={billingMessage}
                                 onChange={(e) => setBillingMessage(e.target.value)}
                                 rows={6}
                                 className="resize-y"
                             />
                             <p className="text-xs text-gray-500">
-                                Esta mensagem aparecerá na notificação que o administrador da clínica receberá.
+                                Esta mensagem aparecerá na notificação que os usuários da clínica receberão.
                             </p>
                         </div>
                     </div>
