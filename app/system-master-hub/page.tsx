@@ -100,6 +100,7 @@ export default function SuperAdminDashboard() {
     const [users, setUsers] = useState<DashboardData['users']>([])
     const [loadingUsers, setLoadingUsers] = useState(false)
     const [sendingBilling, setSendingBilling] = useState<string | null>(null)
+    const [generatingBoleto, setGeneratingBoleto] = useState<string | null>(null)
     const [billingModal, setBillingModal] = useState<{
         open: boolean
         clinicId: string
@@ -391,6 +392,39 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    const handleGenerateBoleto = async (clinicId: string, clinicName: string, planType: string) => {
+        const confirmed = confirm(`Deseja gerar um boleto referente ao plano ${planType} para a clínica "${clinicName}"?\n\nO boleto será registrado no sistema e a clínica será notificada imediatamente.`)
+        if (!confirmed) return
+
+        setGeneratingBoleto(clinicId)
+        try {
+            const res = await fetch('/api/billing/generate-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinic_id: clinicId, plan_type: planType }),
+            })
+
+            const result = await res.json()
+
+            if (!res.ok) {
+                throw new Error(result.details || result.error || 'Falha ao gerar boleto')
+            }
+
+            alert(`✅ Boleto gerado com sucesso!\n\nLinha Digitável: ${result.boleto?.linha_digitavel}\n\n-> O PDF do boleto vai abrir em uma nova aba agora!`)
+            
+            if (result.boleto?.nosso_numero) {
+                window.open(`/api/billing/boleto-pdf?nossoNumero=${result.boleto.nosso_numero}`, '_blank')
+            }
+
+            loadDashboard()
+        } catch (error) {
+            console.error('Boleto error:', error)
+            alert(`Erro ao gerar boleto: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setGeneratingBoleto(null)
+        }
+    }
+
     const getPlanBadge = (plan: string) => {
         const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
             BASIC: 'secondary',
@@ -656,6 +690,20 @@ export default function SuperAdminDashboard() {
                                                                 <Send className="h-4 w-4 mr-1" />
                                                             )}
                                                             Cobrar
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleGenerateBoleto(clinic.id, clinic.name, clinic.planType)}
+                                                            disabled={generatingBoleto === clinic.id}
+                                                            className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50"
+                                                        >
+                                                            {generatingBoleto === clinic.id ? (
+                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                            ) : (
+                                                                <CreditCard className="h-4 w-4 mr-1" />
+                                                            )}
+                                                            Gerar Boleto
                                                         </Button>
                                                     </div>
                                                 </TableCell>

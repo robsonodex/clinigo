@@ -143,12 +143,22 @@ export default function ClinicsPage() {
     })
 
     const generateBoletoMutation = useMutation({
-        mutationFn: (clinic: Clinic) =>
-            api.post('/billing/generate-payment', { clinic_id: clinic.id, plan_type: clinic.plan_type }),
+        mutationFn: async (clinic: Clinic) => {
+            const res = await fetch('/api/billing/generate-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinic_id: clinic.id, plan_type: clinic.plan_type })
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || data.details || 'Falha ao gerar boleto')
+            return data
+        },
         onSuccess: (data: any) => {
             if (data.success && data.boleto) {
                 setGeneratedBoleto(data.boleto)
-                toast.success('Boleto gerado com sucesso!')
+                toast.success('Boleto gerado! Abrindo PDF em nova aba...')
+                // Auto open the PDF immediately
+                window.open(`/api/billing/boleto-pdf?nossoNumero=${data.boleto.nosso_numero}`, '_blank')
             } else {
                 toast.error(data.error || 'Erro ao gerar boleto')
             }
