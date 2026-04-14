@@ -54,6 +54,8 @@ export function useNotifications() {
                     ])
                     toast(newNotification.title, {
                         description: newNotification.message,
+                        duration: 86400000, 
+                        closeButton: true,
                     })
                     // Play sound?
                     // const audio = new Audio('/sounds/notification.mp3')
