@@ -101,6 +101,7 @@ export default function SuperAdminDashboard() {
     const [loadingUsers, setLoadingUsers] = useState(false)
     const [sendingBilling, setSendingBilling] = useState<string | null>(null)
     const [generatingBoleto, setGeneratingBoleto] = useState<string | null>(null)
+    const [markingPaid, setMarkingPaid] = useState<string | null>(null)
     const [billingModal, setBillingModal] = useState<{
         open: boolean
         clinicId: string
@@ -346,6 +347,38 @@ export default function SuperAdminDashboard() {
         } catch (error) {
             console.error('Unblock error:', error)
             alert(`Erro ao desbloquear: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        }
+    }
+
+    const handleMarkPaid = async (clinicId: string, clinicName: string) => {
+        const confirmed = confirm(
+            `Confirmar pagamento da clínica "${clinicName}"?\n\n` +
+            `Isso irá renovar a assinatura por +1 mês a partir do vencimento atual.`
+        )
+
+        if (!confirmed) return
+
+        setMarkingPaid(clinicId)
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'mark_paid' }),
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Falha ao confirmar pagamento')
+            }
+
+            const result = await res.json()
+            alert(`✅ ${result.message || 'Pagamento confirmado!'}`)
+            loadDashboard()
+        } catch (error) {
+            console.error('Mark paid error:', error)
+            alert(`Erro ao confirmar pagamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setMarkingPaid(null)
         }
     }
 
@@ -704,6 +737,20 @@ export default function SuperAdminDashboard() {
                                                                 <CreditCard className="h-4 w-4 mr-1" />
                                                             )}
                                                             Gerar Boleto
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleMarkPaid(clinic.id, clinic.name)}
+                                                            disabled={markingPaid === clinic.id}
+                                                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        >
+                                                            {markingPaid === clinic.id ? (
+                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                            ) : (
+                                                                <DollarSign className="h-4 w-4 mr-1" />
+                                                            )}
+                                                            Marcar Pago
                                                         </Button>
                                                     </div>
                                                 </TableCell>

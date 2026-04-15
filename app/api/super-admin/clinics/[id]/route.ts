@@ -177,6 +177,89 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // ============================================
+        // MARK PAID (manual by super admin)
+        // ============================================
+        if (action === 'mark_paid') {
+            const { data: clinic } = await serviceSupabase
+                .from('clinics')
+                .select('name, is_active, subscription_due_date')
+                .eq('id', clinicId)
+                .single()
+
+            if (!clinic) {
+                return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            const dueDateStr = (clinic as any).subscription_due_date;
+            const currentDueDate = dueDateStr ? new Date(dueDateStr) : new Date();
+            const newDueDate = new Date();
+            
+            // Se o vencimento for no futuro, incrementa a partir do vencimento.
+            // Se for no passado (atrasado), incrementa a partir de hoje.
+            if (currentDueDate > new Date()) {
+                newDueDate.setTime(currentDueDate.getTime());
+            }
+            newDueDate.setMonth(newDueDate.getMonth() + 1);
+
+            const { error: updateError } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    payment_confirmed: true,
+                    payment_confirmed_at: new Date().toISOString(),
+                    payment_status: 'ACTIVE',
+                    is_active: true,
+                    approval_status: 'active',
+                    last_payment_date: new Date().toISOString(),
+                    subscription_due_date: newDueDate.toISOString(),
+                    blocked_at: null,
+                    blocked_reason: null,
+                    blocked_by: null,
+                    updated_at: new Date().toISOString()
+                } as any)
+                .eq('id', clinicId)
+
+            if (updateError) {
+                console.error('[PATCH clinics/[id]] Mark Paid error:', updateError)
+                return NextResponse.json({ error: 'Failed to mark as paid' }, { status: 500 })
+            }
+
+            // Audit log
+            await serviceSupabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'MANUAL_PAYMENT_CONFIRMATION',
+                resource_type: 'CLINIC',
+                resource_id: clinicId,
+                metadata: {
+                    clinic_name: (clinic as any).name,
+                    new_due_date: newDueDate.toISOString(),
+                    marked_at: new Date().toISOString(),
+                },
+                created_at: new Date().toISOString(),
+            })
+
+            // Fix for Issue: Ensure manual payments appear in the clinic's payment history
+            try {
+                await serviceSupabase.from('payment_logs').insert({
+                    clinic_id: clinicId,
+                    payment_id: `manual_${Date.now()}`,
+                    payment_method: 'MANUAL',
+                    amount: 0,
+                    status: 'APPROVED',
+                    mercadopago_status: 'approved',
+                    raw_webhook_data: { source: 'super_admin_manual' },
+                    email_sent: false,
+                })
+            } catch (logError) {
+                console.error('[PATCH clinics/[id]] Payment log error:', logError)
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: `Pagamento da clínica "${(clinic as any).name}" confirmado. Renovada até ${newDueDate.toLocaleDateString('pt-BR')}.`,
+            })
+        }
+
+        // ============================================
         // UNBLOCK CLINIC (manual by super admin)
         // ============================================
         if (action === 'unblock_clinic') {
