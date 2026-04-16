@@ -88,8 +88,9 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Error fetching queue' }, { status: 500 })
         }
 
-        // Merge and sort combined list
-        const queue = [
+        // Deduplicate identical appointments or walk-ins (same patient, same doctor, same time)
+        const uniqueQueueValues = new Map()
+        for (const item of [
             ...appointments.map(a => ({
                 id: a.id,
                 type: 'appointment',
@@ -113,7 +114,23 @@ export async function GET(request: Request) {
                 status: w.status,
                 notes: w.reason
             }))
-        ].sort((a, b) => {
+        ]) {
+            const timeKey = item.scheduledTime ? item.scheduledTime.toString().substring(0, 16) : ''
+            const dupKey = `${item.patient?.id}-${item.doctor?.id}-${timeKey}`
+            
+            // Prefer keeping the one that is further along in the process if there's a conflict
+            if (uniqueQueueValues.has(dupKey)) {
+                const existing = uniqueQueueValues.get(dupKey)
+                const statusOrder: Record<string, number> = { 'COMPLETED': 4, 'IN_PROGRESS': 3, 'WAITING': 2, 'CONFIRMED': 1, 'SCHEDULED': 0, 'NO_SHOW': -1 }
+                if ((statusOrder[item.status] ?? 0) > (statusOrder[existing.status] ?? 0)) {
+                    uniqueQueueValues.set(dupKey, item)
+                }
+            } else {
+                uniqueQueueValues.set(dupKey, item)
+            }
+        }
+
+        const queue = Array.from(uniqueQueueValues.values()).sort((a, b) => {
             // Sort by priority first
             if (a.isPriority && !b.isPriority) return -1
             if (!a.isPriority && b.isPriority) return 1

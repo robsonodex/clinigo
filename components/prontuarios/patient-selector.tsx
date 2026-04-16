@@ -138,7 +138,7 @@ export default function PatientSelector({
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[500px] p-0" align="start">
-                    <Command>
+                    <Command shouldFilter={false}>
                         <CommandInput
                             placeholder="Buscar paciente por nome, CPF..."
                             value={search}

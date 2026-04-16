@@ -60,6 +60,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+    const [isLocked, setIsLocked] = useState(false)
 
     // Context Data
     const [appointment, setAppointment] = useState<any>(null)
@@ -129,12 +130,24 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 1. Fetch Appointment Context
             const { data: appt, error: apptError } = await supabase
                 .from('appointments')
-                .select(`id, appointment_date, clinic_id, doctor_id, patient_id`)
+                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id`)
                 .eq('id', appointmentId)
                 .single()
 
             if (apptError || !appt) throw new Error('Agendamento não encontrado')
             setAppointment(appt)
+
+            // Verifica bloqueio de 24h
+            let referenceTime = new Date().getTime()
+            if (appt.checked_in_at) {
+                referenceTime = new Date(appt.checked_in_at).getTime()
+            } else if (appt.appointment_date) {
+                referenceTime = new Date(`${appt.appointment_date}T${appt.appointment_time || '00:00:00'}`).getTime()
+            }
+            const hoursDiff = (new Date().getTime() - referenceTime) / (1000 * 60 * 60)
+            if (hoursDiff > 24) {
+                setIsLocked(true)
+            }
 
             // 2. Fetch Patient, Clinic, Doctor
             const [patientRes, clinicRes, doctorRes] = await Promise.all([
@@ -235,10 +248,18 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     }
 
     const handleChange = (field: keyof typeof formData, value: string) => {
+        if (isLocked) {
+             toast({ title: 'Bloqueado', description: 'O prazo de 24h para evolução expirou.', variant: 'destructive'})
+             return
+        }
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
     const handleSave = async () => {
+        if (isLocked) {
+            toast({ title: 'Bloqueado', description: 'O prazo de 24h para evolução expirou. Não é mais possível alterar este registro.', variant: 'destructive' })
+            return
+        }
         if (!appointment || !patient) return
         setIsSaving(true)
         try {
@@ -425,6 +446,14 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             <div ref={printableRef} className="bg-white border rounded-lg shadow-sm overflow-hidden text-slate-800 printable-area relative">
                 
                 {/* Header (Visão Clinica) */}
+                
+                {isLocked && (
+                    <div className="bg-red-50 p-4 border-b-2 border-red-200 text-red-800 flex items-center justify-center gap-2 print:hidden">
+                        <AlertCircle className="w-5 h-5" />
+                        <span className="font-semibold text-sm">Prontuário bloqueado para edição (Prazo de 24h expirado). Disponível apenas para visualização ou impressão.</span>
+                    </div>
+                )}
+                
                 <div className="p-8 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 print:border-b-2 print:border-black">
                     <div className="flex items-center gap-4">
                         {clinic?.logo_url ? (
@@ -771,10 +800,12 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                         {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
                         Exportar PDF
                     </Button>
-                    <Button onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                        Terminar Consulta (Salvar)
-                    </Button>
+                    {!isLocked && (
+                        <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Terminar Consulta (Salvar)
+                        </Button>
+                    )}
                 </div>
             </div>
             
