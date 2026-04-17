@@ -25,6 +25,7 @@ import {
     Loader2,
     Lock,
     Unlock,
+    Megaphone,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -110,6 +111,13 @@ export default function SuperAdminDashboard() {
     }>({ open: false, clinicId: '', clinicName: '', dueDate: null })
     const [billingMessage, setBillingMessage] = useState('')
     const [billingTitle, setBillingTitle] = useState('Aviso de Faturamento: CliniGo')
+
+    // Feature Announcement State
+    const [featureModal, setFeatureModal] = useState(false)
+    const [featureTitle, setFeatureTitle] = useState('')
+    const [featureMessage, setFeatureMessage] = useState('')
+    const [featureTargetPlans, setFeatureTargetPlans] = useState<string[]>([])
+    const [sendingFeature, setSendingFeature] = useState(false)
 
     useEffect(() => {
         loadDashboard()
@@ -425,6 +433,72 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    // === Feature Announcement Handlers ===
+    const openFeatureModal = () => {
+        setFeatureModal(true)
+        setFeatureTitle('')
+        setFeatureMessage('')
+        setFeatureTargetPlans([])
+    }
+
+    const closeFeatureModal = () => {
+        setFeatureModal(false)
+        setFeatureTitle('')
+        setFeatureMessage('')
+        setFeatureTargetPlans([])
+    }
+
+    const handleSendFeatureNotification = async () => {
+        if (!featureTitle.trim() || !featureMessage.trim()) {
+            alert('Preencha o título e a mensagem.')
+            return
+        }
+
+        const clinicCount = data?.clinics?.filter(c => c.isActive)?.length || 0
+        const planLabel = featureTargetPlans.length > 0 ? featureTargetPlans.join(', ') : 'TODOS'
+        const confirmed = confirm(
+            `📢 Enviar notificação de nova feature?\n\n` +
+            `Título: ${featureTitle.trim()}\n` +
+            `Planos alvo: ${planLabel}\n` +
+            `Clínicas ativas: ~${clinicCount}\n\n` +
+            `TODOS os usuários dessas clínicas serão notificados.\nConfirmar?`
+        )
+        if (!confirmed) return
+
+        setSendingFeature(true)
+        try {
+            const res = await fetch('/api/super-admin/clinics/notify-feature', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: featureTitle.trim(),
+                    message: featureMessage.trim(),
+                    targetPlans: featureTargetPlans.length > 0 ? featureTargetPlans : undefined,
+                }),
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Falha ao enviar notificação')
+            }
+
+            const result = await res.json()
+            alert(`✅ ${result.data?.message || 'Notificação enviada com sucesso!'}`)
+            closeFeatureModal()
+        } catch (error) {
+            console.error('Feature notification error:', error)
+            alert(`Erro ao enviar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setSendingFeature(false)
+        }
+    }
+
+    const togglePlanFilter = (plan: string) => {
+        setFeatureTargetPlans(prev =>
+            prev.includes(plan) ? prev.filter(p => p !== plan) : [...prev, plan]
+        )
+    }
+
     const handleGenerateBoleto = async (clinicId: string, clinicName: string, planType: string) => {
         const confirmed = confirm(`Deseja gerar um boleto referente ao plano ${planType} para a clínica "${clinicName}"?\n\nO boleto será registrado no sistema e a clínica será notificada imediatamente.`)
         if (!confirmed) return
@@ -504,6 +578,10 @@ export default function SuperAdminDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <Button size="sm" onClick={openFeatureModal} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                            <Megaphone className="h-4 w-4 mr-2" />
+                            📢 Notificar Features
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/chat')}>
                             <MessageCircle className="h-4 w-4 mr-2" />
                             Chat
@@ -926,6 +1004,93 @@ export default function SuperAdminDashboard() {
                                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
                             ) : (
                                 <><Send className="h-4 w-4 mr-2" /> Enviar Cobrança</>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Feature Announcement Modal */}
+            <Dialog open={featureModal} onOpenChange={(open) => { if (!open) closeFeatureModal() }}>
+                <DialogContent className="sm:max-w-[550px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Megaphone className="h-5 w-5 text-indigo-600" />
+                            Notificar Novas Features
+                        </DialogTitle>
+                        <DialogDescription>
+                            Envie uma notificação para <strong>todas as clínicas ativas</strong> sobre novas funcionalidades.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        {/* Plan Filter */}
+                        <div className="space-y-2">
+                            <Label>Filtrar por plano (opcional)</Label>
+                            <div className="flex gap-2 flex-wrap">
+                                {['BASIC', 'PRO', 'ENTERPRISE'].map((plan) => (
+                                    <button
+                                        key={plan}
+                                        type="button"
+                                        onClick={() => togglePlanFilter(plan)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                            featureTargetPlans.includes(plan)
+                                                ? 'bg-indigo-100 border-indigo-400 text-indigo-700'
+                                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {plan}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-gray-400">
+                                {featureTargetPlans.length === 0
+                                    ? 'Nenhum filtro = envia para TODOS os planos'
+                                    : `Enviando apenas para: ${featureTargetPlans.join(', ')}`}
+                            </p>
+                        </div>
+
+                        {/* Title */}
+                        <div className="space-y-2">
+                            <Label htmlFor="feature-title">Título da notificação</Label>
+                            <input
+                                id="feature-title"
+                                type="text"
+                                value={featureTitle}
+                                onChange={(e) => setFeatureTitle(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Ex: 🚀 Nova funcionalidade: Assinatura Digital"
+                            />
+                        </div>
+
+                        {/* Message */}
+                        <div className="space-y-2">
+                            <Label htmlFor="feature-message">Mensagem</Label>
+                            <Textarea
+                                id="feature-message"
+                                placeholder="Descreva a nova funcionalidade para as clínicas...&#10;&#10;Ex: Agora você pode assinar digitalmente seus prontuários com certificado ICP-Brasil A1!&#10;&#10;Acesse: Dashboard → Prontuários → Assinar Digitalmente"
+                                value={featureMessage}
+                                onChange={(e) => setFeatureMessage(e.target.value)}
+                                rows={7}
+                                className="resize-y"
+                            />
+                            <p className="text-xs text-gray-500">
+                                Esta mensagem aparecerá no sino de notificações de TODOS os usuários das clínicas selecionadas.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={closeFeatureModal} disabled={sendingFeature}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleSendFeatureNotification}
+                            disabled={sendingFeature || !featureTitle.trim() || !featureMessage.trim()}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                            {sendingFeature ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
+                            ) : (
+                                <><Megaphone className="h-4 w-4 mr-2" /> Enviar para Todas</>  
                             )}
                         </Button>
                     </DialogFooter>
