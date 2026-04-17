@@ -16,7 +16,8 @@ import {
     Trash2,
     History,
     AlertCircle,
-    Paperclip
+    Paperclip,
+    PenLine
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -29,6 +30,9 @@ import { Slider } from '@/components/ui/slider'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
+import { SignatureBadge } from '@/components/pep/SignatureBadge'
+import { useAuth as useAuthContext } from '@/lib/hooks/use-auth'
 
 // html2pdf import handle
 const generatePDF = async (element: HTMLElement, filename: string) => {
@@ -61,6 +65,9 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     const [isSaving, setIsSaving] = useState(false)
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
     const [isLocked, setIsLocked] = useState(false)
+    const [showSignModal, setShowSignModal] = useState(false)
+    const [signatureData, setSignatureData] = useState<any>(null)
+    const [pendingSign, setPendingSign] = useState(false)
 
     // Context Data
     const [appointment, setAppointment] = useState<any>(null)
@@ -73,6 +80,14 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
     const [recordId, setRecordId] = useState<string | null>(null)
     const [professionType, setProfessionType] = useState('MEDICO')
+
+    // Open sign modal after save completes and recordId is set
+    React.useEffect(() => {
+        if (pendingSign && recordId && !isSaving) {
+            setPendingSign(false)
+            setShowSignModal(true)
+        }
+    }, [pendingSign, recordId, isSaving])
 
     const [formData, setFormData] = useState({
         // == GERAL / MÉDICO ==
@@ -233,6 +248,33 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     nivel_independencia: customData.nivel_independencia || '',
                     participacao_acompanhante: customData.participacao_acompanhante || ''
                 })
+
+                // Load signature data if signed
+                if (record.signed_at) {
+                    setIsLocked(true)
+                    // Fetch signature details
+                    try {
+                        const sigRes = await fetch(`/api/pep/sign/verify?record_id=${record.id}`)
+                        const sigData = await sigRes.json()
+                        if (sigData.signer_name) {
+                            setSignatureData({
+                                signerName: sigData.signer_name,
+                                crm: sigData.crm,
+                                crmState: sigData.crm_state,
+                                signedAt: sigData.signed_at,
+                                signedPdfUrl: '', // Will be resolved from storage
+                            })
+                        }
+                    } catch (e) {
+                        // Even if fetch fails, we know it's signed from signed_at
+                        setSignatureData({
+                            signerName: 'Médico',
+                            crm: '',
+                            crmState: '',
+                            signedAt: record.signed_at,
+                        })
+                    }
+                }
             }
 
         } catch (error: any) {
@@ -749,16 +791,27 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     </div>
                 </div>
 
-                {/* Subfooter e Assinatura Digital Placeholder */}
+                {/* Subfooter e Assinatura Digital */}
                 <div className="p-8 pt-4 pb-16 mt-6 printable-signature">
-                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center mt-12 bg-white p-4">
-                        <div className="w-full border-b border-slate-500 mb-2"></div>
-                        <p className="font-bold text-sm text-slate-800">{doctor?.user?.full_name}</p>
-                        <p className="text-xs text-slate-500 mt-1">{PROFESSIONS.find(p => p.id === professionType)?.label} - Especialidade: {doctor?.specialty || 'Não definida'}</p>
-                        <p className="text-[10px] text-slate-400 mt-4 border px-2 py-1 bg-slate-50 inline-block rounded">
-                            Assinado Eletronicamente via Plataforma - {format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
-                        </p>
-                    </div>
+                    {signatureData ? (
+                        <SignatureBadge
+                            signerName={signatureData.signerName}
+                            crm={signatureData.crm}
+                            crmState={signatureData.crmState}
+                            signedAt={signatureData.signedAt}
+                            recordId={recordId || ''}
+                            signedPdfUrl={signatureData.signedPdfUrl}
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center mt-12 bg-white p-4">
+                            <div className="w-full border-b border-slate-500 mb-2"></div>
+                            <p className="font-bold text-sm text-slate-800">{doctor?.user?.full_name}</p>
+                            <p className="text-xs text-slate-500 mt-1">{PROFESSIONS.find(p => p.id === professionType)?.label} - Especialidade: {doctor?.specialty || 'Não definida'}</p>
+                            <p className="text-[10px] text-slate-400 mt-4 border px-2 py-1 bg-slate-50 inline-block rounded">
+                                Assinado Eletronicamente via Plataforma - {format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* PRINT CSS Hacks */}
@@ -795,11 +848,25 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     <Paperclip className="w-4 h-4" /> 
                     <span>Anexos fotográficos em breve na v2 (Arquitetura em desenvolvimento)</span>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap">
                     <Button variant="outline" onClick={handleGeneratePDF} disabled={isGeneratingPDF}>
                         {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
                         Exportar PDF
                     </Button>
+                    {!signatureData && (
+                        <Button variant="outline" className="text-primary border-primary/30 hover:bg-primary/5" onClick={async () => {
+                            if (!recordId) {
+                                // Save first, then pendingSign will open modal via useEffect
+                                setPendingSign(true)
+                                await handleSave()
+                            } else {
+                                setShowSignModal(true)
+                            }
+                        }} disabled={isSaving}>
+                            <PenLine className="w-4 h-4 mr-2" />
+                            ✍ Assinar Digitalmente
+                        </Button>
+                    )}
                     {!isLocked && (
                         <Button onClick={handleSave} disabled={isSaving}>
                             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -808,6 +875,26 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     )}
                 </div>
             </div>
+
+            {/* Sign Document Modal */}
+            {recordId && (
+                <SignDocumentModal
+                    open={showSignModal}
+                    onOpenChange={setShowSignModal}
+                    recordId={recordId}
+                    onSuccess={(data) => {
+                        setSignatureData({
+                            signerName: data.signer_name,
+                            crm: data.crm,
+                            crmState: data.crm_state,
+                            signedAt: data.signed_at,
+                            signedPdfUrl: data.signed_pdf_url,
+                        })
+                        setIsLocked(true)
+                    }}
+                />
+            )}
+
             
         </div>
     )

@@ -75,6 +75,11 @@ export type FeatureKey =
     | 'pagina_publica'           // Página pública de agendamento
     | 'multi_units'              // Múltiplas unidades
 
+    // ============================================
+    // ASSINATURA DIGITAL (✅ IMPLEMENTADO)
+    // ============================================
+    | 'assinatura_digital'       // Assinatura digital ICP-Brasil
+
 // Feature matrix: which plan level unlocks each feature
 // 1 = BASICO, 2 = AVANCADO, 3 = PROFESSIONAL, 4 = ENTERPRISE
 const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
@@ -142,6 +147,11 @@ const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
     // ============================================
     pagina_publica: 1,           // Todos os planos
     multi_units: 3,              // PROFESSIONAL+
+
+    // ============================================
+    // ASSINATURA DIGITAL
+    // ============================================
+    assinatura_digital: 2,       // AVANCADO+
 }
 
 /**
@@ -237,4 +247,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
     // Plataforma
     pagina_publica: 'Página Pública',
     multi_units: 'Múltiplas Unidades',
+
+    // Assinatura Digital
+    assinatura_digital: 'Assinatura Digital ICP-Brasil',
 }
