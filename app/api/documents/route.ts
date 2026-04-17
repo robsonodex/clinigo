@@ -44,6 +44,40 @@ export async function GET(request: Request) {
 
         const { patient_id: patientId, category, search } = validationResult.data
 
+        // SECURITY: DOCTOR não-coordenador só vê documentos dos seus próprios pacientes
+        let allowedPatientIds: string[] | null = null
+        if (user.role === 'DOCTOR') {
+            const { data: userFull } = await supabase
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', user.id)
+                .single()
+
+            if (!(userFull as any)?.is_coordinator) {
+                const { data: doctor } = await supabase
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+
+                if (doctor) {
+                    const { data: appointments } = await supabase
+                        .from('appointments')
+                        .select('patient_id')
+                        .eq('doctor_id', doctor.id)
+
+                    allowedPatientIds = [...new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))]
+
+                    if (allowedPatientIds.length === 0) {
+                        return NextResponse.json({ documents: [] })
+                    }
+                } else {
+                    // Doctor sem registro na tabela doctors = sem acesso a documentos
+                    return NextResponse.json({ documents: [] })
+                }
+            }
+        }
+
         let query = supabase
             .from('patient_documents')
             .select(`
@@ -63,7 +97,16 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false })
             .limit(50) // Limite de performance
 
+        // SECURITY: Filtrar por pacientes permitidos (DOCTOR não-coordenador)
+        if (allowedPatientIds) {
+            query = query.in('patient_id', allowedPatientIds)
+        }
+
         if (patientId) {
+            // SECURITY: Se DOCTOR não-coordenador tenta filtrar por patient_id que não é seu, retorna vazio
+            if (allowedPatientIds && !allowedPatientIds.includes(patientId)) {
+                return NextResponse.json({ documents: [] })
+            }
             query = query.eq('patient_id', patientId)
         }
         if (category) {
@@ -134,6 +177,39 @@ export async function POST(request: Request) {
             
             if (!file || !patient_id) {
                 return NextResponse.json({ error: 'Faltam campos obrigatórios (file e patient_id)' }, { status: 400 })
+            }
+
+            // SECURITY: DOCTOR não-coordenador só pode fazer upload para seus próprios pacientes
+            if (user.role === 'DOCTOR') {
+                const { data: userFull } = await supabase
+                    .from('users')
+                    .select('is_coordinator')
+                    .eq('id', user.id)
+                    .single()
+
+                if (!(userFull as any)?.is_coordinator) {
+                    const { data: doctor } = await supabase
+                        .from('doctors')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .single()
+
+                    if (!doctor) {
+                        return NextResponse.json({ error: 'Acesso negado - perfil de profissional não encontrado' }, { status: 403 })
+                    }
+
+                    const { data: appointment } = await supabase
+                        .from('appointments')
+                        .select('id')
+                        .eq('doctor_id', doctor.id)
+                        .eq('patient_id', patient_id)
+                        .limit(1)
+                        .single()
+
+                    if (!appointment) {
+                        return NextResponse.json({ error: 'Acesso negado - paciente não pertence aos seus atendimentos' }, { status: 403 })
+                    }
+                }
             }
 
             const fileExt = file.name.split('.').pop()

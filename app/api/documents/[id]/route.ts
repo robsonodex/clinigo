@@ -4,6 +4,47 @@ import { requireRole } from '@/lib/middlewares/auth'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * SECURITY HELPER: Verifica se um DOCTOR não-coordenador tem acesso
+ * ao paciente dono do documento (via appointments).
+ * Retorna true se permitido, false se bloqueado.
+ */
+async function isDoctorAllowedForDocument(
+    supabase: any,
+    userId: string,
+    patientId: string
+): Promise<boolean> {
+    // Verificar se é coordenador
+    const { data: userFull } = await supabase
+        .from('users')
+        .select('is_coordinator')
+        .eq('id', userId)
+        .single()
+
+    if ((userFull as any)?.is_coordinator) {
+        return true // Coordenador tem acesso total na clínica
+    }
+
+    // Não-coordenador: verificar se tem appointment com este paciente
+    const { data: doctor } = await supabase
+        .from('doctors')
+        .select('id')
+        .eq('user_id', userId)
+        .single()
+
+    if (!doctor) return false
+
+    const { data: appointment } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('doctor_id', doctor.id)
+        .eq('patient_id', patientId)
+        .limit(1)
+        .single()
+
+    return !!appointment
+}
+
 // DELETE /api/documents/:id
 export async function DELETE(
     request: Request,
@@ -15,17 +56,18 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
         
-        const { user, role } = authResult
+        const user = authResult.user!
+        const role = user.role
         const supabase = await createClient()
 
         const { id: documentId } = await props.params
 
-        // Get document info first
+        // Get document info first (include patient_id for security check)
         const { data: document } = await supabase
             .from('patient_documents')
-            .select('file_url, uploaded_by')
+            .select('file_url, uploaded_by, patient_id')
             .eq('id', documentId)
-            .single()
+            .single() as { data: { file_url: string; uploaded_by: string; patient_id: string } | null }
 
         if (!document) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 })
@@ -34,6 +76,14 @@ export async function DELETE(
         // Check permission (Admins can delete anything, others only their own)
         if (role !== 'CLINIC_ADMIN' && role !== 'SUPER_ADMIN' && document.uploaded_by !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        // SECURITY: DOCTOR não-coordenador só pode deletar documentos dos seus pacientes
+        if (role === 'DOCTOR') {
+            const allowed = await isDoctorAllowedForDocument(supabase, user.id, document.patient_id)
+            if (!allowed) {
+                return NextResponse.json({ error: 'Acesso negado - documento não pertence aos seus pacientes' }, { status: 403 })
+            }
         }
 
         // Delete from storage
@@ -74,8 +124,30 @@ export async function PATCH(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        const user = authResult.user!
+        const role = user.role
         const supabase = await createClient()
         const { id: documentId } = await props.params
+
+        // SECURITY: Buscar o documento primeiro para verificar acesso
+        const { data: existingDoc } = await supabase
+            .from('patient_documents')
+            .select('patient_id')
+            .eq('id', documentId)
+            .single() as { data: { patient_id: string } | null }
+
+        if (!existingDoc) {
+            return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+        }
+
+        // SECURITY: DOCTOR não-coordenador só pode editar documentos dos seus pacientes
+        if (role === 'DOCTOR') {
+            const allowed = await isDoctorAllowedForDocument(supabase, user!.id, existingDoc.patient_id)
+            if (!allowed) {
+                return NextResponse.json({ error: 'Acesso negado - documento não pertence aos seus pacientes' }, { status: 403 })
+            }
+        }
+
         const body = await request.json()
 
         const { name, category, document_type, description, tags, notes } = body
@@ -90,7 +162,7 @@ export async function PATCH(
 
         const { data, error } = await supabase
             .from('patient_documents')
-            .update(updates)
+            .update(updates as any)
             .eq('id', documentId)
             .select()
             .single()
