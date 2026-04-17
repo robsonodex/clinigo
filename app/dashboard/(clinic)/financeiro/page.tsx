@@ -23,12 +23,14 @@ import { ptBR } from 'date-fns/locale'
 
 interface FinancialSummary {
     total_income: number
-    total_expense: number
+    total_expense?: number
     net_result: number
-    pending_income: number
-    pending_expense: number
-    overdue_income: number
-    overdue_expense: number
+    pending_income?: number
+    pending_expense?: number
+    overdue_income?: number
+    overdue_expense?: number
+    total_glosas?: number
+    total_receivables?: number
 }
 
 interface FinancialEntry {
@@ -116,11 +118,13 @@ export default function FinancialPage() {
         try {
             const { start_date, end_date } = getDateRange()
 
-            // Fetch summary
-            const summaryRes = await fetch(`/api/financial/summary?type=summary&start_date=${start_date}&end_date=${end_date}`)
+            // Fetch executive summary
+            const summaryRes = await fetch(`/api/financial/dashboard/executive?start_date=${start_date}&end_date=${end_date}`)
             if (summaryRes.ok) {
                 const data = await summaryRes.json()
-                setSummary(data.summary)
+                if (data.success) {
+                    setSummary(data.data.summary)
+                }
             }
 
             // Fetch entries
@@ -298,7 +302,7 @@ export default function FinancialPage() {
                 <div>
                     <h1 className="text-3xl font-bold">Financeiro</h1>
                     <p className="text-muted-foreground">
-                        Contas a pagar, receber e fluxo de caixa
+                        Painel Executivo e fluxo de caixa
                     </p>
                 </div>
 
@@ -420,43 +424,48 @@ export default function FinancialPage() {
             </div>
 
             {/* Modules Quick Access */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-blue-50 border-blue-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financial/payroll'}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-blue-50 border-blue-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financeiro/dre'}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-blue-900">Repasse Médico</CardTitle>
+                        <CardTitle className="text-sm font-medium text-blue-900">DRE Gerencial</CardTitle>
                         <TrendingUp className="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-blue-700">Folha de Pagamento</div>
-                        <p className="text-xs text-blue-600 mt-1">
-                            Gerencie contratos e comissões médicas
-                        </p>
+                        <div className="text-2xl font-bold text-blue-700">Relatórios</div>
+                        <p className="text-xs text-blue-600 mt-1">Demonstração de resultados consolidados</p>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-purple-50 border-purple-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financial/dre'}>
+                <Card className="bg-purple-50 border-purple-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financeiro/glosas'}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-purple-900">DRE Gerencial</CardTitle>
-                        <TrendingDown className="h-4 w-4 text-purple-600" />
+                        <CardTitle className="text-sm font-medium text-purple-900">Glosas TISS</CardTitle>
+                        <AlertTriangle className="h-4 w-4 text-purple-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-purple-700">Relatórios</div>
-                        <p className="text-xs text-purple-600 mt-1">
-                            Demonstração de resultados e fechamento
-                        </p>
+                        <div className="text-2xl font-bold text-purple-700">Contestação</div>
+                        <p className="text-xs text-purple-600 mt-1">Gabinete de contestações e recursos</p>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-amber-50 border-amber-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financial/audit'}>
+                <Card className="bg-amber-50 border-amber-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financeiro/reembolsos'}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-amber-900">Auditoria</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <CardTitle className="text-sm font-medium text-amber-900">Estornos</CardTitle>
+                        <CreditCard className="h-4 w-4 text-amber-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-amber-700">Compliance</div>
-                        <p className="text-xs text-amber-600 mt-1">
-                            Identifique perdas e inconsistências
-                        </p>
+                        <div className="text-2xl font-bold text-amber-700">Reembolsos PIX</div>
+                        <p className="text-xs text-amber-600 mt-1">Aprovação de devoluções de pacientes</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 border-green-100 hover:shadow-md transition-all cursor-pointer" onClick={() => window.location.href = '/dashboard/financeiro/conciliacao'}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-green-900">Lotes TISS</CardTitle>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-700">Conciliação</div>
+                        <p className="text-xs text-green-600 mt-1">Conferência de pagamentos TISS</p>
                     </CardContent>
                 </Card>
             </div>
@@ -467,11 +476,11 @@ export default function FinancialPage() {
                 </div>
             ) : (
                 <>
-                    {/* Summary Cards */}
+                    {/* Executive Dashboard Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <Card className="border-l-4 border-l-green-500">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Receitas</CardTitle>
+                                <CardTitle className="text-sm font-medium">Receita do Mês</CardTitle>
                                 <ArrowUpCircle className="h-4 w-4 text-green-500" />
                             </CardHeader>
                             <CardContent>
@@ -479,22 +488,37 @@ export default function FinancialPage() {
                                     {formatCurrency(summary?.total_income || 0)}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Pendente: {formatCurrency(summary?.pending_income || 0)}
+                                    Faturado Recebido
                                 </p>
                             </CardContent>
                         </Card>
 
                         <Card className="border-l-4 border-l-red-500">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Despesas</CardTitle>
+                                <CardTitle className="text-sm font-medium">Glosas</CardTitle>
                                 <ArrowDownCircle className="h-4 w-4 text-red-500" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold text-red-600">
-                                    {formatCurrency(summary?.total_expense || 0)}
+                                    {formatCurrency(summary?.total_glosas || 0)}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Pendente: {formatCurrency(summary?.pending_expense || 0)}
+                                    Registradas no período
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-l-4 border-l-yellow-500">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Em Aberto/A Receber</CardTitle>
+                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-yellow-600">
+                                    {formatCurrency(summary?.total_receivables || 0)}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Títulos não faturados
                                 </p>
                             </CardContent>
                         </Card>
@@ -513,22 +537,7 @@ export default function FinancialPage() {
                                     {formatCurrency(summary?.net_result || 0)}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Receita - Despesa
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="border-l-4 border-l-yellow-500">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Em Atraso</CardTitle>
-                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-yellow-600">
-                                    {formatCurrency((summary?.overdue_income || 0) + (summary?.overdue_expense || 0))}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    A receber: {formatCurrency(summary?.overdue_income || 0)}
+                                    Caixa Líquido
                                 </p>
                             </CardContent>
                         </Card>

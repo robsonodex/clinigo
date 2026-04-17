@@ -101,8 +101,8 @@ export async function POST(
         let amountApproved = 0;
         let amountDenied = 0;
 
-        // Processar cada linha do retorno mockado
-        for (const returnLine of mockReturnData) {
+        // Processar cada linha do retorno parseado
+        for (const returnLine of parsedReturn.guides) {
             const guide = guides.find(g => g.guide_number === returnLine.guide_number);
 
             if (!guide) continue;
@@ -137,9 +137,9 @@ export async function POST(
             } else { // PARTIAL
                 guideStatus = 'PARTIAL';
                 totalPartial++;
-                const glosedAmount = guide.total_value * 0.3; // Mock: 30% de glosa
+                const glosedAmount = returnLine.denied_value || (guide.total_value - (returnLine.approved_value || 0));
                 glosaValue = glosedAmount;
-                amountApproved += (guide.total_value - glosedAmount);
+                amountApproved += (returnLine.approved_value || (guide.total_value - glosedAmount));
                 amountDenied += glosedAmount;
 
                 // Criar registro de glosa parcial
@@ -182,7 +182,7 @@ export async function POST(
                 amount_requested: returnRecord.batch.total_value,
                 amount_approved: amountApproved,
                 amount_denied: amountDenied,
-                parsed_data: mockReturnData,
+                parsed_data: parsedReturn.guides,
             })
             .eq('id', return_id);
 
@@ -254,40 +254,3 @@ export async function POST(
     }
 }
 
-// ============================================
-// HELPER: Gerador de dados mockados de retorno
-// (Substituir por parser real de XML/TXT)
-// ============================================
-function generateMockReturnData(guides: any[]) {
-    return guides.map((guide, index) => {
-        // Simular: 70% aprovado, 20% glosa parcial, 10% negado
-        const rand = Math.random();
-        let status: string;
-        let denial_code: string | null = null;
-        let denial_reason: string | null = null;
-        let can_appeal = false;
-
-        if (rand < 0.7) {
-            status = 'APPROVED';
-        } else if (rand < 0.9) {
-            status = 'PARTIAL';
-            denial_code = 'PARTIAL_001';
-            denial_reason = 'Valor glosado por divergência de tabela';
-            can_appeal = true;
-        } else {
-            status = 'DENIED';
-            denial_code = 'DENIED_004';
-            denial_reason = 'Paciente sem cobertura para o procedimento';
-            can_appeal = false;
-        }
-
-        return {
-            guide_number: guide.guide_number,
-            status,
-            denial_code,
-            denial_reason,
-            can_appeal,
-            approved_value: status === 'APPROVED' ? guide.total_value : (status === 'PARTIAL' ? guide.total_value * 0.7 : 0),
-        };
-    });
-}

@@ -32,6 +32,10 @@ const customJestConfig = {
         '**/__tests__/**/*.[jt]s?(x)',
         '**/?(*.)+(spec|test).[jt]s?(x)',
     ],
+    testPathIgnorePatterns: [
+        '/node_modules/',
+        '/tests/e2e/',  // Playwright tests run via `npx playwright test`
+    ],
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

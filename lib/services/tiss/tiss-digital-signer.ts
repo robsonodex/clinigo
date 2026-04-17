@@ -55,9 +55,9 @@ class X509KeyInfoProvider {
         this.publicKey = publicKey;
     }
 
-    getKeyInfo(key?: string, prefix?: string): string {
-        prefix = prefix || '';
-        prefix = prefix ? prefix + ':' : prefix;
+    // xml-crypto v6 uses getKeyInfoContent (returns inner content without KeyInfo wrapper)
+    getKeyInfoContent(args?: { key?: string; prefix?: string }): string {
+        const prefix = args?.prefix ? args.prefix + ':' : '';
 
         // Clean certificate (remove headers/footers and newlines)
         const cleanCert = this.certificate
@@ -66,6 +66,11 @@ class X509KeyInfoProvider {
             .replace(/\s/g, '');
 
         return `<${prefix}X509Data><${prefix}X509Certificate>${cleanCert}</${prefix}X509Certificate></${prefix}X509Data>`;
+    }
+
+    // Legacy support (xml-crypto < v6)
+    getKeyInfo(key?: string, prefix?: string): string {
+        return this.getKeyInfoContent({ key, prefix });
     }
 
     getKey(keyInfo?: Node): Buffer {
@@ -193,11 +198,15 @@ export class TISSDigitalSigner {
                 digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
             });
 
-            // Set key info provider
+            // Set key info content provider (xml-crypto v6 API)
             const publicKey = forge.pki.publicKeyToPem(
                 forge.pki.certificateFromPem(this.certificate).publicKey
             );
-            sig.keyInfoProvider = new X509KeyInfoProvider(this.certificate, publicKey);
+            const keyInfoProvider = new X509KeyInfoProvider(this.certificate, publicKey);
+
+            // xml-crypto v6: override getKeyInfoContent on instance
+            sig.getKeyInfoContent = keyInfoProvider.getKeyInfoContent.bind(keyInfoProvider);
+            sig.publicCert = this.certificate;
 
             // Compute signature
             sig.computeSignature(xml, {

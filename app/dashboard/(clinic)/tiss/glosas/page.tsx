@@ -1,16 +1,21 @@
 // app/dashboard/(clinic)/tiss/glosas/page.tsx
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
+import { AlertCircle, TrendingDown, TrendingUp, DollarSign, Scale } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { ContestGlosaDialog } from '@/components/tiss/contest-glosa-dialog';
 
 export default function GlosasPage() {
+    const [selectedGlosa, setSelectedGlosa] = useState<{ id: string, value: number, code: string } | null>(null);
+
     // Buscar glosas
-    const { data: glosas, isLoading } = useQuery({
+    const { data: glosas, isLoading, refetch } = useQuery({
         queryKey: ['tiss-glosas'],
         queryFn: async () => {
             const response = await fetch('/api/tiss/glosas');
@@ -24,7 +29,7 @@ export default function GlosasPage() {
     const stats = glosas ? {
         total: glosas.length,
         totalValue: glosas.reduce((sum: number, g: any) => sum + g.glosa_value, 0),
-        canAppeal: glosas.filter((g: any) => g.can_appeal && !g.appeal_status).length,
+        canAppeal: glosas.filter((g: any) => g.can_appeal && (!g.contest_status || g.contest_status === 'NONE')).length,
         byCategory: glosas.reduce((acc: any, g: any) => {
             acc[g.category] = (acc[g.category] || 0) + 1;
             return acc;
@@ -111,7 +116,7 @@ export default function GlosasPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Glosas Recentes</CardTitle>
-                    <CardDescription>Últimas glosas registradas</CardDescription>
+                    <CardDescription>Últimas glosas registradas e status do recurso</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -126,8 +131,8 @@ export default function GlosasPage() {
                                     <TableHead>Descrição</TableHead>
                                     <TableHead>Categoria</TableHead>
                                     <TableHead className="text-right">Valor</TableHead>
-                                    <TableHead>Tipo</TableHead>
-                                    <TableHead>Recurso</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -146,15 +151,32 @@ export default function GlosasPage() {
                                             -R$ {new Intl.NumberFormat('pt-BR').format(glosa.glosa_value)}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={glosa.glosa_type === 'TOTAL' ? 'destructive' : 'default'}>
-                                                {glosa.glosa_type}
-                                            </Badge>
+                                            {glosa.contest_status === 'REVERSED' ? (
+                                                <Badge className="bg-green-600">Revertida</Badge>
+                                            ) : glosa.contest_status === 'IN_REVIEW' ? (
+                                                <Badge className="bg-amber-500">Em Análise</Badge>
+                                            ) : glosa.contest_status === 'CLOSED' ? (
+                                                <Badge variant="destructive">Recurso Negado</Badge>
+                                            ) : !glosa.can_appeal ? (
+                                                <Badge variant="secondary">Irrecorrível</Badge>
+                                            ) : (
+                                                <Badge variant="secondary">Sem Recurso</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>
-                                            {glosa.can_appeal ? (
-                                                <Badge variant="default">Possível</Badge>
-                                            ) : (
-                                                <Badge variant="secondary">Não</Badge>
+                                            {glosa.can_appeal && (!glosa.contest_status || glosa.contest_status === 'NONE') && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setSelectedGlosa({
+                                                        id: glosa.id,
+                                                        code: glosa.glosa_code,
+                                                        value: glosa.glosa_value
+                                                    })}
+                                                >
+                                                    <Scale className="h-4 w-4 mr-1" />
+                                                    Recorrer
+                                                </Button>
                                             )}
                                         </TableCell>
                                     </TableRow>
@@ -172,6 +194,16 @@ export default function GlosasPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <ContestGlosaDialog
+                open={selectedGlosa !== null}
+                onOpenChange={(open) => !open && setSelectedGlosa(null)}
+                glosaId={selectedGlosa?.id || null}
+                glosaCode={selectedGlosa?.code || ''}
+                glosaValue={selectedGlosa?.value || 0}
+                onSuccess={() => refetch()}
+            />
         </div>
     );
 }
+

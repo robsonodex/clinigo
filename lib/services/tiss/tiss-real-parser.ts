@@ -98,7 +98,7 @@ export class TissRealParser {
             ignoreAttributes: false,
             attributeNamePrefix: '@_',
             textNodeName: '#text',
-            parseTagValue: true,
+            parseTagValue: false, // CRITICAL: Keep as string to preserve leading zeros (e.g., '01')
             parseAttributeValue: true,
             trimValues: true,
             // CRÍTICO: Preservar arrays mesmo com 1 elemento
@@ -263,34 +263,32 @@ export class TissRealParser {
             // Cabeçalho
             const cabecalho = root['ans:cabecalho'] || root['cabecalho'];
             if (cabecalho) {
-                header.lote_numero = this.getText(cabecalho, ['ans:numeroLote', 'numeroLote']);
                 header.lote_protocolo = this.getText(cabecalho, ['ans:identificadorTransacao', 'identificadorTransacao']);
             }
 
-            // Dados da operadora
-            const operadora = this.navigate(root, [
-                'ans:prestadorParaOperadora',
-                'prestadorParaOperadora',
-                'ans:dadosOperadora',
-                'dadosOperadora'
-            ]);
-
-            if (operadora) {
-                header.operadora_codigo = this.getText(operadora, ['ans:codigoOperadora', 'codigoOperadora', 'registro']);
-                header.operadora_nome = this.getText(operadora, ['ans:nomeOperadora', 'nomeOperadora', 'razaoSocial']);
+            // Lote número está dentro de loteGuias, não no cabecalho
+            const presPara = root['ans:prestadorParaOperadora'] || root['prestadorParaOperadora'];
+            const loteGuias = presPara?.['ans:loteGuias'] || presPara?.['loteGuias'] ||
+                root['ans:loteGuias'] || root['loteGuias'];
+            if (loteGuias) {
+                header.lote_numero = this.getText(loteGuias, ['ans:numeroLote', 'numeroLote']);
             }
 
-            // Dados do prestador
-            const prestador = this.navigate(root, [
-                'ans:prestadorParaOperadora',
-                'prestadorParaOperadora',
-                'ans:dadosPrestador',
-                'dadosPrestador'
-            ]);
+            // Dados da operadora e prestador (estão DENTRO de prestadorParaOperadora)
+            const presPara2 = root['ans:prestadorParaOperadora'] || root['prestadorParaOperadora'];
 
-            if (prestador) {
-                header.prestador_codigo = this.getText(prestador, ['ans:codigoPrestador', 'codigoPrestador']);
-                header.prestador_nome = this.getText(prestador, ['ans:nomePrestador', 'nomePrestador']);
+            if (presPara2) {
+                const operadora = presPara2['ans:dadosOperadora'] || presPara2['dadosOperadora'];
+                if (operadora) {
+                    header.operadora_codigo = this.getText(operadora, ['ans:codigoOperadora', 'codigoOperadora', 'registro']);
+                    header.operadora_nome = this.getText(operadora, ['ans:nomeOperadora', 'nomeOperadora', 'razaoSocial']);
+                }
+
+                const prestador = presPara2['ans:dadosPrestador'] || presPara2['dadosPrestador'];
+                if (prestador) {
+                    header.prestador_codigo = this.getText(prestador, ['ans:codigoPrestador', 'codigoPrestador']);
+                    header.prestador_nome = this.getText(prestador, ['ans:nomePrestador', 'nomePrestador']);
+                }
             }
 
         } catch (error: any) {
@@ -310,11 +308,16 @@ export class TissRealParser {
             const root = this.navigate(parsed, ['ans:mensagemTISS', 'mensagemTISS']);
             if (!root) return guias;
 
-            // Encontrar lote de guias
-            const loteGuias = root['ans:loteGuias'] ||
-                root['loteGuias'] ||
-                root['ans:prestadorParaOperadora'] ||
-                root['prestadorParaOperadora'];
+            // Encontrar lote de guias (pode estar na raiz ou dentro de prestadorParaOperadora)
+            let loteGuias = root['ans:loteGuias'] || root['loteGuias'];
+            
+            if (!loteGuias) {
+                // Tentar dentro de prestadorParaOperadora
+                const presPara = root['ans:prestadorParaOperadora'] || root['prestadorParaOperadora'];
+                if (presPara) {
+                    loteGuias = presPara['ans:loteGuias'] || presPara['loteGuias'];
+                }
+            }
 
             if (!loteGuias) {
                 errors.push({
@@ -469,6 +472,9 @@ export class TissRealParser {
             guia.status = 'DENIED';
         } else if (codigoStatus === '3' || codigoStatus === 'PARCIAL') {
             guia.status = 'PARTIAL';
+        } else if (codigoStatus === '1' || codigoStatus === 'APROVADO') {
+            // Código explícito de aprovação prevalece
+            guia.status = 'APPROVED';
         } else if (guia.valor_glosa && guia.valor_glosa > 0) {
             // Se tem glosa mas não veio código, inferir PARTIAL
             guia.status = 'PARTIAL';
@@ -546,7 +552,7 @@ export class TissRealParser {
     private getText(obj: any, paths: string[]): string | undefined {
         const value = this.navigate(obj, paths);
 
-        if (!value) return undefined;
+        if (value === null || value === undefined) return undefined;
 
         if (typeof value === 'object' && value['#text'] !== undefined) {
             return value['#text'].toString().trim();

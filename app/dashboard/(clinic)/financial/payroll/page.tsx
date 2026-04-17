@@ -49,6 +49,7 @@ import {
     Loader2,
     Lock,
     CreditCard,
+    BarChart3,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
@@ -239,6 +240,12 @@ export default function PayrollPage() {
                             ))}
                         </SelectContent>
                     </Select>
+                    <Link href="/dashboard/financial/payroll/report">
+                        <Button variant="outline">
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            Relatório
+                        </Button>
+                    </Link>
                     <Link href="/dashboard/financial/payroll/contracts">
                         <Button variant="outline">
                             <FileText className="w-4 h-4 mr-2" />

@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { GET } from '@/api/cron/doctor-payroll/route';
 import { createClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/notifications';
@@ -47,7 +48,7 @@ describe('Doctor Payroll Cron', () => {
         mockSupabase = {
             from: jest.fn(),
         };
-        (createClient as jest.Mock).mockReturnValue(mockSupabase);
+        (createClient as jest.Mock).mockResolvedValue(mockSupabase);
     });
 
     it('should run only on day 20', async () => {
@@ -88,26 +89,45 @@ describe('Doctor Payroll Cron', () => {
             { id: 'c2', payment_amount: 300 }  // 50% = 150
         ]; // Total = 250
 
+        // Helper to create a chainable mock that resolves at any point
+        const chainable = (resolvedData: any) => {
+            const chain: any = {};
+            const resolver = jest.fn().mockResolvedValue(resolvedData);
+            chain.select = jest.fn().mockReturnValue(chain);
+            chain.eq = jest.fn().mockReturnValue(chain);
+            chain.gte = jest.fn().mockReturnValue(chain);
+            chain.lte = jest.fn().mockReturnValue(chain);
+            chain.in = jest.fn().mockReturnValue(chain);
+            chain.order = jest.fn().mockReturnValue(chain);
+            chain.single = resolver;
+            chain.maybeSingle = resolver;
+            chain.insert = jest.fn().mockReturnValue(chain);
+            chain.then = (resolve: any) => resolve(resolvedData);
+            return chain;
+        };
+
         mockSupabase.from.mockImplementation((table: string) => {
             if (table === 'clinics') {
-                return { select: () => ({ eq: jest.fn().mockResolvedValue({ data: mockClinics }) }) };
+                return chainable({ data: mockClinics, error: null });
             }
             if (table === 'doctors') {
-                return { select: () => ({ eq: () => ({ eq: jest.fn().mockResolvedValue({ data: mockDoctors }) }) }) };
+                return chainable({ data: mockDoctors, error: null });
             }
             if (table === 'medical_payroll') {
-                return {
-                    select: () => ({ eq: () => ({ eq: () => ({ single: jest.fn().mockResolvedValue({ data: null }) }) }) }),
-                    insert: jest.fn().mockReturnValue({ select: () => ({ single: jest.fn().mockResolvedValue({ data: { id: 'payroll-1' }, error: null }) }) })
-                };
+                const c = chainable({ data: null, error: null }); // no existing payroll
+                c.insert = jest.fn().mockReturnValue(chainable({ data: { id: 'payroll-1' }, error: null }));
+                return c;
+            }
+            if (table === 'doctor_contracts') {
+                return chainable({ data: { contract_type: 'PERCENTAGE', percentage: 50, fixed_value: 0 }, error: null });
             }
             if (table === 'appointments') {
-                return { select: () => ({ eq: () => ({ eq: () => ({ gte: () => ({ lte: jest.fn().mockResolvedValue({ data: mockConsultations }) }) }) }) }) };
+                return chainable({ data: mockConsultations, error: null });
             }
             if (table === 'financial_entries') {
                 return { insert: jest.fn().mockResolvedValue({ error: null }) };
             }
-            return {};
+            return chainable({ data: null, error: null });
         });
 
         const req = new Request('http://localhost/api/cron', {

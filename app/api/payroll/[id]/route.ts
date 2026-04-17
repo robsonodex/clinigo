@@ -27,7 +27,7 @@ export async function GET(
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', user.id)
             .single();
 
@@ -35,8 +35,24 @@ export async function GET(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        // Buscar folha
-        const { data: payroll, error: payrollError } = await supabase
+        // RBAC: médico só pode acessar a própria folha
+        let doctorIdFilter: string | null = null;
+        if (profile.role === 'DOCTOR') {
+            const { data: doctorRecord } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('clinic_id', profile.clinic_id)
+                .single();
+
+            if (!doctorRecord) {
+                return NextResponse.json({ success: false, error: 'Perfil de profissional não encontrado' }, { status: 403 });
+            }
+            doctorIdFilter = doctorRecord.id;
+        }
+
+        // Buscar folha com query condicional (RBAC)
+        let payrollQuery = supabase
             .from('medical_payroll')
             .select(`
         *,
@@ -45,8 +61,13 @@ export async function GET(
         paid_by_user:users!paid_by(name, email)
       `)
             .eq('id', params.id)
-            .eq('clinic_id', profile.clinic_id)
-            .single();
+            .eq('clinic_id', profile.clinic_id);
+
+        if (doctorIdFilter) {
+            payrollQuery = payrollQuery.eq('doctor_id', doctorIdFilter);
+        }
+
+        const { data: payroll, error: payrollError } = await payrollQuery.single();
 
         if (payrollError || !payroll) {
             return NextResponse.json({ success: false, error: 'Folha não encontrada' }, { status: 404 });

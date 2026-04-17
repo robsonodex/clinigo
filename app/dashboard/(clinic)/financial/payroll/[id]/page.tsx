@@ -31,6 +31,7 @@ import {
     CreditCard,
     FileText,
     Loader2,
+    Download,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
@@ -186,6 +187,31 @@ export default function PayrollDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-3">
+                    {/* Holerite PDF */}
+                    <Button
+                        variant="outline"
+                        onClick={async () => {
+                            try {
+                                const res = await fetch(`/api/payroll/${payrollId}/pdf`);
+                                if (!res.ok) throw new Error('Erro ao gerar PDF');
+                                const blob = await res.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `holerite_${payrollId}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                                toast.success('Holerite gerado!');
+                            } catch {
+                                toast.error('Erro ao gerar holerite PDF');
+                            }
+                        }}
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Holerite PDF
+                    </Button>
                     {data.status === 'PENDING_APPROVAL' && (
                         <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
                             {approveMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}

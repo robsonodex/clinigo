@@ -162,7 +162,9 @@ describe('TISS XSD Validation', () => {
 
     describe('Field Format Validation', () => {
         it('should validate registroANS format (6 digits)', async () => {
-            const xmlWithInvalidANS = VALID_TISS_401_XML.replace('123456', '123');
+            // Replace registroANS values specifically (not codigoPrestadorNaOperadora)
+            const xmlWithInvalidANS = VALID_TISS_401_XML
+                .replace(/<ans:registroANS>123456<\/ans:registroANS>/g, '<ans:registroANS>12<\/ans:registroANS>');
             const result = await validator.validateXML(xmlWithInvalidANS);
 
             const ansErrors = result.errors.filter(e =>
@@ -172,7 +174,9 @@ describe('TISS XSD Validation', () => {
         });
 
         it('should validate numeroCarteira format (16-20 digits)', async () => {
-            const xmlWithShortCard = VALID_TISS_401_XML.replace('1234567890123456', '123');
+            const xmlWithShortCard = VALID_TISS_401_XML
+                .replace(/<ans:numeroCarteira>1234567890123456<\/ans:numeroCarteira>/,
+                    '<ans:numeroCarteira>12X<\/ans:numeroCarteira>');
             const result = await validator.validateXML(xmlWithShortCard);
 
             const cardErrors = result.errors.filter(e =>
@@ -182,7 +186,9 @@ describe('TISS XSD Validation', () => {
         });
 
         it('should validate codigoProcedimento format (8-10 digits)', async () => {
-            const xmlWithInvalidCode = VALID_TISS_401_XML.replace('10101012', '123');
+            const xmlWithInvalidCode = VALID_TISS_401_XML
+                .replace(/<ans:codigoProcedimento>10101012<\/ans:codigoProcedimento>/,
+                    '<ans:codigoProcedimento>12X<\/ans:codigoProcedimento>');
             const result = await validator.validateXML(xmlWithInvalidCode);
 
             const codeErrors = result.errors.filter(e =>

@@ -43,6 +43,7 @@ import {
     Lock,
     Activity,
     TrendingUp,
+    TrendingDown,
     ShieldAlert,
     Upload,
     Bot,
@@ -214,6 +215,26 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN'],
                 badge: 'PRO',
                 minPlan: 'PROFESSIONAL',
+                children: [
+                    {
+                        title: 'Guias e Lotes',
+                        href: '/dashboard/tiss',
+                        icon: Receipt,
+                        minPlan: 'PROFESSIONAL',
+                    },
+                    {
+                        title: 'Gestão de Glosas',
+                        href: '/dashboard/tiss/glosas',
+                        icon: ShieldAlert,
+                        minPlan: 'PROFESSIONAL',
+                    },
+                    {
+                        title: 'Perdas (BI)',
+                        href: '/dashboard/tiss/reports/loss-analysis',
+                        icon: TrendingDown,
+                        minPlan: 'PROFESSIONAL',
+                    }
+                ]
             },
             {
                 title: 'Convênios',

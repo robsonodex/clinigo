@@ -28,9 +28,27 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
+        // RBAC: médico só pode ver a própria folha
+        const isDoctor = profile.role === 'DOCTOR';
+        let resolvedDoctorId: string | null = null;
+
+        if (isDoctor) {
+            const { data: doctorRecord } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('clinic_id', profile.clinic_id)
+                .single();
+
+            if (!doctorRecord) {
+                return NextResponse.json({ success: false, error: 'Perfil de profissional não encontrado' }, { status: 403 });
+            }
+            resolvedDoctorId = doctorRecord.id;
+        }
+
         const { searchParams } = new URL(request.url);
         const month = searchParams.get('month'); // 2026-01
-        const doctorId = searchParams.get('doctor_id');
+        const doctorId = isDoctor ? resolvedDoctorId : searchParams.get('doctor_id');
         const status = searchParams.get('status');
 
         let query = supabase
@@ -100,7 +118,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (!profile?.clinic_id || !['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            return NextResponse.json({ success: false, error: 'Sem permissão' }, { status: 403 });
+            return NextResponse.json({ success: false, error: 'Sem permissão — apenas administradores podem calcular repasses' }, { status: 403 });
         }
 
         const body = await request.json();

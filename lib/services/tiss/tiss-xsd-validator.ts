@@ -422,13 +422,14 @@ export class TISSXSDValidator {
             const cleanKey = key.replace('ans:', '');
             const currentPath = path ? `${path}.${cleanKey}` : cleanKey;
 
-            if (typeof value === 'string' && FIELD_FORMATS[cleanKey]) {
+            if ((typeof value === 'string' || typeof value === 'number') && FIELD_FORMATS[cleanKey]) {
                 const pattern = FIELD_FORMATS[cleanKey];
-                if (!pattern.test(value)) {
+                const stringValue = String(value);
+                if (!pattern.test(stringValue)) {
                     errors.push({
                         code: 'INVALID_FORMAT',
                         field: currentPath,
-                        message: `Invalid format for ${cleanKey}: "${value}"`,
+                        message: `Invalid format for ${cleanKey}: "${stringValue}"`,
                     });
                 }
             } else if (typeof value === 'object') {

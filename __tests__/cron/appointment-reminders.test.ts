@@ -1,70 +1,75 @@
+/** @jest-environment node */
 import { GET } from '@/api/cron/appointment-reminders/route';
 import { createClient } from '@/lib/supabase/server';
 import { sendWhatsApp, sendEmail } from '@/lib/notifications';
-import { NextResponse } from 'next/server';
 
-// Mock dependencies
 jest.mock('@/lib/supabase/server', () => ({
-    createClient: jest.fn()
+    createClient: jest.fn(),
 }));
 
 jest.mock('@/lib/notifications', () => ({
-    sendWhatsApp: jest.fn(),
-    sendEmail: jest.fn()
+    sendWhatsApp: jest.fn().mockResolvedValue(undefined),
+    sendEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('next/server', () => ({
-    NextResponse: {
-        json: jest.fn((body, init) => ({ body, init }))
-    }
+jest.mock('@/lib/automation-config', () => ({
+    getClinicAutomationConfig: jest.fn().mockResolvedValue({
+        reminder_24h: true,
+        reminder_2h: false,
+        reminder_15min: false,
+        channels: ['WHATSAPP', 'EMAIL'],
+    }),
 }));
 
-// Setup ENV
-process.env.CRON_SECRET_KEY = 'test-secret';
-
-describe('Appointment Reminders Cron', () => {
+describe('Cron: Appointment Reminders', () => {
     let mockSupabase: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
+        process.env.CRON_SECRET_KEY = 'test-secret';
 
-        // Mock Supabase Chain
-        const mockSelect = jest.fn();
-        const mockInsert = jest.fn().mockResolvedValue({ error: null });
-        const mockEq = jest.fn();
-        const mockGte = jest.fn();
-        const mockLt = jest.fn();
-        const mockSingle = jest.fn();
-
-        // Setup basic query chain
-        mockSupabase = {
-            from: jest.fn(() => ({
-                select: mockSelect,
-                insert: mockInsert
-            }))
+        // Chainable mock helper
+        const makeChain = (resolvedData: any) => {
+            const chain: any = {};
+            chain.select = jest.fn().mockReturnValue(chain);
+            chain.eq = jest.fn().mockReturnValue(chain);
+            chain.gte = jest.fn().mockReturnValue(chain);
+            chain.lt = jest.fn().mockReturnValue(chain);
+            chain.lte = jest.fn().mockReturnValue(chain);
+            chain.order = jest.fn().mockReturnValue(chain);
+            chain.single = jest.fn().mockResolvedValue(resolvedData);
+            chain.insert = jest.fn().mockResolvedValue({ error: null });
+            chain.then = (resolve: any) => resolve(resolvedData);
+            return chain;
         };
 
-        // Chain implementations
-        mockSelect.mockReturnValue({
-            eq: mockEq
-        });
+        const mockAppointments = [
+            {
+                id: 'apt-1',
+                scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                patients: { id: 'p1', full_name: 'John Doe', phone: '5511999999999', email: 'john@example.com' },
+                doctors: { id: 'd1', full_name: 'Dr. House', specialty: 'Diagnóstico' },
+            }
+        ];
 
-        mockEq.mockReturnValue({
-            gte: mockGte,
-            eq: mockEq, // recursive for existing log check
-            single: mockSingle
-        });
+        mockSupabase = {
+            from: jest.fn((table: string) => {
+                if (table === 'clinics') {
+                    return makeChain({ data: [{ id: 'c1', name: 'Clinica Teste', plan_type: 'ENTERPRISE' }], error: null });
+                }
+                if (table === 'appointments') {
+                    return makeChain({ data: mockAppointments, error: null });
+                }
+                if (table === 'notification_logs') {
+                    const c = makeChain({ data: null, error: null }); // No existing log
+                    c.insert = jest.fn().mockResolvedValue({ error: null });
+                    return c;
+                }
+                return makeChain({ data: null, error: null });
+            }),
+        };
 
-        mockGte.mockReturnValue({
-            lt: mockLt
-        });
-
-        mockLt.mockResolvedValue({
-            data: [], // Default empty
-            error: null
-        });
-
-        (createClient as jest.Mock).mockReturnValue(mockSupabase);
+        (createClient as jest.Mock).mockResolvedValue(mockSupabase);
     });
 
     it('should return 401 if unauthorized', async () => {
@@ -72,68 +77,22 @@ describe('Appointment Reminders Cron', () => {
             headers: { 'Authorization': 'Bearer wrong-key' }
         });
         const res = await GET(req);
-        expect(res.init.status).toBe(401);
+        const body = await res.json();
+        expect(res.status).toBe(401);
     });
 
     it('should send reminders for scheduled appointments', async () => {
-        // Mock Appointments Data
-        const mockAppointments = [
-            {
-                id: 'apt-1',
-                scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // +24h
-                patients: { id: 'p1', full_name: 'John Doe', phone: '5511999999999', email: 'john@example.com' },
-                doctors: { id: 'd1', full_name: 'Dr. House', specialty: 'Diagnóstico' },
-                clinics: { id: 'c1', name: 'Clinica Teste', plan_type: 'ENTERPRISE' }
-            }
-        ];
-
-        // Mock the query chain response for appointments
-        // We need to be careful because the code calls DB multiple times in a loop (24h, 2h, 15min)
-        // For simplicity, we make the first call return our mock data, others empty
-        const mockLt = jest.fn()
-            .mockResolvedValueOnce({ data: mockAppointments, error: null }) // 24h window
-            .mockResolvedValue({ data: [], error: null }); // others
-
-        mockSupabase.from().select().eq().gte.mockReturnValue({ lt: mockLt });
-
-        // Mock "existing log" check to return null (not sent yet)
-        // The code does: .from('notification_logs').select().eq().eq().single()
-        // We need to ensure the chain handles this structure.
-        // Re-mocking specific chain for notification_logs
-        mockSupabase.from.mockImplementation((table: string) => {
-            if (table === 'appointments') {
-                return {
-                    select: () => ({
-                        eq: () => ({
-                            gte: () => ({
-                                lt: mockLt
-                            })
-                        })
-                    })
-                };
-            }
-            if (table === 'notification_logs') {
-                return {
-                    select: () => ({
-                        eq: () => ({
-                            eq: () => ({
-                                single: jest.fn().mockResolvedValue({ data: null }) // No existing log
-                            })
-                        })
-                    }),
-                    insert: jest.fn().mockResolvedValue({ error: null })
-                };
-            }
-            return {};
-        });
-
         const req = new Request('http://localhost/api/cron', {
             headers: { 'Authorization': 'Bearer test-secret' }
         });
 
-        await GET(req);
+        const res = await GET(req);
+        const body = await res.json();
 
-        // Assertions
+        expect(res.status).toBe(200);
+        expect(body.success).toBe(true);
+
+        // Should have called sendWhatsApp with patient data
         expect(sendWhatsApp).toHaveBeenCalledWith(
             '5511999999999',
             expect.objectContaining({
@@ -142,7 +101,7 @@ describe('Appointment Reminders Cron', () => {
             'REMINDER_24H'
         );
 
-        // Should log success
+        // Should log to notification_logs
         expect(mockSupabase.from).toHaveBeenCalledWith('notification_logs');
     });
 });

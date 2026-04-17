@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Testes da API de Walk-in (Recepção)
  * Testa registro de pacientes walk-in

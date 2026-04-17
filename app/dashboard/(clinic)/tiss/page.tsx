@@ -108,10 +108,18 @@ export default function TissPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => window.location.href = '/dashboard/tiss/reports/loss-analysis'}>
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        Relatórios
-                    </Button>
+                    <Link href="/dashboard/tiss/reports/loss-analysis">
+                        <Button variant="outline">
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            BI de Perdas
+                        </Button>
+                    </Link>
+                    <Link href="/dashboard/tiss/glosas">
+                        <Button variant="outline" className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
+                            <AlertCircle className="w-4 h-4 mr-2" />
+                            Glosas
+                        </Button>
+                    </Link>
                     <Link href="/dashboard/tiss/migration">
                         <Button variant="outline">
                             <ArrowRightLeft className="w-4 h-4 mr-2" />

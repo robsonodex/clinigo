@@ -114,12 +114,12 @@ export async function POST(
             );
         }
 
-        // Atualizar status das guias
+        // Atualizar status das guias (PENDING e VALID -> SENT)
         await (supabase
             .from('tiss_guides') as any)
             .update({ status: 'SENT', sent_at: new Date().toISOString() })
             .eq('batch_id', batch_id)
-            .eq('status', 'PENDING');
+            .in('status', ['PENDING', 'VALID']);
 
         return NextResponse.json({
             success: true,
