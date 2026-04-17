@@ -294,7 +294,7 @@ export default function LandingPremium() {
                         <div className="absolute -top-12 -right-12 w-40 h-40 bg-teal-vibrant/10 rounded-full blur-[60px] -z-0" />
                     </div>
 
-                    {/* ASSINATURA DIGITAL TISS */}
+                    {/* ASSINATURA DIGITAL ICP-BRASIL */}
                     <div className="w-full md:w-80 bg-navy-deep-light border border-slate-800 rounded-3xl p-6 relative overflow-hidden group hover:border-teal-vibrant/30 transition-all flex flex-col">
                         <div className="absolute top-4 right-4">
                             <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
@@ -304,9 +304,9 @@ export default function LandingPremium() {
                         <div className="w-12 h-12 rounded-2xl bg-teal-vibrant/10 flex items-center justify-center mb-4 border border-teal-vibrant/20">
                             <Fingerprint className="w-6 h-6 text-teal-vibrant" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Assinatura Eletrônica TISS</h3>
+                        <h3 className="text-lg font-bold text-white mb-2">Assinatura Digital ICP-Brasil</h3>
                         <p className="text-slate-400 text-sm leading-relaxed flex-1">
-                            Assinatura eletrônica para lotes TISS com validade jurídica (Lei 14.063/2020). Compatível com certificados A1/A3 quando disponíveis.
+                            Assinatura de Prontuários Eletrônicos (PEP) e Lotes TISS com certificado digital A1. Máxima segurança com bloqueio imutável e validade jurídica (Lei 14.063/2020).
                         </p>
                     </div>
                 </div>
@@ -361,9 +361,9 @@ export default function LandingPremium() {
                         <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
                             <Receipt className="w-6 h-6 text-teal-vibrant" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Faturamento TISS</h3>
+                        <h3 className="text-lg font-bold text-white mb-2">Módulo TISS Completo</h3>
                         <p className="text-slate-400 text-sm leading-relaxed">
-                            Geração de XML TISS 4.02 nativo para operadoras. Sem intermediários.
+                            Elegibilidade, Emissão de Guias, Lotes XML (v4.01.00), conciliação com arquivos de retorno e dashboard focado para resolver Glosas com 1 clique.
                         </p>
                     </motion.div>
 
@@ -501,6 +501,9 @@ export default function LandingPremium() {
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-white font-medium">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in QR Code
+                                </li>
+                                <li className="flex items-center gap-2 text-xs text-white font-medium">
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Assinatura ICP-Brasil no PEP
                                 </li>
                             </ul>
 
