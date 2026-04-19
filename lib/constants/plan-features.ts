@@ -80,6 +80,11 @@ export type FeatureKey =
     // ============================================
     | 'assinatura_digital'       // Assinatura digital ICP-Brasil
 
+    // ============================================
+    // PRESCRIÇÃO DIGITAL (✅ IMPLEMENTADO)
+    // ============================================
+    | 'prescricao_digital'       // Prescrição digital com assinatura
+
 // Feature matrix: which plan level unlocks each feature
 // 1 = BASICO, 2 = AVANCADO, 3 = PROFESSIONAL, 4 = ENTERPRISE
 const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
@@ -152,6 +157,11 @@ const FEATURE_PLAN_LEVEL: Record<FeatureKey, number> = {
     // ASSINATURA DIGITAL
     // ============================================
     assinatura_digital: 2,       // AVANCADO+
+
+    // ============================================
+    // PRESCRIÇÃO DIGITAL
+    // ============================================
+    prescricao_digital: 3,       // PROFESSIONAL+
 }
 
 /**
@@ -250,4 +260,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
 
     // Assinatura Digital
     assinatura_digital: 'Assinatura Digital ICP-Brasil',
+
+    // Prescrição Digital
+    prescricao_digital: 'Prescrição Digital',
 }

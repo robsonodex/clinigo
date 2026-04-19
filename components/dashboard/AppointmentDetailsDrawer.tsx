@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
 import {
     Sheet,
     SheetContent,
@@ -149,14 +150,18 @@ export function AppointmentDetailsDrawer({
     }
 
     // Sharing functions
-    function handleShareWhatsApp() {
+    async function handleShareWhatsApp() {
         if (!appointment || !qrCode) return
+        if (!appointment.patient?.phone) {
+            toast.error('Paciente não possui telefone cadastrado')
+            return
+        }
 
         const scheduledDate = appointment.scheduled_at ||
             `${appointment.appointment_date}T${appointment.appointment_time}`
-        const formattedDate = format(new Date(scheduledDate), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+        const fmtDate = format(new Date(scheduledDate), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
 
-        const doctorName = appointment.doctor?.full_name ||
+        const drName = appointment.doctor?.full_name ||
             appointment.doctor?.user?.full_name ||
             'Médico'
 
@@ -165,11 +170,20 @@ export function AppointmentDetailsDrawer({
         const message =
             `✅ *Consulta Agendada!*\n\n` +
             `👤 ${patientName}\n` +
-            `📅 ${formattedDate}\n` +
-            `👨⚕️ Dr(a). ${doctorName}\n\n` +
+            `📅 ${fmtDate}\n` +
+            `👨⚕️ Dr(a). ${drName}\n\n` +
             `📲 ${qrCode.url}`
 
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
+        const result = await sendWhatsappMessage({
+            to: appointment.patient.phone,
+            message,
+            triggerContext: 'drawer_qr_share',
+        })
+        if (result.success) {
+            toast.success('QR Code enviado via WhatsApp!')
+        } else {
+            toast.error(result.error || 'Falha ao enviar WhatsApp')
+        }
     }
 
     function handlePrint() {
@@ -238,8 +252,12 @@ export function AppointmentDetailsDrawer({
         }
     }
 
-    function handleTeleconsultaWhatsApp() {
+    async function handleTeleconsultaWhatsApp() {
         if (!appointment || !videoRoom) return
+        if (!appointment.patient?.phone) {
+            toast.error('Paciente não possui telefone cadastrado')
+            return
+        }
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
         const link = `${baseUrl}/video/${videoRoom.room_id}?role=patient&token=${videoRoom.patient_token}`
         const patientName = appointment.patient?.full_name || 'Paciente'
@@ -250,7 +268,17 @@ export function AppointmentDetailsDrawer({
             `📅 Data: ${formattedDate}\n` +
             `👨‍⚕️ Médico(a): Dr(a). ${doctorName}\n\n` +
             `Clique no link no horário da consulta para entrar na sala de vídeo.`
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
+
+        const result = await sendWhatsappMessage({
+            to: appointment.patient.phone,
+            message,
+            triggerContext: 'drawer_teleconsulta_link',
+        })
+        if (result.success) {
+            toast.success('Link de teleconsulta enviado via WhatsApp!')
+        } else {
+            toast.error(result.error || 'Falha ao enviar WhatsApp')
+        }
     }
 
     function handleDownloadQR() {

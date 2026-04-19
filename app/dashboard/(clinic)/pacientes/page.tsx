@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -190,12 +191,19 @@ export default function PacientesPage() {
         createMutation.mutate(data)
     }
 
-    // Open WhatsApp
-    const openWhatsApp = (phone: string, name: string) => {
-        const cleanPhone = phone.replace(/\D/g, '')
-        const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+    // Send via WhatsApp (Baileys session)
+    const handleSendWhatsApp = async (phone: string, name: string) => {
         const message = `Olá ${name.split(' ')[0]}! Aqui é da clínica.`
-        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank')
+        const result = await sendWhatsappMessage({
+            to: phone,
+            message,
+            triggerContext: 'pacientes_contato',
+        })
+        if (result.success) {
+            toast({ title: 'Mensagem enviada!', description: `WhatsApp enviado para ${name.split(' ')[0]}` })
+        } else {
+            toast({ title: 'WhatsApp não enviado', description: result.error, variant: 'destructive' })
+        }
     }
 
     // Calculate stats from real data
@@ -367,7 +375,7 @@ export default function PacientesPage() {
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        onClick={() => openWhatsApp(patient.phone, patient.full_name)}
+                                                        onClick={() => handleSendWhatsApp(patient.phone, patient.full_name)}
                                                     >
                                                         <MessageCircle className="w-4 h-4 mr-2 text-green-600" />
                                                         WhatsApp

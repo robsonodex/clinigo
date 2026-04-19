@@ -30,7 +30,13 @@ import {
     XCircle,
     Clock,
     CheckSquare,
-    Square
+    Square,
+    Clipboard,
+    Pill,
+    ShieldCheck,
+    Send,
+    Download,
+    Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -42,6 +48,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FaceEnrollment } from '@/components/face-recognition';
 import { useUser } from '@/hooks/use-user';
+import { useFeaturePermission } from '@/components/common/feature-gate';
 
 interface Patient {
     id: string;
@@ -114,13 +121,19 @@ export default function PatientDetailsPage() {
 
     const clinicId = user?.clinic_id;
 
+    // Prescriptions state
+    const [prescriptions, setPrescriptions] = useState<any[]>([]);
+    const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
+    const { hasPermission: hasPrescriptionFeature } = useFeaturePermission('prescricao_digital');
+
     useEffect(() => {
         if (patientId) {
             loadPatient();
             loadBiometricStatus();
             loadAppointments();
+            if (hasPrescriptionFeature) loadPrescriptions();
         }
-    }, [patientId]);
+    }, [patientId, hasPrescriptionFeature]);
 
     const loadAppointments = async () => {
         setLoadingAppointments(true);
@@ -149,6 +162,21 @@ export default function PatientDetailsPage() {
             console.error('[PatientDetail] Unexpected error loading appointments:', err);
         } finally {
             setLoadingAppointments(false);
+        }
+    };
+
+    const loadPrescriptions = async () => {
+        setLoadingPrescriptions(true);
+        try {
+            const res = await fetch(`/api/prescriptions?patient_id=${patientId}`);
+            if (res.ok) {
+                const json = await res.json();
+                setPrescriptions(json.data || []);
+            }
+        } catch (err) {
+            console.error('[PatientDetail] Error loading prescriptions:', err);
+        } finally {
+            setLoadingPrescriptions(false);
         }
     };
 
@@ -439,6 +467,12 @@ export default function PatientDetailsPage() {
                         <CalendarDays className="w-4 h-4" />
                         Agendamentos
                     </TabsTrigger>
+                    {hasPrescriptionFeature && (
+                        <TabsTrigger value="prescriptions" className="gap-2">
+                            <Clipboard className="w-4 h-4" />
+                            Prescrições
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
                 {/* Tab: Informações */}
@@ -624,6 +658,92 @@ export default function PatientDetailsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+                {/* Tab: Prescrições */}
+                {hasPrescriptionFeature && (
+                    <TabsContent value="prescriptions">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Clipboard className="w-5 h-5" />
+                                            Prescrições do Paciente
+                                        </CardTitle>
+                                        <CardDescription className="mt-1">
+                                            {prescriptions.length} prescrição(ões) encontrada(s)
+                                        </CardDescription>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => window.open(`/dashboard/prescricoes?patient_id=${patientId}`, '_blank')}
+                                    >
+                                        <Clipboard className="w-4 h-4 mr-2" />
+                                        Nova Prescrição
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingPrescriptions ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="w-6 h-6 animate-spin" />
+                                    </div>
+                                ) : prescriptions.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <Clipboard className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                        <p>Nenhuma prescrição encontrada para este paciente.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {prescriptions.map((presc: any) => {
+                                            const statusMap: Record<string, { label: string; color: string }> = {
+                                                DRAFT: { label: 'Rascunho', color: 'bg-yellow-100 text-yellow-800' },
+                                                SIGNED: { label: 'Assinada', color: 'bg-green-100 text-green-800' },
+                                                SENT: { label: 'Enviada', color: 'bg-blue-100 text-blue-800' },
+                                            };
+                                            const statusConfig = statusMap[presc.status] || { label: presc.status, color: '' };
+
+                                            return (
+                                                <div key={presc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex flex-col items-center justify-center w-14 h-14 bg-primary/10 rounded-lg">
+                                                            <Clipboard className="w-5 h-5 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium">Dr(a). {presc.doctor?.full_name || 'Médico'}</p>
+                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                <Calendar className="w-3 h-3" />
+                                                                <span>{new Date(presc.created_at).toLocaleDateString('pt-BR')}</span>
+                                                                <span>•</span>
+                                                                <span>{presc.items?.length || 0} medicamento(s)</span>
+                                                            </div>
+                                                            {presc.items?.slice(0, 2).map((item: any, idx: number) => (
+                                                                <div key={idx} className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                                                    <Pill className="w-3 h-3" />
+                                                                    {item.medication_name} - {item.dosage}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className={statusConfig.color}>{statusConfig.label}</Badge>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => window.open(`/api/prescriptions/${presc.id}/pdf`, '_blank')}
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
             </Tabs>
 
             {/* Edit Patient Modal */}

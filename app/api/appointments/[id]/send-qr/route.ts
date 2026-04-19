@@ -202,44 +202,68 @@ export async function POST(
             }
         }
 
-        // SEND VIA WHATSAPP (generate share URL)
+        // SEND VIA WHATSAPP (Baileys microservice)
         if (method === 'whatsapp' || method === 'both') {
             try {
                 if (!patient.phone) {
                     errors.push('Paciente não possui telefone cadastrado.')
                 } else {
-                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+                    const serviceUrl = process.env.WHATSAPP_SERVICE_URL
+                    const serviceSecret = process.env.WHATSAPP_INTERNAL_SECRET
+                    if (!serviceUrl || !serviceSecret) {
+                        errors.push('Serviço WhatsApp não configurado no servidor.')
+                    } else {
+                        const appointmentDateStr = appointment.appointment_date || appointment.scheduled_at
+                        const appointmentTimeStr = appointment.appointment_time || ''
+                        const schedDate = new Date(appointmentDateStr)
+                        const fmtDate = schedDate.toLocaleDateString('pt-BR')
+                        const fmtTime = appointmentTimeStr
+                            ? appointmentTimeStr.substring(0, 5)
+                            : schedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
-                    whatsappUrl = generateWhatsAppShareUrl({
-                        clinicName: clinic.name,
-                        doctorName: doctor.full_name,
-                        appointmentDate: appointment.scheduled_at,
-                        appointmentTime: new Date(appointment.scheduled_at).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }),
-                        appointmentId: appointment.id,
-                        baseUrl
-                    })
+                        const message =
+                            `✅ *Consulta Agendada!*\n\n` +
+                            `👤 ${patient.full_name}\n` +
+                            `📅 ${fmtDate} às ${fmtTime}\n` +
+                            `👨⚕️ Dr(a). ${doctor.full_name}\n` +
+                            `🏥 ${clinic.name}\n\n` +
+                            `📲 Link de check-in: ${qrCode.qr_data?.preRegistrationUrl || ''}`
 
-                    // Add patient phone to URL
-                    const patientPhone = patient.phone.replace(/\D/g, '')
-                    whatsappUrl = `https://wa.me/55${patientPhone}?text=${whatsappUrl.split('?text=')[1]}`
+                        const cleanPhone = patient.phone.replace(/\D/g, '')
+                        const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
 
-                    whatsappSent = true
-
-                    // Update QR record
-                    await supabase
-                        .from('appointment_qr_codes')
-                        .update({
-                            sent_via_whatsapp: true,
-                            whatsapp_sent_at: new Date().toISOString()
+                        const wppRes = await fetch(`${serviceUrl}/message/send`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-internal-secret': serviceSecret,
+                            },
+                            body: JSON.stringify({
+                                clinicId: clinic.id,
+                                to: phone,
+                                message,
+                                triggerContext: 'send_qr_api_v1',
+                            }),
                         })
-                        .eq('id', qrCode.id)
+
+                        if (wppRes.ok) {
+                            whatsappSent = true
+                            await supabase
+                                .from('appointment_qr_codes')
+                                .update({
+                                    sent_via_whatsapp: true,
+                                    whatsapp_sent_at: new Date().toISOString()
+                                })
+                                .eq('id', qrCode.id)
+                        } else {
+                            const errBody = await wppRes.json().catch(() => ({ error: 'Erro desconhecido' }))
+                            errors.push(errBody.error || 'WhatsApp não conectado.')
+                        }
+                    }
                 }
             } catch (error: any) {
-                console.error('Error preparing WhatsApp:', error)
-                errors.push(`Erro ao preparar WhatsApp: ${error.message}`)
+                console.error('Error sending WhatsApp:', error)
+                errors.push(`Erro ao enviar WhatsApp: ${error.message}`)
             }
         }
 
@@ -247,14 +271,13 @@ export async function POST(
             success: emailSent || whatsappSent,
             emailSent,
             whatsappSent,
-            whatsappUrl,
             errors: errors.length > 0 ? errors : null,
             message: emailSent && whatsappSent
-                ? 'E-mail enviado e WhatsApp preparado!'
+                ? 'E-mail enviado e WhatsApp enviado!'
                 : emailSent
                     ? 'E-mail enviado com sucesso!'
                     : whatsappSent
-                        ? 'WhatsApp preparado. Clique para enviar.'
+                        ? 'WhatsApp enviado com sucesso!'
                         : 'Nenhum método de envio disponível.'
         })
 

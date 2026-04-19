@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth, useRole } from '@/lib/hooks/use-auth'
 import { api, type Appointment } from '@/lib/api-client'
 import { formatDate, formatCurrency } from '@/lib/utils'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
+import { useToast } from '@/components/ui/use-toast'
 import {
     Calendar,
     Users,
@@ -194,14 +196,23 @@ export default function DashboardPage() {
         staleTime: 1000 * 60 * 5, // 5 minutes
     })
 
-    // Open WhatsApp
-    const openWhatsApp = (phone: string, patientName: string, videoLink?: string) => {
-        const cleanPhone = phone.replace(/\D/g, '')
-        const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+    const { toast } = useToast()
+
+    // Send via WhatsApp (Baileys session)
+    const handleSendWhatsApp = async (phone: string, patientName: string, videoLink?: string) => {
         const message = videoLink
             ? `Olá ${patientName.split(' ')[0]}! Lembrete da sua consulta. Acesse o link: ${videoLink}`
             : `Olá ${patientName.split(' ')[0]}! Aqui é da clínica.`
-        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank')
+        const result = await sendWhatsappMessage({
+            to: phone,
+            message,
+            triggerContext: videoLink ? 'dashboard_teleconsulta_lembrete' : 'dashboard_contato_paciente',
+        })
+        if (result.success) {
+            toast({ title: 'Mensagem enviada!', description: `WhatsApp enviado para ${patientName.split(' ')[0]}` })
+        } else {
+            toast({ title: 'WhatsApp não enviado', description: result.error, variant: 'destructive' })
+        }
     }
 
     // Group appointments by date for organized display
@@ -445,7 +456,7 @@ export default function DashboardPage() {
                                                                         size="sm"
                                                                         variant="ghost"
                                                                         className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                                        onClick={() => openWhatsApp(
+                                                                        onClick={() => handleSendWhatsApp(
                                                                             appointment.patient?.phone || '',
                                                                             appointment.patient?.full_name || 'Paciente',
                                                                             appointment.video_link
@@ -508,7 +519,7 @@ export default function DashboardPage() {
                                                                             size="sm"
                                                                             variant="outline"
                                                                             className="h-5 px-1.5 text-[10px] bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                                                                            onClick={() => openWhatsApp(
+                                                                            onClick={() => handleSendWhatsApp(
                                                                                 appointment.patient?.phone || '',
                                                                                 appointment.patient?.full_name || 'Paciente',
                                                                                 appointment.video_link
@@ -572,7 +583,7 @@ export default function DashboardPage() {
                                                                         size="sm"
                                                                         variant="outline"
                                                                         className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                                                                        onClick={() => openWhatsApp(
+                                                                        onClick={() => handleSendWhatsApp(
                                                                             appointment.patient?.phone || '',
                                                                             appointment.patient?.full_name || 'Paciente',
                                                                             appointment.video_link

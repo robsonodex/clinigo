@@ -208,21 +208,52 @@ async function handleFailure(supabase: ReturnType<typeof createServiceRoleClient
     }
 }
 
-// Send WhatsApp notification - API REMOVIDA
-// Agora apenas loga que compartilhamento manual é necessário
+// Send WhatsApp notification via Baileys microservice
 async function sendWhatsAppNotification(item: NotificationItem, checkinUrl?: string): Promise<boolean> {
-    // WhatsApp API foi removida - clínicas devem usar compartilhamento manual
-    // O botão WhatsAppShareButton na UI permite compartilhar via wa.me
-    const message = buildMessage(item, checkinUrl)
+    const serviceUrl = process.env.WHATSAPP_SERVICE_URL
+    const serviceSecret = process.env.WHATSAPP_INTERNAL_SECRET
 
-    console.log(`[WhatsApp] API removida - compartilhamento manual necessário`)
-    console.log(`[WhatsApp] Destinatário: ${item.recipient_phone}`)
-    console.log(`[WhatsApp] Mensagem que seria enviada:`, message)
-    console.log(`[WhatsApp] Use WhatsAppShareButton para compartilhar manualmente`)
+    if (!serviceUrl || !serviceSecret) {
+        console.log('[WhatsApp] Serviço não configurado (WHATSAPP_SERVICE_URL / WHATSAPP_INTERNAL_SECRET)')
+        return false
+    }
 
-    // Retorna false para indicar que não foi enviado automaticamente
-    // O sistema pode marcar como "MANUAL_PENDING" se necessário
-    return false
+    if (!item.recipient_phone) {
+        console.log('[WhatsApp] Destinatário sem telefone — pulando')
+        return false
+    }
+
+    try {
+        const message = buildMessage(item, checkinUrl)
+        const cleanPhone = item.recipient_phone.replace(/\D/g, '')
+        const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+
+        const res = await fetch(`${serviceUrl}/message/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-secret': serviceSecret,
+            },
+            body: JSON.stringify({
+                clinicId: item.clinic_id,
+                to: phone,
+                message,
+                triggerContext: `cron_notification_${item.type}`,
+            }),
+        })
+
+        if (res.ok) {
+            console.log(`[WhatsApp] Mensagem enviada para ${phone} (${item.type})`)
+            return true
+        } else {
+            const errBody = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
+            console.error(`[WhatsApp] Falha ao enviar: ${errBody.error}`)
+            return false
+        }
+    } catch (error) {
+        console.error('[WhatsApp] Erro ao enviar notificação:', error)
+        return false
+    }
 }
 
 // Send Email notification

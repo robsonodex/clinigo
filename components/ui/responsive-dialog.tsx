@@ -44,10 +44,15 @@ export function ResponsiveDialog({
         return (
             <Drawer open={open} onOpenChange={onOpenChange}>
                 <DrawerContent className={className}>
-                    {(title || description) && (
+                    {(title || description) ? (
                         <DrawerHeader>
                             {title && <DrawerTitle>{title}</DrawerTitle>}
                             {description && <DrawerDescription>{description}</DrawerDescription>}
+                        </DrawerHeader>
+                    ) : (
+                        <DrawerHeader className="sr-only">
+                            <DrawerTitle>Drawer</DrawerTitle>
+                            <DrawerDescription>Drawer content</DrawerDescription>
                         </DrawerHeader>
                     )}
                     <div className="px-4 pb-4 max-h-[85vh] overflow-auto">
@@ -61,10 +66,15 @@ export function ResponsiveDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className={className}>
-                {(title || description) && (
+                {(title || description) ? (
                     <DialogHeader>
                         {title && <DialogTitle>{title}</DialogTitle>}
                         {description && <DialogDescription>{description}</DialogDescription>}
+                    </DialogHeader>
+                ) : (
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Dialog</DialogTitle>
+                        <DialogDescription>Dialog content</DialogDescription>
                     </DialogHeader>
                 )}
                 {children}

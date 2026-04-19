@@ -148,7 +148,7 @@ const navigationSections: NavSection[] = [
                 title: 'Prescrições',
                 href: '/dashboard/prescricoes',
                 icon: Clipboard,
-                roles: ['DOCTOR'],
+                roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
                 badge: 'PRO',
                 minPlan: 'PROFESSIONAL',
             },
@@ -696,6 +696,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         alt="CliniGo"
                         width={130}
                         height={34}
+                        priority
                         className="h-8 w-auto"
                     />
                 </Link>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -97,25 +98,31 @@ export function TeleconsultaLinkPanel({ appointment }: TeleconsultaLinkPanelProp
         }
     }
 
-    const handleSendWhatsApp = () => {
+    const handleSendWhatsApp = async () => {
         if (!appointment.patient.phone) {
             toast.error('Paciente não possui telefone cadastrado')
             return
         }
 
-        const phoneNumber = appointment.patient.phone.replace(/\D/g, '')
-        const message = encodeURIComponent(
+        const message =
             `Olá ${appointment.patient.full_name}! 👋\n\n` +
             `Seu link de teleconsulta está pronto:\n\n` +
             `🔗 ${patientLink}\n\n` +
             `📅 Data: ${formattedDateTime}\n` +
             `👨‍⚕️ Médico(a): ${appointment.doctor.user.full_name}\n\n` +
             `Clique no link no horário da consulta para entrar na sala de vídeo.`
-        )
 
-        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
-        toast.success('WhatsApp aberto! Envie a mensagem para o paciente.')
+        const result = await sendWhatsappMessage({
+            to: appointment.patient.phone,
+            message,
+            triggerContext: 'teleconsulta_link',
+        })
+
+        if (result.success) {
+            toast.success('Link de teleconsulta enviado via WhatsApp!')
+        } else {
+            toast.error(result.error || 'Falha ao enviar WhatsApp')
+        }
     }
 
     return (

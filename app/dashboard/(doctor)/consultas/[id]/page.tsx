@@ -27,7 +27,8 @@ import {
     User,
     CheckCircle,
     Phone,
-    Loader2
+    Loader2,
+    Clipboard
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -42,6 +43,7 @@ export default function ConsultationRoomPage({ params }: PageProps) {
     const [activeTab, setActiveTab] = useState<'video' | 'notes'>('video')
     const [showCompletionModal, setShowCompletionModal] = useState(false)
     const [completionNotes, setCompletionNotes] = useState('')
+    const [showPrescriptionForm, setShowPrescriptionForm] = useState(false)
 
     // Fetch consultation
     const { data: consultation, isLoading } = useQuery({
@@ -230,9 +232,18 @@ export default function ConsultationRoomPage({ params }: PageProps) {
 
                                 <div className="space-y-2">
                                     <Label>Prescrição</Label>
-                                    <div className="p-4 border border-dashed rounded-lg text-center text-sm text-muted-foreground hover:bg-muted/50 cursor-pointer transition-colors">
-                                        <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                        Clique para adicionar medicamentos
+                                    <div
+                                        className="p-4 border border-dashed rounded-lg text-center text-sm text-muted-foreground hover:bg-primary/5 hover:border-primary/30 cursor-pointer transition-colors group"
+                                        onClick={() => {
+                                            if (consultation?.patient?.id) {
+                                                window.open(`/dashboard/prescricoes?patient_id=${consultation.patient.id}&appointment_id=${id}`, '_blank')
+                                            } else {
+                                                window.open('/dashboard/prescricoes', '_blank')
+                                            }
+                                        }}
+                                    >
+                                        <Clipboard className="w-8 h-8 mx-auto mb-2 opacity-50 group-hover:opacity-80 group-hover:text-primary transition-all" />
+                                        Clique para emitir prescrição digital
                                     </div>
                                 </div>
                             </div>
@@ -279,6 +290,24 @@ export default function ConsultationRoomPage({ params }: PageProps) {
                             <div className="flex-1">
                                 <p className="text-sm font-medium text-blue-900">Status: Consulta Realizada</p>
                                 <p className="text-xs text-blue-700">O agendamento será marcado como concluído</p>
+                            </div>
+                        </div>
+
+                        {/* Prescription shortcut */}
+                        <div
+                            className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
+                            onClick={() => {
+                                if (consultation?.patient?.id) {
+                                    window.open(`/dashboard/prescricoes?patient_id=${consultation.patient.id}&appointment_id=${id}`, '_blank')
+                                } else {
+                                    window.open('/dashboard/prescricoes', '_blank')
+                                }
+                            }}
+                        >
+                            <Clipboard className="w-5 h-5 text-green-600" />
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-green-900">Emitir Prescrição</p>
+                                <p className="text-xs text-green-700">Abrir módulo de prescrição digital</p>
                             </div>
                         </div>
                     </div>

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
     MessageSquare,
     Settings,
@@ -17,9 +18,12 @@ import {
     Mail,
     Save,
     Loader2,
-    ArrowLeft
+    ArrowLeft,
+    QrCode,
+    Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { WhatsappConnectPanel } from '@/components/whatsapp/WhatsappConnectPanel'
 
 type ProviderType = '' | 'Z_API' | 'EVOLUTION' | 'OFFICIAL'
 
@@ -273,89 +277,122 @@ export default function WhatsAppIntegrationPage() {
                 </CardContent>
             </Card>
 
-            {/* Options */}
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Option 1: Self Configure */}
-                <Card className="border-2 hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2">
-                                <Wrench className="h-5 w-5" />
-                                Configurar Sozinho
-                            </CardTitle>
-                            <Badge variant="outline">Gratuito</Badge>
-                        </div>
-                        <CardDescription>
-                            Para quem já tem um provedor contratado
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li>• Escolha entre Z-API, Evolution ou API Oficial</li>
-                            <li>• Insira as credenciais do seu provedor</li>
-                            <li>• Teste a conexão e pronto!</li>
-                        </ul>
+            {/* Tabs: QR Code Gratuito vs API Paga */}
+            <Tabs defaultValue="qr-code" className="mb-6">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="qr-code" className="gap-2">
+                        <QrCode className="h-4 w-4" />
+                        QR Code (Gratuito)
+                    </TabsTrigger>
+                    <TabsTrigger value="api-paga" className="gap-2">
+                        <Zap className="h-4 w-4" />
+                        API Paga
+                    </TabsTrigger>
+                </TabsList>
 
-                        <div className="pt-4 border-t">
-                            <Button
-                                className="w-full gap-2"
-                                variant="outline"
-                                onClick={() => setShowConfig(true)}
-                            >
-                                <Settings className="h-4 w-4" />
-                                Abrir Configuração
-                            </Button>
+                {/* Tab 1: QR Code Session (Gratuito) */}
+                <TabsContent value="qr-code" className="mt-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Badge className="bg-green-600 text-white">Gratuito</Badge>
+                            <Badge variant="outline">Recomendado</Badge>
                         </div>
-                    </CardContent>
-                </Card>
-
-                {/* Option 2: We Configure */}
-                <Card className="border-2 border-primary bg-primary/5">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2">
-                                <Headphones className="h-5 w-5" />
-                                Nós Configuramos
-                            </CardTitle>
-                            <Badge className="bg-primary">Recomendado</Badge>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Conecte o WhatsApp da clínica escaneando o QR Code, igual ao WhatsApp Web.
+                            Sem custo de API — use o próprio número da clínica.
+                        </p>
+                        <div className="flex justify-center">
+                            <WhatsappConnectPanel />
                         </div>
-                        <CardDescription>
-                            Deixe com nossa equipe
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <ul className="space-y-2 text-sm">
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                Configuração completa
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                Escolhemos o melhor provedor
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                Testes e validação inclusos
-                            </li>
-                        </ul>
+                    </div>
+                </TabsContent>
 
-                        <div className="p-3 bg-white rounded-lg border">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Taxa única:</span>
-                                <span className="font-bold text-lg">R$ 150,00</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Custos de API por conta do cliente
-                            </p>
-                        </div>
+                {/* Tab 2: API Paga (Provedores) */}
+                <TabsContent value="api-paga" className="mt-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Option 1: Self Configure */}
+                        <Card className="border-2 hover:border-primary/50 transition-colors">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Wrench className="h-5 w-5" />
+                                        Configurar Sozinho
+                                    </CardTitle>
+                                    <Badge variant="outline">Gratuito</Badge>
+                                </div>
+                                <CardDescription>
+                                    Para quem já tem um provedor contratado
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <ul className="space-y-2 text-sm text-muted-foreground">
+                                    <li>• Escolha entre Z-API, Evolution ou API Oficial</li>
+                                    <li>• Insira as credenciais do seu provedor</li>
+                                    <li>• Teste a conexão e pronto!</li>
+                                </ul>
 
-                        <Button className="w-full gap-2" onClick={handleContactSupport}>
-                            <Mail className="h-4 w-4" />
-                            Solicitar Configuração
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
+                                <div className="pt-4 border-t">
+                                    <Button
+                                        className="w-full gap-2"
+                                        variant="outline"
+                                        onClick={() => setShowConfig(true)}
+                                    >
+                                        <Settings className="h-4 w-4" />
+                                        Abrir Configuração
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Option 2: We Configure */}
+                        <Card className="border-2 border-primary bg-primary/5">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Headphones className="h-5 w-5" />
+                                        Nós Configuramos
+                                    </CardTitle>
+                                    <Badge className="bg-primary">Recomendado</Badge>
+                                </div>
+                                <CardDescription>
+                                    Deixe com nossa equipe
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <ul className="space-y-2 text-sm">
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                        Configuração completa
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                        Escolhemos o melhor provedor
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                        Testes e validação inclusos
+                                    </li>
+                                </ul>
+
+                                <div className="p-3 bg-white rounded-lg border">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">Taxa única:</span>
+                                        <span className="font-bold text-lg">R$ 150,00</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Custos de API por conta do cliente
+                                    </p>
+                                </div>
+
+                                <Button className="w-full gap-2" onClick={handleContactSupport}>
+                                    <Mail className="h-4 w-4" />
+                                    Solicitar Configuração
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+            </Tabs>
 
             {/* FAQ */}
             <Card className="mt-6">
@@ -367,17 +404,23 @@ export default function WhatsAppIntegrationPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
-                        <h4 className="font-medium">Qual provedor escolher?</h4>
+                        <h4 className="font-medium">Qual opção escolher?</h4>
                         <p className="text-sm text-muted-foreground">
-                            <strong>Z-API:</strong> Bom custo-benefício para clínicas pequenas e médias.
-                            <strong> Evolution:</strong> Gratuito, mas requer servidor próprio.
-                            <strong> API Oficial:</strong> Mais estável, para grandes volumes.
+                            <strong>QR Code (Gratuito):</strong> Ideal para a maioria das clínicas. Use o número existente da clínica, sem custo adicional.{' '}
+                            <strong>API Paga:</strong> Para grandes volumes ou quando precisar de alta disponibilidade com SLA.
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-medium">Quanto custa enviar mensagens?</h4>
+                        <h4 className="font-medium">O QR Code precisa ficar sempre escaneado?</h4>
+                        <p className="text-sm text-muted-foreground">
+                            Não. Após escanear uma vez, a sessão fica ativa automaticamente. Só precisa escanear novamente se desconectar manualmente ou se o WhatsApp deslogar.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 className="font-medium">Quanto custa enviar mensagens via API?</h4>
                         <p className="text-sm text-muted-foreground">
                             Entre R$ 0,05 e R$ 0,15 por mensagem. Cobrado pelo provedor, não pelo CliniGo.
+                            A opção QR Code é gratuita.
                         </p>
                     </div>
 

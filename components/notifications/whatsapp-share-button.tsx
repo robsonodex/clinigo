@@ -1,13 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Loader2 } from 'lucide-react';
 import { generateWhatsAppShareUrl, formatPhoneForWhatsApp } from '@/lib/utils/whatsapp-share';
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender';
 import { toast } from 'sonner';
 
 interface WhatsAppShareButtonProps {
     message: string;
     phone?: string;
+    pdfUrl?: string;
     variant?: 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive' | 'link';
     size?: 'sm' | 'default' | 'lg' | 'icon';
     label?: string;
@@ -17,19 +20,40 @@ interface WhatsAppShareButtonProps {
 export function WhatsAppShareButton({
     message,
     phone,
+    pdfUrl,
     variant = 'outline',
     size = 'default',
     label = 'Compartilhar no WhatsApp',
     className = '',
 }: WhatsAppShareButtonProps) {
-    const handleShare = () => {
-        const formattedPhone = phone ? formatPhoneForWhatsApp(phone) : undefined;
-        const url = generateWhatsAppShareUrl(message, formattedPhone);
+    const [sending, setSending] = useState(false);
 
-        // Abrir em nova aba
-        window.open(url, '_blank', 'noopener,noreferrer');
+    const handleShare = async () => {
+        if (!phone) {
+            toast.error('Telefone não informado. Não é possível enviar WhatsApp.');
+            return;
+        }
 
-        toast.success('WhatsApp aberto! Envie a mensagem manualmente.');
+        setSending(true);
+
+        try {
+            const result = await sendWhatsappMessage({
+                to: phone,
+                message,
+                pdfUrl,
+                triggerContext: 'share_button',
+            });
+
+            if (result.success) {
+                toast.success('✅ Mensagem enviada via WhatsApp da clínica!');
+            } else {
+                toast.error(result.error || 'Falha ao enviar mensagem. WhatsApp não conectado.');
+            }
+        } catch {
+            toast.error('Erro ao enviar WhatsApp. Verifique se a sessão está conectada.');
+        } finally {
+            setSending(false);
+        }
     };
 
     return (
@@ -37,11 +61,17 @@ export function WhatsAppShareButton({
             variant={variant}
             size={size}
             onClick={handleShare}
+            disabled={sending}
             className={`gap-2 ${className}`}
             type="button"
         >
-            <MessageCircle className="h-4 w-4" />
-            {size !== 'icon' && label}
+            {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+                <MessageCircle className="h-4 w-4" />
+            )}
+            {size !== 'icon' && (sending ? 'Enviando...' : label)}
         </Button>
     );
 }
+

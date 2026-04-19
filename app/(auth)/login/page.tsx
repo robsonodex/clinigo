@@ -82,6 +82,7 @@ export default function LoginPage() {
                             alt="CliniGo"
                             width={200}
                             height={52}
+                            priority
                             className="h-14 w-auto"
                         />
                     </Link>

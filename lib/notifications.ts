@@ -15,26 +15,72 @@ export interface ReminderContext {
 }
 
 /**
- * WhatsApp - API removida, usar compartilhamento manual via wa.me
- * @deprecated Use WhatsAppShareButton component for manual sharing
- * @see lib/utils/whatsapp-share.ts for URL generation
+ * WhatsApp - envio automático via microserviço Baileys
  */
 export async function sendWhatsApp(
     to: string,
     context: ReminderContext,
     type: 'REMINDER_24H' | 'REMINDER_2H' | 'REMINDER_15MIN'
 ) {
-    // API WhatsApp removida - clínicas devem usar compartilhamento manual
-    console.log(`[WhatsApp] API removida - compartilhamento manual necessário para: ${to}, tipo: ${type}`);
-    console.log(`[WhatsApp] Paciente: ${context.patient?.full_name}, Consulta: ${context.appointment?.scheduled_at}`);
+    const serviceUrl = process.env.WHATSAPP_SERVICE_URL
+    const serviceSecret = process.env.WHATSAPP_INTERNAL_SECRET
 
-    // Retorna sucesso para não quebrar fluxos existentes
-    // mas indica que compartilhamento manual é necessário
-    return {
-        success: false,
-        reason: 'MANUAL_SHARING_REQUIRED',
-        message: 'WhatsApp API removida. Use o botão de compartilhamento manual.'
-    };
+    if (!serviceUrl || !serviceSecret) {
+        console.log(`[WhatsApp] Serviço não configurado`)
+        return { success: false, reason: 'SERVICE_NOT_CONFIGURED', message: 'Microserviço WhatsApp não configurado.' }
+    }
+
+    if (!to) {
+        return { success: false, reason: 'NO_PHONE', message: 'Paciente sem telefone.' }
+    }
+
+    try {
+        const patientName = context.patient?.full_name || 'Paciente'
+        const doctorName = context.doctor?.full_name || 'Médico'
+        const apptDate = context.appointment?.scheduled_at
+            ? new Date(context.appointment.scheduled_at).toLocaleDateString('pt-BR')
+            : ''
+        const apptTime = context.appointment?.scheduled_at
+            ? new Date(context.appointment.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            : ''
+
+        const typeLabel = type === 'REMINDER_24H' ? '24 horas'
+            : type === 'REMINDER_2H' ? '2 horas' : '15 minutos'
+
+        const message =
+            `🔔 Lembrete de Consulta (${typeLabel})\n\n` +
+            `Olá ${patientName}!\n` +
+            `Sua consulta com Dr(a). ${doctorName} é em ${apptDate} às ${apptTime}.\n` +
+            (context.appointment?.video_link ? `🔗 Link da teleconsulta: ${context.appointment.video_link}\n` : '') +
+            `\n${context.clinic?.name || ''}`
+
+        const cleanPhone = to.replace(/\D/g, '')
+        const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+
+        const res = await fetch(`${serviceUrl}/message/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-secret': serviceSecret,
+            },
+            body: JSON.stringify({
+                clinicId: context.clinic?.id || context.appointment?.clinic_id,
+                to: phone,
+                message,
+                triggerContext: `notification_${type.toLowerCase()}`,
+            }),
+        })
+
+        if (res.ok) {
+            return { success: true, message: 'Enviado via Baileys' }
+        } else {
+            const errBody = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
+            return { success: false, reason: 'SEND_FAILED', message: errBody.error }
+        }
+    } catch (error: any) {
+        console.error('[WhatsApp] Erro ao enviar:', error)
+        return { success: false, reason: 'ERROR', message: error.message }
+    }
 }
 
 /**

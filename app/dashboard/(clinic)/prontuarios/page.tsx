@@ -152,6 +152,12 @@ export default function ProntuariosPage() {
                 payment: {
                     type: 'courtesy',
                     notes: 'Atendimento via Prontuário'
+                },
+                // Prontuários avulsos ignoram validação de agenda e conflitos
+                overrides: {
+                    ignore_schedule_constraints: true,
+                    allow_double_booking: true,
+                    reason: 'Prontuário avulso criado fora da agenda regular'
                 }
             }
 
@@ -196,6 +202,7 @@ export default function ProntuariosPage() {
                 description: error.message || "Tente novamente",
                 variant: "destructive"
             })
+        } finally {
             setIsCreating(false)
         }
     }

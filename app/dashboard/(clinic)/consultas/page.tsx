@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
+import { useToast } from '@/components/ui/use-toast'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -41,6 +43,7 @@ const statusLabels: Record<string, string> = {
 }
 
 export default function ConsultasPage() {
+    const { toast } = useToast()
     const [search, setSearch] = useState('')
     const [tab, setTab] = useState('today')
 
@@ -69,11 +72,18 @@ export default function ConsultasPage() {
         a.doctor?.user?.full_name?.toLowerCase().includes(search.toLowerCase())
     ) || []
 
-    const openWhatsApp = (phone: string, patientName: string) => {
-        const cleanPhone = phone.replace(/\D/g, '')
-        const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+    const handleSendWhatsApp = async (phone: string, patientName: string) => {
         const message = `Olá ${patientName.split(' ')[0]}! Aqui é da clínica.`
-        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank')
+        const result = await sendWhatsappMessage({
+            to: phone,
+            message,
+            triggerContext: 'consultas_contato',
+        })
+        if (result.success) {
+            toast({ title: 'Mensagem enviada!', description: `WhatsApp enviado para ${patientName.split(' ')[0]}` })
+        } else {
+            toast({ title: 'WhatsApp não enviado', description: result.error, variant: 'destructive' })
+        }
     }
 
     return (
@@ -190,7 +200,7 @@ export default function ConsultasPage() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="bg-green-50 border-green-200 text-green-700"
-                                                onClick={() => openWhatsApp(
+                                                onClick={() => handleSendWhatsApp(
                                                     appointment.patient.phone,
                                                     appointment.patient.full_name
                                                 )}

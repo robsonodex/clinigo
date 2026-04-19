@@ -196,16 +196,40 @@ export async function POST(
             }
         }
 
-        // 9. Generate WhatsApp share link for manual sending
-        const whatsappMessage = encodeURIComponent(
-            `Olá ${appointment.patient.full_name}, ` +
-            `percebemos que você não compareceu à consulta agendada para ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às ${appointment.appointment_time}. ` +
-            `Gostaríamos de reagendar? Acesse: ${process.env.NEXT_PUBLIC_APP_URL}/reschedule/${token}`
-        )
+        // 9. Send reschedule WhatsApp via Baileys microservice
+        let whatsappSentOk = false
+        if (appointment.patient.phone) {
+            try {
+                const serviceUrl = process.env.WHATSAPP_SERVICE_URL
+                const serviceSecret = process.env.WHATSAPP_INTERNAL_SECRET
+                if (serviceUrl && serviceSecret) {
+                    const msg =
+                        `Olá ${appointment.patient.full_name}, ` +
+                        `percebemos que você não compareceu à consulta agendada para ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às ${appointment.appointment_time}. ` +
+                        `Gostaríamos de reagendar? Acesse: ${process.env.NEXT_PUBLIC_APP_URL}/reschedule/${token}`
 
-        const whatsappUrl = appointment.patient.phone
-            ? `https://wa.me/55${appointment.patient.phone.replace(/\D/g, '')}?text=${whatsappMessage}`
-            : null
+                    const cleanPhone = appointment.patient.phone.replace(/\D/g, '')
+                    const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+
+                    const wppRes = await fetch(`${serviceUrl}/message/send`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-internal-secret': serviceSecret,
+                        },
+                        body: JSON.stringify({
+                            clinicId: appointment.clinic_id,
+                            to: phone,
+                            message: msg,
+                            triggerContext: 'mark_no_show_reschedule',
+                        }),
+                    })
+                    whatsappSentOk = wppRes.ok
+                }
+            } catch (wppErr) {
+                console.error('Error sending no-show WhatsApp:', wppErr)
+            }
+        }
 
         return NextResponse.json({
             success: true,
@@ -213,7 +237,7 @@ export async function POST(
             appointment: updated,
             minutes_overdue: minutesOverdue,
             reschedule_link: rescheduleToken ? `${process.env.NEXT_PUBLIC_APP_URL}/reschedule/${token}` : null,
-            whatsapp_share_url: whatsappUrl,
+            whatsapp_sent: whatsappSentOk,
             email_sent: !!appointment.patient.email,
         })
 

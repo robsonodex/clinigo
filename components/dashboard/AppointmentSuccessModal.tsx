@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
 import {
     Dialog,
     DialogContent,
@@ -85,23 +86,24 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
                 `📲 *Link de check-in:*\n${appointment.qr_code.url}\n\n` +
                 `Apresente o comprovante anexado na recepção.`
 
-            // Try native share API
+            // Try native share API (mobile devices)
             if (navigator.share && navigator.canShare?.({ files: [file], text: message })) {
                 await navigator.share({ files: [file], text: message })
                 toast.success('Compartilhado com sucesso!')
+            } else if (appointment.patient.phone) {
+                // Send via Baileys session
+                const result = await sendWhatsappMessage({
+                    to: appointment.patient.phone,
+                    message,
+                    triggerContext: 'success_modal_qr_share',
+                })
+                if (result.success) {
+                    toast.success('Comprovante enviado via WhatsApp!')
+                } else {
+                    toast.error(result.error || 'Falha ao enviar WhatsApp')
+                }
             } else {
-                // Fallback to WhatsApp Web with patient phone
-                const patientPhone = appointment.patient.phone?.replace(/\D/g, '')
-                console.log('[DEBUG] Patient phone raw:', appointment.patient.phone)
-                console.log('[DEBUG] Patient phone cleaned:', patientPhone)
-                const formattedPhone = patientPhone ? (patientPhone.startsWith('55') ? patientPhone : `55${patientPhone}`) : ''
-                console.log('[DEBUG] Formatted phone:', formattedPhone)
-                const whatsappUrl = formattedPhone
-                    ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
-                    : `https://wa.me/?text=${encodeURIComponent(message)}`
-                console.log('[DEBUG] WhatsApp URL:', whatsappUrl)
-                window.open(whatsappUrl, '_blank')
-                toast.success(formattedPhone ? 'WhatsApp aberto com o número do paciente!' : 'WhatsApp aberto! Selecione o contato.')
+                toast.error('Paciente não possui telefone cadastrado')
             }
         } catch (error) {
             console.error('Share error:', error)

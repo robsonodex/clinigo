@@ -1,15 +1,20 @@
 /**
  * WhatsApp Share Button Component
- * Opens WhatsApp Web with pre-filled message for clinic contact
+ * Dual mode: sends automatically if Baileys session connected,
+ * falls back to WhatsApp Web link if not
  */
 'use client'
 
-import { MessageCircle } from 'lucide-react'
+import { useState } from 'react'
+import { MessageCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
+import { toast } from 'sonner'
 
 interface WhatsAppButtonProps {
     clinicPhone: string
     message: string
+    pdfUrl?: string
     variant?: 'default' | 'outline' | 'ghost'
     size?: 'default' | 'sm' | 'lg'
     className?: string
@@ -35,19 +40,35 @@ function formatPhoneForWhatsApp(phone: string): string {
 export function WhatsAppButton({
     clinicPhone,
     message,
+    pdfUrl,
     variant = 'default',
     size = 'default',
     className = '',
     children,
 }: WhatsAppButtonProps) {
-    const openWhatsApp = () => {
-        const formattedPhone = formatPhoneForWhatsApp(clinicPhone)
-        const encodedMessage = encodeURIComponent(message)
+    const [sending, setSending] = useState(false)
 
-        // Use WhatsApp API URL (works on both mobile and desktop)
-        const url = `https://wa.me/${formattedPhone}?text=${encodedMessage}`
+    const openWhatsApp = async () => {
+        setSending(true)
 
-        window.open(url, '_blank', 'noopener,noreferrer')
+        try {
+            const result = await sendWhatsappMessage({
+                to: clinicPhone,
+                message,
+                pdfUrl,
+                triggerContext: 'whatsapp_button',
+            })
+
+            if (result.success) {
+                toast.success('✅ Mensagem enviada via WhatsApp da clínica!')
+            } else {
+                toast.error(result.error || 'WhatsApp não conectado. Conecte na aba WhatsApp.')
+            }
+        } catch {
+            toast.error('Erro ao enviar WhatsApp. Verifique se a sessão está conectada.')
+        } finally {
+            setSending(false)
+        }
     }
 
     return (
@@ -55,10 +76,15 @@ export function WhatsAppButton({
             onClick={openWhatsApp}
             variant={variant}
             size={size}
+            disabled={sending}
             className={`bg-green-600 hover:bg-green-700 text-white ${className}`}
         >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            {children || 'Falar no WhatsApp'}
+            {sending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+                <MessageCircle className="w-4 h-4 mr-2" />
+            )}
+            {children || (sending ? 'Enviando...' : 'Falar no WhatsApp')}
         </Button>
     )
 }
@@ -99,3 +125,4 @@ export const whatsappTemplates = {
     reschedule: (data: { patientName: string; originalDate: string }) =>
         `Olá! Sou ${data.patientName} e preciso remarcar minha consulta que estava agendada para ${data.originalDate}. Quais horários estão disponíveis?`,
 }
+

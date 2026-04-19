@@ -66,6 +66,7 @@ export default function MedicoLoginPage() {
                             alt="CliniGo"
                             width={200}
                             height={52}
+                            priority
                             className="h-14 w-auto group-hover:scale-105 transition-transform"
                         />
                     </Link>

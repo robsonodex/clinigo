@@ -24,6 +24,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { hasFeature } from '@/lib/constants/plan-features'
 import { type PlanType } from '@/lib/constants/plans'
+import { sendWhatsappMessage } from '@/lib/whatsapp-sender'
 
 interface QueueItem {
     id: string
@@ -965,7 +966,22 @@ export default function RecepcaoPage() {
                             Peça para o paciente escanear para fazer check-in ou envie pelo WhatsApp.
                         </p>
                         <div className="flex gap-2 w-full">
-                            <Button className="flex-1" variant="outline" onClick={() => window.open(createdWalkIn?.qrCode?.whatsappLink, '_blank')}>
+                            <Button className="flex-1" variant="outline" onClick={async () => {
+                                // Walk-in QR send via Baileys
+                                const phone = createdWalkIn?.patient?.phone
+                                const name = createdWalkIn?.patient?.full_name || 'Paciente'
+                                if (!phone) {
+                                    toast({ title: 'Sem telefone', description: 'Paciente não possui telefone cadastrado.', variant: 'destructive' })
+                                    return
+                                }
+                                const msg = `Olá ${name.split(' ')[0]}! Seu link de check-in: ${createdWalkIn?.qrCode?.checkinUrl || ''}`
+                                const result = await sendWhatsappMessage({ to: phone, message: msg, triggerContext: 'recepcao_walkin_qr' })
+                                if (result.success) {
+                                    toast({ title: 'Enviado!', description: 'Link de check-in enviado via WhatsApp.' })
+                                } else {
+                                    toast({ title: 'WhatsApp não enviado', description: result.error, variant: 'destructive' })
+                                }
+                            }}>
                                 <MessageCircle className="w-4 h-4 mr-2" />
                                 Enviar WhatsApp
                             </Button>

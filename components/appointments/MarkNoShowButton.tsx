@@ -31,7 +31,6 @@ export function MarkNoShowButton({
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [reason, setReason] = useState('')
-    const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null)
 
     const handleMarkNoShow = async () => {
         setLoading(true)
@@ -62,19 +61,15 @@ export function MarkNoShowButton({
                 throw new Error(data.error || 'Erro ao marcar falta')
             }
 
-            // Store WhatsApp URL for sharing
-            if (data.whatsapp_share_url) {
-                setWhatsappUrl(data.whatsapp_share_url)
-            }
+            // Notify about WhatsApp status
+            const wppInfo = data.whatsapp_sent
+                ? ' WhatsApp de reagendamento enviado.'
+                : ''
 
             toast.success('Falta registrada com sucesso', {
                 description: data.email_sent
-                    ? `Email de reagendamento enviado para ${patientName}`
-                    : `Agendamento marcado como "Não Compareceu"`,
-                action: data.whatsapp_share_url ? {
-                    label: 'Compartilhar WhatsApp',
-                    onClick: () => window.open(data.whatsapp_share_url, '_blank')
-                } : undefined
+                    ? `Email de reagendamento enviado para ${patientName}.${wppInfo}`
+                    : `Agendamento marcado como "Não Compareceu".${wppInfo}`,
             })
 
             setOpen(false)

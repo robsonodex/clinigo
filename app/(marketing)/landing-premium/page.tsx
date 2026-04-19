@@ -409,6 +409,22 @@ export default function LandingPremium() {
                             Seus pacientes fazem check-in sozinhos via QR Code ou reconhecimento facial. Sem filas, sem burocracia na recepção.
                         </p>
                     </motion.div>
+
+                    {/* Feature 9 - Prescrição Digital */}
+                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
+                        <div className="absolute top-4 right-4">
+                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                                Novo
+                            </span>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
+                            <FileText className="w-6 h-6 text-teal-vibrant" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Prescrição Digital</h3>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            Emissão, assinatura digital e envio seguro de prescrições médicas eletrônicas com geração de PDF profissional integrada ao prontuário.
+                        </p>
+                    </motion.div>
                 </div>
             </section>
 
@@ -559,6 +575,7 @@ export default function LandingPremium() {
                                 </summary>
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> TISS completo</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Prescrição Digital</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Check-in Facial</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Totem de Auto Atendimento</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Auditoria financeira</li>

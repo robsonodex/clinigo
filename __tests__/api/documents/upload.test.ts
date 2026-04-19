@@ -53,10 +53,18 @@ describe('API /api/documents', () => {
                 select: jest.fn().mockReturnValue({
                     order: jest.fn().mockReturnValue({
                         limit: jest.fn().mockReturnValue({
+                            in: jest.fn().mockReturnValue({
+                                eq: jest.fn().mockReturnValue({
+                                    or: jest.fn().mockResolvedValue({ data: [], error: null })
+                                }),
+                                or: jest.fn().mockResolvedValue({ data: [], error: null }),
+                                then: (resolve: any) => resolve({ data: [], error: null })
+                            }),
                             eq: jest.fn().mockReturnValue({
                                 or: jest.fn().mockResolvedValue({ data: [], error: null })
                             }),
-                            or: jest.fn().mockResolvedValue({ data: [], error: null })
+                            or: jest.fn().mockResolvedValue({ data: [], error: null }),
+                            then: (resolve: any) => resolve({ data: [], error: null })
                         })
                     })
                 }),
@@ -74,12 +82,19 @@ describe('API /api/documents', () => {
             }
         }
 
-        // Make limit().eq() also return the final resolved value for chaining
+        // Make limit().in().eq() return the final resolved value for chaining
         const limitMock = mockSupabase.from().select().order().limit
         limitMock.mockReturnValue({
+            in: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                    or: jest.fn().mockResolvedValue({ data: [], error: null }),
+                    then: (resolve: any) => resolve({ data: [], error: null })
+                }),
+                or: jest.fn().mockResolvedValue({ data: [], error: null }),
+                then: (resolve: any) => resolve({ data: [], error: null })
+            }),
             eq: jest.fn().mockReturnValue({
                 or: jest.fn().mockResolvedValue({ data: [], error: null }),
-                // If no more chaining, resolve directly
                 then: (resolve: any) => resolve({ data: [], error: null })
             }),
             or: jest.fn().mockResolvedValue({ data: [], error: null }),
@@ -131,7 +146,8 @@ describe('API /api/documents', () => {
 
             // Re-setup mock for this specific test with data
             const eqMock = jest.fn().mockResolvedValue({ data: mockDocuments, error: null })
-            const limitMock = jest.fn().mockReturnValue({ eq: eqMock })
+            const inMock = jest.fn().mockReturnValue({ eq: eqMock })
+            const limitMock = jest.fn().mockReturnValue({ in: inMock, eq: eqMock })
             const orderMock = jest.fn().mockReturnValue({ limit: limitMock })
             const selectMock = jest.fn().mockReturnValue({ order: orderMock })
             mockSupabase.from.mockReturnValue({ select: selectMock })
