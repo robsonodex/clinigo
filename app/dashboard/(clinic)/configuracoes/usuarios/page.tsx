@@ -44,9 +44,13 @@ import {
     X,
     Trash2,
     Key,
+    KeyRound,
     Edit,
     Dices,
-    Copy
+    Copy,
+    Eye,
+    EyeOff,
+    Lock
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -135,6 +139,10 @@ export default function UsuariosPermissoesPage() {
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<User | null>(null)
+    const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null)
+    const [resetPassword, setResetPassword] = useState('')
+    const [showResetPassword, setShowResetPassword] = useState(false)
+    const [resettingPassword, setResettingPassword] = useState(false)
     const [newUser, setNewUser] = useState({
         name: '',
         email: '',
@@ -280,7 +288,7 @@ export default function UsuariosPermissoesPage() {
         }
     }
 
-    async function handleResetPassword(email: string) {
+    async function handleResetPasswordEmail(email: string) {
         try {
             const supabase = createClient()
             const { error } = await supabase.auth.resetPasswordForEmail(email)
@@ -289,6 +297,56 @@ export default function UsuariosPermissoesPage() {
             toast.success('Email de redefinição enviado!')
         } catch (error) {
             toast.error('Erro ao enviar email')
+        }
+    }
+
+    function generateResetPassword() {
+        const length = 12
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+        let pwd = ""
+        for (let i = 0; i < length; i++) {
+            pwd += charset.charAt(Math.floor(Math.random() * charset.length))
+        }
+        setResetPassword(pwd)
+    }
+
+    function copyResetPassword() {
+        navigator.clipboard.writeText(resetPassword)
+        toast.success('Senha copiada para a área de transferência!')
+    }
+
+    async function handleForceResetPassword() {
+        if (!resetPasswordUser || !resetPassword) {
+            toast.error('Digite ou gere uma nova senha')
+            return
+        }
+
+        if (resetPassword.length < 6) {
+            toast.error('A senha deve ter no mínimo 6 caracteres')
+            return
+        }
+
+        setResettingPassword(true)
+        try {
+            const response = await fetch(`/api/users/${resetPasswordUser.id}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: resetPassword })
+            })
+
+            if (!response.ok) {
+                const err = await response.json()
+                throw new Error(err.error || 'Erro ao redefinir senha')
+            }
+
+            toast.success(`Senha de ${resetPasswordUser.name} redefinida com sucesso!`)
+            setResetPasswordUser(null)
+            setResetPassword('')
+            setShowResetPassword(false)
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao redefinir senha')
+        } finally {
+            setResettingPassword(false)
         }
     }
 
@@ -504,9 +562,17 @@ export default function UsuariosPermissoesPage() {
                                                             <Edit className="w-4 h-4 mr-2" />
                                                             Editar
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleResetPassword(user.email)}>
-                                                            <Key className="w-4 h-4 mr-2" />
-                                                            Resetar Senha
+                                                        <DropdownMenuItem onClick={() => handleResetPasswordEmail(user.email)}>
+                                                            <Mail className="w-4 h-4 mr-2" />
+                                                            Enviar Link por Email
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => {
+                                                            setResetPasswordUser(user)
+                                                            setResetPassword('')
+                                                            setShowResetPassword(false)
+                                                        }}>
+                                                            <KeyRound className="w-4 h-4 mr-2" />
+                                                            Forçar Nova Senha
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => handleToggleUserStatus(user.id, user.status !== 'active')}
@@ -645,6 +711,105 @@ export default function UsuariosPermissoesPage() {
                         <Button onClick={handleUpdateUser}>
                             <Check className="w-4 h-4 mr-2" />
                             Salvar Alterações
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Forçar Redefinição de Senha */}
+            <Dialog open={!!resetPasswordUser} onOpenChange={(open) => {
+                if (!open) {
+                    setResetPasswordUser(null)
+                    setResetPassword('')
+                    setShowResetPassword(false)
+                }
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Lock className="w-5 h-5 text-orange-500" />
+                            Forçar Nova Senha
+                        </DialogTitle>
+                        <DialogDescription>
+                            Defina uma nova senha para <strong>{resetPasswordUser?.name}</strong> ({resetPasswordUser?.email}).
+                            O usuário poderá acessar imediatamente com a nova senha.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Nova Senha</Label>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <Input
+                                        type={showResetPassword ? 'text' : 'password'}
+                                        value={resetPassword}
+                                        onChange={(e) => setResetPassword(e.target.value)}
+                                        placeholder="Mínimo 6 caracteres"
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full"
+                                        onClick={() => setShowResetPassword(!showResetPassword)}
+                                    >
+                                        {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </Button>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={generateResetPassword}
+                                    title="Gerar Senha Aleatória"
+                                >
+                                    <Dices className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={copyResetPassword}
+                                    disabled={!resetPassword}
+                                    title="Copiar Senha"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                A senha será aplicada imediatamente. Copie e envie ao usuário por um canal seguro.
+                            </p>
+                        </div>
+
+                        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                            <p className="text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                                <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <span>Esta ação é registrada no log de auditoria. O usuário será deslogado de todas as sessões ativas.</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                            setResetPasswordUser(null)
+                            setResetPassword('')
+                            setShowResetPassword(false)
+                        }}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleForceResetPassword}
+                            disabled={resettingPassword || !resetPassword || resetPassword.length < 6}
+                            className="bg-orange-600 hover:bg-orange-700"
+                        >
+                            {resettingPassword ? (
+                                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <Key className="w-4 h-4 mr-2" />
+                            )}
+                            Redefinir Senha
                         </Button>
                     </DialogFooter>
                 </DialogContent>
