@@ -12,6 +12,7 @@ import {
     TrendingUp,
     TrendingDown,
     Eye,
+    EyeOff,
     Shield,
     AlertTriangle,
     DollarSign,
@@ -26,6 +27,10 @@ import {
     Lock,
     Unlock,
     Megaphone,
+    Key,
+    KeyRound,
+    Dices,
+    Copy,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,6 +47,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
     Table,
@@ -117,6 +123,12 @@ export default function SuperAdminDashboard() {
     const [featureTitle, setFeatureTitle] = useState('')
     const [featureMessage, setFeatureMessage] = useState('')
     const [featureTargetPlans, setFeatureTargetPlans] = useState<string[]>([])
+
+    // Reset Password State
+    const [resetPwdUser, setResetPwdUser] = useState<DashboardData['users'][0] | null>(null)
+    const [resetPwdValue, setResetPwdValue] = useState('')
+    const [showResetPwd, setShowResetPwd] = useState(false)
+    const [resettingPwd, setResettingPwd] = useState(false)
     const [sendingFeature, setSendingFeature] = useState(false)
 
     useEffect(() => {
@@ -497,6 +509,66 @@ export default function SuperAdminDashboard() {
         setFeatureTargetPlans(prev =>
             prev.includes(plan) ? prev.filter(p => p !== plan) : [...prev, plan]
         )
+    }
+
+    // === Reset Password Handlers ===
+    const openResetPwdModal = (user: DashboardData['users'][0]) => {
+        setResetPwdUser(user)
+        setResetPwdValue('')
+        setShowResetPwd(false)
+    }
+
+    const closeResetPwdModal = () => {
+        setResetPwdUser(null)
+        setResetPwdValue('')
+        setShowResetPwd(false)
+    }
+
+    const generateResetPwd = () => {
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+        let pwd = ''
+        for (let i = 0; i < 12; i++) {
+            pwd += charset.charAt(Math.floor(Math.random() * charset.length))
+        }
+        setResetPwdValue(pwd)
+    }
+
+    const copyResetPwd = () => {
+        navigator.clipboard.writeText(resetPwdValue)
+        alert('Senha copiada para a área de transferência!')
+    }
+
+    const handleForceResetPwd = async () => {
+        if (!resetPwdUser || !resetPwdValue) {
+            alert('Digite ou gere uma nova senha')
+            return
+        }
+        if (resetPwdValue.length < 6) {
+            alert('A senha deve ter no mínimo 6 caracteres')
+            return
+        }
+
+        setResettingPwd(true)
+        try {
+            const res = await fetch(`/api/users/${resetPwdUser.id}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: resetPwdValue }),
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao redefinir senha')
+            }
+
+            alert(`✅ Senha de "${resetPwdUser.displayName}" (${resetPwdUser.email}) redefinida com sucesso!`)
+            closeResetPwdModal()
+        } catch (error) {
+            console.error('Reset password error:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setResettingPwd(false)
+        }
     }
 
     const handleGenerateBoleto = async (clinicId: string, clinicName: string, planType: string) => {
@@ -882,6 +954,15 @@ export default function SuperAdminDashboard() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
+                                                                onClick={() => openResetPwdModal(user)}
+                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            >
+                                                                <KeyRound className="h-4 w-4 mr-1" />
+                                                                Resetar Senha
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
                                                                 onClick={() => handleDeleteUser(user.id, user.displayName, false)}
                                                                 className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                                                             >
@@ -1091,6 +1172,93 @@ export default function SuperAdminDashboard() {
                                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
                             ) : (
                                 <><Megaphone className="h-4 w-4 mr-2" /> Enviar para Todas</>  
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reset Password Modal */}
+            <Dialog open={!!resetPwdUser} onOpenChange={(open) => { if (!open) closeResetPwdModal() }}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <KeyRound className="h-5 w-5 text-blue-600" />
+                            Resetar Senha do Usuário
+                        </DialogTitle>
+                        <DialogDescription>
+                            Definir nova senha para <strong>{resetPwdUser?.displayName}</strong> ({resetPwdUser?.email})
+                            {resetPwdUser?.clinicName && (
+                                <> — Clínica: <strong>{resetPwdUser.clinicName}</strong></>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label>Nova Senha</Label>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <Input
+                                        type={showResetPwd ? 'text' : 'password'}
+                                        value={resetPwdValue}
+                                        onChange={(e) => setResetPwdValue(e.target.value)}
+                                        placeholder="Mínimo 6 caracteres"
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full"
+                                        onClick={() => setShowResetPwd(!showResetPwd)}
+                                    >
+                                        {showResetPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </Button>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={generateResetPwd}
+                                    title="Gerar Senha Aleatória"
+                                >
+                                    <Dices className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={copyResetPwd}
+                                    disabled={!resetPwdValue}
+                                    title="Copiar Senha"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                                A senha será aplicada imediatamente. Copie e envie ao usuário por um canal seguro.
+                            </p>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <p className="text-sm text-amber-800 flex items-start gap-2">
+                                <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <span>O usuário será deslogado de todas as sessões ativas e precisará usar a nova senha.</span>
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={closeResetPwdModal} disabled={resettingPwd}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleForceResetPwd}
+                            disabled={resettingPwd || !resetPwdValue || resetPwdValue.length < 6}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            {resettingPwd ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Redefinindo...</>
+                            ) : (
+                                <><Key className="h-4 w-4 mr-2" /> Redefinir Senha</>
                             )}
                         </Button>
                     </DialogFooter>
