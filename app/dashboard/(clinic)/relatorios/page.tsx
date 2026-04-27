@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw, Shield, FileText, Receipt } from 'lucide-react'
+import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw, Shield, FileText, Receipt, UserCheck, ListChecks } from 'lucide-react'
 import { toast } from 'sonner'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
@@ -49,6 +49,8 @@ export default function ReportsPage() {
     const [insuranceStats, setInsuranceStats] = useState<any[]>([])
     const [agendaReport, setAgendaReport] = useState<{ data: any[], summary: any }>({ data: [], summary: {} })
     const [reimbursementReport, setReimbursementReport] = useState<{ data: any[], patient_summary: any[], summary: any }>({ data: [], patient_summary: [], summary: {} })
+    const [frequencyReport, setFrequencyReport] = useState<{ data: any[], summary: any }>({ data: [], summary: {} })
+    const [sessionsReport, setSessionsReport] = useState<{ data: any[], summary: any }>({ data: [], summary: {} })
     const [dateRange, setDateRange] = useState('month')
     const [exporting, setExporting] = useState(false)
     const profLabel = useProfessionalLabel()
@@ -126,6 +128,20 @@ export default function ReportsPage() {
             if (reimbursementRes.ok) {
                 const data = await reimbursementRes.json()
                 setReimbursementReport({ data: data.data || [], patient_summary: data.patient_summary || [], summary: data.summary || {} })
+            }
+
+            // Fetch Patient Frequency
+            const freqRes = await fetch(`/api/reports?type=patient_frequency&${params}`)
+            if (freqRes.ok) {
+                const data = await freqRes.json()
+                setFrequencyReport({ data: data.data || [], summary: data.summary || {} })
+            }
+
+            // Fetch Patient Sessions
+            const sessRes = await fetch(`/api/reports?type=patient_sessions&${params}`)
+            if (sessRes.ok) {
+                const data = await sessRes.json()
+                setSessionsReport({ data: data.data || [], summary: data.summary || {} })
             }
 
         } catch (error) {
@@ -311,6 +327,14 @@ export default function ReportsPage() {
                     <TabsTrigger value="reimbursement" className="gap-2">
                         <Receipt className="h-4 w-4" />
                         Reembolso
+                    </TabsTrigger>
+                    <TabsTrigger value="frequency" className="gap-2">
+                        <UserCheck className="h-4 w-4" />
+                        Frequência
+                    </TabsTrigger>
+                    <TabsTrigger value="patient_sessions" className="gap-2">
+                        <ListChecks className="h-4 w-4" />
+                        Sessões Paciente
                     </TabsTrigger>
                 </TabsList>
 
@@ -662,6 +686,91 @@ export default function ReportsPage() {
                                                         <td className="p-2 text-right text-blue-600">{formatCurrency(item.billing_amount)}</td>
                                                         <td className="p-2 text-right">{formatCurrency(item.reimbursement_amount)}</td>
                                                         <td className="p-2 text-right text-green-600 font-medium">{formatCurrency(item.total_reimbursement)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* FREQUÊNCIA */}
+                <TabsContent value="frequency">
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold">{frequencyReport.summary.total_patients || 0}</div><p className="text-xs text-muted-foreground">Pacientes</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold">{frequencyReport.summary.total_appointments || 0}</div><p className="text-xs text-muted-foreground">Total Agendamentos</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold text-green-600">{frequencyReport.summary.total_completed || 0}</div><p className="text-xs text-muted-foreground">Compareceram</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold text-red-600">{frequencyReport.summary.total_no_show || 0}</div><p className="text-xs text-muted-foreground">Faltaram</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold">{frequencyReport.summary.overall_attendance_rate || 0}%</div><p className="text-xs text-muted-foreground">Taxa Presença Geral</p></CardContent></Card>
+                        </div>
+                        <Card>
+                            <CardHeader><CardTitle>Frequência por Paciente</CardTitle><CardDescription>Ordenado por menor taxa de presença (pacientes que mais faltam aparecem primeiro)</CardDescription></CardHeader>
+                            <CardContent>
+                                {frequencyReport.data.length === 0 ? (
+                                    <p className="text-center text-muted-foreground py-8">Sem dados no período</p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead><tr className="border-b"><th className="p-2 text-left">Paciente</th><th className="p-2 text-left">Profissional</th><th className="p-2 text-center">Total</th><th className="p-2 text-center">Presentes</th><th className="p-2 text-center">Faltas</th><th className="p-2 text-center">Canceladas</th><th className="p-2 text-center">Taxa Presença</th></tr></thead>
+                                            <tbody>
+                                                {frequencyReport.data.map((p: any) => (
+                                                    <tr key={p.patient_id} className="border-b hover:bg-muted/50">
+                                                        <td className="p-2 font-medium">{p.patient_name}</td>
+                                                        <td className="p-2">{p.professional}</td>
+                                                        <td className="p-2 text-center">{p.total}</td>
+                                                        <td className="p-2 text-center text-green-600">{p.completed}</td>
+                                                        <td className="p-2 text-center text-red-600 font-bold">{p.no_show}</td>
+                                                        <td className="p-2 text-center">{p.cancelled}</td>
+                                                        <td className="p-2 text-center">
+                                                            <Badge variant={p.attendance_rate >= 80 ? 'default' : p.attendance_rate >= 50 ? 'secondary' : 'destructive'}>{p.attendance_rate}%</Badge>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* SESSÕES POR PACIENTE */}
+                <TabsContent value="patient_sessions">
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold">{sessionsReport.summary.total_sessions || 0}</div><p className="text-xs text-muted-foreground">Total Sessões</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold text-green-600">{sessionsReport.summary.completed || 0}</div><p className="text-xs text-muted-foreground">Realizadas</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold text-red-600">{sessionsReport.summary.no_show || 0}</div><p className="text-xs text-muted-foreground">Faltas</p></CardContent></Card>
+                            <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold text-orange-600">{sessionsReport.summary.cancelled || 0}</div><p className="text-xs text-muted-foreground">Canceladas</p></CardContent></Card>
+                        </div>
+                        <Card>
+                            <CardHeader><CardTitle>Sessões Realizadas</CardTitle><CardDescription>Listagem detalhada de todas as sessões no período</CardDescription></CardHeader>
+                            <CardContent>
+                                {sessionsReport.data.length === 0 ? (
+                                    <p className="text-center text-muted-foreground py-8">Sem dados no período</p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead><tr className="border-b"><th className="p-2 text-left">Data</th><th className="p-2 text-left">Horário</th><th className="p-2 text-left">Paciente</th><th className="p-2 text-left">Profissional</th><th className="p-2 text-left">Especialidade</th><th className="p-2 text-left">Convênio</th><th className="p-2 text-center">Status</th></tr></thead>
+                                            <tbody>
+                                                {sessionsReport.data.map((s: any) => (
+                                                    <tr key={s.id} className="border-b hover:bg-muted/50">
+                                                        <td className="p-2">{new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                                                        <td className="p-2">{s.start_time?.slice(0,5) || '-'}</td>
+                                                        <td className="p-2 font-medium">{s.patient_name}</td>
+                                                        <td className="p-2">{s.professional}</td>
+                                                        <td className="p-2">{s.specialty}</td>
+                                                        <td className="p-2">{s.insurance}</td>
+                                                        <td className="p-2 text-center">
+                                                            <Badge variant={s.status === 'COMPLETED' || s.status === 'CONFIRMED' ? 'default' : s.status === 'NO_SHOW' ? 'destructive' : 'secondary'}>
+                                                                {s.status === 'COMPLETED' ? 'Realizada' : s.status === 'CONFIRMED' ? 'Confirmada' : s.status === 'NO_SHOW' ? 'Falta' : s.status === 'CANCELLED' ? 'Cancelada' : s.status}
+                                                            </Badge>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

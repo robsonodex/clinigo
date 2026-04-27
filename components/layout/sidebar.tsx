@@ -48,6 +48,8 @@ import {
     Upload,
     Bot,
     MessagesSquare,
+    ClipboardList,
+    UserX,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
@@ -164,6 +166,24 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/configuracoes/templates-prontuario',
                 icon: FileText,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+            },
+            {
+                title: 'Planos Terapêuticos',
+                href: '/dashboard/planos-terapeuticos',
+                icon: ClipboardList,
+                roles: ['CLINIC_ADMIN', 'DOCTOR'],
+            },
+            {
+                title: 'Evoluções',
+                href: '/dashboard/evolucoes',
+                icon: TrendingUp,
+                roles: ['CLINIC_ADMIN', 'DOCTOR'],
+            },
+            {
+                title: 'Controle de Faltas',
+                href: '/dashboard/controle-faltas',
+                icon: UserX,
+                roles: ['CLINIC_ADMIN'],
             },
         ],
     },

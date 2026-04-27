@@ -96,6 +96,16 @@ export async function GET(request: NextRequest) {
             case 'reimbursement_report':
                 return await getReimbursementReport(supabase, clinicId, startDate, endDate)
 
+            case 'patient_frequency': {
+                const patientId = searchParams.get('patient_id')
+                return await getPatientFrequency(supabase, clinicId, startDate, endDate, patientId)
+            }
+
+            case 'patient_sessions': {
+                const patientId = searchParams.get('patient_id')
+                return await getPatientSessions(supabase, clinicId, startDate, endDate, patientId)
+            }
+
             default:
                 return NextResponse.json({ error: 'Tipo de relatório inválido' }, { status: 400 })
         }
@@ -596,3 +606,142 @@ async function getReimbursementReport(supabase: SupabaseClient<any, "public", an
     })
 }
 
+// ==========================================
+// RELATÓRIO DE FREQUÊNCIA DO PACIENTE
+// ==========================================
+async function getPatientFrequency(
+    supabase: SupabaseClient<any, "public", any>,
+    clinicId: string,
+    startDate: string,
+    endDate: string,
+    patientId: string | null
+) {
+    let query = supabase
+        .from('appointments')
+        .select(`
+            id, status, appointment_date, start_time,
+            patients(id, full_name),
+            doctors(id, specialty, users(full_name))
+        `)
+        .eq('clinic_id', clinicId)
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
+        .order('appointment_date', { ascending: false })
+
+    if (patientId) query = query.eq('patient_id', patientId)
+
+    const { data: appointments, error } = await query
+    if (error) throw error
+
+    // Group by patient
+    const patientStats: Record<string, {
+        patient_name: string, patient_id: string,
+        total: number, completed: number, no_show: number, cancelled: number, pending: number,
+        attendance_rate: number, professional: string
+    }> = {}
+
+    for (const apt of (appointments || [])) {
+        const p = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients
+        const d = Array.isArray(apt.doctors) ? apt.doctors[0] : apt.doctors
+        const pName = p?.full_name || 'N/A'
+        const pId = p?.id || 'unknown'
+        const dUser = d?.users ? (Array.isArray(d.users) ? d.users[0] : d.users) : null
+
+        if (!patientStats[pId]) {
+            patientStats[pId] = {
+                patient_name: pName, patient_id: pId,
+                total: 0, completed: 0, no_show: 0, cancelled: 0, pending: 0,
+                attendance_rate: 0, professional: dUser?.full_name || d?.specialty || 'N/A'
+            }
+        }
+
+        patientStats[pId].total++
+        const status = (apt.status || '').toUpperCase()
+        if (status === 'COMPLETED' || status === 'CONFIRMED') patientStats[pId].completed++
+        else if (status === 'NO_SHOW') patientStats[pId].no_show++
+        else if (status === 'CANCELLED') patientStats[pId].cancelled++
+        else patientStats[pId].pending++
+    }
+
+    // Calc attendance rate
+    const stats = Object.values(patientStats).map(s => ({
+        ...s,
+        attendance_rate: s.total > 0 ? Math.round(((s.completed) / s.total) * 100) : 0
+    }))
+
+    const totalAll = stats.reduce((s, p) => s + p.total, 0)
+    const completedAll = stats.reduce((s, p) => s + p.completed, 0)
+    const noShowAll = stats.reduce((s, p) => s + p.no_show, 0)
+
+    return NextResponse.json({
+        data: stats.sort((a, b) => a.attendance_rate - b.attendance_rate),
+        summary: {
+            total_appointments: totalAll,
+            total_completed: completedAll,
+            total_no_show: noShowAll,
+            overall_attendance_rate: totalAll > 0 ? Math.round((completedAll / totalAll) * 100) : 0,
+            total_patients: stats.length,
+        }
+    })
+}
+
+// ==========================================
+// RELATÓRIO DE SESSÕES POR PACIENTE
+// ==========================================
+async function getPatientSessions(
+    supabase: SupabaseClient<any, "public", any>,
+    clinicId: string,
+    startDate: string,
+    endDate: string,
+    patientId: string | null
+) {
+    let query = supabase
+        .from('appointments')
+        .select(`
+            id, status, appointment_date, start_time, end_time, therapy_type, notes,
+            patients(id, full_name, cpf, date_of_birth),
+            doctors(id, specialty, users(full_name)),
+            health_insurance_plans(name)
+        `)
+        .eq('clinic_id', clinicId)
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
+        .order('appointment_date', { ascending: true })
+
+    if (patientId) query = query.eq('patient_id', patientId)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const sessions = (data || []).map(apt => {
+        const p = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients
+        const d = Array.isArray(apt.doctors) ? apt.doctors[0] : apt.doctors
+        const dUser = d?.users ? (Array.isArray(d.users) ? d.users[0] : d.users) : null
+        const hip = Array.isArray(apt.health_insurance_plans) ? apt.health_insurance_plans[0] : apt.health_insurance_plans
+
+        return {
+            id: apt.id,
+            date: apt.appointment_date,
+            start_time: apt.start_time,
+            end_time: apt.end_time,
+            status: apt.status,
+            therapy_type: apt.therapy_type,
+            patient_name: p?.full_name || 'N/A',
+            patient_id: p?.id,
+            professional: dUser?.full_name || 'N/A',
+            specialty: d?.specialty || 'N/A',
+            insurance: hip?.name || 'Particular',
+            notes: apt.notes || '',
+        }
+    })
+
+    return NextResponse.json({
+        data: sessions,
+        summary: {
+            total_sessions: sessions.length,
+            completed: sessions.filter(s => s.status === 'COMPLETED' || s.status === 'CONFIRMED').length,
+            no_show: sessions.filter(s => s.status === 'NO_SHOW').length,
+            cancelled: sessions.filter(s => s.status === 'CANCELLED').length,
+        }
+    })
+}
