@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw, Shield } from 'lucide-react'
+import { Loader2, TrendingUp, TrendingDown, Users, Calendar, DollarSign, BarChart3, PieChart, Download, RefreshCcw, Shield, FileText, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
@@ -47,6 +47,8 @@ export default function ReportsPage() {
     const [revenueByDoctor, setRevenueByDoctor] = useState<RevenueByDoctor[]>([])
     const [appointmentsByDay, setAppointmentsByDay] = useState<AppointmentsByDay[]>([])
     const [insuranceStats, setInsuranceStats] = useState<any[]>([])
+    const [agendaReport, setAgendaReport] = useState<{ data: any[], summary: any }>({ data: [], summary: {} })
+    const [reimbursementReport, setReimbursementReport] = useState<{ data: any[], patient_summary: any[], summary: any }>({ data: [], patient_summary: [], summary: {} })
     const [dateRange, setDateRange] = useState('month')
     const [exporting, setExporting] = useState(false)
     const profLabel = useProfessionalLabel()
@@ -110,6 +112,20 @@ export default function ReportsPage() {
             if (insuranceRes.ok) {
                 const data = await insuranceRes.json()
                 setInsuranceStats(data.data || [])
+            }
+
+            // Fetch Agenda Report
+            const agendaRes = await fetch(`/api/reports?type=agenda_report&${params}`)
+            if (agendaRes.ok) {
+                const data = await agendaRes.json()
+                setAgendaReport({ data: data.data || [], summary: data.summary || {} })
+            }
+
+            // Fetch Reimbursement Report
+            const reimbursementRes = await fetch(`/api/reports?type=reimbursement_report&${params}`)
+            if (reimbursementRes.ok) {
+                const data = await reimbursementRes.json()
+                setReimbursementReport({ data: data.data || [], patient_summary: data.patient_summary || [], summary: data.summary || {} })
             }
 
         } catch (error) {
@@ -288,6 +304,14 @@ export default function ReportsPage() {
                         <Shield className="h-4 w-4" />
                         Convênios
                     </TabsTrigger>
+                    <TabsTrigger value="agenda" className="gap-2">
+                        <FileText className="h-4 w-4" />
+                        Relatório da Agenda
+                    </TabsTrigger>
+                    <TabsTrigger value="reimbursement" className="gap-2">
+                        <Receipt className="h-4 w-4" />
+                        Reembolso
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="revenue">
@@ -441,6 +465,212 @@ export default function ReportsPage() {
                             )}
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                {/* Agenda Report Tab */}
+                <TabsContent value="agenda">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Relatório da Agenda</CardTitle>
+                            <CardDescription>
+                                Lista detalhada de agendamentos no período — {agendaReport.summary.total || 0} agendamentos,{' '}
+                                {agendaReport.summary.completed || 0} concluídos,{' '}
+                                {agendaReport.summary.cancelled || 0} cancelados
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {agendaReport.data.length === 0 ? (
+                                <p className="text-center text-muted-foreground py-8">
+                                    Nenhum agendamento encontrado para o período selecionado
+                                </p>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="p-2 text-left">Data</th>
+                                                <th className="p-2 text-left">Horário</th>
+                                                <th className="p-2 text-left">Paciente</th>
+                                                <th className="p-2 text-left">Profissional</th>
+                                                <th className="p-2 text-left">Especialidade</th>
+                                                <th className="p-2 text-center">Status</th>
+                                                <th className="p-2 text-right">Valor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {agendaReport.data.map((item: any) => (
+                                                <tr key={item.id} className="border-b hover:bg-muted/50">
+                                                    <td className="p-2">
+                                                        {new Date(item.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {item.start_time?.substring(0,5) || '-'}
+                                                    </td>
+                                                    <td className="p-2 font-medium">{item.patient_name}</td>
+                                                    <td className="p-2">{item.doctor_name}</td>
+                                                    <td className="p-2 text-muted-foreground">{item.specialty}</td>
+                                                    <td className="p-2 text-center">
+                                                        <Badge variant={
+                                                            item.status === 'COMPLETED' ? 'default' :
+                                                            item.status === 'CANCELLED' ? 'destructive' :
+                                                            item.status === 'NO_SHOW' ? 'destructive' :
+                                                            'secondary'
+                                                        } className="text-xs">
+                                                            {item.status_label}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-2 text-right">
+                                                        {item.payment_amount > 0 ? formatCurrency(item.payment_amount) : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Reimbursement Report Tab */}
+                <TabsContent value="reimbursement">
+                    <div className="space-y-6">
+                        {/* Reimbursement Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">Sessões com Regra</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{reimbursementReport.summary.total_appointments || 0}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Faturamento</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-blue-600">{formatCurrency(reimbursementReport.summary.total_billing || 0)}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Reembolso</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-green-600">{formatCurrency(reimbursementReport.summary.total_reimbursement || 0)}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">Guias Geradas</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{reimbursementReport.summary.total_guides || 0}</div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Patient Summary */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Resumo por Paciente</CardTitle>
+                                <CardDescription>
+                                    Valores de faturamento e reembolso agrupados por paciente
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {reimbursementReport.patient_summary.length === 0 ? (
+                                    <p className="text-center text-muted-foreground py-8">
+                                        Nenhum atendimento com regra de reembolso no período.
+                                        Configure regras em Configurações → Reembolso por Paciente.
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b">
+                                                    <th className="p-2 text-left">Paciente</th>
+                                                    <th className="p-2 text-center">Sessões</th>
+                                                    <th className="p-2 text-center">Guias</th>
+                                                    <th className="p-2 text-right">Faturamento</th>
+                                                    <th className="p-2 text-right">Reembolso</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {reimbursementReport.patient_summary.map((p: any) => (
+                                                    <tr key={p.name} className="border-b hover:bg-muted/50">
+                                                        <td className="p-2 font-medium">{p.name}</td>
+                                                        <td className="p-2 text-center">{p.sessions}</td>
+                                                        <td className="p-2 text-center">{p.guides}</td>
+                                                        <td className="p-2 text-right text-blue-600">{formatCurrency(p.billing)}</td>
+                                                        <td className="p-2 text-right text-green-600 font-medium">{formatCurrency(p.reimbursement)}</td>
+                                                    </tr>
+                                                ))}
+                                                <tr className="border-t-2 font-bold">
+                                                    <td className="p-2">TOTAL</td>
+                                                    <td className="p-2 text-center">{reimbursementReport.patient_summary.reduce((s: number, p: any) => s + p.sessions, 0)}</td>
+                                                    <td className="p-2 text-center">{reimbursementReport.patient_summary.reduce((s: number, p: any) => s + p.guides, 0)}</td>
+                                                    <td className="p-2 text-right text-blue-600">{formatCurrency(reimbursementReport.summary.total_billing || 0)}</td>
+                                                    <td className="p-2 text-right text-green-600">{formatCurrency(reimbursementReport.summary.total_reimbursement || 0)}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Detailed Entries */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Detalhamento por Sessão</CardTitle>
+                                <CardDescription>
+                                    Cada sessão concluída com sua regra de reembolso aplicada
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {reimbursementReport.data.length === 0 ? (
+                                    <p className="text-center text-muted-foreground py-8">
+                                        Nenhum dado disponível
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b">
+                                                    <th className="p-2 text-left">Data</th>
+                                                    <th className="p-2 text-left">Paciente</th>
+                                                    <th className="p-2 text-left">Profissional</th>
+                                                    <th className="p-2 text-left">Terapia</th>
+                                                    <th className="p-2 text-center">Guias</th>
+                                                    <th className="p-2 text-right">Faturamento</th>
+                                                    <th className="p-2 text-right">Reembolso Unit.</th>
+                                                    <th className="p-2 text-right">Total Reemb.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {reimbursementReport.data.map((item: any, idx: number) => (
+                                                    <tr key={`${item.appointment_id}-${idx}`} className="border-b hover:bg-muted/50">
+                                                        <td className="p-2">
+                                                            {new Date(item.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                                        </td>
+                                                        <td className="p-2 font-medium">{item.patient_name}</td>
+                                                        <td className="p-2">{item.doctor_name}</td>
+                                                        <td className="p-2">{item.therapy_type}</td>
+                                                        <td className="p-2 text-center">{item.guides_per_session}</td>
+                                                        <td className="p-2 text-right text-blue-600">{formatCurrency(item.billing_amount)}</td>
+                                                        <td className="p-2 text-right">{formatCurrency(item.reimbursement_amount)}</td>
+                                                        <td className="p-2 text-right text-green-600 font-medium">{formatCurrency(item.total_reimbursement)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>

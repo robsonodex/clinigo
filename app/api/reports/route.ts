@@ -90,6 +90,12 @@ export async function GET(request: NextRequest) {
             case 'health_insurance_stats':
                 return await getHealthInsuranceStats(supabase, clinicId, startDate, endDate)
 
+            case 'agenda_report':
+                return await getAgendaReport(supabase, clinicId, startDate, endDate)
+
+            case 'reimbursement_report':
+                return await getReimbursementReport(supabase, clinicId, startDate, endDate)
+
             default:
                 return NextResponse.json({ error: 'Tipo de relatório inválido' }, { status: 400 })
         }
@@ -425,5 +431,168 @@ async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", a
     })).sort((a, b) => b.total - a.total)
 
     return NextResponse.json({ data: result })
+}
+
+async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select(`
+            id,
+            appointment_date,
+            start_time,
+            end_time,
+            status,
+            payment_type,
+            notes,
+            patients(id, full_name),
+            doctors(id, specialty, users(full_name)),
+            payments(amount, status)
+        `)
+        .eq('clinic_id', clinicId)
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
+        .order('appointment_date', { ascending: true })
+        .order('start_time', { ascending: true })
+
+    if (error) {
+        console.error('Agenda report error:', error)
+        return NextResponse.json({ error: 'Erro ao gerar relatório da agenda' }, { status: 500 })
+    }
+
+    const entries = (appointments || []).map((appt: any) => {
+        const patient = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
+        const doctor = Array.isArray(appt.doctors) ? appt.doctors[0] : appt.doctors
+        const doctorUser = doctor?.users ? (Array.isArray(doctor.users) ? doctor.users[0] : doctor.users) : null
+        const payment = Array.isArray(appt.payments) ? appt.payments[0] : appt.payments
+
+        return {
+            id: appt.id,
+            date: appt.appointment_date,
+            start_time: appt.start_time,
+            end_time: appt.end_time,
+            status: appt.status,
+            status_label: getStatusLabel(appt.status),
+            payment_type: appt.payment_type || 'N/A',
+            patient_name: patient?.full_name || 'N/A',
+            doctor_name: doctorUser?.full_name || 'N/A',
+            specialty: doctor?.specialty || 'N/A',
+            payment_amount: payment?.amount ? parseFloat(payment.amount) : 0,
+            payment_status: payment?.status || 'N/A',
+        }
+    })
+
+    const totalAppointments = entries.length
+    const completed = entries.filter((e: any) => e.status === 'COMPLETED').length
+    const cancelled = entries.filter((e: any) => e.status === 'CANCELLED').length
+    const noShow = entries.filter((e: any) => e.status === 'NO_SHOW').length
+    const totalRevenue = entries.reduce((sum: number, e: any) => sum + e.payment_amount, 0)
+
+    return NextResponse.json({
+        data: entries,
+        summary: {
+            total: totalAppointments,
+            completed,
+            cancelled,
+            no_show: noShow,
+            total_revenue: totalRevenue,
+        }
+    })
+}
+
+async function getReimbursementReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    const { data: rules } = await supabase
+        .from('patient_reimbursement_rules')
+        .select('*, patients(id, full_name)')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+    const { data: appointments } = await supabase
+        .from('appointments')
+        .select(`
+            id,
+            appointment_date,
+            status,
+            patient_id,
+            patients(id, full_name),
+            doctors(id, specialty, users(full_name))
+        `)
+        .eq('clinic_id', clinicId)
+        .eq('status', 'COMPLETED')
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
+        .order('appointment_date', { ascending: true })
+
+    // Cross-reference appointments with reimbursement rules
+    const rulesMap = new Map<string, any[]>()
+    for (const rule of rules || []) {
+        const key = rule.patient_id
+        if (!rulesMap.has(key)) rulesMap.set(key, [])
+        rulesMap.get(key)!.push(rule)
+    }
+
+    const entries: any[] = []
+    let totalBilling = 0
+    let totalReimbursement = 0
+    let totalGuides = 0
+
+    for (const appt of appointments || []) {
+        const patientRules = rulesMap.get(appt.patient_id) || []
+        const patient = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
+        const doctor = Array.isArray(appt.doctors) ? appt.doctors[0] : appt.doctors
+        const doctorUser = doctor?.users ? (Array.isArray(doctor.users) ? doctor.users[0] : doctor.users) : null
+
+        if (patientRules.length > 0) {
+            for (const rule of patientRules) {
+                const billingAmount = parseFloat(rule.billing_amount) || 0
+                const reimbursementAmount = parseFloat(rule.reimbursement_amount) || 0
+                const guidesCount = rule.guides_per_session || 1
+
+                totalBilling += billingAmount
+                totalReimbursement += reimbursementAmount * guidesCount
+                totalGuides += guidesCount
+
+                entries.push({
+                    appointment_id: appt.id,
+                    date: appt.appointment_date,
+                    patient_name: patient?.full_name || 'N/A',
+                    doctor_name: doctorUser?.full_name || 'N/A',
+                    specialty: doctor?.specialty || 'N/A',
+                    therapy_type: rule.therapy_type,
+                    billing_therapy_type: rule.billing_therapy_type || rule.therapy_type,
+                    billing_amount: billingAmount,
+                    reimbursement_amount: reimbursementAmount,
+                    guides_per_session: guidesCount,
+                    total_reimbursement: reimbursementAmount * guidesCount,
+                    session_duration: rule.actual_session_duration,
+                    guide_duration: rule.guide_session_duration,
+                    notes: rule.notes,
+                })
+            }
+        }
+    }
+
+    // Group by patient for summary
+    const patientSummary: Record<string, { name: string, sessions: number, billing: number, reimbursement: number, guides: number }> = {}
+    for (const entry of entries) {
+        if (!patientSummary[entry.patient_name]) {
+            patientSummary[entry.patient_name] = { name: entry.patient_name, sessions: 0, billing: 0, reimbursement: 0, guides: 0 }
+        }
+        patientSummary[entry.patient_name].sessions++
+        patientSummary[entry.patient_name].billing += entry.billing_amount
+        patientSummary[entry.patient_name].reimbursement += entry.total_reimbursement
+        patientSummary[entry.patient_name].guides += entry.guides_per_session
+    }
+
+    return NextResponse.json({
+        data: entries,
+        patient_summary: Object.values(patientSummary).sort((a, b) => b.reimbursement - a.reimbursement),
+        summary: {
+            total_appointments: entries.length,
+            total_billing: totalBilling,
+            total_reimbursement: totalReimbursement,
+            total_guides: totalGuides,
+            patients_with_rules: rulesMap.size,
+        }
+    })
 }
 
