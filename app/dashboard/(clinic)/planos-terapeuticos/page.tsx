@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Plus, Edit, Trash2, Target, TrendingUp, Loader2, Search, ClipboardList } from 'lucide-react'
+import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 
 const STATUS_LABELS: Record<string, string> = { active: 'Ativo', paused: 'Pausado', completed: 'Concluído', cancelled: 'Cancelado' }
@@ -159,12 +160,12 @@ export default function TherapeuticPlansPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <Label>Paciente *</Label>
-                                        <Select value={form.patient_id} onValueChange={v => setForm(p => ({ ...p, patient_id: v }))}>
-                                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                                            <SelectContent>
-                                                {patients.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
+                                        <PatientSearchCombobox
+                                            value={form.patient_id}
+                                            onSelect={(patient) => setForm(p => ({ ...p, patient_id: patient?.id || '' }))}
+                                            onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
+                                            placeholder="Buscar paciente por nome, CPF..."
+                                        />
                                     </div>
                                     <div>
                                         <Label>Profissional *</Label>

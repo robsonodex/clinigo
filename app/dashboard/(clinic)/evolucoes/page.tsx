@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry } from 'lucide-react'
+import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 
 const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP' }
@@ -109,10 +110,12 @@ export default function SessionEvolutionsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <Label>Paciente *</Label>
-                                    <Select value={form.patient_id} onValueChange={v => setForm(p => ({ ...p, patient_id: v }))}>
-                                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                                        <SelectContent>{patients.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
-                                    </Select>
+                                    <PatientSearchCombobox
+                                        value={form.patient_id}
+                                        onSelect={(patient) => setForm(p => ({ ...p, patient_id: patient?.id || '' }))}
+                                        onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
+                                        placeholder="Buscar paciente por nome, CPF..."
+                                    />
                                 </div>
                                 <div>
                                     <Label>Profissional *</Label>
