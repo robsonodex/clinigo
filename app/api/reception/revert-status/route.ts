@@ -71,6 +71,13 @@ export async function POST(request: NextRequest) {
                 }
                 break
 
+            case 'IN_PROGRESS':
+                // Em Atendimento → volta para Confirmado
+                updateData.status = 'CONFIRMED'
+                updateData.started_at = null
+                revertedTo = 'CONFIRMED'
+                break
+
             case 'COMPLETED':
                 // Concluído → volta para Confirmado
                 updateData.status = 'CONFIRMED'
