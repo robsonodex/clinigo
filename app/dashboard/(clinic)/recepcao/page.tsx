@@ -828,9 +828,8 @@ export default function RecepcaoPage() {
                                                 <FileText className="w-3.5 h-3.5" />
                                             </Button>
                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => isEspacoIncluir ? setCheckInModal({ open: true, appointmentId: item.id, notes: '' }) : handleCheckIn(item.id)}>
-                                                    <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                                                    {isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}
+                                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => isEspacoIncluir ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} disabled={actionId === item.id}>
+                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle className="w-3.5 h-3.5 mr-1" />{isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}</>}
                                                 </Button>
                                             )}
                                             {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
