@@ -36,7 +36,8 @@ interface QueueItem {
     }
     doctor?: {
         user: {
-            name: string
+            name?: string
+            full_name?: string
         }
     }
     arrivalTime: string
@@ -800,6 +801,12 @@ export default function RecepcaoPage() {
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h4 className="font-semibold text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                                {item.doctor && (
+                                                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                        <User className="w-3 h-3" />
+                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                    </span>
+                                                )}
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                         <Clock className="w-3 h-3" />
@@ -823,7 +830,7 @@ export default function RecepcaoPage() {
                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
                                                 <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => isEspacoIncluir ? setCheckInModal({ open: true, appointmentId: item.id, notes: '' }) : handleCheckIn(item.id)}>
                                                     <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                                                    Check-in
+                                                    {isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}
                                                 </Button>
                                             )}
                                             {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
@@ -836,15 +843,9 @@ export default function RecepcaoPage() {
                                                     <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                         {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                     </Button>
-                                                    {!isEspacoIncluir ? (
-                                                        <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStartService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
-                                                            {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>🩺 Em Atend.</>}
-                                                        </Button>
-                                                    ) : (
-                                                        <Button size="sm" className="h-8 text-xs bg-gray-600 hover:bg-gray-700 text-white" onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
-                                                            {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>✅ Concluir</>}
-                                                        </Button>
-                                                    )}
+                                                    <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStartService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
+                                                        {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>{isEspacoIncluir ? 'Em Atendimento' : '🩺 Em Atend.'}</>}
+                                                    </Button>
                                                 </>
                                             )}
                                             {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
@@ -887,7 +888,7 @@ export default function RecepcaoPage() {
                                                 {item.doctor && (
                                                     <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                                         <User className="w-3 h-3" />
-                                                        {item.doctor.user.name}
+                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
                                                     </span>
                                                 )}
                                             </div>
@@ -933,7 +934,7 @@ export default function RecepcaoPage() {
                                                 {item.doctor && (
                                                     <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                                         <User className="w-3 h-3" />
-                                                        {item.doctor.user.name}
+                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
                                                     </span>
                                                 )}
                                             </div>
