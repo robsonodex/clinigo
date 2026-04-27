@@ -261,7 +261,21 @@ export default function TherapeuticPlansPage() {
             </div>
 
             {filtered.length === 0 ? (
-                <Card><CardContent className="py-12 text-center text-muted-foreground"><ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhum plano terapêutico encontrado</p></CardContent></Card>
+                <Card><CardContent className="py-12 text-center text-muted-foreground">
+                    <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    {plans.length === 0 ? (
+                        <>
+                            <p className="font-medium text-foreground mb-2">Nenhum plano terapêutico cadastrado</p>
+                            <p className="text-sm mb-4">Clique no botão abaixo para criar o primeiro plano terapêutico.</p>
+                            <Button onClick={() => setShowDialog(true)}><Plus className="h-4 w-4 mr-2" /> Criar Primeiro Plano</Button>
+                        </>
+                    ) : (
+                        <>
+                            <p>Nenhum plano encontrado para &quot;{search}&quot;</p>
+                            <p className="text-sm mt-2">Tente buscar por outro nome ou título.</p>
+                        </>
+                    )}
+                </CardContent></Card>
             ) : (
                 <div className="grid gap-4">
                     {filtered.map((plan: any) => {

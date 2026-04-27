@@ -195,7 +195,21 @@ export default function SessionEvolutionsPage() {
             </div>
 
             {filtered.length === 0 ? (
-                <Card><CardContent className="py-12 text-center text-muted-foreground"><FileEdit className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Nenhuma evolução registrada</p></CardContent></Card>
+                <Card><CardContent className="py-12 text-center text-muted-foreground">
+                    <FileEdit className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    {evolutions.length === 0 ? (
+                        <>
+                            <p className="font-medium text-foreground mb-2">Nenhuma evolução registrada</p>
+                            <p className="text-sm mb-4">Clique no botão abaixo para registrar a primeira evolução.</p>
+                            <Button onClick={() => setShowDialog(true)}><Plus className="h-4 w-4 mr-2" /> Registrar Primeira Evolução</Button>
+                        </>
+                    ) : (
+                        <>
+                            <p>Nenhuma evolução encontrada para &quot;{search}&quot;</p>
+                            <p className="text-sm mt-2">Tente buscar por outro nome.</p>
+                        </>
+                    )}
+                </CardContent></Card>
             ) : (
                 <div className="space-y-3">
                     {filtered.map((ev: any) => (
