@@ -127,11 +127,11 @@ export default function FinancialPage() {
                 }
             }
 
-            // Fetch entries
+            // Fetch entries - load all entries for the period
             const entriesParams = new URLSearchParams({
                 start_date,
                 end_date,
-                limit: '50'
+                limit: '1000'
             })
             if (filterType !== 'all') entriesParams.set('type', filterType)
             if (filterStatus !== 'all') entriesParams.set('status', filterStatus)
