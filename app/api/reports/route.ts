@@ -215,6 +215,7 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
         appointments(
           id,
           status,
+          appointment_date,
           payments(amount, status)
         )
       `)
@@ -449,11 +450,10 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
         .select(`
             id,
             appointment_date,
-            start_time,
-            end_time,
+            appointment_time,
             status,
             payment_type,
-            notes,
+            appointment_type,
             patients(id, full_name),
             doctors(id, specialty, users(full_name)),
             payments(amount, status)
@@ -462,7 +462,7 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
         .order('appointment_date', { ascending: true })
-        .order('start_time', { ascending: true })
+        .order('appointment_time', { ascending: true })
 
     if (error) {
         console.error('Agenda report error:', error)
@@ -478,8 +478,8 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
         return {
             id: appt.id,
             date: appt.appointment_date,
-            start_time: appt.start_time,
-            end_time: appt.end_time,
+            start_time: appt.appointment_time,
+            end_time: null,
             status: appt.status,
             status_label: getStatusLabel(appt.status),
             payment_type: appt.payment_type || 'N/A',
@@ -619,7 +619,7 @@ async function getPatientFrequency(
     let query = supabase
         .from('appointments')
         .select(`
-            id, status, appointment_date, start_time,
+            id, status, appointment_date, appointment_time,
             patients(id, full_name),
             doctors(id, specialty, users(full_name))
         `)
@@ -698,7 +698,7 @@ async function getPatientSessions(
     let query = supabase
         .from('appointments')
         .select(`
-            id, status, appointment_date, start_time, end_time, therapy_type, notes,
+            id, status, appointment_date, appointment_time, appointment_type, waiting_room_notes,
             patients(id, full_name, cpf, date_of_birth),
             doctors(id, specialty, users(full_name)),
             health_insurance_plans(name)
@@ -722,16 +722,16 @@ async function getPatientSessions(
         return {
             id: apt.id,
             date: apt.appointment_date,
-            start_time: apt.start_time,
-            end_time: apt.end_time,
+            start_time: apt.appointment_time,
+            end_time: null,
             status: apt.status,
-            therapy_type: apt.therapy_type,
+            therapy_type: apt.appointment_type || 'N/A',
             patient_name: p?.full_name || 'N/A',
             patient_id: p?.id,
             professional: dUser?.full_name || 'N/A',
             specialty: d?.specialty || 'N/A',
             insurance: hip?.name || 'Particular',
-            notes: apt.notes || '',
+            notes: apt.waiting_room_notes || '',
         }
     })
 
