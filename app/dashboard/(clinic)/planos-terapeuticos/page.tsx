@@ -172,7 +172,7 @@ export default function TherapeuticPlansPage() {
                                         <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))}>
                                             <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                                             <SelectContent>
-                                                {doctors.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.users?.full_name || d.full_name || d.id}</SelectItem>)}
+                                                {doctors.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                     </div>
