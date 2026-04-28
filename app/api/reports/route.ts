@@ -198,16 +198,16 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
         `)
         .eq('clinic_id', clinicId)
 
-    // Get financial entries linked to appointments for this clinic in the period
+    // Get financial entries for this clinic in the period
     const { data: financialEntries } = await supabase
         .from('financial_entries')
-        .select('amount, appointment_id')
+        .select('amount, appointment_id, description')
         .eq('clinic_id', clinicId)
         .eq('entry_type', 'INCOME')
         .gte('due_date', startDate)
         .lte('due_date', endDate)
 
-    // Build a map of appointment_id -> amount for quick lookup
+    // Strategy 1: Build map of appointment_id -> amount
     const appointmentRevenueMap = new Map<string, number>()
     for (const fe of financialEntries || []) {
         if (fe.appointment_id) {
@@ -215,11 +215,22 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
         }
     }
 
-    // Also compute total revenue from financial_entries NOT linked to appointments
-    // to distribute proportionally if needed
-    const totalLinkedRevenue = Array.from(appointmentRevenueMap.values()).reduce((sum, v) => sum + v, 0)
-    const totalAllRevenue = (financialEntries || []).reduce((sum, fe) => sum + (Number(fe.amount) || 0), 0)
-    const unlinkedRevenue = totalAllRevenue - totalLinkedRevenue
+    // Check if we have any linked entries - if not, use description-based matching
+    const hasLinkedEntries = appointmentRevenueMap.size > 0
+
+    // Strategy 2: Build map of doctor name fragment -> amount from description
+    // Entries like "Cristiane - Psico", "Barbara - To" match to doctor names
+    const descriptionRevenueMap = new Map<string, number>()
+    if (!hasLinkedEntries) {
+        for (const fe of financialEntries || []) {
+            const desc = (fe.description || '').trim()
+            if (desc) {
+                // Extract first name from description (before " - ")
+                const nameFragment = desc.split(' - ')[0].trim().toLowerCase()
+                descriptionRevenueMap.set(nameFragment, (descriptionRevenueMap.get(nameFragment) || 0) + (Number(fe.amount) || 0))
+            }
+        }
+    }
 
     const result = (doctors as unknown as DoctorRecord[] || []).map((d) => {
         const appointments = d.appointments?.filter((a) =>
@@ -228,10 +239,20 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
 
         const completedAppointments = appointments.filter((a) => a.status === 'COMPLETED')
 
-        // Sum revenue from financial_entries linked to this doctor's appointments
         let revenue = 0
-        for (const appt of appointments) {
-            revenue += appointmentRevenueMap.get(appt.id) || 0
+
+        if (hasLinkedEntries) {
+            // Strategy 1: Sum revenue from linked financial entries
+            for (const appt of appointments) {
+                revenue += appointmentRevenueMap.get(appt.id) || 0
+            }
+        } else {
+            // Strategy 2: Match by doctor's first name in description
+            const doctorFullName = (d.users?.full_name || '').toLowerCase()
+            const doctorFirstName = doctorFullName.split(' ')[0]
+            if (doctorFirstName) {
+                revenue = descriptionRevenueMap.get(doctorFirstName) || 0
+            }
         }
 
         return {
