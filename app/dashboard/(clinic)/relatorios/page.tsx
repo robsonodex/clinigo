@@ -414,7 +414,7 @@ export default function ReportsPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {appointmentsByDay.slice(-14).map((day) => (
+                                                {appointmentsByDay.map((day) => (
                                                     <tr key={day.day} className="border-b hover:bg-muted/50">
                                                         <td className="p-2">
                                                             {new Date(day.day).toLocaleDateString('pt-BR', {

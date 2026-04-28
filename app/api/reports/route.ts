@@ -116,21 +116,7 @@ export async function GET(request: NextRequest) {
 }
 
 async function getKPIs(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    // Call the database function
-    // TODO: Fix strict RPC typing inference
-    const { data, error } = await (supabase as any).rpc('get_clinic_kpis', {
-        p_clinic_id: clinicId,
-        p_start_date: startDate,
-        p_end_date: endDate,
-    })
-
-    if (error) {
-        console.error('KPIs error:', error)
-        // Fallback to manual calculation if function doesn't exist yet
-        return await getKPIsManual(supabase, clinicId, startDate, endDate)
-    }
-
-    return NextResponse.json({ kpis: data?.[0] || {} })
+    return await getKPIsManual(supabase, clinicId, startDate, endDate)
 }
 
 async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: string, startDate: string, endDate: string) {
@@ -147,16 +133,17 @@ async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: strin
     const cancelled = appointments?.filter((a: AppointmentRecord) => a.status === 'CANCELLED').length || 0
     const noShow = appointments?.filter((a: AppointmentRecord) => a.status === 'NO_SHOW').length || 0
 
-    // Get revenue
-    const { data: payments } = await supabase
-        .from('payments')
+    // Get revenue from financial_entries (not payments table which may be empty)
+    const { data: financialIncome } = await supabase
+        .from('financial_entries')
         .select('amount')
         .eq('clinic_id', clinicId)
+        .eq('entry_type', 'INCOME')
         .eq('status', 'PAID')
-        .gte('paid_at', startDate)
-        .lte('paid_at', endDate)
+        .gte('due_date', startDate)
+        .lte('due_date', endDate)
 
-    const totalRevenue = payments?.reduce((sum: number, p: { amount: any }) => sum + parseFloat(p.amount), 0) || 0
+    const totalRevenue = financialIncome?.reduce((sum: number, p: { amount: any }) => sum + (Number(p.amount) || 0), 0) || 0
 
     // Get patient counts
     const { count: newPatients } = await supabase
@@ -196,94 +183,97 @@ async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: strin
 }
 
 async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    // TODO: Fix strict RPC typing inference
-    const { data: revenueData, error } = await (supabase as any).rpc('get_revenue_by_doctor', {
-        p_clinic_id: clinicId,
-        p_start_date: startDate,
-        p_end_date: endDate,
-    })
+    // Get doctors with their appointments in the period
+    const { data: doctors } = await supabase
+        .from('doctors')
+        .select(`
+            id,
+            specialty,
+            users(full_name),
+            appointments(
+                id,
+                status,
+                appointment_date
+            )
+        `)
+        .eq('clinic_id', clinicId)
 
-    if (error) {
-        console.error('Revenue by doctor error:', error)
-        // Fallback query
-        const { data: doctors } = await supabase
-            .from('doctors')
-            .select(`
-        id,
-        specialty,
-        users(full_name),
-        appointments(
-          id,
-          status,
-          appointment_date,
-          payments(amount, status)
-        )
-      `)
-            .eq('clinic_id', clinicId)
+    // Get financial entries linked to appointments for this clinic in the period
+    const { data: financialEntries } = await supabase
+        .from('financial_entries')
+        .select('amount, appointment_id')
+        .eq('clinic_id', clinicId)
+        .eq('entry_type', 'INCOME')
+        .gte('due_date', startDate)
+        .lte('due_date', endDate)
 
-        const result = (doctors as unknown as DoctorRecord[] || []).map((d) => {
-            const appointments = d.appointments?.filter((a) =>
-                a.appointment_date && a.appointment_date >= startDate && a.appointment_date <= endDate
-            ) || []
-
-            const revenue = appointments
-                .flatMap((a) => a.payments || [])
-                .filter((p) => p.status === 'PAID')
-                .reduce((sum: number, p) => sum + parseFloat(p.amount as unknown as string), 0)
-
-            return {
-                doctor_id: d.id,
-                doctor_name: d.users?.full_name || 'N/A',
-                specialty: d.specialty,
-                total_appointments: appointments.length,
-                completed_appointments: appointments.filter((a) => a.status === 'COMPLETED').length,
-                total_revenue: revenue,
-                average_ticket: appointments.length > 0 ? revenue / appointments.length : 0,
-            }
-        })
-
-        return NextResponse.json({ data: result })
+    // Build a map of appointment_id -> amount for quick lookup
+    const appointmentRevenueMap = new Map<string, number>()
+    for (const fe of financialEntries || []) {
+        if (fe.appointment_id) {
+            appointmentRevenueMap.set(fe.appointment_id, (appointmentRevenueMap.get(fe.appointment_id) || 0) + (Number(fe.amount) || 0))
+        }
     }
 
-    return NextResponse.json({ data: revenueData })
+    // Also compute total revenue from financial_entries NOT linked to appointments
+    // to distribute proportionally if needed
+    const totalLinkedRevenue = Array.from(appointmentRevenueMap.values()).reduce((sum, v) => sum + v, 0)
+    const totalAllRevenue = (financialEntries || []).reduce((sum, fe) => sum + (Number(fe.amount) || 0), 0)
+    const unlinkedRevenue = totalAllRevenue - totalLinkedRevenue
+
+    const result = (doctors as unknown as DoctorRecord[] || []).map((d) => {
+        const appointments = d.appointments?.filter((a) =>
+            a.appointment_date && a.appointment_date >= startDate && a.appointment_date <= endDate
+        ) || []
+
+        const completedAppointments = appointments.filter((a) => a.status === 'COMPLETED')
+
+        // Sum revenue from financial_entries linked to this doctor's appointments
+        let revenue = 0
+        for (const appt of appointments) {
+            revenue += appointmentRevenueMap.get(appt.id) || 0
+        }
+
+        return {
+            doctor_id: d.id,
+            doctor_name: d.users?.full_name || 'N/A',
+            specialty: d.specialty,
+            total_appointments: appointments.length,
+            completed_appointments: completedAppointments.length,
+            total_revenue: revenue,
+            average_ticket: completedAppointments.length > 0 ? revenue / completedAppointments.length : 0,
+        }
+    })
+
+    // Sort by revenue descending
+    result.sort((a, b) => b.total_revenue - a.total_revenue)
+
+    return NextResponse.json({ data: result })
 }
 
 async function getAppointmentsByDay(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    // TODO: Fix strict RPC typing inference
-    const { data: dailyData, error } = await (supabase as any).rpc('get_appointments_by_day', {
-        p_clinic_id: clinicId,
-        p_start_date: startDate,
-        p_end_date: endDate,
-    })
+    const { data: appointments } = await supabase
+        .from('appointments')
+        .select('appointment_date, status')
+        .eq('clinic_id', clinicId)
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
 
-    if (error) {
-        console.error('Appointments by day error:', error)
-        // Fallback: raw query
-        const { data: appointments } = await supabase
-            .from('appointments')
-            .select('appointment_date, status')
-            .eq('clinic_id', clinicId)
-            .gte('appointment_date', startDate)
-            .lte('appointment_date', endDate)
-
-        // Group by date
-        const grouped: Record<string, any> = {}
-        for (const a of appointments || []) {
-            const date = a.appointment_date
-            if (!grouped[date]) {
-                grouped[date] = { day: date, total: 0, completed: 0, cancelled: 0, no_show: 0 }
-            }
-            grouped[date].total++
-            if (a.status === 'COMPLETED') grouped[date].completed++
-            if (a.status === 'CANCELLED') grouped[date].cancelled++
-            if (a.status === 'NO_SHOW') grouped[date].no_show++
+    // Group by date
+    const grouped: Record<string, any> = {}
+    for (const a of appointments || []) {
+        const date = a.appointment_date
+        if (!grouped[date]) {
+            grouped[date] = { day: date, total: 0, completed: 0, cancelled: 0, no_show: 0 }
         }
-
-        const sortedData = Object.values(grouped).sort((a, b) => a.day.localeCompare(b.day))
-        return NextResponse.json({ data: sortedData })
+        grouped[date].total++
+        if (a.status === 'COMPLETED') grouped[date].completed++
+        if (a.status === 'CANCELLED') grouped[date].cancelled++
+        if (a.status === 'NO_SHOW') grouped[date].no_show++
     }
 
-    return NextResponse.json({ data: dailyData })
+    const sortedData = Object.values(grouped).sort((a, b) => a.day.localeCompare(b.day))
+    return NextResponse.json({ data: sortedData })
 }
 
 async function getAppointmentsByStatus(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
@@ -455,8 +445,7 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
             payment_type,
             appointment_type,
             patients(id, full_name),
-            doctors(id, specialty, users(full_name)),
-            payments(amount, status)
+            doctors(id, specialty, users(full_name))
         `)
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
@@ -469,11 +458,32 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
         return NextResponse.json({ error: 'Erro ao gerar relatório da agenda' }, { status: 500 })
     }
 
+    // Get financial entries linked to appointments for revenue data
+    const { data: financialEntries } = await supabase
+        .from('financial_entries')
+        .select('amount, appointment_id, status')
+        .eq('clinic_id', clinicId)
+        .eq('entry_type', 'INCOME')
+        .gte('due_date', startDate)
+        .lte('due_date', endDate)
+
+    // Build appointment -> amount map
+    const appointmentAmountMap = new Map<string, { amount: number; status: string }>()
+    for (const fe of financialEntries || []) {
+        if (fe.appointment_id) {
+            const existing = appointmentAmountMap.get(fe.appointment_id)
+            appointmentAmountMap.set(fe.appointment_id, {
+                amount: (existing?.amount || 0) + (Number(fe.amount) || 0),
+                status: fe.status || existing?.status || 'N/A'
+            })
+        }
+    }
+
     const entries = (appointments || []).map((appt: any) => {
         const patient = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
         const doctor = Array.isArray(appt.doctors) ? appt.doctors[0] : appt.doctors
         const doctorUser = doctor?.users ? (Array.isArray(doctor.users) ? doctor.users[0] : doctor.users) : null
-        const payment = Array.isArray(appt.payments) ? appt.payments[0] : appt.payments
+        const financialInfo = appointmentAmountMap.get(appt.id)
 
         return {
             id: appt.id,
@@ -486,8 +496,8 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
             patient_name: patient?.full_name || 'N/A',
             doctor_name: doctorUser?.full_name || 'N/A',
             specialty: doctor?.specialty || 'N/A',
-            payment_amount: payment?.amount ? parseFloat(payment.amount) : 0,
-            payment_status: payment?.status || 'N/A',
+            payment_amount: financialInfo?.amount || 0,
+            payment_status: financialInfo?.status || 'N/A',
         }
     })
 

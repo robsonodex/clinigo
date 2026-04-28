@@ -43,20 +43,28 @@ export async function POST(request: NextRequest) {
         // Calcular receitas
         const { data: revenueData } = await supabase
             .from('financial_entries')
-            .select('payment_type, amount')
+            .select('category, amount, description')
             .eq('clinic_id', profile.clinic_id)
             .eq('entry_type', 'INCOME')
-            .gte('date', startDate)
-            .lte('date', endDate.toISOString().split('T')[0])
-            .is('unit_id', unit_id || null);
+            .gte('due_date', startDate)
+            .lte('due_date', endDate.toISOString().split('T')[0]);
 
+        // Categorize revenue - entries with insurance-related descriptions go to insurance
         const revenuePrivate = revenueData
-            ?.filter(e => e.payment_type === 'PRIVATE')
-            .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+            ?.filter(e => {
+                const desc = (e.description || '').toLowerCase();
+                const cat = (e.category || '').toLowerCase();
+                return !desc.includes('convênio') && !desc.includes('convenio') && !cat.includes('convenio') && !cat.includes('insurance');
+            })
+            .reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0;
 
         const revenueInsurance = revenueData
-            ?.filter(e => e.payment_type === 'INSURANCE')
-            .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+            ?.filter(e => {
+                const desc = (e.description || '').toLowerCase();
+                const cat = (e.category || '').toLowerCase();
+                return desc.includes('convênio') || desc.includes('convenio') || cat.includes('convenio') || cat.includes('insurance');
+            })
+            .reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0;
 
         const totalRevenue = revenuePrivate + revenueInsurance;
 
@@ -66,14 +74,13 @@ export async function POST(request: NextRequest) {
             .select('category, amount')
             .eq('clinic_id', profile.clinic_id)
             .eq('entry_type', 'EXPENSE')
-            .gte('date', startDate)
-            .lte('date', endDate.toISOString().split('T')[0])
-            .is('unit_id', unit_id || null);
+            .gte('due_date', startDate)
+            .lte('due_date', endDate.toISOString().split('T')[0]);
 
         const expenseByCategory: Record<string, number> = {};
         expenseData?.forEach(e => {
             const cat = e.category || 'Outros';
-            expenseByCategory[cat] = (expenseByCategory[cat] || 0) + (e.amount || 0);
+            expenseByCategory[cat] = (expenseByCategory[cat] || 0) + (Number(e.amount) || 0);
         });
 
         const totalExpenses = Object.values(expenseByCategory).reduce((sum, v) => sum + v, 0);
@@ -94,34 +101,40 @@ export async function POST(request: NextRequest) {
             .eq('clinic_id', profile.clinic_id)
             .eq('status', 'COMPLETED')
             .gte('appointment_date', startDate)
-            .lte('appointment_date', endDate.toISOString().split('T')[0])
-            .is('unit_id', unit_id || null);
+            .lte('appointment_date', endDate.toISOString().split('T')[0]);
 
         const avgTicket = totalAppointments ? totalRevenue / totalAppointments : 0;
         const netProfit = totalRevenue - totalExpenses - payrollExpense;
         const profitMargin = totalRevenue ? (netProfit / totalRevenue) * 100 : 0;
 
         // Salvar fechamento
-        const { data: closure } = await supabase
-            .from('monthly_closures')
-            .upsert({
-                clinic_id: profile.clinic_id,
-                unit_id: unit_id || null,
-                reference_month: startDate,
-                total_revenue: totalRevenue,
-                revenue_private: revenuePrivate,
-                revenue_insurance: revenueInsurance,
-                total_expenses: totalExpenses,
-                expense_payroll: payrollExpense,
-                net_profit: netProfit,
-                profit_margin: profitMargin,
-                total_appointments: totalAppointments || 0,
-                average_ticket: avgTicket,
-            }, {
-                onConflict: 'clinic_id,unit_id,reference_month',
-            })
-            .select()
-            .single();
+        // Try to save closure, but don't fail if table doesn't support upsert
+        let closureId = null;
+        try {
+            const { data: closure } = await supabase
+                .from('monthly_closures')
+                .upsert({
+                    clinic_id: profile.clinic_id,
+                    unit_id: unit_id || null,
+                    reference_month: startDate,
+                    total_revenue: totalRevenue,
+                    revenue_private: revenuePrivate,
+                    revenue_insurance: revenueInsurance,
+                    total_expenses: totalExpenses,
+                    expense_payroll: payrollExpense,
+                    net_profit: netProfit,
+                    profit_margin: profitMargin,
+                    total_appointments: totalAppointments || 0,
+                    average_ticket: avgTicket,
+                }, {
+                    onConflict: 'clinic_id,unit_id,reference_month',
+                })
+                .select()
+                .single();
+            closureId = closure?.id;
+        } catch (e) {
+            console.warn('[DRE] Could not save monthly closure:', e);
+        }
 
         return NextResponse.json({
             success: true,
@@ -145,7 +158,7 @@ export async function POST(request: NextRequest) {
                     total_appointments: totalAppointments || 0,
                     average_ticket: avgTicket,
                 },
-                closure_id: closure?.id,
+                closure_id: closureId,
             },
         });
 

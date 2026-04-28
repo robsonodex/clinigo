@@ -15,7 +15,7 @@ export async function GET() {
 
         // Get clinic ID
         const { data: profile } = await supabase
-            .from('profiles')
+            .from('users')
             .select('clinic_id')
             .eq('id', user.id)
             .single()
@@ -34,22 +34,22 @@ export async function GET() {
             .from('financial_entries')
             .select('amount')
             .eq('clinic_id', clinicId)
-            .eq('type', 'income')
-            .gte('date', today.toISOString().split('T')[0])
+            .eq('entry_type', 'INCOME')
+            .gte('due_date', today.toISOString().split('T')[0])
             .is('cancelled_at', null)
 
-        const revenueToday = todayRevenue?.reduce((sum, entry) => sum + entry.amount, 0) || 0
+        const revenueToday = todayRevenue?.reduce((sum, entry) => sum + Number(entry.amount), 0) || 0
 
         // Revenue this month
         const { data: monthRevenue } = await supabase
             .from('financial_entries')
             .select('amount')
             .eq('clinic_id', clinicId)
-            .eq('type', 'income')
-            .gte('date', startOfMonth.toISOString())
+            .eq('entry_type', 'INCOME')
+            .gte('due_date', startOfMonth.toISOString().split('T')[0])
             .is('cancelled_at', null)
 
-        const revenueMonth = monthRevenue?.reduce((sum, entry) => sum + entry.amount, 0) || 0
+        const revenueMonth = monthRevenue?.reduce((sum, entry) => sum + Number(entry.amount), 0) || 0
 
         // Pending (appointments without payment)
         const { count: pendingCount } = await supabase
@@ -64,13 +64,13 @@ export async function GET() {
             .from('financial_entries')
             .select('payment_method, amount')
             .eq('clinic_id', clinicId)
-            .eq('type', 'income')
-            .gte('date', startOfMonth.toISOString())
+            .eq('entry_type', 'INCOME')
+            .gte('due_date', startOfMonth.toISOString().split('T')[0])
             .is('cancelled_at', null)
 
         const revenueByMethod = byMethod?.reduce((acc, entry) => {
             const method = entry.payment_method || 'other'
-            acc[method] = (acc[method] || 0) + entry.amount
+            acc[method] = (acc[method] || 0) + Number(entry.amount)
             return acc
         }, {} as Record<string, number>)
 

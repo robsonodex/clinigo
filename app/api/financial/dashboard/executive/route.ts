@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
             .eq('clinic_id', clinicId)
             .eq('entry_type', 'INCOME')
             .eq('status', 'PAID')
-            .gte('date', startDate)
-            .lte('date', endDate);
+            .gte('due_date', startDate)
+            .lte('due_date', endDate);
         
         const totalIncome = incomeData?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
 
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
             .eq('clinic_id', clinicId)
             .eq('entry_type', 'INCOME')
             .in('status', ['PENDING', 'OVERDUE'])
-            .gte('date', startDate)
-            .lte('date', endDate);
+            .gte('due_date', startDate)
+            .lte('due_date', endDate);
         
         const totalAReceber = aReceberData?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
 
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
             .eq('clinic_id', clinicId)
             .eq('entry_type', 'EXPENSE')
             .eq('status', 'PAID')
-            .gte('date', startDate)
-            .lte('date', endDate);
+            .gte('due_date', startDate)
+            .lte('due_date', endDate);
 
         const totalExpense = expenseData?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
         const result = totalIncome - totalExpense;

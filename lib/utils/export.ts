@@ -75,35 +75,48 @@ export function formatReportData(
 ): Record<string, any>[] {
     const rows: Record<string, any>[] = [];
 
-    // KPIs gerais
-    rows.push({
-        tipo: 'KPI',
-        metrica: 'Receita Total',
-        valor: kpis?.total_revenue || 0,
-        periodo: dateRange
-    });
-    rows.push({
-        tipo: 'KPI',
-        metrica: 'Total Agendamentos',
-        valor: kpis?.total_appointments || 0,
-        periodo: dateRange
-    });
-    rows.push({
-        tipo: 'KPI',
-        metrica: 'Taxa No-Show',
-        valor: `${(kpis?.no_show_rate || 0).toFixed(1)}%`,
-        periodo: dateRange
-    });
-
-    // Receita por médico
-    revenueByDoctor.forEach(doc => {
+    try {
+        // KPIs gerais
         rows.push({
-            tipo: 'Médico',
-            metrica: doc.doctor_name,
-            valor: doc.total_revenue,
-            periodo: `${doc.completed_appointments} consultas`
+            tipo: 'KPI',
+            metrica: 'Receita Total',
+            valor: Number(kpis?.total_revenue) || 0,
+            periodo: dateRange
         });
-    });
+        rows.push({
+            tipo: 'KPI',
+            metrica: 'Total Agendamentos',
+            valor: Number(kpis?.total_appointments) || 0,
+            periodo: dateRange
+        });
+        const noShowRate = Number(kpis?.no_show_rate) || 0;
+        rows.push({
+            tipo: 'KPI',
+            metrica: 'Taxa No-Show',
+            valor: `${noShowRate.toFixed(1)}%`,
+            periodo: dateRange
+        });
+
+        // Receita por médico
+        if (Array.isArray(revenueByDoctor)) {
+            revenueByDoctor.forEach(doc => {
+                rows.push({
+                    tipo: 'Profissional',
+                    metrica: doc.doctor_name || 'N/A',
+                    valor: Number(doc.total_revenue) || 0,
+                    periodo: `${doc.completed_appointments || 0} consultas`
+                });
+            });
+        }
+    } catch (error) {
+        console.error('formatReportData error:', error);
+        rows.push({
+            tipo: 'Erro',
+            metrica: 'Erro ao formatar dados',
+            valor: 0,
+            periodo: dateRange
+        });
+    }
 
     return rows;
 }
