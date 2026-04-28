@@ -28,28 +28,71 @@ export async function GET() {
 
         const today = new Date()
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+        const todayStr = today.toISOString().split('T')[0]
+        const startOfMonthStr = startOfMonth.toISOString().split('T')[0]
 
-        // Revenue today
+        // Revenue today from financial_entries
         const { data: todayRevenue } = await supabase
             .from('financial_entries')
             .select('amount')
             .eq('clinic_id', clinicId)
             .eq('entry_type', 'INCOME')
-            .gte('due_date', today.toISOString().split('T')[0])
+            .gte('due_date', todayStr)
             .is('cancelled_at', null)
 
-        const revenueToday = todayRevenue?.reduce((sum, entry) => sum + Number(entry.amount), 0) || 0
+        let revenueToday = todayRevenue?.reduce((sum, entry) => sum + Number(entry.amount), 0) || 0
 
-        // Revenue this month
+        // Revenue this month from financial_entries
         const { data: monthRevenue } = await supabase
             .from('financial_entries')
             .select('amount')
             .eq('clinic_id', clinicId)
             .eq('entry_type', 'INCOME')
-            .gte('due_date', startOfMonth.toISOString().split('T')[0])
+            .gte('due_date', startOfMonthStr)
             .is('cancelled_at', null)
 
-        const revenueMonth = monthRevenue?.reduce((sum, entry) => sum + Number(entry.amount), 0) || 0
+        let revenueMonth = monthRevenue?.reduce((sum, entry) => sum + Number(entry.amount), 0) || 0
+
+        // FALLBACK: If no financial_entries this month, calculate from reimbursement rules
+        if (revenueMonth === 0) {
+            const { data: completedAppts } = await supabase
+                .from('appointments')
+                .select('id, patient_id, appointment_type, appointment_date')
+                .eq('clinic_id', clinicId)
+                .eq('status', 'COMPLETED')
+                .gte('appointment_date', startOfMonthStr)
+                .lte('appointment_date', todayStr)
+
+            if (completedAppts && completedAppts.length > 0) {
+                const { data: rules } = await supabase
+                    .from('patient_reimbursement_rules')
+                    .select('patient_id, therapy_type, billing_amount')
+                    .eq('clinic_id', clinicId)
+                    .eq('is_active', true)
+
+                if (rules && rules.length > 0) {
+                    const rulesMap = new Map<string, any[]>()
+                    for (const rule of rules) {
+                        if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, [])
+                        rulesMap.get(rule.patient_id)!.push(rule)
+                    }
+
+                    for (const appt of completedAppts) {
+                        const patientRules = rulesMap.get(appt.patient_id)
+                        if (patientRules && patientRules.length > 0) {
+                            const matchedRule = patientRules.find(
+                                (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+                            ) || patientRules[0]
+                            const amount = Number(matchedRule.billing_amount) || 0
+                            revenueMonth += amount
+                            if (appt.appointment_date === todayStr) {
+                                revenueToday += amount
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // Pending (appointments without payment)
         const { count: pendingCount } = await supabase
@@ -65,7 +108,7 @@ export async function GET() {
             .select('payment_method, amount')
             .eq('clinic_id', clinicId)
             .eq('entry_type', 'INCOME')
-            .gte('due_date', startOfMonth.toISOString().split('T')[0])
+            .gte('due_date', startOfMonthStr)
             .is('cancelled_at', null)
 
         const revenueByMethod = byMethod?.reduce((acc, entry) => {

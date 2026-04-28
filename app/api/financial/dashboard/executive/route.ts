@@ -31,7 +31,44 @@ export async function GET(request: NextRequest) {
             .gte('due_date', startDate)
             .lte('due_date', endDate);
         
-        const totalIncome = incomeData?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
+        let totalIncome = incomeData?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
+
+        // FALLBACK: If no financial_entries for this period, calculate from reimbursement rules
+        if (totalIncome === 0) {
+            const { data: completedAppts } = await supabase
+                .from('appointments')
+                .select('id, patient_id, appointment_type')
+                .eq('clinic_id', clinicId)
+                .eq('status', 'COMPLETED')
+                .gte('appointment_date', startDate)
+                .lte('appointment_date', endDate);
+
+            if (completedAppts && completedAppts.length > 0) {
+                const { data: rules } = await supabase
+                    .from('patient_reimbursement_rules')
+                    .select('patient_id, therapy_type, billing_amount')
+                    .eq('clinic_id', clinicId)
+                    .eq('is_active', true);
+
+                if (rules && rules.length > 0) {
+                    const rulesMap = new Map<string, any[]>();
+                    for (const rule of rules) {
+                        if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
+                        rulesMap.get(rule.patient_id)!.push(rule);
+                    }
+
+                    for (const appt of completedAppts) {
+                        const patientRules = rulesMap.get(appt.patient_id);
+                        if (patientRules && patientRules.length > 0) {
+                            const matchedRule = patientRules.find(
+                                (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+                            ) || patientRules[0];
+                            totalIncome += Number(matchedRule.billing_amount) || 0;
+                        }
+                    }
+                }
+            }
+        }
 
         // 2. Glosas do Mês (from tiss_guides)
         const { data: glosasData } = await supabase

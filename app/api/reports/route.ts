@@ -120,20 +120,20 @@ async function getKPIs(supabase: SupabaseClient<any, "public", any>, clinicId: s
 }
 
 async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: string, startDate: string, endDate: string) {
-    // Get appointment stats
+    // Get appointment stats with patient_id for reimbursement rule matching
     const { data: appointments } = await supabase
         .from('appointments')
-        .select('id, status')
+        .select('id, status, patient_id, appointment_type')
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
 
     const total = appointments?.length || 0
-    const completed = appointments?.filter((a: AppointmentRecord) => a.status === 'COMPLETED').length || 0
-    const cancelled = appointments?.filter((a: AppointmentRecord) => a.status === 'CANCELLED').length || 0
-    const noShow = appointments?.filter((a: AppointmentRecord) => a.status === 'NO_SHOW').length || 0
+    const completed = appointments?.filter((a: any) => a.status === 'COMPLETED').length || 0
+    const cancelled = appointments?.filter((a: any) => a.status === 'CANCELLED').length || 0
+    const noShow = appointments?.filter((a: any) => a.status === 'NO_SHOW').length || 0
 
-    // Get revenue from financial_entries (not payments table which may be empty)
+    // Get revenue from financial_entries
     const { data: financialIncome } = await supabase
         .from('financial_entries')
         .select('amount')
@@ -143,7 +143,12 @@ async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: strin
         .gte('due_date', startDate)
         .lte('due_date', endDate)
 
-    const totalRevenue = financialIncome?.reduce((sum: number, p: { amount: any }) => sum + (Number(p.amount) || 0), 0) || 0
+    let totalRevenue = financialIncome?.reduce((sum: number, p: { amount: any }) => sum + (Number(p.amount) || 0), 0) || 0
+
+    // FALLBACK: If no financial_entries in this period, calculate from reimbursement rules
+    if (totalRevenue === 0 && completed > 0) {
+        totalRevenue = await calculateRevenueFromRules(supabase, clinicId, appointments || [])
+    }
 
     // Get patient counts
     const { count: newPatients } = await supabase
@@ -182,8 +187,51 @@ async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: strin
     })
 }
 
+/**
+ * Calcula receita a partir de regras de reembolso × agendamentos concluídos.
+ * Usado como fallback quando não há financial_entries no período.
+ */
+async function calculateRevenueFromRules(
+    supabase: SupabaseClient<any, "public", any>,
+    clinicId: string,
+    appointments: any[]
+): Promise<number> {
+    const completedAppts = appointments.filter(a => a.status === 'COMPLETED')
+    if (completedAppts.length === 0) return 0
+
+    // Get active reimbursement rules for this clinic
+    const { data: rules } = await supabase
+        .from('patient_reimbursement_rules')
+        .select('patient_id, therapy_type, billing_amount, guides_per_session')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+    if (!rules || rules.length === 0) return 0
+
+    // Build map: patient_id -> rules (keyed by therapy_type)
+    const rulesMap = new Map<string, any[]>()
+    for (const rule of rules) {
+        if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, [])
+        rulesMap.get(rule.patient_id)!.push(rule)
+    }
+
+    let totalRevenue = 0
+    for (const appt of completedAppts) {
+        const patientRules = rulesMap.get(appt.patient_id)
+        if (patientRules && patientRules.length > 0) {
+            // Try to match by appointment_type to therapy_type
+            const matchedRule = patientRules.find(
+                (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+            ) || patientRules[0] // Fallback to first rule if no match
+            totalRevenue += Number(matchedRule.billing_amount) || 0
+        }
+    }
+
+    return totalRevenue
+}
+
 async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    // Get doctors with their appointments in the period
+    // Get doctors with their appointments in the period (include patient_id and appointment_type)
     const { data: doctors } = await supabase
         .from('doctors')
         .select(`
@@ -193,7 +241,9 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
             appointments(
                 id,
                 status,
-                appointment_date
+                appointment_date,
+                patient_id,
+                appointment_type
             )
         `)
         .eq('clinic_id', clinicId)
@@ -215,20 +265,34 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
         }
     }
 
-    // Check if we have any linked entries - if not, use description-based matching
+    // Check if we have any linked entries
     const hasLinkedEntries = appointmentRevenueMap.size > 0
 
     // Strategy 2: Build map of doctor name fragment -> amount from description
-    // Entries like "Cristiane - Psico", "Barbara - To" match to doctor names
     const descriptionRevenueMap = new Map<string, number>()
-    if (!hasLinkedEntries) {
+    if (!hasLinkedEntries && financialEntries && financialEntries.length > 0) {
         for (const fe of financialEntries || []) {
             const desc = (fe.description || '').trim()
             if (desc) {
-                // Extract first name from description (before " - ")
                 const nameFragment = desc.split(' - ')[0].trim().toLowerCase()
                 descriptionRevenueMap.set(nameFragment, (descriptionRevenueMap.get(nameFragment) || 0) + (Number(fe.amount) || 0))
             }
+        }
+    }
+
+    // Strategy 3 (FALLBACK): Use reimbursement rules when no financial_entries exist at all
+    let rulesMap = new Map<string, any[]>()
+    const noFinancialData = !financialEntries || financialEntries.length === 0
+    if (noFinancialData) {
+        const { data: rules } = await supabase
+            .from('patient_reimbursement_rules')
+            .select('patient_id, therapy_type, billing_amount')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true)
+
+        for (const rule of rules || []) {
+            if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, [])
+            rulesMap.get(rule.patient_id)!.push(rule)
         }
     }
 
@@ -246,12 +310,23 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
             for (const appt of appointments) {
                 revenue += appointmentRevenueMap.get(appt.id) || 0
             }
-        } else {
+        } else if (descriptionRevenueMap.size > 0) {
             // Strategy 2: Match by doctor's first name in description
             const doctorFullName = (d.users?.full_name || '').toLowerCase()
             const doctorFirstName = doctorFullName.split(' ')[0]
             if (doctorFirstName) {
                 revenue = descriptionRevenueMap.get(doctorFirstName) || 0
+            }
+        } else if (noFinancialData) {
+            // Strategy 3: Calculate from reimbursement rules
+            for (const appt of completedAppointments) {
+                const patientRules = rulesMap.get((appt as any).patient_id)
+                if (patientRules && patientRules.length > 0) {
+                    const matchedRule = patientRules.find(
+                        (r: any) => r.therapy_type?.toLowerCase() === ((appt as any).appointment_type || '').toLowerCase()
+                    ) || patientRules[0]
+                    revenue += Number(matchedRule.billing_amount) || 0
+                }
             }
         }
 
@@ -465,6 +540,7 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
             status,
             payment_type,
             appointment_type,
+            patient_id,
             patients(id, full_name),
             doctors(id, specialty, users(full_name))
         `)
@@ -500,11 +576,42 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
         }
     }
 
+    // Check if we have ANY linked entries - if not, use reimbursement rules as fallback
+    const hasLinkedEntries = appointmentAmountMap.size > 0
+    let rulesMap = new Map<string, any[]>()
+    if (!hasLinkedEntries) {
+        const { data: rules } = await supabase
+            .from('patient_reimbursement_rules')
+            .select('patient_id, therapy_type, billing_amount')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true)
+
+        for (const rule of rules || []) {
+            if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, [])
+            rulesMap.get(rule.patient_id)!.push(rule)
+        }
+    }
+
     const entries = (appointments || []).map((appt: any) => {
         const patient = Array.isArray(appt.patients) ? appt.patients[0] : appt.patients
         const doctor = Array.isArray(appt.doctors) ? appt.doctors[0] : appt.doctors
         const doctorUser = doctor?.users ? (Array.isArray(doctor.users) ? doctor.users[0] : doctor.users) : null
         const financialInfo = appointmentAmountMap.get(appt.id)
+
+        // Calculate payment amount: first try financial_entries, then fallback to reimbursement rules
+        let paymentAmount = financialInfo?.amount || 0
+        let paymentStatus = financialInfo?.status || 'N/A'
+
+        if (paymentAmount === 0 && appt.status === 'COMPLETED' && !hasLinkedEntries) {
+            const patientRules = rulesMap.get(appt.patient_id)
+            if (patientRules && patientRules.length > 0) {
+                const matchedRule = patientRules.find(
+                    (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+                ) || patientRules[0]
+                paymentAmount = Number(matchedRule.billing_amount) || 0
+                paymentStatus = 'ESTIMATED'
+            }
+        }
 
         return {
             id: appt.id,
@@ -517,8 +624,8 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
             patient_name: patient?.full_name || 'N/A',
             doctor_name: doctorUser?.full_name || 'N/A',
             specialty: doctor?.specialty || 'N/A',
-            payment_amount: financialInfo?.amount || 0,
-            payment_status: financialInfo?.status || 'N/A',
+            payment_amount: paymentAmount,
+            payment_status: paymentStatus,
         }
     })
 
