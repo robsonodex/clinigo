@@ -177,6 +177,34 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    // Hard refresh - limpa cache da clínica (equivalente a Ctrl+Shift+R)
+    const [refreshingClinic, setRefreshingClinic] = useState<string | null>(null)
+    const hardRefreshClinic = async (clinicId: string, clinicName: string) => {
+        setRefreshingClinic(clinicId)
+        try {
+            const res = await fetch('/api/super-admin/revalidate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinicId, clinicName }),
+            })
+
+            if (res.ok) {
+                const result = await res.json()
+                alert(`✅ ${result.message}`)
+            } else {
+                const err = await res.json()
+                alert(`❌ Erro: ${err.error}`)
+            }
+            // Also reload the master hub data
+            await silentRefresh()
+        } catch (error) {
+            console.error('Hard refresh error:', error)
+            alert('❌ Erro ao limpar cache da clínica')
+        } finally {
+            setRefreshingClinic(null)
+        }
+    }
+
     const loadUsers = async () => {
         setLoadingUsers(true)
         try {
@@ -761,11 +789,12 @@ export default function SuperAdminDashboard() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={silentRefresh}
+                                                            onClick={() => hardRefreshClinic(clinic.id, clinic.name)}
+                                                            disabled={refreshingClinic === clinic.id}
                                                             className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-                                                            title="Atualizar dados"
+                                                            title="Hard Refresh - Limpar cache da clínica (Ctrl+Shift+R)"
                                                         >
-                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                            <RefreshCw className={`h-3.5 w-3.5 ${refreshingClinic === clinic.id ? 'animate-spin' : ''}`} />
                                                         </Button>
                                                     </div>
                                                 </TableCell>
