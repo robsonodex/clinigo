@@ -1,15 +1,18 @@
 /**
  * Cron Job: Send Appointment Reminders via WhatsApp
  * Sends automated WhatsApp reminders 24h and 1h before appointments
+ * 
+ * Usa o serviço centralizado em lib/whatsapp/service.ts
+ * que se comunica com a Evolution API (QR Code / WhatsApp Web)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { WhatsAppBusinessService } from '@/lib/services/whatsapp-business'
+import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 import { sendReminderEmail } from '@/lib/services/email'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60 // 60 seconds timeout
+export const maxDuration = 60
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
@@ -23,19 +26,7 @@ export async function GET(request: NextRequest) {
         }
 
         const supabase = await createClient()
-        const whatsapp = WhatsAppBusinessService.getInstance()
         const now = new Date()
-
-        // Initialize WhatsApp if not ready
-        if (!whatsapp.ready) {
-            console.log('⚠️ WhatsApp not ready, initializing...')
-            try {
-                await whatsapp.initialize()
-            } catch (error) {
-                console.error('Failed to initialize WhatsApp:', error)
-                // Continue with email fallback
-            }
-        }
 
         // 1. Reminders 24h before
         const tomorrow = new Date(now)
@@ -63,20 +54,23 @@ export async function GET(request: NextRequest) {
 
         for (const apt of appointments24h || []) {
             try {
-                // Try WhatsApp first
-                if (whatsapp.ready && apt.patient?.phone) {
-                    await whatsapp.sendLembrete24h(apt as any)
+                if (apt.patient?.phone && apt.clinic?.id) {
+                    const patientName = apt.patient?.full_name || 'Paciente'
+                    const doctorName = apt.doctor?.user?.full_name || apt.doctor?.full_name || 'seu médico'
+                    const time = apt.appointment_time || ''
+                    const message = `🔔 *Lembrete de Consulta*\n\nOlá ${patientName}!\n\nSua consulta é AMANHÃ:\n📅 ${tomorrowStr}\n🕐 ${time}\n👨‍⚕️ Dr(a). ${doctorName}\n\nConfirme sua presença respondendo esta mensagem.`
+
+                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_24h')
                     sent24h++
                 } else {
                     // Fallback to email
                     await sendReminderEmail(apt, 24)
                     sent24h++
                 }
-            } catch (error) {
-                console.error(`Error sending 24h reminder for ${apt.id}:`, error)
+            } catch (error: any) {
+                console.error(`Error sending 24h reminder for ${apt.id}:`, error.message)
                 failed24h++
-
-                // Try email fallback if WhatsApp fails
+                // Email fallback
                 try {
                     await sendReminderEmail(apt, 24)
                     sent24h++
@@ -124,20 +118,21 @@ export async function GET(request: NextRequest) {
 
         for (const apt of appointmentsInWindow) {
             try {
-                // Try WhatsApp first
-                if (whatsapp.ready && apt.patient?.phone) {
-                    await whatsapp.sendLembrete1h(apt as any)
+                if (apt.patient?.phone && apt.clinic?.id) {
+                    const patientName = apt.patient?.full_name || 'Paciente'
+                    const doctorName = apt.doctor?.user?.full_name || apt.doctor?.full_name || 'seu médico'
+                    const time = apt.appointment_time || ''
+                    const message = `⏰ *Consulta em 1 hora!*\n\n${patientName}, sua consulta é daqui a pouco:\n🕐 ${time}\n👨‍⚕️ Dr(a). ${doctorName}\n\nNão esqueça seus documentos!`
+
+                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_1h')
                     sent1h++
                 } else {
-                    // Fallback to email
                     await sendReminderEmail(apt, 1)
                     sent1h++
                 }
-            } catch (error) {
-                console.error(`Error sending 1h reminder for ${apt.id}:`, error)
+            } catch (error: any) {
+                console.error(`Error sending 1h reminder for ${apt.id}:`, error.message)
                 failed1h++
-
-                // Try email fallback
                 try {
                     await sendReminderEmail(apt, 1)
                     sent1h++
@@ -149,7 +144,6 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            whatsapp_ready: whatsapp.ready,
             sent_24h: sent24h,
             failed_24h: failed24h,
             sent_1h: sent1h,
@@ -164,4 +158,3 @@ export async function GET(request: NextRequest) {
         )
     }
 }
-

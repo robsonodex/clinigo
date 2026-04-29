@@ -1,396 +1,373 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-    MessageSquare,
-    Settings,
-    Headphones,
-    CheckCircle,
-    Wrench,
-    HelpCircle,
-    Mail,
-    Save,
-    Loader2,
-    ArrowLeft
+  MessageSquare,
+  CheckCircle,
+  Loader2,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Phone,
+  AlertTriangle,
+  Unplug,
+  Smartphone,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type ProviderType = '' | 'Z_API' | 'EVOLUTION' | 'OFFICIAL'
-
-interface ProviderConfig {
-    name: string
-    description: string
-    fields: { key: string; label: string; placeholder: string; type?: string }[]
+interface ConnectionState {
+  connected: boolean
+  status: 'connecting' | 'connected' | 'disconnected'
+  phone_number: string | null
+  connected_at: string | null
+  qr_code: string | null
 }
 
-const PROVIDERS: Record<string, ProviderConfig> = {
-    Z_API: {
-        name: 'Z-API',
-        description: 'API não-oficial, boa para clínicas pequenas e médias',
-        fields: [
-            { key: 'instance_id', label: 'Instance ID', placeholder: 'Ex: 3C2A5F8E...' },
-            { key: 'token', label: 'Token', placeholder: 'Seu token de acesso', type: 'password' },
-            { key: 'client_token', label: 'Client Token', placeholder: 'Token do cliente (opcional)' },
-        ]
-    },
-    EVOLUTION: {
-        name: 'Evolution API',
-        description: 'API open-source, sem custo por mensagem (requer servidor)',
-        fields: [
-            { key: 'api_url', label: 'URL da API', placeholder: 'https://sua-api.com' },
-            { key: 'api_key', label: 'API Key', placeholder: 'Sua chave de API', type: 'password' },
-            { key: 'instance_name', label: 'Nome da Instância', placeholder: 'clinica-nome' },
-        ]
-    },
-    OFFICIAL: {
-        name: 'WhatsApp Business API (Oficial)',
-        description: 'API oficial da Meta, mais estável, para grandes volumes',
-        fields: [
-            { key: 'phone_number_id', label: 'Phone Number ID', placeholder: 'ID do número no Meta' },
-            { key: 'access_token', label: 'Access Token', placeholder: 'Token permanente', type: 'password' },
-            { key: 'business_id', label: 'Business Account ID', placeholder: 'ID da conta business' },
-        ]
-    }
-}
+export default function WhatsAppPage() {
+  const [state, setState] = useState<ConnectionState>({
+    connected: false,
+    status: 'disconnected',
+    phone_number: null,
+    connected_at: null,
+    qr_code: null,
+  })
+  const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
+  const qrRefreshRef = useRef<NodeJS.Timeout | null>(null)
 
-export default function WhatsAppIntegrationPage() {
-    const [showConfig, setShowConfig] = useState(false)
-    const [selectedProvider, setSelectedProvider] = useState<ProviderType>('')
-    const [formData, setFormData] = useState<Record<string, string>>({})
-    const [saving, setSaving] = useState(false)
+  // ========== BUSCAR STATUS ==========
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/whatsapp/status')
+      if (!res.ok) return
 
-    const handleContactSupport = () => {
-        const email = 'suporte@clinigo.app'
-        const subject = 'Solicitação de Configuração WhatsApp'
-        const body = `Olá,\n\nGostaria de solicitar a configuração da integração WhatsApp para minha clínica.\n\nNome da Clínica: \nPlano Atual: \nTelefone para contato: \n\nAguardo retorno.`
+      const data = await res.json()
+      setState(data)
 
-        window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
-    }
-
-    const handleSaveConfig = async () => {
-        if (!selectedProvider) {
-            toast.error('Selecione um provedor')
-            return
+      // Se conectou, parar polling e avisar
+      if (data.connected && pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+        if (qrRefreshRef.current) {
+          clearInterval(qrRefreshRef.current)
+          qrRefreshRef.current = null
         }
+        toast.success('WhatsApp conectado com sucesso! 🎉')
+        setConnecting(false)
+      }
+    } catch { /* silent */ }
+  }, [])
 
-        const provider = PROVIDERS[selectedProvider]
-        const missingFields = provider.fields.filter(f => !formData[f.key])
+  // Buscar status inicial
+  useEffect(() => {
+    fetchStatus().finally(() => setLoading(false))
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      if (qrRefreshRef.current) clearInterval(qrRefreshRef.current)
+    }
+  }, [fetchStatus])
 
-        if (missingFields.length > 0) {
-            toast.error(`Preencha todos os campos obrigatórios`)
-            return
-        }
+  // ========== CONECTAR ==========
+  const handleConnect = async () => {
+    setConnecting(true)
+    try {
+      const res = await fetch('/api/whatsapp/connect', { method: 'POST' })
+      const data = await res.json()
 
-        setSaving(true)
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao conectar')
+        setConnecting(false)
+        return
+      }
+
+      // Mostrar QR Code
+      setState(prev => ({
+        ...prev,
+        qr_code: data.qr_code,
+        status: data.status,
+        connected: data.status === 'connected',
+      }))
+
+      if (data.status === 'connected') {
+        toast.success('WhatsApp já estava conectado!')
+        setConnecting(false)
+        return
+      }
+
+      // Iniciar polling de status a cada 3 segundos
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      pollingRef.current = setInterval(fetchStatus, 3000)
+
+      // Atualizar QR Code a cada 30 segundos
+      if (qrRefreshRef.current) clearInterval(qrRefreshRef.current)
+      qrRefreshRef.current = setInterval(async () => {
         try {
-            const res = await fetch('/api/integrations/whatsapp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    provider: selectedProvider,
-                    config: formData
-                })
-            })
-
-            if (res.ok) {
-                toast.success('Configuração salva com sucesso!')
-                setShowConfig(false)
-            } else {
-                const data = await res.json()
-                toast.error(data.error || 'Erro ao salvar configuração')
-            }
-        } catch (error) {
-            toast.error('Erro ao salvar configuração')
-        } finally {
-            setSaving(false)
-        }
+          const refreshRes = await fetch('/api/whatsapp/connect', { method: 'POST' })
+          const refreshData = await refreshRes.json()
+          if (refreshRes.ok && refreshData.qr_code) {
+            setState(prev => ({ ...prev, qr_code: refreshData.qr_code }))
+          }
+        } catch { /* silent */ }
+      }, 30000)
+    } catch (error) {
+      toast.error('Erro ao conectar WhatsApp')
+      setConnecting(false)
     }
+  }
 
-    const handleFieldChange = (key: string, value: string) => {
-        setFormData(prev => ({ ...prev, [key]: value }))
+  // ========== DESCONECTAR ==========
+  const handleDisconnect = async () => {
+    setDisconnecting(true)
+    try {
+      const res = await fetch('/api/whatsapp/disconnect', { method: 'POST' })
+      if (res.ok) {
+        setState({
+          connected: false,
+          status: 'disconnected',
+          phone_number: null,
+          connected_at: null,
+          qr_code: null,
+        })
+        toast.success('WhatsApp desconectado')
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Erro ao desconectar')
+      }
+    } catch {
+      toast.error('Erro ao desconectar')
+    } finally {
+      setDisconnecting(false)
     }
+  }
 
-    // Form de configuração
-    if (showConfig) {
-        return (
-            <div className="container mx-auto py-8 px-4 max-w-2xl">
-                <Button
-                    variant="ghost"
-                    className="mb-4 gap-2"
-                    onClick={() => setShowConfig(false)}
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Voltar
-                </Button>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Settings className="h-5 w-5" />
-                            Configurar Integração WhatsApp
-                        </CardTitle>
-                        <CardDescription>
-                            Configure as credenciais do seu provedor de WhatsApp
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Provider Selection */}
-                        <div className="space-y-2">
-                            <Label>Provedor de WhatsApp</Label>
-                            <Select
-                                value={selectedProvider}
-                                onValueChange={(v) => {
-                                    setSelectedProvider(v as ProviderType)
-                                    setFormData({})
-                                }}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o provedor" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Z_API">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">Z-API</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="EVOLUTION">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">Evolution API</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="OFFICIAL">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">WhatsApp Business API (Oficial)</span>
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {selectedProvider && PROVIDERS[selectedProvider] && (
-                                <p className="text-xs text-muted-foreground">
-                                    {PROVIDERS[selectedProvider].description}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Provider Specific Fields */}
-                        {selectedProvider && PROVIDERS[selectedProvider] && (
-                            <div className="space-y-4 pt-4 border-t">
-                                <h4 className="font-medium">Credenciais do {PROVIDERS[selectedProvider].name}</h4>
-
-                                {PROVIDERS[selectedProvider].fields.map(field => (
-                                    <div key={field.key} className="space-y-2">
-                                        <Label htmlFor={field.key}>{field.label}</Label>
-                                        <Input
-                                            id={field.key}
-                                            type={field.type || 'text'}
-                                            placeholder={field.placeholder}
-                                            value={formData[field.key] || ''}
-                                            onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Save Button */}
-                        {selectedProvider && (
-                            <div className="pt-4">
-                                <Button
-                                    className="w-full gap-2"
-                                    onClick={handleSaveConfig}
-                                    disabled={saving}
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Salvando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="h-4 w-4" />
-                                            Salvar Configuração
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    // Página principal
+  // ========== LOADING ==========
+  if (loading) {
     return (
-        <div className="container mx-auto py-8 px-4 max-w-4xl">
-            {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold flex items-center gap-3">
-                    <MessageSquare className="h-8 w-8 text-green-500" />
-                    Integração WhatsApp
-                </h1>
-                <p className="text-muted-foreground mt-2">
-                    Conecte seu WhatsApp para enviar notificações automáticas aos pacientes
-                </p>
-            </div>
-
-            {/* Main Info Card */}
-            <Card className="mb-6">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Settings className="h-5 w-5" />
-                        Como Funciona
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <p className="text-muted-foreground">
-                        A integração WhatsApp permite enviar automaticamente:
-                    </p>
-                    <div className="grid md:grid-cols-2 gap-2">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm">Confirmações de agendamento</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm">Lembretes de consulta</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm">QR Code para check-in</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm">Notificações personalizadas</span>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Options */}
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Option 1: Self Configure */}
-                <Card className="border-2 hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2">
-                                <Wrench className="h-5 w-5" />
-                                Configurar Sozinho
-                            </CardTitle>
-                            <Badge variant="outline">Gratuito</Badge>
-                        </div>
-                        <CardDescription>
-                            Para quem já tem um provedor contratado
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li>• Escolha entre Z-API, Evolution ou API Oficial</li>
-                            <li>• Insira as credenciais do seu provedor</li>
-                            <li>• Teste a conexão e pronto!</li>
-                        </ul>
-
-                        <div className="pt-4 border-t">
-                            <Button
-                                className="w-full gap-2"
-                                variant="outline"
-                                onClick={() => setShowConfig(true)}
-                            >
-                                <Settings className="h-4 w-4" />
-                                Abrir Configuração
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Option 2: We Configure */}
-                <Card className="border-2 border-primary bg-primary/5">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2">
-                                <Headphones className="h-5 w-5" />
-                                Nós Configuramos
-                            </CardTitle>
-                            <Badge className="bg-primary">Recomendado</Badge>
-                        </div>
-                        <CardDescription>
-                            Deixe com nossa equipe
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <ul className="space-y-2 text-sm">
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                Configuração completa
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                Escolhemos o melhor provedor
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                Testes e validação inclusos
-                            </li>
-                        </ul>
-
-                        <div className="p-3 bg-white rounded-lg border">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Taxa única:</span>
-                                <span className="font-bold text-lg">R$ 150,00</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Custos de API por conta do cliente
-                            </p>
-                        </div>
-
-                        <Button className="w-full gap-2" onClick={handleContactSupport}>
-                            <Mail className="h-4 w-4" />
-                            Solicitar Configuração
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* FAQ */}
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <HelpCircle className="h-5 w-5" />
-                        Dúvidas Frequentes
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div>
-                        <h4 className="font-medium">Qual provedor escolher?</h4>
-                        <p className="text-sm text-muted-foreground">
-                            <strong>Z-API:</strong> Bom custo-benefício para clínicas pequenas e médias.
-                            <strong> Evolution:</strong> Gratuito, mas requer servidor próprio.
-                            <strong> API Oficial:</strong> Mais estável, para grandes volumes.
-                        </p>
-                    </div>
-                    <div>
-                        <h4 className="font-medium">Quanto custa enviar mensagens?</h4>
-                        <p className="text-sm text-muted-foreground">
-                            Entre R$ 0,05 e R$ 0,15 por mensagem. Cobrado pelo provedor, não pelo CliniGo.
-                        </p>
-                    </div>
-
-                    <div className="pt-4 border-t text-center">
-                        <p className="text-xs text-muted-foreground">
-                            Precisa de ajuda? Entre em contato: {' '}
-                            <a href="mailto:suporte@clinigo.app" className="text-primary hover:underline">
-                                suporte@clinigo.app
-                            </a>
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto" />
+          <p className="text-muted-foreground">Verificando conexão...</p>
         </div>
+      </div>
     )
+  }
+
+  // ========== ESTADO: CONECTADO ==========
+  if (state.connected) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-2xl">
+        <h1 className="text-3xl font-bold flex items-center gap-3 mb-8">
+          <MessageSquare className="h-8 w-8 text-green-500" />
+          WhatsApp
+        </h1>
+
+        <Card className="border-2 border-green-300 bg-green-50/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
+                <Wifi className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-green-800">Conectado</h3>
+                  <Badge className="bg-green-500">Ativo</Badge>
+                </div>
+                {state.phone_number && (
+                  <p className="text-green-700 flex items-center gap-1.5 mt-1">
+                    <Phone className="h-4 w-4" />
+                    +{state.phone_number.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}
+                  </p>
+                )}
+                {state.connected_at && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Conectado em {new Date(state.connected_at).toLocaleString('pt-BR')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Info sobre o que está ativo */}
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-sm font-medium">✅ Lembretes automáticos</p>
+                <p className="text-xs text-muted-foreground">24h e 2h antes</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-sm font-medium">✅ Confirmações</p>
+                <p className="text-xs text-muted-foreground">Ao agendar</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-sm font-medium">✅ Cancelamentos</p>
+                <p className="text-xs text-muted-foreground">Aviso automático</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-sm font-medium">✅ Documentos</p>
+                <p className="text-xs text-muted-foreground">Receitas e laudos</p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-green-200">
+              <Button
+                variant="outline"
+                className="gap-2 text-red-600 hover:bg-red-50 border-red-200"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+              >
+                {disconnecting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Unplug className="h-4 w-4" />
+                )}
+                Desconectar WhatsApp
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ========== ESTADO: QR CODE (CONECTANDO) ==========
+  if (state.qr_code || connecting) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-xl">
+        <h1 className="text-3xl font-bold flex items-center gap-3 mb-8">
+          <MessageSquare className="h-8 w-8 text-green-500" />
+          WhatsApp
+        </h1>
+
+        <Card className="border-2 border-amber-200">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-lg">Escaneie o QR Code</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* QR CODE */}
+            <div className="flex justify-center">
+              {state.qr_code ? (
+                <div className="bg-white p-6 rounded-2xl border-2 border-dashed border-green-300 shadow-inner">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={state.qr_code.startsWith('data:') ? state.qr_code : `data:image/png;base64,${state.qr_code}`}
+                    alt="QR Code WhatsApp"
+                    className="w-72 h-72"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
+              ) : (
+                <div className="w-72 h-72 bg-gray-100 rounded-2xl flex flex-col items-center justify-center gap-3 animate-pulse">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  <p className="text-sm text-gray-400">Gerando QR Code...</p>
+                </div>
+              )}
+            </div>
+
+            {/* Instruções */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+              <div className="flex items-start gap-3">
+                <Smartphone className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <div className="text-sm space-y-1">
+                  <p><strong>1.</strong> Abra o <strong>WhatsApp</strong> no seu celular</p>
+                  <p><strong>2.</strong> Toque nos três pontos <strong>(⋮)</strong> → <strong>Aparelhos conectados</strong></p>
+                  <p><strong>3.</strong> Toque em <strong>Conectar um aparelho</strong></p>
+                  <p><strong>4.</strong> Aponte a câmera para este QR Code</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Status de aguardo */}
+            <div className="flex items-center justify-center gap-2 text-sm text-amber-600 bg-amber-50 rounded-lg p-3">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Aguardando escaneamento...</span>
+            </div>
+
+            {/* Botão novo QR */}
+            <div className="text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground"
+                onClick={handleConnect}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Gerar novo QR Code
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ========== ESTADO: DESCONECTADO ==========
+  return (
+    <div className="container mx-auto py-8 px-4 max-w-2xl">
+      <h1 className="text-3xl font-bold flex items-center gap-3 mb-8">
+        <MessageSquare className="h-8 w-8 text-green-500" />
+        WhatsApp
+      </h1>
+
+      <Card className="border-2 border-dashed border-gray-300">
+        <CardContent className="pt-8 pb-8">
+          <div className="text-center space-y-6">
+            <div className="mx-auto w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center">
+              <WifiOff className="h-10 w-10 text-gray-400" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold">WhatsApp não conectado</h2>
+              <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                Conecte o WhatsApp da sua clínica para enviar lembretes, 
+                confirmações e notificações automaticamente.
+              </p>
+            </div>
+
+            <Button
+              size="lg"
+              className="gap-3 bg-green-600 hover:bg-green-700 text-lg px-8 py-6"
+              onClick={handleConnect}
+              disabled={connecting}
+            >
+              {connecting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Gerando QR Code...
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="h-5 w-5" />
+                  Conectar WhatsApp
+                </>
+              )}
+            </Button>
+
+            <div className="text-left max-w-md mx-auto bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+              <p className="font-semibold flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                O que muda ao conectar:
+              </p>
+              <ul className="space-y-1 text-muted-foreground pl-6">
+                <li>• Lembretes de consulta enviados automaticamente</li>
+                <li>• Confirmação de agendamento instantânea</li>
+                <li>• Aviso de cancelamento automático</li>
+                <li>• Envio de receitas e laudos por WhatsApp</li>
+              </ul>
+            </div>
+
+            <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg p-3 max-w-md mx-auto">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>
+                O celular que escanear o QR Code ficará responsável por todos 
+                os envios da clínica. Use o número oficial da clínica.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

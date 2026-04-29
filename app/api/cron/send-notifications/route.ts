@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -208,21 +209,33 @@ async function handleFailure(supabase: ReturnType<typeof createServiceRoleClient
     }
 }
 
-// Send WhatsApp notification - API REMOVIDA
-// Agora apenas loga que compartilhamento manual é necessário
+// Send WhatsApp notification via Evolution API service
 async function sendWhatsAppNotification(item: NotificationItem, checkinUrl?: string): Promise<boolean> {
-    // WhatsApp API foi removida - clínicas devem usar compartilhamento manual
-    // O botão WhatsAppShareButton na UI permite compartilhar via wa.me
     const message = buildMessage(item, checkinUrl)
 
-    console.log(`[WhatsApp] API removida - compartilhamento manual necessário`)
-    console.log(`[WhatsApp] Destinatário: ${item.recipient_phone}`)
-    console.log(`[WhatsApp] Mensagem que seria enviada:`, message)
-    console.log(`[WhatsApp] Use WhatsAppShareButton para compartilhar manualmente`)
+    if (!item.recipient_phone) {
+        console.log(`[WhatsApp] Sem telefone para notificação ${item.id}`)
+        return false
+    }
 
-    // Retorna false para indicar que não foi enviado automaticamente
-    // O sistema pode marcar como "MANUAL_PENDING" se necessário
-    return false
+    try {
+        await sendWhatsAppMessage(
+            item.clinic_id,
+            item.recipient_phone,
+            message,
+            `cron_${item.type}`
+        )
+        console.log(`[WhatsApp] ✅ Enviado para ${item.recipient_phone} (${item.type})`)
+        return true
+    } catch (error: any) {
+        // Se não está conectado, não é erro fatal — é modo manual
+        if (error.message?.includes('não conectado')) {
+            console.log(`[WhatsApp] 📎 Sem conexão — modo manual para ${item.recipient_phone}`)
+            return false
+        }
+        console.error(`[WhatsApp] ❌ Falha:`, error.message)
+        return false
+    }
 }
 
 // Send Email notification

@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkInstanceStatus } from '@/lib/whatsapp/service'
+import { disconnectInstance } from '@/lib/whatsapp/service'
 
 /**
- * GET /api/whatsapp/test-connection
- * Health check da conexão WhatsApp.
+ * POST /api/whatsapp/disconnect
+ * 
+ * Desconecta o WhatsApp da clínica.
+ * RECEPTIONIST e NURSE NÃO podem desconectar.
+ * 
+ * Roles: CLINIC_ADMIN, SUPER_ADMIN
  */
-export async function GET() {
+export async function POST() {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -17,7 +21,7 @@ export async function GET() {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('clinic_id')
+      .select('clinic_id, role')
       .eq('id', user.id)
       .single()
 
@@ -25,14 +29,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
     }
 
-    const status = await checkInstanceStatus(profile.clinic_id)
+    if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Apenas administradores podem desconectar o WhatsApp' }, { status: 403 })
+    }
 
-    return NextResponse.json({
-      connected: status.connected,
-      status: status.status,
-      phone_number: status.phone_number,
-    })
+    await disconnectInstance(profile.clinic_id)
+
+    return NextResponse.json({ success: true, message: 'WhatsApp desconectado' })
   } catch (error: any) {
+    console.error('[WhatsApp Disconnect]', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

@@ -1,10 +1,11 @@
 import { sendMail } from '@/lib/services/mail-service'; // Direct simple mail
 import { sendReminderEmail } from '@/lib/services/email'; // React-email structured
+import { sendWhatsAppMessage } from '@/lib/whatsapp/service';
 
 export const NotificationChannels = {
     EMAIL: 'EMAIL',
-    WHATSAPP: 'WHATSAPP', // Legacy - agora usa compartilhamento manual
-    SMS: 'SMS' // Removido - usar compartilhamento manual
+    WHATSAPP: 'WHATSAPP',
+    SMS: 'SMS'
 };
 
 export interface ReminderContext {
@@ -15,26 +16,53 @@ export interface ReminderContext {
 }
 
 /**
- * WhatsApp - API removida, usar compartilhamento manual via wa.me
- * @deprecated Use WhatsAppShareButton component for manual sharing
- * @see lib/utils/whatsapp-share.ts for URL generation
+ * Envia mensagem WhatsApp via serviço centralizado multi-provedor.
+ * Se a clínica não tiver provedor configurado, retorna fallback para wa.me.
+ * 
+ * @see lib/services/whatsapp-provider.ts
  */
 export async function sendWhatsApp(
     to: string,
     context: ReminderContext,
     type: 'REMINDER_24H' | 'REMINDER_2H' | 'REMINDER_15MIN'
 ) {
-    // API WhatsApp removida - clínicas devem usar compartilhamento manual
-    console.log(`[WhatsApp] API removida - compartilhamento manual necessário para: ${to}, tipo: ${type}`);
-    console.log(`[WhatsApp] Paciente: ${context.patient?.full_name}, Consulta: ${context.appointment?.scheduled_at}`);
+    const clinicId = context.clinic?.id;
+    if (!clinicId) {
+        console.log(`[WhatsApp] Sem clinic_id — modo manual para: ${to}`);
+        return { success: false, reason: 'NO_CLINIC_ID', message: 'Clínica não identificada' };
+    }
 
-    // Retorna sucesso para não quebrar fluxos existentes
-    // mas indica que compartilhamento manual é necessário
-    return {
-        success: false,
-        reason: 'MANUAL_SHARING_REQUIRED',
-        message: 'WhatsApp API removida. Use o botão de compartilhamento manual.'
-    };
+    const patientName = context.patient?.full_name || 'Paciente';
+    const doctorName = context.doctor?.full_name || 'seu médico';
+    const appointmentDate = context.appointment?.scheduled_at
+        ? new Date(context.appointment.scheduled_at).toLocaleDateString('pt-BR')
+        : '';
+    const appointmentTime = context.appointment?.scheduled_at
+        ? new Date(context.appointment.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : '';
+
+    let message = '';
+    switch (type) {
+        case 'REMINDER_24H':
+            message = `🔔 *Lembrete de Consulta*\n\nOlá ${patientName}!\n\nSua consulta é AMANHÃ:\n📅 ${appointmentDate}\n🕐 ${appointmentTime}\n👨‍⚕️ Dr(a). ${doctorName}\n\nConfirme sua presença respondendo esta mensagem.`;
+            break;
+        case 'REMINDER_2H':
+            message = `⏰ *Consulta em 2 horas!*\n\n${patientName}, sua consulta é daqui a pouco:\n🕐 ${appointmentTime}\n👨‍⚕️ Dr(a). ${doctorName}\n\nNão esqueça seus documentos!`;
+            break;
+        case 'REMINDER_15MIN':
+            message = `🔔 *Consulta em 15 minutos!*\n\n${patientName}, sua consulta começa em breve:\n🕐 ${appointmentTime}\n\nPor favor, dirija-se à recepção.`;
+            break;
+    }
+
+    try {
+        await sendWhatsAppMessage(clinicId, to, message, `notification_${type}`);
+        return { success: true, reason: 'SENT', message: 'Enviado com sucesso' };
+    } catch (error: any) {
+        if (error.message?.includes('não conectado')) {
+            return { success: false, reason: 'MANUAL_SHARING_REQUIRED', message: error.message };
+        }
+        return { success: false, reason: 'SEND_FAILED', message: error.message || 'Falha no envio' };
+    }
 }
 
 /**
