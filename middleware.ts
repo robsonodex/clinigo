@@ -69,6 +69,7 @@ const PUBLIC_ROUTES = [
     '/api/checkin/verify', // QR Code verification and queue (public)
     '/partners/login', // Partner login page
     '/partners/register', // Partner registration page
+    '/m/login', // PWA mobile login page
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)

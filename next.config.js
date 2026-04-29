@@ -1,3 +1,45 @@
+const withPWA = require('@ducanh2912/next-pwa').default({
+    dest: 'public',
+    disable: process.env.NODE_ENV === 'development',
+    register: true,
+    skipWaiting: true,
+    runtimeCaching: [
+        {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+                cacheName: 'supabase-api',
+                expiration: { maxEntries: 64, maxAgeSeconds: 60 * 5 },
+                networkTimeoutSeconds: 10,
+            },
+        },
+        {
+            urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+                cacheName: 'google-fonts',
+                expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+        },
+        {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
+            handler: 'CacheFirst',
+            options: {
+                cacheName: 'static-images',
+                expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+        },
+        {
+            urlPattern: /\/_next\/static\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+                cacheName: 'next-static',
+                expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+        },
+    ],
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     // Enable React strict mode for better development experience
@@ -126,6 +168,6 @@ const nextConfig = {
     },
 }
 
-module.exports = nextConfig
+module.exports = withPWA(nextConfig)
 
 

@@ -189,4 +189,24 @@
   .animate-glow {
     animation: glow-pulse 2s ease-in-out infinite;
   }
+
+  /* PWA: Toast slide-in animation */
+  @keyframes slide-in {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+
+  /* PWA: Hide scrollbar for horizontal scroll areas */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
