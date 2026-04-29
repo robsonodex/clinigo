@@ -630,6 +630,48 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Send WhatsApp notification if enabled
+        if (body.notifications?.send_whatsapp && patient.phone) {
+            try {
+                const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
+                const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
+                const clinicName = appointmentWithRelations?.clinic?.name || 'Clínica'
+                const isTelemedicina = body.type === 'telemedicina'
+
+                let message = `✅ *Agendamento Confirmado!*\n\n`
+                message += `Olá *${patient.full_name}*!\n\n`
+                message += `Sua consulta foi agendada com sucesso:\n\n`
+                message += `👨‍⚕️ *Médico(a):* Dr(a). ${doctorFullName}\n`
+                message += `📅 *Data:* ${appointmentDate}\n`
+                message += `🕐 *Horário:* ${appointmentTime}\n`
+                message += `🏥 *Clínica:* ${clinicName}\n`
+                message += `📋 *Tipo:* ${isTelemedicina ? '📹 Teleconsulta' : '🏥 Presencial'}\n`
+
+                if (isTelemedicina && videoRoom) {
+                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+                    const videoUrl = `${baseUrl}/video/${appointmentId}?role=patient&token=${(videoRoom as any).patient_token}`
+                    message += `\n🎥 *Link da Teleconsulta:*\n${videoUrl}\n`
+                    message += `\n_Acesse o link acima no horário da consulta._`
+                } else {
+                    const checkinUrl = qrCodeData?.url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/checkin/${appointmentId}`
+                    message += `\n📱 *Faça seu pré-check-in:*\n${checkinUrl}\n`
+                    message += `\n_Agilize seu atendimento fazendo o check-in antes da consulta._`
+                }
+
+                message += `\n\n_CliniGo - Cuidando de você! 💚_`
+
+                await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_confirmation')
+                console.log('[NOTIFICATION] WhatsApp sent to:', patient.phone)
+            } catch (whatsappError: any) {
+                if (whatsappError.message?.includes('não conectado')) {
+                    console.log('[NOTIFICATION] WhatsApp não conectado para esta clínica - notificação ignorada')
+                } else {
+                    console.error('[NOTIFICATION] WhatsApp send failed:', whatsappError)
+                }
+                // Non-blocking - don't fail the appointment creation
+            }
+        }
+
         return NextResponse.json({
             success: true,
             appointment: {
