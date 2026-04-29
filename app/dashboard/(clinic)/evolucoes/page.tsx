@@ -61,10 +61,13 @@ export default function SessionEvolutionsPage() {
             const url = editingId ? `/api/session-evolutions/${editingId}` : '/api/session-evolutions'
             const method = editingId ? 'PUT' : 'POST'
             const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, template_type: templateType }) })
-            if (!res.ok) throw new Error()
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || `Erro ${res.status}`)
+            }
             toast.success(editingId ? 'Evolução atualizada!' : 'Evolução registrada!')
             setShowDialog(false); setForm(emptyForm); setEditingId(null); fetchEvolutions()
-        } catch { toast.error('Erro ao salvar') }
+        } catch (err: any) { toast.error(err.message || 'Erro ao salvar evolução') }
         finally { setSaving(false) }
     }
 
