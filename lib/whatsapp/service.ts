@@ -411,8 +411,25 @@ export async function sendWhatsAppMessage(
   message: string,
   triggerSource: string
 ): Promise<void> {
-  const session = getSession(clinicId)
+  let session = getSession(clinicId)
   const supabase = getSupabaseAdmin()
+
+  if (!session.socket || session.status !== 'open') {
+    console.log(`[WhatsApp] Socket not open for ${clinicId}. Attempting lazy reconnection...`)
+    // Check if we have auth state
+    const authState = await loadAuthStateFromStorage(clinicId)
+    if (authState) {
+      // Start session and wait for it to be open (up to 5 seconds)
+      startBaileysSession(clinicId).catch(console.error)
+      
+      let attempts = 0
+      while (session.status !== 'open' && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        session = getSession(clinicId)
+        attempts++
+      }
+    }
+  }
 
   if (!session.socket || session.status !== 'open') {
     throw new Error('WhatsApp não conectado. Acesse Configurações > WhatsApp para conectar.')
