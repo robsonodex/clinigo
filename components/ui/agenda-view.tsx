@@ -75,6 +75,7 @@ import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
 import { RecurringAppointmentModal } from '@/components/appointments/RecurringAppointmentModal'
+import { EditSeriesModal } from '@/components/appointments/EditSeriesModal'
 import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenceModal'
 import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
 import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
@@ -399,6 +400,9 @@ export default function AgendaPage() {
     // Cancel recurring series logic (double confirmation)
     const [cancellingSeriesId, setCancellingSeriesId] = useState<string | null>(null)
     const [cancelSeriesStep, setCancelSeriesStep] = useState<1 | 2>(1)
+
+    // Edit recurring series
+    const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null)
 
     const cancelSeriesMutation = useMutation({
         mutationFn: async () => {
@@ -898,16 +902,24 @@ export default function AgendaPage() {
                                                                                             </DropdownMenuItem>
                                                                                         )}
                                                                                         {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
-                                                                                            <DropdownMenuItem
-                                                                                                className="text-destructive focus:text-destructive"
-                                                                                                onClick={() => {
-                                                                                                    setCancellingSeriesId((appointment as any).series_id)
-                                                                                                    setCancelSeriesStep(1)
-                                                                                                }}
-                                                                                            >
-                                                                                                <Repeat className="w-4 h-4 mr-2" />
-                                                                                                Cancelar Série
-                                                                                            </DropdownMenuItem>
+                                                                                            <>
+                                                                                                <DropdownMenuItem
+                                                                                                    onClick={() => setEditingSeriesId((appointment as any).series_id)}
+                                                                                                >
+                                                                                                    <Repeat className="w-4 h-4 mr-2" />
+                                                                                                    Editar Série
+                                                                                                </DropdownMenuItem>
+                                                                                                <DropdownMenuItem
+                                                                                                    className="text-destructive focus:text-destructive"
+                                                                                                    onClick={() => {
+                                                                                                        setCancellingSeriesId((appointment as any).series_id)
+                                                                                                        setCancelSeriesStep(1)
+                                                                                                    }}
+                                                                                                >
+                                                                                                    <Repeat className="w-4 h-4 mr-2" />
+                                                                                                    Cancelar Série
+                                                                                                </DropdownMenuItem>
+                                                                                            </>
                                                                                         )}
                                                                                     </DropdownMenuContent>
                                                                                 </DropdownMenu>
@@ -1108,16 +1120,24 @@ export default function AgendaPage() {
                                                                                                     </DropdownMenuItem>
                                                                                                 )}
                                                                                                 {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
-                                                                                                    <DropdownMenuItem
-                                                                                                        className="text-destructive focus:text-destructive"
-                                                                                                        onClick={() => {
-                                                                                                            setCancellingSeriesId((appointment as any).series_id)
-                                                                                                            setCancelSeriesStep(1)
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        <Repeat className="w-4 h-4 mr-2" />
-                                                                                                        Cancelar Série
-                                                                                                    </DropdownMenuItem>
+                                                                                                    <>
+                                                                                                        <DropdownMenuItem
+                                                                                                            onClick={() => setEditingSeriesId((appointment as any).series_id)}
+                                                                                                        >
+                                                                                                            <Repeat className="w-4 h-4 mr-2" />
+                                                                                                            Editar Série
+                                                                                                        </DropdownMenuItem>
+                                                                                                        <DropdownMenuItem
+                                                                                                            className="text-destructive focus:text-destructive"
+                                                                                                            onClick={() => {
+                                                                                                                setCancellingSeriesId((appointment as any).series_id)
+                                                                                                                setCancelSeriesStep(1)
+                                                                                                            }}
+                                                                                                        >
+                                                                                                            <Repeat className="w-4 h-4 mr-2" />
+                                                                                                            Cancelar Série
+                                                                                                        </DropdownMenuItem>
+                                                                                                    </>
                                                                                                 )}
                                                                                             </DropdownMenuContent>
                                                                                         </DropdownMenu>
@@ -1300,6 +1320,15 @@ export default function AgendaPage() {
             <RecurringAppointmentModal
                 open={recurringAppointmentOpen}
                 onOpenChange={setRecurringAppointmentOpen}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+                }}
+            />
+
+            <EditSeriesModal
+                open={!!editingSeriesId}
+                onOpenChange={(open) => !open && setEditingSeriesId(null)}
+                seriesId={editingSeriesId}
                 onSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
                 }}
