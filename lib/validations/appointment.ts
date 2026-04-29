@@ -119,6 +119,9 @@ export const updateAppointmentSchema = z.object({
     status: z
         .enum(['PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'])
         .optional(),
+    appointment_type: z
+        .enum(['presencial', 'online', 'IN_PERSON', 'TELEMEDICINA'])
+        .optional(),
     video_link: z
         .string()
         .url('Link de vídeo inválido')

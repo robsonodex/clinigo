@@ -19,6 +19,9 @@ import {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  initAuthCreds,
+  BufferJSON,
+  proto,
   type ConnectionState,
   type WASocket,
   type AuthenticationState,
@@ -44,6 +47,8 @@ const STORAGE_BUCKET = 'whatsapp-sessions'
 
 // ========== IN-MEMORY SESSION MAP ==========
 
+const MAX_RECONNECT_ATTEMPTS = 3
+
 interface ClinicSession {
   socket: WASocket | null
   qrCode: string | null       // base64 data URI do QR
@@ -51,6 +56,7 @@ interface ClinicSession {
   phoneNumber: string | null
   connectedAt: string | null
   authState: AuthenticationState | null
+  reconnectAttempts: number
 }
 
 const sessions = new Map<string, ClinicSession>()
@@ -64,6 +70,7 @@ function getSession(clinicId: string): ClinicSession {
       phoneNumber: null,
       connectedAt: null,
       authState: null,
+      reconnectAttempts: 0,
     })
   }
   return sessions.get(clinicId)!
@@ -87,7 +94,7 @@ async function loadAuthStateFromStorage(clinicId: string): Promise<any | null> {
     if (error || !data) return null
 
     const text = await data.text()
-    return JSON.parse(text)
+    return JSON.parse(text, BufferJSON.reviver)
   } catch {
     return null
   }
@@ -101,7 +108,8 @@ async function saveAuthStateToStorage(clinicId: string, state: any): Promise<voi
   const filePath = `${clinicId}/auth_info.json`
 
   try {
-    const blob = new Blob([JSON.stringify(state)], { type: 'application/json' })
+    const jsonStr = JSON.stringify(state, BufferJSON.replacer, 2)
+    const blob = new Blob([jsonStr], { type: 'application/json' })
 
     // Upsert: remove e re-cria
     await supabase.storage.from(STORAGE_BUCKET).remove([filePath])
@@ -136,7 +144,8 @@ function createInMemoryAuthState(existingState?: any): {
   state: AuthenticationState
   saveCreds: () => Promise<any>
 } {
-  const creds = existingState?.creds || {}
+  // Se não há creds existentes, gerar credenciais iniciais com chaves criptográficas
+  const creds = existingState?.creds || initAuthCreds()
   const keys: Record<string, Record<string, any>> = existingState?.keys || {}
 
   const state: AuthenticationState = {
@@ -272,15 +281,21 @@ async function startBaileysSession(clinicId: string): Promise<void> {
         session.socket = null
         session.qrCode = null
 
-        if (shouldReconnect) {
-          // Reconectar automaticamente
+        if (shouldReconnect && session.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          // Reconectar automaticamente com limite
+          session.reconnectAttempts++
           session.status = 'connecting'
+          console.log(`[WhatsApp] Tentativa de reconexão ${session.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} (${clinicId})`)
           setTimeout(() => startBaileysSession(clinicId), 3000)
         } else {
-          // Logout — limpar tudo
+          // Logout ou esgotou tentativas — limpar tudo
+          if (session.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            console.log(`[WhatsApp] Máximo de reconexões atingido (${clinicId})`)
+          }
           session.status = 'close'
           session.phoneNumber = null
           session.connectedAt = null
+          session.reconnectAttempts = 0
           await removeAuthStateFromStorage(clinicId)
 
           const supabase = getSupabaseAdmin()

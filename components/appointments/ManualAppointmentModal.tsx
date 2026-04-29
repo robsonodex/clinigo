@@ -218,10 +218,16 @@ export function ManualAppointmentModal({
 
             let response;
             if (isEditing && appointmentToEdit) {
+                // PATCH uses updateAppointmentSchema - map fields correctly
+                const patchPayload: Record<string, unknown> = {
+                    appointment_date: data.appointment_date,
+                    appointment_time: data.appointment_time,
+                    appointment_type: data.type === 'telemedicina' ? 'online' : 'presencial',
+                }
                 response = await fetch(`/api/appointments/${appointmentToEdit.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify(patchPayload),
                 })
             } else {
                 response = await fetch('/api/appointments/manual', {

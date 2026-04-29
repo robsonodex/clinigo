@@ -216,6 +216,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             (validatedData.appointment_date && validatedData.appointment_date !== appointment.appointment_date) ||
             (validatedData.appointment_time && validatedData.appointment_time !== appointment.appointment_time)
 
+        // Check if changing to teleconsulta (need to generate video_link and video_room)
+        const isChangingToTeleconsulta = validatedData.appointment_type &&
+            (validatedData.appointment_type === 'online' || validatedData.appointment_type === 'TELEMEDICINA') &&
+            appointment.appointment_type !== 'online' && appointment.appointment_type !== 'TELEMEDICINA'
+
+        // Auto-generate video_link when switching to teleconsulta
+        if (isChangingToTeleconsulta && !validatedData.video_link) {
+            const { generateVideoRoomUrl } = await import('@/lib/utils/video')
+            validatedData.video_link = generateVideoRoomUrl(appointmentId)
+        }
+
         // Update appointment
         const { data: updatedAppointment, error: updateError } = await adminDb
             .from('appointments')
@@ -229,6 +240,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .single()
 
         if (updateError) throw updateError
+
+        // Auto-create video_room when switching to teleconsulta
+        if (isChangingToTeleconsulta) {
+            try {
+                const roomId = `room_${appointmentId.substring(0, 8)}_${Date.now()}`
+                const patientToken = `patient_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+                const doctorToken = `doctor_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+
+                await adminDb
+                    .from('video_rooms')
+                    .insert({
+                        appointment_id: appointmentId,
+                        room_id: roomId,
+                        patient_token: patientToken,
+                        doctor_token: doctorToken,
+                    })
+
+                console.log('[VIDEO_ROOM] Created video room for type change to teleconsulta:', roomId)
+            } catch (roomError) {
+                console.error('[VIDEO_ROOM] Error creating room on type change:', roomError)
+            }
+        }
 
         // Send reschedule email notification if date/time changed
         if (isRescheduling && appointment.patient?.email) {
