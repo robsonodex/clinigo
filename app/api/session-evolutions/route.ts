@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
                 *,
                 patients(id, full_name),
                 doctors(id, specialty, users(full_name)),
-                appointments(id, appointment_date, start_time)
+                appointments(id, appointment_date, appointment_time)
             `)
             .eq('clinic_id', userData.clinic_id)
             .order('evolution_date', { ascending: false })

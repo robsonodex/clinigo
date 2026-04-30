@@ -44,39 +44,9 @@ export async function GET(request: Request) {
 
         const { patient_id: patientId, category, search } = validationResult.data
 
-        // SECURITY: DOCTOR não-coordenador só vê documentos dos seus próprios pacientes
+        // SECURITY: O RLS do Supabase agora permite que DOCTOR veja documentos de todos os pacientes da clínica
+        // Não é mais necessário filtrar apenas por agendamentos (appointments)
         let allowedPatientIds: string[] | null = null
-        if (user.role === 'DOCTOR') {
-            const { data: userFull } = await supabase
-                .from('users')
-                .select('is_coordinator')
-                .eq('id', user.id)
-                .single()
-
-            if (!(userFull as any)?.is_coordinator) {
-                const { data: doctor } = await supabase
-                    .from('doctors')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .single()
-
-                if (doctor) {
-                    const { data: appointments } = await supabase
-                        .from('appointments')
-                        .select('patient_id')
-                        .eq('doctor_id', doctor.id)
-
-                    allowedPatientIds = [...new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))]
-
-                    if (allowedPatientIds.length === 0) {
-                        return NextResponse.json({ documents: [] })
-                    }
-                } else {
-                    // Doctor sem registro na tabela doctors = sem acesso a documentos
-                    return NextResponse.json({ documents: [] })
-                }
-            }
-        }
 
         let query = supabase
             .from('patient_documents')
@@ -179,36 +149,12 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'Faltam campos obrigatórios (file e patient_id)' }, { status: 400 })
             }
 
-            // SECURITY: DOCTOR não-coordenador só pode fazer upload para seus próprios pacientes
-            if (user.role === 'DOCTOR') {
-                const { data: userFull } = await supabase
-                    .from('users')
-                    .select('is_coordinator')
-                    .eq('id', user.id)
-                    .single()
-
-                if (!(userFull as any)?.is_coordinator) {
-                    const { data: doctor } = await supabase
-                        .from('doctors')
-                        .select('id')
-                        .eq('user_id', user.id)
-                        .single()
-
-                    if (!doctor) {
-                        return NextResponse.json({ error: 'Acesso negado - perfil de profissional não encontrado' }, { status: 403 })
-                    }
-
-                    const { data: appointment } = await supabase
-                        .from('appointments')
-                        .select('id')
-                        .eq('doctor_id', doctor.id)
-                        .eq('patient_id', patient_id)
-                        .limit(1)
-                        .single()
-
-                    if (!appointment) {
-                        return NextResponse.json({ error: 'Acesso negado - paciente não pertence aos seus atendimentos' }, { status: 403 })
-                    }
+            // Valida se o paciente pertence à clínica do usuário logado
+            const { data: userFull } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+            if (userFull?.clinic_id) {
+                const { data: patientData } = await supabase.from('patients').select('clinic_id').eq('id', patient_id).single()
+                if (patientData?.clinic_id !== userFull.clinic_id) {
+                    return NextResponse.json({ error: 'Acesso negado - paciente não pertence à sua clínica' }, { status: 403 })
                 }
             }
 
