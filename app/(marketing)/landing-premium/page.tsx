@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor, Tablet, Stethoscope } from 'lucide-react'
+import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor, Tablet, Stethoscope, Smartphone, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -407,6 +407,36 @@ export default function LandingPremium() {
                         <h3 className="text-lg font-bold text-white mb-2">Totem de Auto Atendimento</h3>
                         <p className="text-slate-400 text-sm leading-relaxed">
                             Seus pacientes fazem check-in sozinhos via QR Code ou reconhecimento facial. Sem filas, sem burocracia na recepção.
+                        </p>
+                    {/* Feature 9 - WhatsApp Multi-Atendente */}
+                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
+                        <div className="absolute top-4 right-4">
+                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                                Novo
+                            </span>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
+                            <Smartphone className="w-6 h-6 text-teal-vibrant" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">WhatsApp Integrado (QR Code)</h3>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            Conecte o número da sua clínica via QR Code. Automação de lembretes, envio de receitas e confirmações direto no painel, sem precisar do celular em mãos.
+                        </p>
+                    </motion.div>
+
+                    {/* Feature 10 - Chat Interno */}
+                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
+                        <div className="absolute top-4 right-4">
+                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                                Novo
+                            </span>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
+                            <MessageCircle className="w-6 h-6 text-teal-vibrant" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Chat Interno (CliniGo Messenger)</h3>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            Comunicação ágil e segura entre a recepção e os consultórios. Envie alertas silenciosos, tire dúvidas rapidamente e acabe com os grupos desorganizados.
                         </p>
                     </motion.div>
                 </div>
