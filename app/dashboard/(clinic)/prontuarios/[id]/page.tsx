@@ -160,7 +160,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 referenceTime = new Date(`${appt.appointment_date}T${appt.appointment_time || '00:00:00'}`).getTime()
             }
             const hoursDiff = (new Date().getTime() - referenceTime) / (1000 * 60 * 60)
-            if (hoursDiff > 24) {
+            if (hoursDiff > 48) {
                 setIsLocked(true)
             }
 
@@ -291,7 +291,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
     const handleChange = (field: keyof typeof formData, value: string) => {
         if (isLocked) {
-             toast({ title: 'Bloqueado', description: 'O prazo de 24h para evolução expirou.', variant: 'destructive'})
+             toast({ title: 'Bloqueado', description: 'O prazo de 48h para evolução expirou.', variant: 'destructive'})
              return
         }
         setFormData(prev => ({ ...prev, [field]: value }))
@@ -299,7 +299,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
     const handleSave = async () => {
         if (isLocked) {
-            toast({ title: 'Bloqueado', description: 'O prazo de 24h para evolução expirou. Não é mais possível alterar este registro.', variant: 'destructive' })
+            toast({ title: 'Bloqueado', description: 'O prazo de 48h para evolução expirou. Não é mais possível alterar este registro.', variant: 'destructive' })
             return
         }
         if (!appointment || !patient) return
@@ -492,7 +492,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 {isLocked && (
                     <div className="bg-red-50 p-4 border-b-2 border-red-200 text-red-800 flex items-center justify-center gap-2 print:hidden">
                         <AlertCircle className="w-5 h-5" />
-                        <span className="font-semibold text-sm">Prontuário bloqueado para edição (Prazo de 24h expirado). Disponível apenas para visualização ou impressão.</span>
+                        <span className="font-semibold text-sm">Prontuário bloqueado para edição (Prazo de 48h expirado). Disponível apenas para visualização ou impressão.</span>
                     </div>
                 )}
                 
