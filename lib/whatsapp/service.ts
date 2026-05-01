@@ -382,12 +382,19 @@ export async function checkInstanceStatus(clinicId: string): Promise<{
       console.log(`[WhatsApp] Lazy checking status for ${clinicId}. Data found in storage.`)
       // Disparamos o startBaileysSession em background
       startBaileysSession(clinicId).catch(console.error)
-      // Como estamos no meio de um status check, vamos assumir temporariamente que ele 
-      // está conectando (evita que a tela pisque "Desconectado")
+      
+      // Capturar número de telefone salvo no authState para exibição
+      let phoneNumber = null
+      if (authState.creds && authState.creds.me && authState.creds.me.id) {
+        phoneNumber = authState.creds.me.id.split(':')[0].split('@')[0]
+      }
+
+      // 🚀 Correção de Falso Positivo: Como estamos na Vercel (Serverless), a memória RAM reseta constantemente.
+      // Se existe AuthState persistido no banco, significa que o usuário não se desconectou e a sessão é válida.
       return {
-        connected: false,
-        phone_number: null,
-        status: 'connecting',
+        connected: true,
+        phone_number: phoneNumber,
+        status: 'connected',
       }
     }
   }
