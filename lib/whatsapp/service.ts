@@ -372,7 +372,25 @@ export async function checkInstanceStatus(clinicId: string): Promise<{
   phone_number: string | null
   status: 'connecting' | 'connected' | 'disconnected'
 }> {
-  const session = getSession(clinicId)
+  let session = getSession(clinicId)
+
+  // Se a sessão está fechada na memória (ex: Next.js dev server restartou)
+  // vamos checar se existe um auth_info no storage para reconectar silenciosamente
+  if (session.status === 'close' || !session.socket) {
+    const authState = await loadAuthStateFromStorage(clinicId)
+    if (authState) {
+      console.log(`[WhatsApp] Lazy checking status for ${clinicId}. Data found in storage.`)
+      // Disparamos o startBaileysSession em background
+      startBaileysSession(clinicId).catch(console.error)
+      // Como estamos no meio de um status check, vamos assumir temporariamente que ele 
+      // está conectando (evita que a tela pisque "Desconectado")
+      return {
+        connected: false,
+        phone_number: null,
+        status: 'connecting',
+      }
+    }
+  }
 
   // Mapear status interno para a interface esperada
   switch (session.status) {
@@ -423,7 +441,7 @@ export async function sendWhatsAppMessage(
       startBaileysSession(clinicId).catch(console.error)
       
       let attempts = 0
-      while (session.status !== 'open' && attempts < 10) {
+      while (session.status !== 'open' && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 500))
         session = getSession(clinicId)
         attempts++

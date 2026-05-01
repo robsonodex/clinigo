@@ -519,3 +519,6 @@ vercel --prod
 ---
 
 *Gerado automaticamente por auditoria tÃ©cnica â€” CliniGo v5.0*
+\ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   R e c e ç ã o   - >   A g e n d a   - >   M a n u a l A p p o i n t m e n t M o d a l . t s x   - >   C o r r e ç ã o   d e   c a c h e   ( q u e r y K e y )   q u e   i m p e d i a   n o v o s   m é d i c o s   d e   a p a r e c e r e m   n o   a g e n d a m e n t o   m a n u a l .  
+ \ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   B a c k e n d   - >   l i b / w h a t s a p p / s e r v i c e . t s   - >   C o r r e ç ã o   d o   e s t a d o   d e   s e s s ã o   ' L a z y   R e c o n n e c t i o n '   i n - p r o c e s s   p a r a   n ã o   d e s l o g a r   a   U I   v i s u a l m e n t e   d u r a n t e   d e v .   A u m e n t a d o   o   t e m p o   d e   r e c o n n e c t _ t i m e o u t   n o   s e n d W h a t s A p p M e s s a g e   d e   5 s   p a r a   1 0 s   g a r a n t i n d o   q u e   e n v i o s   a s s í n c r o n o s   n ã o   f a l h e m .  
+ 

@@ -170,7 +170,7 @@ export function ManualAppointmentModal({
 
     // Fetch doctors with caching
     const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useQuery({
-        queryKey: ['doctors-for-manual'],
+        queryKey: ['doctors', 'manual'],
         queryFn: async () => {
             console.log('[ManualAppointment] Fetching doctors...');
             const result = await api.get<Doctor[]>('/doctors');
