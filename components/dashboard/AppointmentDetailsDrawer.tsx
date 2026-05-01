@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle } from 'lucide-react'
+import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send } from 'lucide-react'
 
 interface AppointmentDetailsDrawerProps {
     appointmentId: string | null
@@ -34,6 +34,7 @@ export function AppointmentDetailsDrawer({
     const [loading, setLoading] = useState(false)
     const [copied, setCopied] = useState(false)
     const [teleconsultaCopied, setTeleconsultaCopied] = useState(false)
+    const [isResending, setIsResending] = useState(false)
 
     useEffect(() => {
         if (appointmentId && isOpen) {
@@ -145,6 +146,30 @@ export function AppointmentDetailsDrawer({
             toast.error(error instanceof Error ? error.message : 'Erro ao carregar agendamento')
         } finally {
             setLoading(false)
+        }
+    }
+
+    async function handleResendWhatsApp() {
+        if (!appointment) return
+        try {
+            setIsResending(true)
+            const response = await fetch(`/api/appointments/${appointmentId}/resend`, {
+                method: 'POST',
+                headers: {
+                    'x-clinic-id': appointment.clinic_id || ''
+                }
+            })
+            
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Falha ao reenviar notificação.')
+            }
+            
+            toast.success('Confirmação reenviada via WhatsApp com sucesso!')
+        } catch (error: any) {
+            toast.error(error.message)
+        } finally {
+            setIsResending(false)
         }
     }
 
@@ -315,6 +340,18 @@ export function AppointmentDetailsDrawer({
                                 <Label>Status</Label>
                                 <Badge>{appointment.status}</Badge>
                             </div>
+                        </div>
+
+                        <div className="pt-2">
+                            <Button 
+                                variant="outline" 
+                                className="w-full" 
+                                onClick={handleResendWhatsApp}
+                                disabled={isResending}
+                            >
+                                <Send className="h-4 w-4 mr-2" />
+                                {isResending ? 'Enviando...' : 'Reenviar WhatsApp'}
+                            </Button>
                         </div>
 
                         {/* TELECONSULTA LINK SECTION */}
