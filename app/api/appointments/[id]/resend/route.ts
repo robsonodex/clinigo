@@ -5,10 +5,10 @@ import { format } from 'date-fns'
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const appointmentId = params.id
+        const { id: appointmentId } = await params
         
         // Pega do header
         const clinicId = request.headers.get('x-clinic-id')
@@ -26,8 +26,8 @@ export async function POST(
             .from('appointments')
             .select(`
                 *,
-                patient:patients(*),
-                doctor:doctors(
+                patient:patients!appointments_patient_id_fkey(*),
+                doctor:doctors!appointments_doctor_id_fkey(
                     *,
                     user:users(*)
                 )
@@ -37,7 +37,8 @@ export async function POST(
             .single()
 
         if (fetchError || !appointment) {
-            return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 })
+            console.error('[RESEND ERROR]', fetchError)
+            return NextResponse.json({ error: 'Agendamento não encontrado', details: fetchError }, { status: 404 })
         }
 
         const patient = appointment.patient
