@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -21,7 +23,8 @@ import {
     FileText,
     Stethoscope,
     Phone,
-    Mail
+    Mail,
+    Send
 } from 'lucide-react'
 import { type Appointment } from '@/lib/api-client'
 import { formatCurrency, formatPhone } from '@/lib/utils'
@@ -43,6 +46,7 @@ export function AppointmentDetailsModal({
     onCancel
 }: AppointmentDetailsModalProps) {
     const router = useRouter()
+    const [isResending, setIsResending] = useState(false)
 
     if (!appointment) return null
 
@@ -65,6 +69,30 @@ export function AppointmentDetailsModal({
     const handleOpenMedicalRecord = () => {
         router.push(`/dashboard/consultas/${appointment.id}`)
         onOpenChange(false)
+    }
+
+    const handleResendWhatsApp = async () => {
+        if (!appointment) return
+        try {
+            setIsResending(true)
+            const response = await fetch(`/api/appointments/${appointment.id}/resend`, {
+                method: 'POST',
+                headers: {
+                    'x-clinic-id': appointment.clinic_id
+                }
+            })
+            
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Falha ao reenviar notificação.')
+            }
+            
+            toast.success('Confirmação reenviada via WhatsApp com sucesso!')
+        } catch (error: any) {
+            toast.error(error.message)
+        } finally {
+            setIsResending(false)
+        }
     }
 
     return (
@@ -173,6 +201,15 @@ export function AppointmentDetailsModal({
                 </div>
 
                 <DialogFooter className="flex-col sm:flex-row gap-2">
+                    <Button 
+                        variant="outline" 
+                        className="w-full sm:w-auto" 
+                        onClick={handleResendWhatsApp}
+                        disabled={isResending}
+                    >
+                        <Send className="h-4 w-4 mr-2" />
+                        {isResending ? 'Enviando...' : 'Reenviar WhatsApp'}
+                    </Button>
                     {appointment.status === 'CONFIRMED' && (
                         <Button className="w-full sm:w-auto" onClick={handleOpenMedicalRecord}>
                             <FileText className="h-4 w-4 mr-2" />
