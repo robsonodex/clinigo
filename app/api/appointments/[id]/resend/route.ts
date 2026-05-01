@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 import { format } from 'date-fns'
 
@@ -19,7 +19,7 @@ export async function POST(
             )
         }
 
-        const supabase = getSupabaseAdmin()
+        const supabase = createServiceRoleClient()
 
         // Busca os detalhes do agendamento
         const { data: appointment, error: fetchError } = await supabase
