@@ -408,6 +408,8 @@ export default function LandingPremium() {
                         <p className="text-slate-400 text-sm leading-relaxed">
                             Seus pacientes fazem check-in sozinhos via QR Code ou reconhecimento facial. Sem filas, sem burocracia na recepção.
                         </p>
+                    </motion.div>
+
                     {/* Feature 9 - WhatsApp Multi-Atendente */}
                     <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
                         <div className="absolute top-4 right-4">
