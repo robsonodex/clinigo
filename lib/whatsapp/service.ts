@@ -456,10 +456,39 @@ export async function sendWhatsAppMessage(
   // Limpar número e formatar para WhatsApp
   const cleanPhone = phone.replace(/\D/g, '')
   const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
-  const jid = `${fullPhone}@s.whatsapp.net`
+  let jid = `${fullPhone}@s.whatsapp.net`
 
   try {
+    // 🔍 Validar e corrigir nono dígito usando onWhatsApp
+    const [result] = await session.socket.onWhatsApp(fullPhone)
+    if (result?.exists) {
+      jid = result.jid
+    } else if (fullPhone.length === 13) {
+      // Tentar sem o 9 (muito comum no Brasil em DDDs até 28)
+      const semNove = fullPhone.substring(0, 4) + fullPhone.substring(5)
+      const [resSemNove] = await session.socket.onWhatsApp(semNove)
+      if (resSemNove?.exists) {
+        jid = resSemNove.jid
+        console.log(`[WhatsApp] 🔄 Número corrigido automaticamente (removido 9): ${semNove}`)
+      } else {
+        console.log(`[WhatsApp] ⚠️ Número ${fullPhone} não foi encontrado pelo Meta, a mensagem pode falhar silenciosamente.`)
+      }
+    } else if (fullPhone.length === 12) {
+      // Tentar com o 9
+      const comNove = fullPhone.substring(0, 4) + '9' + fullPhone.substring(4)
+      const [resComNove] = await session.socket.onWhatsApp(comNove)
+      if (resComNove?.exists) {
+        jid = resComNove.jid
+        console.log(`[WhatsApp] 🔄 Número corrigido automaticamente (adicionado 9): ${comNove}`)
+      } else {
+        console.log(`[WhatsApp] ⚠️ Número ${fullPhone} não foi encontrado pelo Meta, a mensagem pode falhar silenciosamente.`)
+      }
+    }
+
     await session.socket.sendMessage(jid, { text: message })
+    
+    // Delay de 1.5s para garantir que a Vercel/Node Event Loop não mate a Serverless function antes do pacote TCP ser despachado pro Meta
+    await new Promise(resolve => setTimeout(resolve, 1500))
 
     // Log de sucesso
     await supabase.from('whatsapp_logs').insert({
