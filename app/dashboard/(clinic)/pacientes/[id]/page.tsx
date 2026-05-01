@@ -30,7 +30,9 @@ import {
     XCircle,
     Clock,
     CheckSquare,
-    Square
+    Square,
+    FileText,
+    History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -42,6 +44,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FaceEnrollment } from '@/components/face-recognition';
 import { useUser } from '@/hooks/use-user';
+import { PatientDocuments } from '@/components/patients/PatientDocuments';
+import { PatientEvolutions } from '@/components/patients/PatientEvolutions';
 
 interface Patient {
     id: string;
@@ -439,6 +443,14 @@ export default function PatientDetailsPage() {
                         <CalendarDays className="w-4 h-4" />
                         Agendamentos
                     </TabsTrigger>
+                    <TabsTrigger value="documents" className="gap-2">
+                        <FileText className="w-4 h-4" />
+                        Documentos
+                    </TabsTrigger>
+                    <TabsTrigger value="evolutions" className="gap-2">
+                        <History className="w-4 h-4" />
+                        Evoluções
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* Tab: Informações */}
@@ -623,6 +635,16 @@ export default function PatientDetailsPage() {
                             )}
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                {/* Tab: Documentos */}
+                <TabsContent value="documents">
+                    {clinicId && <PatientDocuments patientId={patientId} clinicId={clinicId} />}
+                </TabsContent>
+
+                {/* Tab: Evoluções */}
+                <TabsContent value="evolutions">
+                    <PatientEvolutions patientId={patientId} />
                 </TabsContent>
             </Tabs>
 
