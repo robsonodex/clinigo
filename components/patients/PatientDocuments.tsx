@@ -21,16 +21,19 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
 
     const loadDocuments = async () => {
         setIsLoading(true)
-        const { data, error } = await supabase
-            .from('patient_documents')
-            .select('*')
-            .eq('patient_id', patientId)
-            .order('created_at', { ascending: false })
-            
-        if (!error && data) {
-            setDocuments(data)
+        try {
+            const res = await fetch(`/api/documents?patient_id=${patientId}`)
+            if (res.ok) {
+                const data = await res.json()
+                setDocuments(data.documents || [])
+            } else {
+                toast.error('Erro ao carregar documentos')
+            }
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setIsLoading(false)
         }
-        setIsLoading(false)
     }
 
     useEffect(() => {
@@ -39,12 +42,15 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
 
     const handleDelete = async (id: string) => {
         if (!confirm('Deseja realmente excluir este documento?')) return
-        const { error } = await supabase.from('patient_documents').delete().eq('id', id)
-        if (error) {
-            toast.error('Erro ao excluir documento')
-        } else {
+        try {
+            const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' })
+            if (!res.ok) {
+                throw new Error('Erro ao excluir')
+            }
             toast.success('Documento excluído')
             loadDocuments()
+        } catch (error) {
+            toast.error('Erro ao excluir documento')
         }
     }
 
@@ -72,7 +78,7 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
                                             <FileText className="w-5 h-5 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="font-medium text-sm">{doc.file_name}</p>
+                                            <p className="font-medium text-sm">{doc.name || doc.file_name}</p>
                                             <p className="text-xs text-muted-foreground">
                                                 {format(new Date(doc.created_at), 'dd/MM/yyyy HH:mm')} • {doc.document_type || doc.category}
                                             </p>
@@ -80,7 +86,7 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Button variant="ghost" size="sm" asChild>
-                                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                                            <a href={doc.storage_path || doc.file_url} target="_blank" rel="noopener noreferrer">
                                                 <Download className="w-4 h-4" />
                                             </a>
                                         </Button>
