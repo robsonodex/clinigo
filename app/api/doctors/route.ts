@@ -238,6 +238,17 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Check if email already exists (tabela users)
+        const { data: existingUser } = await (adminClient as any)
+            .from('users')
+            .select('id')
+            .eq('email', validatedData.email)
+            .maybeSingle()
+
+        if (existingUser) {
+            throw new BadRequestError('Este e-mail já está cadastrado no sistema. Utilize um e-mail diferente.')
+        }
+
         // Create auth user
         const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
             email: validatedData.email,
@@ -250,7 +261,17 @@ export async function POST(request: NextRequest) {
         })
 
         if (authError) {
-            throw new BadRequestError(authError.message)
+            // Intercepta TODAS as variações de erro de e-mail duplicado do Supabase Auth
+            const msg = authError.message.toLowerCase()
+            const isEmailDuplicate =
+                msg.includes('already been registered') ||
+                msg.includes('already registered') ||
+                msg.includes('already exists') ||
+                msg.includes('database error checking email')
+            if (isEmailDuplicate) {
+                throw new BadRequestError('Este e-mail já está cadastrado. Utilize um e-mail diferente.')
+            }
+            throw new BadRequestError(`Erro ao criar usuário: ${authError.message}`)
         }
 
         // Create users profile
