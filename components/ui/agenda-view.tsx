@@ -275,8 +275,8 @@ export default function AgendaPage() {
                 date_to: view === 'week' ? format(weekEnd, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
                 pageSize: 1000, // Ensure we get all appointments for the period
             }),
-        staleTime: 60 * 1000, // 1 minute cache
-        refetchOnWindowFocus: false,
+        staleTime: 0, // Sem cache - sempre busca dados frescos
+        refetchOnWindowFocus: true,
     })
 
     // Check if a time slot is within working hours for any (or filtered) doctor (Agenda Inversa)

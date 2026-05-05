@@ -31,6 +31,9 @@ export function useAgenda(date?: string): UseAgendaReturn {
   const [error, setError] = useState<string | null>(null)
 
   const today = date || new Date().toISOString().split('T')[0]
+  const nextWeek = new Date()
+  nextWeek.setDate(nextWeek.getDate() + 7)
+  const endDate = nextWeek.toISOString().split('T')[0]
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -43,7 +46,7 @@ export function useAgenda(date?: string): UseAgendaReturn {
 
       const { data: profile } = await supabase
         .from('users')
-        .select('clinic_id, role')
+        .select('clinic_id, role, id')
         .eq('id', user.id)
         .single() as any
 
@@ -51,14 +54,34 @@ export function useAgenda(date?: string): UseAgendaReturn {
 
       let query = supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          id,
+          appointment_date,
+          appointment_time,
+          status,
+          notes,
+          consulting_room,
+          therapy_type,
+          health_insurance_id,
+          patient:patients!appointments_patient_id_fkey(full_name, phone),
+          doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name))
+        `)
         .eq('clinic_id', profile.clinic_id)
-        .eq('appointment_date', today)
+        .gte('appointment_date', today)
+        .lte('appointment_date', endDate)
+        .order('appointment_date', { ascending: true })
         .order('appointment_time', { ascending: true })
 
       // Médicos veem só os próprios
       if (profile.role === 'DOCTOR') {
-        query = query.eq('doctor_id', user.id)
+        const { data: doctorRecord } = await supabase
+          .from('doctors')
+          .select('id')
+          .eq('user_id', user.id)
+          .single() as any
+        if (doctorRecord?.id) {
+          query = query.eq('doctor_id', doctorRecord.id)
+        }
       }
 
       const { data, error: queryError } = await query as any
@@ -67,13 +90,12 @@ export function useAgenda(date?: string): UseAgendaReturn {
 
       const items: AgendaItem[] = (data || []).map((a: any) => ({
         id: a.id,
-        patient_name: a.patient_name || 'Paciente',
-        patient_phone: a.patient_phone,
+        patient_name: a.patient?.full_name || 'Paciente',
+        patient_phone: a.patient?.phone,
         appointment_time: a.appointment_time,
         appointment_date: a.appointment_date,
         status: a.status,
-        doctor_name: a.doctor_name,
-        health_insurance_name: a.health_insurance_name,
+        doctor_name: a.doctor?.user?.full_name,
         therapy_type: a.therapy_type,
         consulting_room: a.consulting_room,
         notes: a.notes,
@@ -95,7 +117,7 @@ export function useAgenda(date?: string): UseAgendaReturn {
     } finally {
       setLoading(false)
     }
-  }, [today])
+  }, [today, endDate])
 
   const updateStatus = useCallback(async (id: string, status: string) => {
     try {
