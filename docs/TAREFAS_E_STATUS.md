@@ -1,7 +1,34 @@
 # CliniGo - Status das Funcionalidades
 
-> **Atualizado:** 11/01/2026
+> **Atualizado:** 07/05/2026
 > **Produção:** https://clinigo.app
+
+---
+
+## 🆕 Últimas Alterações — 07/05/2026 (Espaço Incluir)
+
+### 📝 Módulo: Evoluções por Sessão
+
+| Alteração | Arquivo | Descrição |
+|-----------|---------|-----------|
+| Novo campo `finalized_by` | `session_evolutions` (BD) | Armazena quem finalizou a evolução |
+| Novo campo `finalized_at` | `session_evolutions` (BD) | Carimbo de tempo de finalização |
+| Novo campo `created_by` | `session_evolutions` (BD) | Rastreia o criador da evolução |
+| Bloqueio por profissional | `evolucoes/page.tsx` | Botão editar oculto se finalizado por outro profissional |
+| Botão "Finalizar e Assinar" | `evolucoes/page.tsx` | Grava `finalized_at` + `signed_at` — carimbo legal |
+| Badge "Finalizada" | `evolucoes/page.tsx` | Indicador visual verde nas evoluções concluídas |
+| Proteção na API PUT | `[id]/route.ts` | Retorna 403 se outro profissional tentar editar |
+| Proteção na API DELETE | `[id]/route.ts` | Bloqueia exclusão de evoluções finalizadas |
+| Grava criador no POST | `route.ts` | Campo `created_by` preenchido com `user.id` |
+| Nova rota `/api/auth/me` | `auth/me/route.ts` | Retorna dados do usuário logado para o frontend |
+
+```
+Evoluções → evolucoes/page.tsx → canEdit(), handleSave(finalize), badge Finalizada
+Evoluções → [id]/route.ts → bloqueio 403 se finalized_by ≠ user.id
+Evoluções → route.ts → POST grava created_by
+Auth → api/auth/me/route.ts → novo endpoint de usuário logado
+Banco → session_evolutions → colunas: finalized_by, finalized_at, created_by
+```
 
 ---
 
@@ -88,13 +115,6 @@
 | Guias | SP/SADT, Consulta |
 | Status | Rascunho, Enviada, Aprovada, Glosada |
 | Relatórios | Por convênio |
-
-### 🤖 Inteligência Artificial
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Triagem | Classificação de sintomas |
-| Sugestão de Diagnóstico | Baseado em sintomas |
-| Resumo de Consulta | Geração automática |
 
 ### 📊 CRM
 | Funcionalidade | Descrição |
@@ -195,5 +215,5 @@ SMTP_PASSWORD=senha-de-app-16-digitos
 
 ### Longo Prazo (3-6 meses)
 - [ ] Marketplace de especialistas
-- [ ] IA preditiva avançada
+
 - [ ] Expansão internacional

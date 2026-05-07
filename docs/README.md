@@ -30,7 +30,7 @@
 - Prontuário eletrônico
 - Telemedicina integrada
 - Gestão financeira
-- IA para triagem e diagnóstico
+
 - Integração WhatsApp
 - Faturamento TISS
 
@@ -209,7 +209,7 @@ ALTER TABLE clinics ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(10,2);
 |------|--------|-----------|--------|
 | `/api/consultations` | GET/POST | CRUD consultas | ✅ |
 | `/api/consultations/[id]` | GET/PUT | Consulta | ✅ |
-| `/api/consultations/[id]/analyze` | POST | Análise IA | ✅ |
+
 
 ### Financeiro (`/api/financial`)
 
@@ -239,8 +239,7 @@ ALTER TABLE clinics ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(10,2);
 
 | Rota | Descrição | Status |
 |------|-----------|--------|
-| `/api/ai/predict-diagnosis` | IA diagnóstico | ✅ |
-| `/api/aia/triage` | IA triagem | ✅ |
+
 | `/api/crm/*` | CRM (automações, campanhas) | ✅ |
 | `/api/inventory/*` | Estoque | ✅ |
 | `/api/tiss/*` | Guias TISS | ✅ |

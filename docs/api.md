@@ -116,7 +116,7 @@
 | POST | `/consultations` | Iniciar consulta | ✅ |
 | GET | `/consultations/[id]` | Detalhes | ✅ |
 | PUT | `/consultations/[id]` | Atualizar (prontuário) | ✅ |
-| POST | `/consultations/[id]/analyze` | Análise IA | ✅ |
+
 
 ---
 
@@ -155,15 +155,7 @@
 
 ---
 
-## 🤖 IA (`/api/ai`, `/api/aia`)
 
-| Método | Rota | Descrição | Status |
-|--------|------|-----------|--------|
-| POST | `/ai/predict-diagnosis` | Sugestão de diagnóstico | ✅ |
-| POST | `/aia/triage` | Triagem de paciente | ✅ |
-| GET | `/aia/triage/history` | Histórico de triagens | ✅ |
-
----
 
 ## 📱 WhatsApp (`/api/whatsapp`)
 

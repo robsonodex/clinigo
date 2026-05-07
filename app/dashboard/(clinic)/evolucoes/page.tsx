@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,24 +9,25 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry } from 'lucide-react'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 
 const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP' }
-const MOOD_ICONS = [Angry, Frown, Meh, Smile, SmilePlus]
 const MOOD_LABELS = ['Muito Baixo', 'Baixo', 'Neutro', 'Bom', 'Excelente']
 
 export default function SessionEvolutionsPage() {
     const [evolutions, setEvolutions] = useState<any[]>([])
     const [patients, setPatients] = useState<any[]>([])
     const [doctors, setDoctors] = useState<any[]>([])
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [showDialog, setShowDialog] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
+    const [finalizing, setFinalizing] = useState(false)
     const [templateType, setTemplateType] = useState('soap')
 
     const emptyForm = {
@@ -49,32 +50,48 @@ export default function SessionEvolutionsPage() {
     }, [])
 
     useEffect(() => { fetchEvolutions() }, [fetchEvolutions])
+
     useEffect(() => {
+        // Busca o usuário logado para controle de bloqueio
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (d?.id) setCurrentUserId(d.id)
+        }).catch(() => {
+            // Fallback: tenta pelo supabase diretamente
+        })
         fetch('/api/patients').then(r => r.json()).then(d => setPatients(d.data || d.patients || []))
         fetch('/api/doctors').then(r => r.json()).then(d => setDoctors(d.data || d.doctors || []))
     }, [])
 
-    const handleSave = async () => {
+    const handleSave = async (finalize = false) => {
         if (!form.patient_id || !form.doctor_id) { toast.error('Selecione paciente e profissional'); return }
-        setSaving(true)
+        finalize ? setFinalizing(true) : setSaving(true)
         try {
             const url = editingId ? `/api/session-evolutions/${editingId}` : '/api/session-evolutions'
             const method = editingId ? 'PUT' : 'POST'
-            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, template_type: templateType }) })
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...form, template_type: templateType, finalize })
+            })
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
                 throw new Error(errData.error || `Erro ${res.status}`)
             }
-            toast.success(editingId ? 'Evolução atualizada!' : 'Evolução registrada!')
+            toast.success(finalize ? '✅ Evolução finalizada e assinada!' : editingId ? 'Evolução atualizada!' : 'Evolução registrada!')
             setShowDialog(false); setForm(emptyForm); setEditingId(null); fetchEvolutions()
         } catch (err: any) { toast.error(err.message || 'Erro ao salvar evolução') }
-        finally { setSaving(false) }
+        finally { setSaving(false); setFinalizing(false) }
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Excluir esta evolução?')) return
-        try { await fetch(`/api/session-evolutions/${id}`, { method: 'DELETE' }); toast.success('Excluída'); fetchEvolutions() }
-        catch { toast.error('Erro') }
+        try {
+            const res = await fetch(`/api/session-evolutions/${id}`, { method: 'DELETE' })
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || 'Erro ao excluir')
+            }
+            toast.success('Excluída'); fetchEvolutions()
+        } catch (err: any) { toast.error(err.message || 'Erro') }
     }
 
     const openEdit = (ev: any) => {
@@ -92,7 +109,21 @@ export default function SessionEvolutionsPage() {
         setShowDialog(true)
     }
 
-    const getName = (obj: any) => { const o = Array.isArray(obj) ? obj[0] : obj; return o?.full_name || (o?.users ? (Array.isArray(o.users) ? o.users[0]?.full_name : o.users?.full_name) : 'N/A') }
+    const getName = (obj: any) => {
+        const o = Array.isArray(obj) ? obj[0] : obj
+        return o?.full_name || (o?.users ? (Array.isArray(o.users) ? o.users[0]?.full_name : o.users?.full_name) : 'N/A')
+    }
+
+    // Verifica se o usuário atual pode editar esta evolução
+    const canEdit = (ev: any) => {
+        // Se foi finalizada por outro usuário, bloqueia
+        if (ev.finalized_by && ev.finalized_by !== currentUserId) return false
+        // Se foi criada por outro usuário e já está finalizada, bloqueia
+        if (ev.finalized_at) return false
+        return true
+    }
+
+    const isFinalized = (ev: any) => !!ev.finalized_at
 
     const filtered = evolutions.filter(e => getName(e.patients).toLowerCase().includes(search.toLowerCase()))
 
@@ -184,9 +215,35 @@ export default function SessionEvolutionsPage() {
                                 </div>
                             </div>
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className="flex gap-2 pt-2">
                             <Button variant="outline" onClick={() => { setShowDialog(false); setForm(emptyForm); setEditingId(null) }}>Cancelar</Button>
-                            <Button onClick={handleSave} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Salvar</Button>
+                            <Button variant="outline" onClick={() => handleSave(false)} disabled={saving || finalizing}>
+                                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                Salvar Rascunho
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button className="bg-green-600 hover:bg-green-700 text-white" disabled={saving || finalizing}>
+                                        {finalizing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                        <Shield className="h-4 w-4 mr-2" />
+                                        Finalizar e Assinar
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Finalizar e Assinar Evolução</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Ao finalizar, esta evolução será <strong>bloqueada para edição</strong> por outros profissionais e receberá um carimbo de tempo digital. Esta ação não pode ser desfeita sem intervenção administrativa.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleSave(true)} className="bg-green-600 hover:bg-green-700">
+                                            Confirmar e Finalizar
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -216,14 +273,25 @@ export default function SessionEvolutionsPage() {
             ) : (
                 <div className="space-y-3">
                     {filtered.map((ev: any) => (
-                        <Card key={ev.id} className="hover:shadow-md transition-shadow">
+                        <Card key={ev.id} className={`hover:shadow-md transition-shadow ${isFinalized(ev) ? 'border-green-200 bg-green-50/30 dark:border-green-900 dark:bg-green-950/20' : ''}`}>
                             <CardContent className="pt-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
+                                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                                             <span className="font-semibold">{getName(ev.patients)}</span>
                                             <Badge variant="outline">{TEMPLATE_LABELS[ev.template_type]}</Badge>
                                             <span className="text-sm text-muted-foreground">{new Date(ev.evolution_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                                            {isFinalized(ev) && (
+                                                <Badge className="bg-green-600 text-white gap-1">
+                                                    <CheckCircle2 className="h-3 w-3" />
+                                                    Finalizada
+                                                </Badge>
+                                            )}
+                                            {isFinalized(ev) && ev.finalized_at && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    Assinada em {new Date(ev.finalized_at).toLocaleString('pt-BR')}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-sm text-muted-foreground">Profissional: {getName(ev.doctors)}</p>
                                         {ev.template_type === 'soap' && ev.subjective && <p className="text-sm mt-1 line-clamp-2"><strong>S:</strong> {ev.subjective}</p>}
@@ -236,8 +304,35 @@ export default function SessionEvolutionsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-1 ml-4">
-                                        <Button variant="ghost" size="icon" onClick={() => openEdit(ev)}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(ev.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                        {canEdit(ev) ? (
+                                            <>
+                                                <Button variant="ghost" size="icon" onClick={() => openEdit(ev)} title="Editar evolução">
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive" title="Excluir evolução">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Excluir evolução?</AlertDialogTitle>
+                                                            <AlertDialogDescription>Esta ação não poderá ser desfeita.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(ev.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground px-2" title="Evolução finalizada — bloqueada para edição">
+                                                <Lock className="h-4 w-4 text-green-600" />
+                                                <span className="hidden sm:inline">Bloqueada</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>

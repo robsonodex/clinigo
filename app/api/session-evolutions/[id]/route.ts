@@ -56,12 +56,37 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+        // Busca a evolução atual para checar quem criou e se já foi finalizada
+        const { data: existing, error: fetchError } = await supabase
+            .from('session_evolutions')
+            .select('created_by, finalized_by, finalized_at')
+            .eq('id', id)
+            .single()
+
+        if (fetchError || !existing) {
+            return NextResponse.json({ error: 'Evolução não encontrada' }, { status: 404 })
+        }
+
+        // REGRA DE BLOQUEIO: Se foi finalizada por outro profissional, bloqueia edição
+        if (existing.finalized_by && existing.finalized_by !== user.id) {
+            return NextResponse.json(
+                { error: 'Esta evolução foi finalizada por outro profissional e não pode ser editada.' },
+                { status: 403 }
+            )
+        }
+
         const body = await request.json()
-        const cleanBody = sanitizeBody(body)
+        const { finalize, ...rest } = body
+        const cleanBody = sanitizeBody(rest)
+
+        // Se a requisição pede finalização, grava o carimbo de tempo
+        const finalizeFields = finalize
+            ? { finalized_by: user.id, finalized_at: new Date().toISOString(), signed_at: new Date().toISOString() }
+            : {}
 
         const { data, error } = await supabase
             .from('session_evolutions')
-            .update({ ...cleanBody, updated_at: new Date().toISOString() })
+            .update({ ...cleanBody, updated_at: new Date().toISOString(), ...finalizeFields })
             .eq('id', id)
             .select()
             .single()
@@ -84,6 +109,17 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+        // Apenas o criador pode excluir
+        const { data: existing } = await supabase
+            .from('session_evolutions')
+            .select('created_by, finalized_by')
+            .eq('id', id)
+            .single()
+
+        if (existing?.finalized_by) {
+            return NextResponse.json({ error: 'Não é possível excluir uma evolução já finalizada.' }, { status: 403 })
+        }
+
         const { error } = await supabase.from('session_evolutions').delete().eq('id', id)
         if (error) throw error
         return NextResponse.json({ success: true })
@@ -91,4 +127,3 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
-

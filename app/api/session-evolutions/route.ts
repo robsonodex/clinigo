@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
         const { data, error } = await supabase
             .from('session_evolutions')
-            .insert({ ...cleanBody, clinic_id: userData.clinic_id })
+            .insert({ ...cleanBody, clinic_id: userData.clinic_id, created_by: user.id })
             .select()
             .single()
 
