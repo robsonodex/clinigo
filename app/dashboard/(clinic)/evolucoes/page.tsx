@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
+import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
 
 const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP' }
 const MOOD_LABELS = ['Muito Baixo', 'Baixo', 'Neutro', 'Bom', 'Excelente']
@@ -29,6 +30,8 @@ export default function SessionEvolutionsPage() {
     const [saving, setSaving] = useState(false)
     const [finalizing, setFinalizing] = useState(false)
     const [templateType, setTemplateType] = useState('soap')
+    const [signModalOpen, setSignModalOpen] = useState(false)
+    const [recordToSign, setRecordToSign] = useState<string | null>(null)
 
     const emptyForm = {
         patient_id: '', doctor_id: '', appointment_id: '', plan_id: '',
@@ -62,23 +65,37 @@ export default function SessionEvolutionsPage() {
         fetch('/api/doctors').then(r => r.json()).then(d => setDoctors(d.data || d.doctors || []))
     }, [])
 
-    const handleSave = async (finalize = false) => {
+    const handleSave = async (openSignatureModal = false) => {
         if (!form.patient_id || !form.doctor_id) { toast.error('Selecione paciente e profissional'); return }
-        finalize ? setFinalizing(true) : setSaving(true)
+        openSignatureModal ? setFinalizing(true) : setSaving(true)
         try {
             const url = editingId ? `/api/session-evolutions/${editingId}` : '/api/session-evolutions'
             const method = editingId ? 'PUT' : 'POST'
+            // Quando pedimos assinatura, não "finalizamos" direto pela API, deixamos a API de sign fazer isso.
+            // Para manter a funcionalidade antiga, se não for ICP, passamos finalize: openSignatureModal
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, template_type: templateType, finalize })
+                body: JSON.stringify({ ...form, template_type: templateType, finalize: false }) 
             })
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
                 throw new Error(errData.error || `Erro ${res.status}`)
             }
-            toast.success(finalize ? '✅ Evolução finalizada e assinada!' : editingId ? 'Evolução atualizada!' : 'Evolução registrada!')
-            setShowDialog(false); setForm(emptyForm); setEditingId(null); fetchEvolutions()
+            const savedData = await res.json()
+            const recordId = editingId || savedData.data?.id || savedData.id
+            
+            toast.success('Rascunho salvo com sucesso!')
+            fetchEvolutions()
+            
+            if (openSignatureModal && recordId) {
+                setRecordToSign(recordId)
+                setSignModalOpen(true)
+            } else {
+                setShowDialog(false)
+                setForm(emptyForm)
+                setEditingId(null)
+            }
         } catch (err: any) { toast.error(err.message || 'Erro ao salvar evolução') }
         finally { setSaving(false); setFinalizing(false) }
     }
@@ -231,9 +248,9 @@ export default function SessionEvolutionsPage() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Finalizar e Assinar Evolução</AlertDialogTitle>
+                                        <AlertDialogTitle>Finalizar e Assinar com Certificado</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Ao finalizar, esta evolução será <strong>bloqueada para edição</strong> por outros profissionais e receberá um carimbo de tempo digital. Esta ação não pode ser desfeita sem intervenção administrativa.
+                                            Ao confirmar, a evolução será salva e o sistema solicitará seu <strong>Certificado Digital ICP-Brasil</strong> para assinatura. Após assinada, ela será bloqueada permanentemente.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -247,6 +264,30 @@ export default function SessionEvolutionsPage() {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                {recordToSign && (
+                    <SignDocumentModal
+                        open={signModalOpen}
+                        onOpenChange={(open) => {
+                            setSignModalOpen(open)
+                            if (!open) {
+                                setShowDialog(false)
+                                setForm(emptyForm)
+                                setEditingId(null)
+                                setRecordToSign(null)
+                                fetchEvolutions()
+                            }
+                        }}
+                        recordId={recordToSign}
+                        documentType="evolucao"
+                        apiEndpoint="/api/session-evolutions/sign"
+                        payloadKey="evolution_id"
+                        onSuccess={() => {
+                            toast.success('Evolução assinada com certificado ICP-Brasil!')
+                            fetchEvolutions()
+                        }}
+                    />
+                )}
             </div>
 
             <div className="relative">
@@ -287,9 +328,10 @@ export default function SessionEvolutionsPage() {
                                                     Finalizada
                                                 </Badge>
                                             )}
-                                            {isFinalized(ev) && ev.finalized_at && (
-                                                <span className="text-xs text-muted-foreground">
-                                                    Assinada em {new Date(ev.finalized_at).toLocaleString('pt-BR')}
+                                            {isFinalized(ev) && ev.signed_at && (
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <Shield className="h-3 w-3 text-emerald-600" />
+                                                    Assinatura ICP-Brasil ({new Date(ev.signed_at).toLocaleString('pt-BR')})
                                                 </span>
                                             )}
                                         </div>

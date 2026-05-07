@@ -32,6 +32,8 @@ interface SignDocumentModalProps {
     onOpenChange: (open: boolean) => void
     recordId: string
     documentType?: string
+    apiEndpoint?: string
+    payloadKey?: string
     onSuccess?: (signatureData: any) => void
 }
 
@@ -52,6 +54,8 @@ export function SignDocumentModal({
     onOpenChange,
     recordId,
     documentType = 'prontuario',
+    apiEndpoint = '/api/pep/sign',
+    payloadKey = 'record_id',
     onSuccess,
 }: SignDocumentModalProps) {
     const [state, setState] = useState<ModalState>('loading')
@@ -96,11 +100,11 @@ export function SignDocumentModal({
         setErrorMessage('')
 
         try {
-            const res = await fetch('/api/pep/sign', {
+            const res = await fetch(apiEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    record_id: recordId,
+                    [payloadKey]: recordId,
                     document_type: documentType,
                 }),
             })
