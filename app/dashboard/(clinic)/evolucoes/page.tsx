@@ -71,12 +71,13 @@ export default function SessionEvolutionsPage() {
         try {
             const url = editingId ? `/api/session-evolutions/${editingId}` : '/api/session-evolutions'
             const method = editingId ? 'PUT' : 'POST'
-            // Quando pedimos assinatura, não "finalizamos" direto pela API, deixamos a API de sign fazer isso.
-            // Para manter a funcionalidade antiga, se não for ICP, passamos finalize: openSignatureModal
+            // Passamos finalize: openSignatureModal para garantir que a evolução seja
+            // bloqueada internamente (assinatura simples) imediatamente.
+            // Se o usuário tiver certificado ICP-Brasil, a assinatura digital será adicionada depois.
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, template_type: templateType, finalize: false }) 
+                body: JSON.stringify({ ...form, template_type: templateType, finalize: openSignatureModal }) 
             })
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
