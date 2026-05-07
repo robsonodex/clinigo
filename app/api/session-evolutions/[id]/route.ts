@@ -80,8 +80,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const cleanBody = sanitizeBody(rest)
 
         // Se a requisição pede finalização, grava o carimbo de tempo
+        // NOTA: signed_at NÃO é preenchido aqui — ele é exclusivo da assinatura ICP-Brasil
+        // que é feita via /api/session-evolutions/sign
         const finalizeFields = finalize
-            ? { finalized_by: user.id, finalized_at: new Date().toISOString(), signed_at: new Date().toISOString() }
+            ? { finalized_by: user.id, finalized_at: new Date().toISOString() }
             : {}
 
         const { data, error } = await supabase

@@ -258,7 +258,7 @@ export default function SessionEvolutionsPage() {
                                             <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
                                             Assinatura Simples (Sem Certificado)
                                         </Button>
-                                        <Button variant="outline" onClick={() => handleSave(true, true)} className="justify-start border-green-200 bg-green-50 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/30">
+                                        <Button variant="outline" onClick={() => handleSave(true, false)} className="justify-start border-green-200 bg-green-50 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/30">
                                             <Shield className="h-4 w-4 mr-2 text-green-600" />
                                             Assinar com Certificado ICP-Brasil
                                         </Button>
@@ -335,12 +335,17 @@ export default function SessionEvolutionsPage() {
                                                     Finalizada
                                                 </Badge>
                                             )}
-                                            {isFinalized(ev) && ev.signed_at && (
+                                            {isFinalized(ev) && ev.signature_hash && ev.signed_at ? (
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                     <Shield className="h-3 w-3 text-emerald-600" />
                                                     Assinatura ICP-Brasil ({new Date(ev.signed_at).toLocaleString('pt-BR')})
                                                 </span>
-                                            )}
+                                            ) : isFinalized(ev) && !ev.signature_hash ? (
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                                    Assinatura Simples ({new Date(ev.finalized_at).toLocaleString('pt-BR')})
+                                                </span>
+                                            ) : null}
                                         </div>
                                         <p className="text-sm text-muted-foreground">Profissional: {getName(ev.doctors)}</p>
                                         {ev.template_type === 'soap' && ev.subjective && <p className="text-sm mt-1 line-clamp-2"><strong>S:</strong> {ev.subjective}</p>}
