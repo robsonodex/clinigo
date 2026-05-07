@@ -32,7 +32,8 @@ import {
     CheckSquare,
     Square,
     FileText,
-    History
+    History,
+    Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -46,6 +47,7 @@ import { FaceEnrollment } from '@/components/face-recognition';
 import { useUser } from '@/hooks/use-user';
 import { PatientDocuments } from '@/components/patients/PatientDocuments';
 import { PatientEvolutions } from '@/components/patients/PatientEvolutions';
+import { PatientReimbursement } from '@/components/patients/PatientReimbursement';
 
 interface Patient {
     id: string;
@@ -451,6 +453,10 @@ export default function PatientDetailsPage() {
                         <History className="w-4 h-4" />
                         Evoluções
                     </TabsTrigger>
+                    <TabsTrigger value="reimbursement" className="gap-2">
+                        <Receipt className="w-4 h-4" />
+                        Reembolso
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* Tab: Informações */}
@@ -645,6 +651,18 @@ export default function PatientDetailsPage() {
                 {/* Tab: Evoluções */}
                 <TabsContent value="evolutions">
                     <PatientEvolutions patientId={patientId} />
+                </TabsContent>
+
+                {/* Tab: Reembolso */}
+                <TabsContent value="reimbursement">
+                    {clinicId && (
+                        <PatientReimbursement
+                            patientId={patientId}
+                            clinicId={clinicId}
+                            patientName={typeof patient.full_name === 'object' ? '' : patient.full_name}
+                            patientCpf={(patient as any).cpf}
+                        />
+                    )}
                 </TabsContent>
             </Tabs>
 
