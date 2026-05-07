@@ -11,11 +11,13 @@
 
 ### Implementado (07/05/2026 - Sprint Evoluções Seguras & ICP-Brasil)
 - [x] **Bloqueio de Edição de Evoluções:** Implementada trava via API (`api/session-evolutions/[id]/route.ts`) e no Frontend para impedir edição de evoluções finalizadas.
-- [x] **Assinatura Digital ICP-Brasil nas Evoluções:**
-  - O sistema já contava com a infraestrutura para Certificados Digitais ICP-Brasil para Prontuários (Atestados, Laudos, Receituários).
-  - Criado o novo endpoint `api/session-evolutions/sign/route.ts` para processar assinaturas especificamente para **Evoluções**.
-  - O componente `SignDocumentModal.tsx` foi atualizado para ser reaproveitável, permitindo o uso nas Evoluções.
-  - A interface `evolucoes/page.tsx` agora exige o certificado ICP-Brasil ao clicar em "Finalizar e Assinar", gerando o PDF com a assinatura e garantindo a **validade legal** da documentação do paciente.
+- [x] **Integração de Assinatura Digital ICP-Brasil (Evoluções)**:
+  - Adicionadas colunas `signed_at` e `signature_hash` na tabela `session_evolutions`.
+  - Criado fluxo de assinatura utilizando certificado digital A1.
+  - Na tela de "Evolução por Sessão", o botão "Finalizar" agora oferece duas opções:
+    1. **Assinatura Simples (Sem Certificado)**: Apenas bloqueia a evolução internamente.
+    2. **Assinar com Certificado ICP-Brasil**: Exige o certificado e adiciona a assinatura criptográfica à evolução.
+  - Evoluções finalizadas (qualquer modalidade) são bloqueadas para edição. Evoluções assinadas com ICP-Brasil recebem um selo "Assinatura ICP-Brasil".
 - [ ] **Template Personalizado (Pendente):** Aguardando envio do template (Nathalia) para inserir nas opções de evoluções (junto a SOAP, CIF, etc). → [id]/route.ts → bloqueio 403 se finalized_by ≠ user.id
 Evoluções → route.ts → POST grava created_by
 Auth → api/auth/me/route.ts → novo endpoint de usuário logado
