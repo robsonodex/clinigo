@@ -65,19 +65,18 @@ export default function SessionEvolutionsPage() {
         fetch('/api/doctors').then(r => r.json()).then(d => setDoctors(d.data || d.doctors || []))
     }, [])
 
-    const handleSave = async (openSignatureModal = false) => {
+    const handleSave = async (openSignatureModal = false, shouldFinalize = false) => {
         if (!form.patient_id || !form.doctor_id) { toast.error('Selecione paciente e profissional'); return }
-        openSignatureModal ? setFinalizing(true) : setSaving(true)
+        (openSignatureModal || shouldFinalize) ? setFinalizing(true) : setSaving(true)
         try {
             const url = editingId ? `/api/session-evolutions/${editingId}` : '/api/session-evolutions'
             const method = editingId ? 'PUT' : 'POST'
-            // Passamos finalize: openSignatureModal para garantir que a evolução seja
-            // bloqueada internamente (assinatura simples) imediatamente.
-            // Se o usuário tiver certificado ICP-Brasil, a assinatura digital será adicionada depois.
+            const isFinalizing = openSignatureModal || shouldFinalize
+            
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, template_type: templateType, finalize: openSignatureModal }) 
+                body: JSON.stringify({ ...form, template_type: templateType, finalize: isFinalizing }) 
             })
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
@@ -235,7 +234,7 @@ export default function SessionEvolutionsPage() {
                         </div>
                         <DialogFooter className="flex gap-2 pt-2">
                             <Button variant="outline" onClick={() => { setShowDialog(false); setForm(emptyForm); setEditingId(null) }}>Cancelar</Button>
-                            <Button variant="outline" onClick={() => handleSave(false)} disabled={saving || finalizing}>
+                            <Button variant="outline" onClick={() => handleSave(false, false)} disabled={saving || finalizing}>
                                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Salvar Rascunho
                             </Button>
@@ -243,22 +242,29 @@ export default function SessionEvolutionsPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button className="bg-green-600 hover:bg-green-700 text-white" disabled={saving || finalizing}>
                                         {finalizing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                        <Shield className="h-4 w-4 mr-2" />
-                                        Finalizar e Assinar
+                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                        Finalizar
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Finalizar e Assinar com Certificado</AlertDialogTitle>
+                                        <AlertDialogTitle>Finalizar Evolução</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Ao confirmar, a evolução será salva e o sistema solicitará seu <strong>Certificado Digital ICP-Brasil</strong> para assinatura. Após assinada, ela será bloqueada permanentemente.
+                                            Como deseja finalizar esta evolução? Após finalizada, ela será bloqueada para edições.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
+                                    <div className="flex flex-col gap-3 my-4">
+                                        <Button variant="outline" onClick={() => handleSave(false, true)} className="justify-start">
+                                            <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                                            Assinatura Simples (Sem Certificado)
+                                        </Button>
+                                        <Button variant="outline" onClick={() => handleSave(true, true)} className="justify-start border-green-200 bg-green-50 hover:bg-green-100 dark:border-green-900 dark:bg-green-950/30">
+                                            <Shield className="h-4 w-4 mr-2 text-green-600" />
+                                            Assinar com Certificado ICP-Brasil
+                                        </Button>
+                                    </div>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleSave(true)} className="bg-green-600 hover:bg-green-700">
-                                            Confirmar e Finalizar
-                                        </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
