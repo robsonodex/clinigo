@@ -9,26 +9,17 @@
 
 ### 📝 Módulo: Evoluções por Sessão
 
-| Alteração | Arquivo | Descrição |
-|-----------|---------|-----------|
-| Novo campo `finalized_by` | `session_evolutions` (BD) | Armazena quem finalizou a evolução |
-| Novo campo `finalized_at` | `session_evolutions` (BD) | Carimbo de tempo de finalização |
-| Novo campo `created_by` | `session_evolutions` (BD) | Rastreia o criador da evolução |
-| Bloqueio por profissional | `evolucoes/page.tsx` | Botão editar oculto se finalizado por outro profissional |
-| Botão "Finalizar e Assinar" | `evolucoes/page.tsx` | Grava `finalized_at` + `signed_at` — carimbo legal |
-| Badge "Finalizada" | `evolucoes/page.tsx` | Indicador visual verde nas evoluções concluídas |
-| Proteção na API PUT | `[id]/route.ts` | Retorna 403 se outro profissional tentar editar |
-| Proteção na API DELETE | `[id]/route.ts` | Bloqueia exclusão de evoluções finalizadas |
-| Grava criador no POST | `route.ts` | Campo `created_by` preenchido com `user.id` |
-| Nova rota `/api/auth/me` | `auth/me/route.ts` | Retorna dados do usuário logado para o frontend |
-
-```
-Evoluções → evolucoes/page.tsx → canEdit(), handleSave(finalize), badge Finalizada
-Evoluções → [id]/route.ts → bloqueio 403 se finalized_by ≠ user.id
+### Implementado (07/05/2026 - Sprint Evoluções Seguras & ICP-Brasil)
+- [x] **Bloqueio de Edição de Evoluções:** Implementada trava via API (`api/session-evolutions/[id]/route.ts`) e no Frontend para impedir edição de evoluções finalizadas.
+- [x] **Assinatura Digital ICP-Brasil nas Evoluções:**
+  - O sistema já contava com a infraestrutura para Certificados Digitais ICP-Brasil para Prontuários (Atestados, Laudos, Receituários).
+  - Criado o novo endpoint `api/session-evolutions/sign/route.ts` para processar assinaturas especificamente para **Evoluções**.
+  - O componente `SignDocumentModal.tsx` foi atualizado para ser reaproveitável, permitindo o uso nas Evoluções.
+  - A interface `evolucoes/page.tsx` agora exige o certificado ICP-Brasil ao clicar em "Finalizar e Assinar", gerando o PDF com a assinatura e garantindo a **validade legal** da documentação do paciente.
+- [ ] **Template Personalizado (Pendente):** Aguardando envio do template (Nathalia) para inserir nas opções de evoluções (junto a SOAP, CIF, etc). → [id]/route.ts → bloqueio 403 se finalized_by ≠ user.id
 Evoluções → route.ts → POST grava created_by
 Auth → api/auth/me/route.ts → novo endpoint de usuário logado
 Banco → session_evolutions → colunas: finalized_by, finalized_at, created_by
-```
 
 ---
 
