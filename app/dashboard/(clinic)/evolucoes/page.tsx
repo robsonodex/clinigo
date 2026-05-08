@@ -23,6 +23,8 @@ export default function SessionEvolutionsPage() {
     const [patients, setPatients] = useState<any[]>([])
     const [doctors, setDoctors] = useState<any[]>([])
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+    const [currentDoctorId, setCurrentDoctorId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [showDialog, setShowDialog] = useState(false)
@@ -55,15 +57,35 @@ export default function SessionEvolutionsPage() {
     useEffect(() => { fetchEvolutions() }, [fetchEvolutions])
 
     useEffect(() => {
-        // Busca o usuário logado para controle de bloqueio
+        // Busca o usuário logado para controle de bloqueio e role
         fetch('/api/auth/me').then(r => r.json()).then(d => {
             if (d?.id) setCurrentUserId(d.id)
+            if (d?.role) setCurrentUserRole(d.role)
         }).catch(() => {
             // Fallback: tenta pelo supabase diretamente
         })
         fetch('/api/patients').then(r => r.json()).then(d => setPatients(d.data || d.patients || []))
         fetch('/api/doctors').then(r => r.json()).then(d => setDoctors(d.data || d.doctors || []))
     }, [])
+
+    // Auto-preenche profissional quando usuário é DOCTOR (terapeuta só vê seu próprio nome)
+    useEffect(() => {
+        if (currentUserRole === 'DOCTOR' && currentUserId && doctors.length > 0) {
+            const myDoctor = doctors.find((d: any) => d.user_id === currentUserId)
+            if (myDoctor) {
+                setCurrentDoctorId(myDoctor.id)
+                setForm(prev => ({ ...prev, doctor_id: myDoctor.id }))
+            }
+        }
+    }, [currentUserRole, currentUserId, doctors])
+
+    // Helper: retorna form vazio preservando doctor_id para DOCTOR
+    const getResetForm = () => {
+        if (currentUserRole === 'DOCTOR' && currentDoctorId) {
+            return { ...emptyForm, doctor_id: currentDoctorId }
+        }
+        return emptyForm
+    }
 
     const handleSave = async (openSignatureModal = false, shouldFinalize = false) => {
         if (!form.patient_id || !form.doctor_id) { toast.error('Selecione paciente e profissional'); return }
@@ -93,7 +115,7 @@ export default function SessionEvolutionsPage() {
                 setSignModalOpen(true)
             } else {
                 setShowDialog(false)
-                setForm(emptyForm)
+                setForm(getResetForm())
                 setEditingId(null)
             }
         } catch (err: any) { toast.error(err.message || 'Erro ao salvar evolução') }
@@ -153,7 +175,7 @@ export default function SessionEvolutionsPage() {
                     <h1 className="text-2xl font-bold">Evolução por Sessão</h1>
                     <p className="text-muted-foreground">Notas de evolução pós-atendimento (SOAP, CIF, DAP ou Livre)</p>
                 </div>
-                <Dialog open={showDialog} onOpenChange={o => { setShowDialog(o); if (!o) { setForm(emptyForm); setEditingId(null) } }}>
+                <Dialog open={showDialog} onOpenChange={o => { setShowDialog(o); if (!o) { setForm(getResetForm()); setEditingId(null) } }}>
                     <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" /> Nova Evolução</Button></DialogTrigger>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{editingId ? 'Editar' : 'Nova'} Evolução</DialogTitle></DialogHeader>
@@ -170,9 +192,9 @@ export default function SessionEvolutionsPage() {
                                 </div>
                                 <div>
                                     <Label>Profissional *</Label>
-                                    <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))}>
+                                    <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))} disabled={currentUserRole === 'DOCTOR' && !!currentDoctorId}>
                                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                                        <SelectContent>{doctors.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}</SelectContent>
+                                        <SelectContent>{(currentUserRole === 'DOCTOR' && currentDoctorId ? doctors.filter((d: any) => d.id === currentDoctorId) : doctors).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                             </div>
@@ -233,7 +255,7 @@ export default function SessionEvolutionsPage() {
                             </div>
                         </div>
                         <DialogFooter className="flex gap-2 pt-2">
-                            <Button variant="outline" onClick={() => { setShowDialog(false); setForm(emptyForm); setEditingId(null) }}>Cancelar</Button>
+                            <Button variant="outline" onClick={() => { setShowDialog(false); setForm(getResetForm()); setEditingId(null) }}>Cancelar</Button>
                             <Button variant="outline" onClick={() => handleSave(false, false)} disabled={saving || finalizing}>
                                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Salvar Rascunho
@@ -279,7 +301,7 @@ export default function SessionEvolutionsPage() {
                             setSignModalOpen(open)
                             if (!open) {
                                 setShowDialog(false)
-                                setForm(emptyForm)
+                                setForm(getResetForm())
                                 setEditingId(null)
                                 setRecordToSign(null)
                                 fetchEvolutions()

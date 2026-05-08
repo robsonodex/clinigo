@@ -453,10 +453,12 @@ export default function PatientDetailsPage() {
                         <History className="w-4 h-4" />
                         Evoluções
                     </TabsTrigger>
+                    {user?.role !== 'DOCTOR' && (
                     <TabsTrigger value="reimbursement" className="gap-2">
                         <Receipt className="w-4 h-4" />
                         Reembolso
                     </TabsTrigger>
+                    )}
                 </TabsList>
 
                 {/* Tab: Informações */}
@@ -653,7 +655,8 @@ export default function PatientDetailsPage() {
                     <PatientEvolutions patientId={patientId} />
                 </TabsContent>
 
-                {/* Tab: Reembolso */}
+                {/* Tab: Reembolso — oculto para terapeutas (DOCTOR) */}
+                {user?.role !== 'DOCTOR' && (
                 <TabsContent value="reimbursement">
                     {clinicId && (
                         <PatientReimbursement
@@ -664,6 +667,7 @@ export default function PatientDetailsPage() {
                         />
                     )}
                 </TabsContent>
+                )}
             </Tabs>
 
             {/* Edit Patient Modal */}
