@@ -264,6 +264,12 @@ const navigationSections: NavSection[] = [
                 // Acessível a todos os planos (BASICO+)
             },
             {
+                title: 'Fechamento',
+                href: '/dashboard/financeiro/fechamento',
+                icon: FileText,
+                roles: ['CLINIC_ADMIN'],
+            },
+            {
                 title: 'Reembolso',
                 href: '/dashboard/configuracoes/reembolso',
                 icon: Receipt,
