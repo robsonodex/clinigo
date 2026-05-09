@@ -12,6 +12,7 @@ interface UserProfile {
     role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST'
     clinic_id?: string
     avatar_url?: string
+    is_coordinator?: boolean
 }
 
 interface AuthState {
@@ -170,6 +171,7 @@ export function useRole() {
         isClinicAdmin: profile?.role === 'CLINIC_ADMIN',
         isDoctor: profile?.role === 'DOCTOR',
         isReceptionist: profile?.role === 'RECEPTIONIST',
+        isCoordinator: !!profile?.is_coordinator,
         clinicId: profile?.clinic_id,
     }
 }

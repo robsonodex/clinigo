@@ -158,8 +158,8 @@ const navigationSections: NavSection[] = [
                 title: 'Documentos',
                 href: '/dashboard/documentos',
                 icon: FileArchive,
-                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
-                // Acessível a todos os planos (BASICO+)
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+                // Apenas ADM e Recepção podem acessar documentos (solicitação Jeferson - Espaço Incluir)
             },
             {
                 title: 'Templates Prontuário',
@@ -642,7 +642,7 @@ function NavItemComponent({
 
 export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
-    const { role } = useRole()
+    const { role, isCoordinator } = useRole()
     const { planType, isLoading } = usePlan()
     const profLabel = useProfessionalLabel()
 
@@ -650,11 +650,18 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const currentPlan: PlanType = planType || 'BASICO'
 
     // Filter sections based on role + inject professional labels
+    // Coordenadoras DOCTOR veem também o menu Documentos (solicitação Espaço Incluir)
     const filteredSections = navigationSections
         .map(section => ({
             ...section,
             items: section.items
-                .filter((item) => !item.roles || (role && item.roles.includes(role)))
+                .filter((item) => {
+                    if (!item.roles) return true
+                    if (role && item.roles.includes(role)) return true
+                    // Coordenadoras DOCTOR também veem Documentos
+                    if (role === 'DOCTOR' && isCoordinator && item.href === '/dashboard/documentos') return true
+                    return false
+                })
                 .map(item => ({
                     ...item,
                     title: item.title

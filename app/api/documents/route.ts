@@ -44,9 +44,41 @@ export async function GET(request: Request) {
 
         const { patient_id: patientId, category, search } = validationResult.data
 
-        // SECURITY: O RLS do Supabase agora permite que DOCTOR veja documentos de todos os pacientes da clínica
-        // Não é mais necessário filtrar apenas por agendamentos (appointments)
+        // SIGILO: DOCTOR não-coordenador só vê documentos dos seus pacientes
         let allowedPatientIds: string[] | null = null
+        
+        if (user.role === 'DOCTOR') {
+            // Verifica se é coordenador
+            const { data: userFullData } = await supabase
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', user.id)
+                .single()
+            
+            if (!userFullData?.is_coordinator) {
+                // Busca pacientes que o terapeuta atende via appointments
+                const { data: doctorData } = await supabase
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+                
+                if (doctorData?.id) {
+                    const { data: appointmentPatients } = await supabase
+                        .from('appointments')
+                        .select('patient_id')
+                        .eq('doctor_id', doctorData.id)
+                    
+                    allowedPatientIds = [...new Set((appointmentPatients || []).map((a: any) => a.patient_id).filter(Boolean))]
+                    
+                    if (allowedPatientIds.length === 0) {
+                        return NextResponse.json({ documents: [] })
+                    }
+                } else {
+                    return NextResponse.json({ documents: [] })
+                }
+            }
+        }
 
         let query = supabase
             .from('patient_documents')
@@ -119,7 +151,7 @@ export async function GET(request: Request) {
 // POST /api/documents - Create document record (file already uploaded to Supabase Storage)
 export async function POST(request: Request) {
     try {
-        // Authorization: All medical staff can upload documents
+        // Authorization: Apenas ADM, Recepção e coordenadores podem subir documentos
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
 
         if (!authResult.authorized) {
@@ -130,6 +162,20 @@ export async function POST(request: Request) {
         }
 
         const { user } = authResult
+
+        // SIGILO: DOCTOR só pode subir documentos se for coordenador
+        if (user.role === 'DOCTOR') {
+            const supabaseCheck = await createClient()
+            const { data: userCheck } = await supabaseCheck
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', user.id)
+                .single()
+            
+            if (!userCheck?.is_coordinator) {
+                return forbiddenResponse('Apenas coordenadores, recepção e administradores podem subir documentos')
+            }
+        }
 
         // Rate limiting: General API limit (100 req/min)
         const rateLimitResponse = await withRateLimit('api', user.id)

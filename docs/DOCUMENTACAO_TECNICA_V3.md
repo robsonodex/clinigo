@@ -68,3 +68,52 @@ Este documento rastreia as implantações cirúrgicas de UI/UX e Efeito UAU no s
   - Para `CLINIC_ADMIN` e `RECEPTIONIST`, o comportamento permanece inalterado (pode selecionar qualquer profissional).
   - Adicionado helper `getResetForm()` que preserva o `doctor_id` do terapeuta ao resetar o formulário.
 * **Caminho de acesso:** Dashboard → Evoluções → Nova Evolução → Campo "Profissional" (auto-preenchido e travado para terapeutas)
+
+### Módulo: Financeiro → Fechamento Mensal (NOVO)
+* **Submódulo:** Fechamento Financeiro Consolidado
+* **Arquivos criados:**
+  - `app/api/financial/closing/route.ts` (NOVO — API de agregação)
+  - `app/dashboard/(clinic)/financeiro/fechamento/page.tsx` (NOVO — Página)
+* **Arquivo modificado:**
+  - `components/layout/sidebar.tsx` (novo item "Fechamento" no menu Financeiro)
+* **Data:** 08 de Maio de 2026
+* **Solicitante:** Jeferson — Espaço Incluir
+* **O que foi feito:**
+  - Criação de módulo completo de **Fechamento Financeiro Mensal** permanente.
+  - Seletor de mês/ano com navegação por setas (← →), permitindo consultar qualquer mês passado.
+  - **6 cards de resumo:** Receitas, Despesas, Resultado Líquido, Sessões Realizadas, Ticket Médio e Pendências.
+  - **Comparativo automático** com mês anterior (variação % em todos os indicadores).
+  - **4 tabelas de breakdown:**
+    1. Receita por Profissional (nome, sessões, receita, % do total)
+    2. Receita por Forma de Pagamento (barras de progresso visuais)
+    3. Receitas por Categoria (barras de progresso verdes)
+    4. Despesas por Categoria (barras de progresso vermelhas)
+  - **Tabela de pendências/vencidos** com status visual (badges Pendente/Vencido).
+  - Empty state elegante quando o mês não tem dados.
+  - API `/api/financial/closing?month=4&year=2026` consulta `financial_entries` e `appointments`.
+* **Caminho de acesso:** Dashboard → Menu Financeiro → Fechamento
+
+### Módulo: Prontuário → Evoluções + Documentos (Isolamento por Terapeuta — SIGILO)
+* **Submódulo:** Controle de Acesso e Sigilo Clínico
+* **Arquivos modificados:**
+  - `components/layout/sidebar.tsx` (menu Documentos restrito)
+  - `lib/hooks/use-auth.ts` (exposição de `is_coordinator` no hook `useRole`)
+  - `app/api/session-evolutions/route.ts` (filtro por doctor_id)
+  - `app/api/documents/route.ts` (filtro por pacientes do terapeuta + bloqueio de upload)
+  - **Supabase RLS:** `session_evolutions` (4 policies novas) + `patient_documents` (drop de policy duplicada)
+* **Data:** 09 de Maio de 2026
+* **Solicitante:** Jeferson — Espaço Incluir
+* **O que foi feito:**
+  1. **Sidebar:** Botão "Documentos" agora visível apenas para `CLINIC_ADMIN`, `RECEPTIONIST` e DOCTORs coordenadores (`is_coordinator = true`). Terapeutas comuns não veem o menu.
+  2. **Evoluções — API:** GET `/api/session-evolutions` agora filtra por `doctor_id` do terapeuta logado quando role é `DOCTOR` e `is_coordinator = false`. Cada terapeuta vê apenas evoluções dos seus próprios pacientes.
+  3. **Documentos — API GET:** GET `/api/documents` agora filtra documentos por pacientes vinculados ao terapeuta via tabela `appointments`, quando role é `DOCTOR` e `is_coordinator = false`.
+  4. **Documentos — API POST:** Upload bloqueado para DOCTORs não-coordenadores. Apenas ADM, Recepção e coordenadores podem subir documentos.
+  5. **RLS Supabase — session_evolutions:** Policy antiga `"Users can access their clinic evolutions"` (acesso total por clínica) foi substituída por 4 policies granulares (`select`, `insert`, `update`, `delete`). DOCTORs não-coordenadores só acessam evoluções onde são o `doctor_id`.
+  6. **RLS Supabase — patient_documents:** Policy duplicada `"patient_documents_select_policy"` que dava acesso total a DOCTORs foi removida. As policies `documents_select_by_role`, `documents_insert_by_role`, etc. já faziam o filtro correto.
+  7. **Hook useRole:** Adicionado `isCoordinator` ao retorno do hook para uso no sidebar.
+* **Impacto:**
+  - Terapeutas (DOCTOR, `is_coordinator = false`): veem apenas evoluções e documentos dos **seus** pacientes.
+  - Coordenadoras (DOCTOR, `is_coordinator = true`, ex: Nathalia): veem tudo da clínica, incluindo o botão Documentos.
+  - CLINIC_ADMIN e RECEPTIONIST: sem alteração — acesso total à clínica.
+  - Clínicas novas: `is_coordinator` default é `false`, então o mesmo comportamento se aplica. Para dar acesso a um terapeuta, basta marcar `is_coordinator = true`.
+* **Caminho de acesso:** Dashboard → Evoluções (terapeuta vê só as suas) | Dashboard → Documentos (oculto para terapeutas comuns)

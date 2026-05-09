@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-        const { data: userData } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+        const { data: userData } = await supabase.from('users').select('clinic_id, role, is_coordinator').eq('id', user.id).single()
         if (!userData?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const { searchParams } = new URL(request.url)
@@ -55,6 +55,22 @@ export async function GET(request: NextRequest) {
             .eq('clinic_id', userData.clinic_id)
             .order('evolution_date', { ascending: false })
             .limit(200)
+
+        // SIGILO: Terapeutas não-coordenadoras veem apenas suas próprias evoluções
+        if (userData.role === 'DOCTOR' && !userData.is_coordinator) {
+            const { data: doctorData } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
+            
+            if (doctorData?.id) {
+                query = query.eq('doctor_id', doctorData.id)
+            } else {
+                // Terapeuta sem registro de doctor — retorna vazio por segurança
+                return NextResponse.json({ data: [] })
+            }
+        }
 
         if (patientId) query = query.eq('patient_id', patientId)
         if (appointmentId) query = query.eq('appointment_id', appointmentId)

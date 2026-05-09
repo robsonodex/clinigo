@@ -75,7 +75,7 @@ export default function LandingPremium() {
                                 </span>
                             </h1>
                             <p className="text-lg md:text-xl text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
-                                Tudo que você precisa em um só lugar: Elimine atrasos, reduza faltas e aumente seu faturamento com a solução mais completa do mercado.
+                                Enquanto outros têm agenda e prontuário, o CliniGo tem totem, check-in facial, TISS completo e WhatsApp nativo — tudo integrado, do agendamento ao repasse. Não existe outro sistema assim. Agora existe.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <Link href="/contato" className="h-14 px-8 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
