@@ -77,6 +77,16 @@ export default function TrialPage() {
             }
 
             toast.success('Conta criada com sucesso! Redirecionando...')
+
+            // Google Ads — evento de conversão
+            if (typeof window !== 'undefined' && (window as any).gtag) {
+                (window as any).gtag('event', 'conversion', {
+                    send_to: 'AW-18137890436',
+                    event_category: 'trial_signup',
+                    event_label: 'free_trial_7days',
+                })
+            }
+
             setTimeout(() => {
                 window.location.href = '/clinica?trial=success'
             }, 1500)

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { Providers } from '@/lib/providers'
 import { Toaster } from '@/components/ui/toaster'
@@ -50,6 +51,20 @@ export default function RootLayout({
     return (
         <html lang="pt-BR" suppressHydrationWarning>
             <head>
+                {/* Google Ads Tag (gtag.js) — Medição de conversões */}
+                <Script
+                    src="https://www.googletagmanager.com/gtag/js?id=AW-18137890436"
+                    strategy="afterInteractive"
+                />
+                <Script id="google-ads-gtag" strategy="afterInteractive">
+                    {`
+                        window.dataLayer = window.dataLayer || [];
+                        function gtag(){dataLayer.push(arguments);}
+                        gtag('js', new Date());
+                        gtag('config', 'AW-18137890436');
+                    `}
+                </Script>
+
                 {/* PWA - Apple specific tags */}
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
