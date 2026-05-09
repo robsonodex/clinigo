@@ -310,20 +310,6 @@ export default function TrialPage() {
                                 </div>
                             </div>
 
-                            {/* Social Proof Mini */}
-                            <div className="mt-4 flex items-center justify-center gap-3 text-xs text-slate-500">
-                                <div className="flex -space-x-2">
-                                    {['HB', 'CM', 'RD', 'PN'].map((initials, i) => (
-                                        <div
-                                            key={i}
-                                            className="w-6 h-6 rounded-full bg-teal-vibrant/20 border-2 border-navy-deep flex items-center justify-center text-teal-vibrant text-[8px] font-bold"
-                                        >
-                                            {initials}
-                                        </div>
-                                    ))}
-                                </div>
-                                <span>Mais de 50 clínicas já usam o CliniGo</span>
-                            </div>
                         </div>
                     </div>
                 </div>
