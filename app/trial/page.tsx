@@ -80,11 +80,7 @@ export default function TrialPage() {
 
             // Google Ads — evento de conversão
             if (typeof window !== 'undefined' && (window as any).gtag) {
-                (window as any).gtag('event', 'conversion', {
-                    send_to: 'AW-18137890436',
-                    event_category: 'trial_signup',
-                    event_label: 'free_trial_7days',
-                })
+                (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {})
             }
 
             setTimeout(() => {
