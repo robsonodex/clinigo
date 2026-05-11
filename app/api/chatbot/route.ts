@@ -138,12 +138,30 @@ export async function POST(request: NextRequest) {
 
     // Se sessão já foi transferida, não processar automaticamente
     if (existingSession?.status === 'transferred') {
-      return NextResponse.json({
-        reply: 'Sua conversa foi transferida para um especialista. Em breve você receberá atendimento humano. 🤝',
-        messages: ['Sua conversa foi transferida para um especialista. Em breve você receberá atendimento humano. 🤝'],
-        transfer: true,
-        whatsappUrl: 'https://wa.me/5521965532247?text=Olá!%20Gostaria%20de%20falar%20com%20um%20especialista'
-      })
+      // RESETAR SESSÃO se o usuário enviar a mensagem padrão do botão do site
+      if (message.trim().toLowerCase() === 'olá! gostaria de saber mais sobre o clinigo') {
+        await supabaseAdmin
+          .from('chatbot_sessions')
+          .update({
+            status: 'active',
+            conversation_state: createInitialState(),
+            message_count: 0
+          })
+          .eq('session_id', sessionId)
+        
+        // Continuamos a execução para processar essa mensagem no novo estado limpo
+        existingSession.status = 'active'
+        existingSession.conversation_state = createInitialState()
+        existingSession.message_count = 0
+        convState = createInitialState()
+      } else {
+        return NextResponse.json({
+          reply: 'Sua conversa foi transferida para um especialista. Em breve você receberá atendimento humano. 🤝',
+          messages: ['Sua conversa foi transferida para um especialista. Em breve você receberá atendimento humano. 🤝'],
+          transfer: true,
+          whatsappUrl: 'https://wa.me/5521965532247?text=Olá!%20Gostaria%20de%20falar%20com%20um%20especialista'
+        })
+      }
     }
 
     // ========== SALVAR MENSAGEM DO USUÁRIO ==========
