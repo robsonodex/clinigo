@@ -16,10 +16,18 @@ export default function ClinWhatsAppPage() {
       if (res.ok) {
         const data = await res.json()
         setPhoneNumber(data.phone_number)
-        setStatus(data.connected ? 'connected' : 'disconnected')
+        if (data.connected) {
+          setStatus('connected')
+          setQrCode(null)
+        } else if (data.status === 'connecting') {
+          // Não resetar para disconnected se está connecting
+          setStatus(prev => prev === 'loading' ? 'disconnected' : prev)
+        } else {
+          setStatus('disconnected')
+        }
       }
     } catch {
-      setStatus('disconnected')
+      setStatus(prev => prev === 'loading' ? 'disconnected' : prev)
     }
   }, [])
 
@@ -41,17 +49,22 @@ export default function ClinWhatsAppPage() {
         setStatus('connecting')
         // Poll para verificar se conectou
         const interval = setInterval(async () => {
-          const statusRes = await fetch('/api/clin-whatsapp/connect')
-          const statusData = await statusRes.json()
-          if (statusData.connected) {
-            clearInterval(interval)
-            setQrCode(null)
-            setPhoneNumber(statusData.phone_number)
-            setStatus('connected')
+          try {
+            const statusRes = await fetch('/api/clin-whatsapp/connect')
+            const statusData = await statusRes.json()
+            console.log('[Clin Poll]', statusData)
+            if (statusData.connected) {
+              clearInterval(interval)
+              setQrCode(null)
+              setPhoneNumber(statusData.phone_number)
+              setStatus('connected')
+            }
+          } catch (e) {
+            console.error('[Clin Poll Error]', e)
           }
         }, 3000)
-        // Parar poll após 2 minutos
-        setTimeout(() => clearInterval(interval), 120000)
+        // Parar poll após 3 minutos
+        setTimeout(() => clearInterval(interval), 180000)
       } else if (data.status === 'connected') {
         setStatus('connected')
       }
