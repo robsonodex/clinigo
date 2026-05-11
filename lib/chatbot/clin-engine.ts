@@ -163,6 +163,12 @@ export function processStep(
     if (input === '3') return result(MSG_FLUXO_3_DEMO, 'fluxo_3_demo')
     if (input === '4') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
     if (input === '5') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    
+    // Check for the default message from the website WhatsApp button
+    if (input.includes('gostaria de saber mais sobre o clinigo') || input.includes('vim do chat do site')) {
+      return result(MSG_MENU, 'menu')
+    }
+
     // Não reconheceu → tentar intenção
     return handleIntentOrResentMenu(state, userMessage)
   }
