@@ -58,6 +58,12 @@ export default function ClinWhatsAppPage() {
               setQrCode(null)
               setPhoneNumber(statusData.phone_number)
               setStatus('connected')
+            } else if (statusData.status === 'disconnected') {
+              // QR expirou ou sessão inválida — parar polling
+              clearInterval(interval)
+              setQrCode(null)
+              setStatus('disconnected')
+              setError('QR Code expirou ou sessão inválida. Clique em "Conectar WhatsApp" para gerar um novo QR Code.')
             }
           } catch (e) {
             console.error('[Clin Poll Error]', e)
