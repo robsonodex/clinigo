@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { connectClinSession, getClinStatus, disconnectClinSession } from '@/lib/whatsapp/service'
 
 /**
  * POST /api/clin-whatsapp/connect
- * Conecta a sessão do Clin e retorna QR Code.
+ * Proxy para o servidor Railway — conecta a sessão do Clin.
  * 
  * GET /api/clin-whatsapp/connect
- * Verifica status da sessão do Clin.
+ * Proxy para o servidor Railway — status da sessão do Clin.
  * 
  * DELETE /api/clin-whatsapp/connect
- * Desconecta a sessão do Clin.
+ * Proxy para o servidor Railway — desconecta a sessão do Clin.
  * 
  * Roles: SUPER_ADMIN apenas
  */
+
+const RAILWAY_URL = process.env.SIGNALING_SERVER_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
 
 async function verifySuperAdmin() {
   const supabase = await createClient()
@@ -38,11 +39,18 @@ export async function POST() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    const result = await connectClinSession()
+    // Chamar Railway para conectar e obter QR
+    const res = await fetch(`${RAILWAY_URL}/clin/qr`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    const data = await res.json()
 
     return NextResponse.json({
-      qr_code: result.qr_code,
-      status: result.status,
+      qr_code: data.qr || null,
+      status: data.status === 'connected' ? 'connected' : 'connecting',
+      phone_number: data.phone_number || null,
     })
   } catch (error: any) {
     console.error('[Clin WhatsApp Connect]', error)
@@ -57,11 +65,21 @@ export async function GET() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    const status = await getClinStatus()
-    return NextResponse.json(status)
+    const res = await fetch(`${RAILWAY_URL}/clin/status`)
+    const data = await res.json()
+
+    return NextResponse.json({
+      connected: data.connected || false,
+      phone_number: data.phone_number || null,
+      status: data.status || 'disconnected',
+    })
   } catch (error: any) {
     console.error('[Clin WhatsApp Status]', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({
+      connected: false,
+      phone_number: null,
+      status: 'disconnected',
+    })
   }
 }
 
@@ -72,7 +90,7 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    await disconnectClinSession()
+    await fetch(`${RAILWAY_URL}/clin/disconnect`, { method: 'POST' })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Clin WhatsApp Disconnect]', error)

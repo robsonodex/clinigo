@@ -78,10 +78,10 @@ export default function LandingPremium() {
                                 Enquanto outros têm agenda e prontuário, o CliniGo tem totem, check-in facial, TISS completo e WhatsApp nativo — tudo integrado, do agendamento ao repasse. Não existe outro sistema assim. Agora existe.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Link href="/contato" className="h-14 px-8 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
+                                <a href="https://wa.me/5521965532247?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20CliniGo" target="_blank" rel="noopener noreferrer" className="h-14 px-8 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
                                     Falar com Especialista
                                     <ArrowRight className="w-5 h-5" />
-                                </Link>
+                                </a>
                             </div>
                         </motion.div>
 
@@ -825,10 +825,10 @@ export default function LandingPremium() {
                     <h2 className="text-4xl md:text-5xl font-bold text-white mb-10 tracking-tight">Pronto para transformar sua <br /> clínica?</h2>
 
                     <div className="flex justify-center mb-10">
-                        <Link href="/contato" className="h-14 px-10 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
+                        <a href="https://wa.me/5521965532247?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20CliniGo" target="_blank" rel="noopener noreferrer" className="h-14 px-10 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
                             Falar com Especialista
                             <ArrowRight className="w-5 h-5" />
-                        </Link>
+                        </a>
                     </div>
 
 
