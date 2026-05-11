@@ -1,21 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import {
-  createInstanceAndGetQR,
-  checkInstanceStatus,
-  disconnectInstance,
-} from '@/lib/whatsapp/service'
 
 /**
- * POST /api/clin-whatsapp/connect — Conectar WhatsApp do Clin
- * GET  /api/clin-whatsapp/connect — Status da conexão
+ * POST /api/clin-whatsapp/connect — Conectar/QR Code
+ * GET  /api/clin-whatsapp/connect — Status
  * DELETE /api/clin-whatsapp/connect — Desconectar
  * 
- * Usa diretamente o lib/whatsapp/service.ts (Baileys in-process).
+ * Proxy para o serviço Clin Bot no Railway (24/7).
+ * ENV: CLIN_BOT_URL = URL do serviço Railway
  * Roles: SUPER_ADMIN apenas.
  */
 
-const CLIN_CLINIC_ID = 'clin-sales-bot'
+function getClinBotUrl(): string {
+  return process.env.CLIN_BOT_URL || 'https://clinigo-clin-bot-production.up.railway.app'
+}
 
 async function verifySuperAdmin() {
   const supabase = await createClient()
@@ -32,6 +30,35 @@ async function verifySuperAdmin() {
   return user
 }
 
+async function fetchClinBot(path: string, method = 'GET'): Promise<any> {
+  const url = `${getClinBotUrl()}${path}`
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000) // 15s timeout (QR demora)
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+    const text = await res.text()
+
+    if (text.startsWith('<') || text.startsWith('<!')) {
+      throw new Error('Serviço Clin Bot retornou HTML. Deploy pode estar em andamento.')
+    }
+
+    return JSON.parse(text)
+  } catch (err: any) {
+    clearTimeout(timeout)
+    if (err.name === 'AbortError') {
+      throw new Error('Clin Bot não respondeu em 15s. Verifique se o serviço Railway está ativo.')
+    }
+    throw err
+  }
+}
+
 export async function POST() {
   try {
     const user = await verifySuperAdmin()
@@ -39,16 +66,19 @@ export async function POST() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    const result = await createInstanceAndGetQR(CLIN_CLINIC_ID)
+    // Chamar /clin/qr no Railway (gera QR se necessário)
+    const data = await fetchClinBot('/clin/qr')
 
     return NextResponse.json({
-      qr_code: result.qr_code,
-      status: result.status,
-      instance_name: result.instance_name,
+      qr_code: data.qr || null,
+      status: data.status === 'connected' ? 'connected' : 'connecting',
+      phone_number: data.phone_number || null,
     })
   } catch (error: any) {
-    console.error('[Clin WhatsApp Connect]', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[Clin WhatsApp Connect]', error.message)
+    return NextResponse.json({
+      error: error.message || 'Erro ao conectar com o serviço Clin Bot no Railway',
+    }, { status: 502 })
   }
 }
 
@@ -59,15 +89,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    const status = await checkInstanceStatus(CLIN_CLINIC_ID)
+    const data = await fetchClinBot('/clin/status')
 
     return NextResponse.json({
-      connected: status.connected,
-      phone_number: status.phone_number,
-      status: status.status,
+      connected: data.connected || false,
+      phone_number: data.phone_number || null,
+      status: data.status || 'disconnected',
     })
   } catch (error: any) {
-    console.error('[Clin WhatsApp Status]', error)
+    console.error('[Clin WhatsApp Status]', error.message)
     return NextResponse.json({
       connected: false,
       phone_number: null,
@@ -83,10 +113,10 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    await disconnectInstance(CLIN_CLINIC_ID)
+    await fetchClinBot('/clin/disconnect', 'POST')
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Clin WhatsApp Disconnect]', error)
+    console.error('[Clin WhatsApp Disconnect]', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
