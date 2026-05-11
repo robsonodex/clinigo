@@ -11,6 +11,7 @@ interface Message {
   timestamp: Date
   transfer?: boolean
   whatsappUrl?: string
+  buttons?: { label: string; value: string }[]
 }
 
 function generateSessionId(): string {
@@ -24,6 +25,69 @@ function getOrCreateSessionId(): string {
   const newId = generateSessionId()
   sessionStorage.setItem('clinigo_chat_session', newId)
   return newId
+}
+
+/** Detecta opções clicáveis no texto do bot (1️⃣, 🅰️, ✅ *1*, etc.) */
+function extractButtons(text: string): { label: string; value: string }[] {
+  const buttons: { label: string; value: string }[] = []
+  const lines = text.split('\n')
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Padrão: 1️⃣ — Texto / 2️⃣ — Texto
+    const emojiNum = trimmed.match(/^([1-5])️⃣\s*[—–-]\s*(.+)/)
+    if (emojiNum) {
+      buttons.push({ label: `${emojiNum[1]} ${emojiNum[2]}`, value: emojiNum[1] })
+      continue
+    }
+
+    // Padrão: 🅰️ — Texto / 🅱️ — Texto / 🅲
+    const letterEmoji = trimmed.match(/^🅰️|^🅱️|^🅲|^🅳|^🅴/)
+    if (letterEmoji) {
+      const letter = trimmed.startsWith('🅰️') ? 'a' : trimmed.startsWith('🅱️') ? 'b' : trimmed.startsWith('🅲') ? 'c' : trimmed.startsWith('🅳') ? 'd' : 'e'
+      const labelText = trimmed.replace(/^🅰️|^🅱️|^🅲|^🅳|^🅴/, '').replace(/^\s*[—–-]\s*/, '').trim()
+      buttons.push({ label: `${letter.toUpperCase()} ${labelText}`, value: letter })
+      continue
+    }
+
+    // Padrão: ✅ *1* — Texto / 💬 *2* — Texto / 🔙 *3* / ❓ *3* / 🕐 *2*
+    const starNum = trimmed.match(/^[✅💬🔙❓🕐📅📋💰📱🔵📊📦🤖]\s*\*([1-9a-hA-H])\*\s*[—–-]\s*(.+)/)
+    if (starNum) {
+      buttons.push({ label: `${starNum[1]} ${starNum[2].replace(/\*/g, '')}`, value: starNum[1].toLowerCase() })
+      continue
+    }
+
+    // Padrão simples: 📅 *A* — Texto (funcionalidades)
+    const funcMatch = trimmed.match(/^[📅📋💰📱🔵📊📦🤖]\s*\*([A-H])\*\s*[—–-]\s*(.+)/)
+    if (funcMatch) {
+      buttons.push({ label: `${funcMatch[1]} ${funcMatch[2].replace(/\*/g, '')}`, value: funcMatch[1].toLowerCase() })
+      continue
+    }
+
+    // Padrão: 🔁 *1* — Texto (sem emoji prefixo variável)
+    const rebuildMatch = trimmed.match(/^🔁\s*\*([1-3])\*\s*[—–-]\s*(.+)/)
+    if (rebuildMatch) {
+      buttons.push({ label: `${rebuildMatch[1]} ${rebuildMatch[2].replace(/\*/g, '')}`, value: rebuildMatch[1] })
+      continue
+    }
+
+    // Padrão: 🚀 *2* — Texto
+    const rocketMatch = trimmed.match(/^🚀\s*\*([1-3B])\*\s*[—–-]\s*(.+)/)
+    if (rocketMatch) {
+      buttons.push({ label: `${rocketMatch[1]} ${rocketMatch[2].replace(/\*/g, '')}`, value: rocketMatch[1].toLowerCase() })
+      continue
+    }
+  }
+
+  return buttons
+}
+
+/** Formata texto estilo WhatsApp para HTML simples */
+function formatWhatsAppText(text: string): string {
+  return text
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/_(.*?)_/g, '<em>$1</em>')
 }
 
 export default function ChatbotWidget() {
@@ -50,15 +114,33 @@ export default function ChatbotWidget() {
     }
   }, [isOpen])
 
-  // Mostrar mensagem de boas-vindas ao abrir pela primeira vez
+  // Mostrar menu inicial ao abrir pela primeira vez
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      setMessages([{
-        id: 'welcome',
-        role: 'assistant',
-        content: 'Olá! 👋 Sou o Clin, assistente virtual do CliniGo. Fico feliz em te atender! Como posso te ajudar hoje?',
-        timestamp: new Date()
-      }])
+      setIsLoading(true)
+      // Chamar API GET para pegar menu inicial
+      fetch('/api/chatbot')
+        .then(res => res.json())
+        .then(data => {
+          const msgs: string[] = data.messages || [data.reply]
+          const allMsgs: Message[] = msgs.map((content: string, i: number) => ({
+            id: `welcome_${i}`,
+            role: 'assistant' as const,
+            content,
+            timestamp: new Date(),
+            buttons: extractButtons(content),
+          }))
+          setMessages(allMsgs)
+        })
+        .catch(() => {
+          setMessages([{
+            id: 'welcome',
+            role: 'assistant',
+            content: 'Olá! 👋 Sou o Clin, assistente virtual do CliniGo. Como posso te ajudar hoje?',
+            timestamp: new Date(),
+          }])
+        })
+        .finally(() => setIsLoading(false))
     }
   }, [isOpen, messages.length])
 
@@ -68,8 +150,8 @@ export default function ChatbotWidget() {
     return () => clearTimeout(timer)
   }, [])
 
-  const sendMessage = useCallback(async () => {
-    const trimmed = input.trim()
+  const sendMessage = useCallback(async (overrideText?: string) => {
+    const trimmed = (overrideText || input).trim()
     if (!trimmed || isLoading) return
 
     const userMessage: Message = {
@@ -90,22 +172,43 @@ export default function ChatbotWidget() {
         body: JSON.stringify({
           message: trimmed,
           sessionId: sessionIdRef.current,
-          sourcePage: typeof window !== 'undefined' ? window.location.pathname : '/'
+          sourcePage: typeof window !== 'undefined' ? window.location.pathname : '/',
+          source: 'web',
         })
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: data.reply,
+        // Parsear múltiplas mensagens
+        const msgs: string[] = data.messages || (data.reply ? [data.reply] : [])
+
+        // Adicionar cada mensagem como bolha separada com pequeno delay visual
+        const newMsgs: Message[] = msgs.map((content: string, i: number) => ({
+          id: (Date.now() + i + 1).toString(),
+          role: 'assistant' as const,
+          content,
           timestamp: new Date(),
-          transfer: data.transfer,
-          whatsappUrl: data.whatsappUrl
+          transfer: i === msgs.length - 1 ? data.transfer : false,
+          whatsappUrl: i === msgs.length - 1 ? data.whatsappUrl : undefined,
+          buttons: extractButtons(content),
+        }))
+
+        setMessages(prev => [...prev, ...newMsgs])
+
+        // Se API indicou follow-up, adicionar após 30s
+        if (data.sendFollowUp && data.followUpMessages) {
+          setTimeout(() => {
+            const followUps: Message[] = data.followUpMessages.map((content: string, i: number) => ({
+              id: `followup_${Date.now()}_${i}`,
+              role: 'assistant' as const,
+              content,
+              timestamp: new Date(),
+              buttons: extractButtons(content),
+            }))
+            setMessages(prev => [...prev, ...followUps])
+          }, 30000)
         }
-        setMessages(prev => [...prev, assistantMessage])
       } else {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
@@ -131,6 +234,10 @@ export default function ChatbotWidget() {
       e.preventDefault()
       sendMessage()
     }
+  }
+
+  const handleButtonClick = (value: string) => {
+    sendMessage(value)
   }
 
   return (
@@ -208,8 +315,27 @@ export default function ChatbotWidget() {
                         : 'bg-white text-slate-700 shadow-sm border border-slate-100 rounded-bl-md'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <div
+                      className="whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ __html: formatWhatsAppText(msg.content) }}
+                    />
                     
+                    {/* Botões clicáveis */}
+                    {msg.buttons && msg.buttons.length > 0 && msg.role === 'assistant' && (
+                      <div className="mt-3 flex flex-col gap-1.5">
+                        {msg.buttons.map((btn, i) => (
+                          <button
+                            key={i}
+                            onClick={() => handleButtonClick(btn.value)}
+                            disabled={isLoading}
+                            className="w-full text-left px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {btn.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Botão WhatsApp quando transferir */}
                     {msg.transfer && msg.whatsappUrl && (
                       <a
@@ -256,7 +382,7 @@ export default function ChatbotWidget() {
                   className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all disabled:opacity-50"
                 />
                 <button
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}
                   className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 disabled:hover:scale-100 flex-shrink-0 cursor-pointer"
                   aria-label="Enviar mensagem"

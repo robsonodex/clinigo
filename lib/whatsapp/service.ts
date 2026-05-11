@@ -665,7 +665,8 @@ async function handleClinWhatsAppMessage(
       body: JSON.stringify({
         message: text,
         sessionId: `wa-${senderPhone}`,
-        history: history.slice(-10), // Últimas 10 mensagens para contexto
+        sourcePage: 'whatsapp',
+        source: 'whatsapp',
       }),
     })
 
@@ -674,20 +675,50 @@ async function handleClinWhatsAppMessage(
     }
 
     const data = await response.json()
-    const reply = data.reply || 'Desculpe, estou com dificuldade técnica. Tente novamente em instantes! 😊'
 
-    // Adicionar resposta ao histórico
-    history.push({ role: 'assistant', content: reply })
+    // Parsear array de mensagens (novo formato)
+    const messages: string[] = data.messages || (data.reply ? [data.reply] : [])
+    if (messages.length === 0) {
+      messages.push('Desculpe, estou com dificuldade técnica. Tente novamente em instantes! 😊')
+    }
 
-    // Parar indicador de digitação
+    // Adicionar respostas ao histórico
+    for (const msg of messages) {
+      history.push({ role: 'assistant', content: msg })
+    }
+
+    // Parar indicador de digitação antes de enviar
     try {
       await socket.sendPresenceUpdate('paused', senderJid)
     } catch { /* best effort */ }
 
-    // Enviar resposta pelo WhatsApp
-    await socket.sendMessage(senderJid, { text: reply })
+    // Enviar cada mensagem com delay de 1.5s entre elas
+    for (let i = 0; i < messages.length; i++) {
+      if (i > 0) {
+        try { await socket.sendPresenceUpdate('composing', senderJid) } catch { /* */ }
+        await new Promise(r => setTimeout(r, 1500))
+      }
+      await socket.sendMessage(senderJid, { text: messages[i] })
+    }
 
-    console.log(`[Clin WhatsApp] ✅ Respondido para ${senderPhone}`)
+    try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* */ }
+
+    console.log(`[Clin WhatsApp] ✅ Respondido para ${senderPhone} (${messages.length} msg${messages.length > 1 ? 's' : ''})`)
+
+    // Se API indicou follow-up (trial), enviar após 30s
+    if (data.sendFollowUp && data.followUpMessages) {
+      setTimeout(async () => {
+        try {
+          for (let i = 0; i < data.followUpMessages.length; i++) {
+            if (i > 0) await new Promise(r => setTimeout(r, 1500))
+            await socket.sendMessage(senderJid, { text: data.followUpMessages[i] })
+          }
+        } catch (err) {
+          console.error(`[Clin WhatsApp] Erro ao enviar follow-up:`, err)
+        }
+      }, 30000)
+    }
+
   } catch (err) {
     console.error(`[Clin WhatsApp] Erro ao chamar API:`, err)
 
