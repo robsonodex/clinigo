@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
-import { Plus, Edit, Trash2, Target, TrendingUp, Loader2, Search, ClipboardList } from 'lucide-react'
+import { Plus, Edit, Trash2, Target, TrendingUp, Loader2, Search, ClipboardList, Printer } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 
@@ -310,6 +310,9 @@ export default function TherapeuticPlansPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-1 ml-4">
+                                            <Button variant="ghost" size="icon" title="Imprimir / Exportar PDF" onClick={() => window.open(`/api/therapeutic-plans/pdf?id=${plan.id}`, '_blank')}>
+                                                <Printer className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="ghost" size="icon" onClick={() => openEdit(plan)}><Edit className="h-4 w-4" /></Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleDelete(plan.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                         </div>

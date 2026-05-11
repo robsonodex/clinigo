@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
@@ -380,6 +380,9 @@ export default function SessionEvolutionsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-1 ml-4">
+                                        <Button variant="ghost" size="icon" title="Imprimir / Exportar PDF" onClick={() => window.open(`/api/session-evolutions/pdf?id=${ev.id}`, '_blank')}>
+                                            <Printer className="h-4 w-4" />
+                                        </Button>
                                         {canEdit(ev) ? (
                                             <>
                                                 <Button variant="ghost" size="icon" onClick={() => openEdit(ev)} title="Editar evolução">
