@@ -117,7 +117,7 @@ export const MSG_FLUXO_2_PLANOS = [
 ━━━━━━━━━━━━━━━━━━
 🟢 *BÁSICO — R$ 99/mês*
 ━━━━━━━━━━━━━━━━━━
-👤 1 profissional | 👥 até 200 pacientes | 💾 2 GB
+👤 1 profissional | 👥 até 200 pacientes
 ✔️ Agenda completa
 ✔️ Prontuário eletrônico
 ✔️ Financeiro e convênios
@@ -127,7 +127,7 @@ export const MSG_FLUXO_2_PLANOS = [
 ━━━━━━━━━━━━━━━━━━
 🔵 *AVANÇADO — R$ 249/mês*
 ━━━━━━━━━━━━━━━━━━
-👤 até 5 profissionais | 👥 Ilimitados | 💾 20 GB
+👤 até 5 profissionais | 👥 Ilimitados
 ✔️ Tudo do Básico +
 ✔️ WhatsApp integrado (lembretes automáticos)
 ✔️ Teleconsulta nativa
@@ -138,7 +138,7 @@ export const MSG_FLUXO_2_PLANOS = [
   `━━━━━━━━━━━━━━━━━━
 🟣 *PROFESSIONAL — R$ 449/mês*
 ━━━━━━━━━━━━━━━━━━
-👤 até 30 profissionais | 👥 Ilimitados | 💾 100 GB
+👤 até 30 profissionais | 👥 Ilimitados
 ✔️ Tudo do Avançado +
 ✔️ Faturamento TISS completo (ANS 3.05.00)
 ✔️ Check-in facial (biometria)
@@ -149,7 +149,7 @@ export const MSG_FLUXO_2_PLANOS = [
 ━━━━━━━━━━━━━━━━━━
 🟠 *ENTERPRISE — A partir de R$ 699/mês*
 ━━━━━━━━━━━━━━━━━━
-👤 Profissionais ilimitados | 💾 500 GB
+👤 Profissionais ilimitados
 ✔️ Tudo do Professional +
 ✔️ Múltiplas clínicas / rede
 ✔️ Analytics global centralizado

@@ -23,7 +23,9 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
     useEffect(() => {
         const loadRecords = async () => {
             setIsLoading(true)
-            const { data, error } = await supabase
+            
+            // 1. Fetch Medical Records (Doctors)
+            const { data: medicalData, error: medicalError } = await supabase
                 .from('medical_records')
                 .select(`
                     *,
@@ -31,11 +33,37 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
                     doctor:doctors(users(full_name), specialty)
                 `)
                 .eq('patient_id', patientId)
-                .order('created_at', { ascending: false })
                 
-            if (!error && data) {
-                setRecords(data)
+            // 2. Fetch Session Evolutions (Therapists)
+            const { data: sessionData, error: sessionError } = await supabase
+                .from('session_evolutions')
+                .select(`
+                    *,
+                    appointment:appointments(appointment_date, status),
+                    doctor:doctors(users(full_name), specialty)
+                `)
+                .eq('patient_id', patientId)
+
+            let combinedRecords: any[] = []
+            
+            if (!medicalError && medicalData) {
+                const mappedMedical = medicalData.map(r => ({ ...r, _type: 'medical_record' }))
+                combinedRecords = [...combinedRecords, ...mappedMedical]
             }
+            
+            if (!sessionError && sessionData) {
+                const mappedSessions = sessionData.map(r => ({ ...r, _type: 'session_evolution' }))
+                combinedRecords = [...combinedRecords, ...mappedSessions]
+            }
+            
+            // Sort combined records by date descending
+            combinedRecords.sort((a, b) => {
+                const dateA = new Date(a.created_at).getTime()
+                const dateB = new Date(b.created_at).getTime()
+                return dateB - dateA
+            })
+
+            setRecords(combinedRecords)
             setIsLoading(false)
         }
         if (patientId) loadRecords()
@@ -143,6 +171,10 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
                                 || customData.evolucao_psicologica 
                                 || customData.evolucao_funcional 
                                 || record.chief_complaint 
+                                || record.content
+                                || record.subjective
+                                || record.data_description
+                                || record.patient_response
                                 || "Sessão realizada sem detalhes descritivos longos."
 
                             return (
