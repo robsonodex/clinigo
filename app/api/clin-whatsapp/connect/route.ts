@@ -66,7 +66,10 @@ export async function POST() {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    // Chamar /clin/qr no Railway (gera QR se necessário)
+    // 1. Chamar /clin/connect para iniciar sessão (limpa auth antigo)
+    await fetchClinBot('/clin/connect', 'POST')
+
+    // 2. Buscar QR gerado
     const data = await fetchClinBot('/clin/qr')
 
     return NextResponse.json({
