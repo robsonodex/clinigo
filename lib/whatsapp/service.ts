@@ -284,17 +284,42 @@ async function startBaileysSession(clinicId: string): Promise<void> {
         session.socket = null
         session.qrCode = null
 
-        if (shouldReconnect && session.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          // Reconectar automaticamente com limite
-          session.reconnectAttempts++
-          session.status = 'connecting'
-          console.log(`[WhatsApp] Tentativa de reconexão ${session.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} (${clinicId})`)
-          setTimeout(() => startBaileysSession(clinicId), 3000)
-        } else {
-          // Logout ou esgotou tentativas — limpar tudo
-          if (session.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        if (shouldReconnect) {
+          // Para o Clin bot: reconexão INFINITA (sessão eterna)
+          // Para clínicas normais: limite de 3 tentativas
+          const isClinBot = clinicId === CLIN_SESSION_ID
+          const maxAttempts = isClinBot ? Infinity : MAX_RECONNECT_ATTEMPTS
+
+          if (session.reconnectAttempts < maxAttempts) {
+            session.reconnectAttempts++
+            session.status = 'connecting'
+
+            // Backoff exponencial: 3s, 6s, 12s, 24s, 30s (max)
+            const delay = isClinBot
+              ? Math.min(3000 * Math.pow(2, session.reconnectAttempts - 1), 30000)
+              : 3000
+
+            console.log(`[WhatsApp] 🔄 Reconexão ${session.reconnectAttempts}${isClinBot ? '/∞' : `/${MAX_RECONNECT_ATTEMPTS}`} em ${delay/1000}s (${clinicId})`)
+            setTimeout(() => startBaileysSession(clinicId), delay)
+          } else {
             console.log(`[WhatsApp] Máximo de reconexões atingido (${clinicId})`)
+            session.status = 'close'
+            session.phoneNumber = null
+            session.connectedAt = null
+            session.reconnectAttempts = 0
+            await removeAuthStateFromStorage(clinicId)
+
+            const supabase = getSupabaseAdmin()
+            await supabase.from('whatsapp_sessions').update({
+              status: 'disconnected',
+              disconnected_at: new Date().toISOString(),
+              qr_code: null,
+              phone_number: null,
+              updated_at: new Date().toISOString(),
+            }).eq('clinic_id', clinicId)
           }
+        } else {
+          // Logout explícito (desconectou do celular) — limpar tudo
           session.status = 'close'
           session.phoneNumber = null
           session.connectedAt = null
