@@ -45,6 +45,9 @@ function getSupabaseAdmin() {
 
 const STORAGE_BUCKET = 'whatsapp-sessions'
 
+// ========== CHATBOT CLIN — ID da sessão de vendas ==========
+const CLIN_SESSION_ID = 'clin-sales-bot'
+
 // ========== IN-MEMORY SESSION MAP ==========
 
 const MAX_RECONNECT_ATTEMPTS = 3
@@ -316,6 +319,36 @@ async function startBaileysSession(clinicId: string): Promise<void> {
       await saveAuthStateToStorage(clinicId, authData)
     })
 
+    // ===== CHATBOT CLIN: Listener de mensagens recebidas =====
+    if (clinicId === CLIN_SESSION_ID) {
+      socket.ev.on('messages.upsert', async (m) => {
+        for (const msg of m.messages) {
+          // Ignorar mensagens enviadas por nós, de grupo, broadcasts e status
+          if (msg.key.fromMe) continue
+          if (msg.key.remoteJid?.endsWith('@g.us')) continue
+          if (msg.key.remoteJid === 'status@broadcast') continue
+
+          const text = msg.message?.conversation
+            || msg.message?.extendedTextMessage?.text
+            || ''
+
+          if (!text.trim()) continue
+
+          const senderJid = msg.key.remoteJid!
+          const senderPhone = senderJid.split('@')[0]
+
+          console.log(`[Clin WhatsApp] 📩 Mensagem de ${senderPhone}: ${text.substring(0, 50)}`)
+
+          try {
+            await handleClinWhatsAppMessage(socket, senderJid, senderPhone, text)
+          } catch (err) {
+            console.error(`[Clin WhatsApp] Erro ao processar:`, err)
+          }
+        }
+      })
+      console.log(`[Clin WhatsApp] 🤖 Listener de mensagens ativado`)
+    }
+
   } catch (error) {
     console.error(`[WhatsApp] Erro ao iniciar sessão (${clinicId}):`, error)
     session.status = 'close'
@@ -559,4 +592,114 @@ export async function disconnectInstance(clinicId: string): Promise<void> {
   }).eq('clinic_id', clinicId)
 
   console.log(`[WhatsApp] 🔌 Clínica ${clinicId} desconectada`)
+}
+
+// ========== CHATBOT CLIN — HANDLER DE MENSAGENS ==========
+
+/**
+ * Map de conversas ativas do Clin no WhatsApp.
+ * Chave: número do telefone, Valor: histórico de mensagens
+ */
+const clinConversations = new Map<string, { role: string; content: string }[]>()
+
+/**
+ * Processa mensagem recebida no WhatsApp e responde via Clin.
+ */
+async function handleClinWhatsAppMessage(
+  socket: WASocket,
+  senderJid: string,
+  senderPhone: string,
+  text: string
+): Promise<void> {
+  // Obter ou criar histórico de conversa
+  if (!clinConversations.has(senderPhone)) {
+    clinConversations.set(senderPhone, [])
+  }
+  const history = clinConversations.get(senderPhone)!
+
+  // Adicionar mensagem do usuário ao histórico
+  history.push({ role: 'user', content: text })
+
+  // Limitar histórico a 20 mensagens para não estourar tokens
+  if (history.length > 20) {
+    history.splice(0, history.length - 20)
+  }
+
+  // Indicar que está digitando
+  try {
+    await socket.presenceSubscribe(senderJid)
+    await socket.sendPresenceUpdate('composing', senderJid)
+  } catch { /* best effort */ }
+
+  try {
+    // Chamar a API do Clin internamente
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'
+    const response = await fetch(`${baseUrl}/api/chatbot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        sessionId: `wa-${senderPhone}`,
+        history: history.slice(-10), // Últimas 10 mensagens para contexto
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`API retornou ${response.status}`)
+    }
+
+    const data = await response.json()
+    const reply = data.reply || 'Desculpe, estou com dificuldade técnica. Tente novamente em instantes! 😊'
+
+    // Adicionar resposta ao histórico
+    history.push({ role: 'assistant', content: reply })
+
+    // Parar indicador de digitação
+    try {
+      await socket.sendPresenceUpdate('paused', senderJid)
+    } catch { /* best effort */ }
+
+    // Enviar resposta pelo WhatsApp
+    await socket.sendMessage(senderJid, { text: reply })
+
+    console.log(`[Clin WhatsApp] ✅ Respondido para ${senderPhone}`)
+  } catch (err) {
+    console.error(`[Clin WhatsApp] Erro ao chamar API:`, err)
+
+    // Resposta de fallback
+    await socket.sendMessage(senderJid, {
+      text: 'Oi! 😊 Estou com uma dificuldade técnica momentânea. Mas não se preocupe, nossa equipe já foi notificada e vai te atender em breve!'
+    })
+  }
+}
+
+// ========== EXPORTED: SESSÃO CLIN (CHATBOT DE VENDAS) ==========
+
+/**
+ * Conecta a sessão do Clin (chatbot de vendas) e retorna QR Code.
+ */
+export async function connectClinSession(): Promise<{
+  qr_code: string | null
+  status: 'connecting' | 'connected'
+}> {
+  return createInstanceAndGetQR(CLIN_SESSION_ID) as any
+}
+
+/**
+ * Verifica status da sessão do Clin.
+ */
+export async function getClinStatus(): Promise<{
+  connected: boolean
+  phone_number: string | null
+  status: 'connecting' | 'connected' | 'disconnected'
+}> {
+  return checkInstanceStatus(CLIN_SESSION_ID)
+}
+
+/**
+ * Desconecta a sessão do Clin.
+ */
+export async function disconnectClinSession(): Promise<void> {
+  clinConversations.clear()
+  return disconnectInstance(CLIN_SESSION_ID)
 }
