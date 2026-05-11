@@ -5,6 +5,7 @@ import './globals.css'
 import { Providers } from '@/lib/providers'
 import { Toaster } from '@/components/ui/toaster'
 import { PWAInitializer } from '@/components/pwa-initializer'
+import ChatbotProvider from '@/components/chatbot/ChatbotProvider'
 
 
 const inter = Inter({ subsets: ['latin'] })
@@ -85,6 +86,7 @@ export default function RootLayout({
                     {children}
                 </Providers>
                 <Toaster />
+                <ChatbotProvider />
             </body>
         </html>
     )
