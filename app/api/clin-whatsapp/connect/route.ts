@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/server'
  */
 
 function getClinBotUrl(): string {
-  return process.env.CLIN_BOT_URL || 'https://clinigo-clin-bot-production.up.railway.app'
+  return process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
 }
 
 async function verifySuperAdmin() {
