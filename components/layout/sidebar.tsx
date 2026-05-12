@@ -216,7 +216,7 @@ const navigationSections: NavSection[] = [
                 title: 'Meu Financeiro',
                 href: '/dashboard/meu-financeiro',
                 icon: Wallet,
-                roles: ['DOCTOR'],
+                roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
             },
             {
                 title: 'DRE',

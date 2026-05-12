@@ -7,14 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, DollarSign, ArrowUpRight, ArrowDownRight, Wallet, Receipt } from 'lucide-react';
+import { Calendar, DollarSign, ArrowUpRight, ArrowDownRight, Wallet, Receipt, RefreshCw, FileSpreadsheet, Download } from 'lucide-react';
 import { NotaRepasseButton } from '../financial/payroll/components/NotaRepasseButton';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function MeuFinanceiroPage() {
     const [year, setYear] = useState(new Date().getFullYear().toString());
 
     // Buscar histórico (backend força doctorId se for role DOCTOR)
-    const { data: historyRes, isLoading } = useQuery({
+    const { data: historyRes, isLoading, refetch } = useQuery({
         queryKey: ['my-payroll-history', year],
         queryFn: async () => {
             const url = `/api/payroll/history?year=${year}`;
@@ -48,6 +50,50 @@ export default function MeuFinanceiroPage() {
         };
     };
 
+    const [isExporting, setIsExporting] = useState(false);
+
+    const handleExportExcel = async () => {
+        if (!history || history.length === 0) return;
+        setIsExporting(true);
+        try {
+            const ExcelJS = (await import('exceljs')).default;
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Meu Financeiro');
+            
+            worksheet.columns = [
+                { header: 'Mês', key: 'month', width: 20 },
+                { header: 'Status', key: 'status', width: 15 },
+                { header: 'Bruto', key: 'gross_production', width: 20 },
+                { header: 'Deduções', key: 'deductions', width: 20 },
+                { header: 'Líquido', key: 'net_payroll', width: 20 },
+            ];
+            
+            history.forEach((h: any) => {
+                worksheet.addRow({
+                    month: h.month,
+                    status: h.status,
+                    gross_production: h.gross_production,
+                    deductions: h.deductions,
+                    net_payroll: h.net_payroll
+                });
+            });
+            
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meu-financeiro-${year}.xlsx`;
+            a.click();
+            toast.success('Excel gerado com sucesso!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Erro ao gerar Excel');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className="space-y-6 p-6 max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -61,7 +107,7 @@ export default function MeuFinanceiroPage() {
                     </p>
                 </div>
                 
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap">
                     <Select value={year} onValueChange={setYear}>
                         <SelectTrigger className="w-[120px]">
                             <SelectValue placeholder="Ano" />
@@ -73,6 +119,24 @@ export default function MeuFinanceiroPage() {
                             })}
                         </SelectContent>
                     </Select>
+                    
+                    <Button 
+                        variant="outline" 
+                        onClick={() => { refetch(); toast.success('Dados atualizados!'); }}
+                        disabled={isLoading}
+                    >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        Atualizar
+                    </Button>
+                    
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportExcel}
+                        disabled={!history || history.length === 0 || isExporting}
+                    >
+                        <FileSpreadsheet className={`w-4 h-4 mr-2 ${isExporting ? 'animate-pulse' : ''}`} />
+                        Exportar Excel
+                    </Button>
                 </div>
             </div>
 
