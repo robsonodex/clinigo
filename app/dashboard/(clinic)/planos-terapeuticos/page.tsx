@@ -30,6 +30,9 @@ export default function TherapeuticPlansPage() {
     const [showDialog, setShowDialog] = useState(false)
     const [editingPlan, setEditingPlan] = useState<any>(null)
     const [saving, setSaving] = useState(false)
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+    const [currentDoctorId, setCurrentDoctorId] = useState<string | null>(null)
 
     const [form, setForm] = useState({
         patient_id: '', doctor_id: '', title: '', diagnosis: '', cid_code: '',
@@ -54,9 +57,23 @@ export default function TherapeuticPlansPage() {
     useEffect(() => { fetchPlans() }, [fetchPlans])
 
     useEffect(() => {
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (d?.id) setCurrentUserId(d.id)
+            if (d?.role) setCurrentUserRole(d.role)
+        }).catch(() => {})
         fetch('/api/patients').then(r => r.json()).then(d => setPatients(d.data || d.patients || []))
         fetch('/api/doctors').then(r => r.json()).then(d => setDoctors(d.data || d.doctors || []))
     }, [])
+
+    useEffect(() => {
+        if (currentUserRole === 'DOCTOR' && currentUserId && doctors.length > 0) {
+            const myDoctor = doctors.find((d: any) => d.user_id === currentUserId)
+            if (myDoctor) {
+                setCurrentDoctorId(myDoctor.id)
+                setForm(prev => ({ ...prev, doctor_id: myDoctor.id }))
+            }
+        }
+    }, [currentUserRole, currentUserId, doctors])
 
     const handleSave = async () => {
         if (!form.patient_id || !form.doctor_id || !form.title) {
@@ -87,7 +104,7 @@ export default function TherapeuticPlansPage() {
     }
 
     const resetForm = () => {
-        setForm({ patient_id: '', doctor_id: '', title: '', diagnosis: '', cid_code: '', objectives: '', methodology: '', frequency: '', estimated_duration: '', start_date: new Date().toISOString().split('T')[0], end_date: '', review_date: '', status: 'active', notes: '', goals: [] })
+        setForm({ patient_id: '', doctor_id: (currentUserRole === 'DOCTOR' && currentDoctorId) ? currentDoctorId : '', title: '', diagnosis: '', cid_code: '', objectives: '', methodology: '', frequency: '', estimated_duration: '', start_date: new Date().toISOString().split('T')[0], end_date: '', review_date: '', status: 'active', notes: '', goals: [] })
         setEditingPlan(null)
     }
 
@@ -165,14 +182,15 @@ export default function TherapeuticPlansPage() {
                                             onSelect={(patient) => setForm(p => ({ ...p, patient_id: patient?.id || '' }))}
                                             onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
                                             placeholder="Buscar paciente por nome, CPF..."
+                                            doctorId={currentUserRole === 'DOCTOR' && currentDoctorId ? currentDoctorId : undefined}
                                         />
                                     </div>
                                     <div>
                                         <Label>Profissional *</Label>
-                                        <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))}>
+                                        <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))} disabled={currentUserRole === 'DOCTOR' && !!currentDoctorId}>
                                             <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                                             <SelectContent>
-                                                {doctors.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}
+                                                {(currentUserRole === 'DOCTOR' && currentDoctorId ? doctors.filter((d: any) => d.id === currentDoctorId) : doctors).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                     </div>

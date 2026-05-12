@@ -36,6 +36,8 @@ interface PatientSearchComboboxProps {
     onCreateNew: () => void
     disabled?: boolean
     placeholder?: string
+    /** When provided, restricts search to patients on this doctor's agenda */
+    doctorId?: string
 }
 
 export function PatientSearchCombobox({
@@ -44,6 +46,7 @@ export function PatientSearchCombobox({
     onCreateNew,
     disabled,
     placeholder = 'Buscar por CPF, nome ou telefone...',
+    doctorId,
 }: PatientSearchComboboxProps) {
     const [open, setOpen] = useState(false)
     const [search, setSearch] = useState('')
@@ -61,10 +64,12 @@ export function PatientSearchCombobox({
 
     // Fetch patients with caching
     const { data: patients, isLoading } = useQuery({
-        queryKey: ['patient-search', debouncedSearch],
+        queryKey: ['patient-search', debouncedSearch, doctorId],
         queryFn: async () => {
             if (debouncedSearch.length < 2) return []
-            const response = await fetch(`/api/patients/search?q=${encodeURIComponent(debouncedSearch)}`)
+            let url = `/api/patients/search?q=${encodeURIComponent(debouncedSearch)}`
+            if (doctorId) url += `&doctor_id=${encodeURIComponent(doctorId)}`
+            const response = await fetch(url)
             if (!response.ok) throw new Error('Search failed')
             const data = await response.json()
             return data.data as PatientSearchResult[]

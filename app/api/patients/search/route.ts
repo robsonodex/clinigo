@@ -44,9 +44,28 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url)
         const query = searchParams.get('q')
+        const doctorIdFilter = searchParams.get('doctor_id')
 
         if (!query || query.length < 2) {
             return NextResponse.json({ data: [] })
+        }
+
+        // If doctor_id filter is provided, get patient IDs from appointments
+        let allowedPatientIds: string[] | null = null
+        if (doctorIdFilter) {
+            const { data: appointmentPatients } = await supabase
+                .from('appointments')
+                .select('patient_id')
+                .eq('doctor_id', doctorIdFilter)
+                .not('status', 'eq', 'CANCELLED')
+            
+            if (appointmentPatients && appointmentPatients.length > 0) {
+                // Deduplicate patient IDs
+                allowedPatientIds = [...new Set(appointmentPatients.map((a: any) => a.patient_id))]
+            } else {
+                // No appointments found for this doctor — return empty
+                return NextResponse.json({ data: [] })
+            }
         }
 
         // Clean query for different search types
@@ -62,6 +81,11 @@ export async function GET(request: NextRequest) {
         // Filter by clinic (unless super admin)
         if (profile.role !== 'SUPER_ADMIN' && profile.clinic_id) {
             searchQuery = searchQuery.eq('clinic_id', profile.clinic_id)
+        }
+
+        // Filter by allowed patient IDs (from doctor's agenda)
+        if (allowedPatientIds) {
+            searchQuery = searchQuery.in('id', allowedPatientIds)
         }
 
         // Search by different fields

@@ -188,6 +188,7 @@ export default function SessionEvolutionsPage() {
                                         onSelect={(patient) => setForm(p => ({ ...p, patient_id: patient?.id || '' }))}
                                         onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
                                         placeholder="Buscar paciente por nome, CPF..."
+                                        doctorId={currentUserRole === 'DOCTOR' && currentDoctorId ? currentDoctorId : undefined}
                                     />
                                 </div>
                                 <div>
