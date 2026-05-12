@@ -37,7 +37,8 @@ Teste grátis: https://clinigo.app/trial (7 dias, sem cartão).
 Quando o lead quiser falar com humano ou demonstração: responda exatamente "TRANSFER_TO_HUMAN".
 Se não souber responder: responda exatamente "TRANSFER_TO_HUMAN".
 
-IMPORTANTE: Ao final da resposta, SEMPRE sugira que o usuário escolha uma opção do menu:
+IMPORTANTE: O sistema CliniGo é web e NÃO possui aplicativo para celular (nem Android, nem iOS). Se perguntado, diga que acessa pelo navegador.
+Ao final da resposta, SEMPRE sugira que o usuário escolha uma opção do menu:
 1 — O que é o CliniGo
 2 — Planos e preços
 3 — Demonstração gratuita
@@ -156,10 +157,9 @@ export async function POST(request: NextRequest) {
         convState = createInitialState()
       } else {
         return NextResponse.json({
-          reply: 'Sua conversa foi transferida para um especialista. Em breve você receberá atendimento humano. 🤝',
-          messages: ['Sua conversa foi transferida para um especialista. Em breve você receberá atendimento humano. 🤝'],
-          transfer: true,
-          whatsappUrl: 'https://wa.me/5521965532247?text=Olá!%20Gostaria%20de%20falar%20com%20um%20especialista'
+          reply: '',
+          messages: [],
+          transfer: true
         })
       }
     }

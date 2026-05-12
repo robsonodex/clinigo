@@ -39,9 +39,9 @@ Pensa assim: *você cuida dos pacientes, o CliniGo cuida de tudo o mais.* 💙`,
 
 *Qual é o seu perfil?*
 
-🅰️ — Sou médico(a) ou terapeuta solo (atendo sozinho)
-🅱️ — Tenho uma clínica com equipe (2 a 10 profissionais)
-🅲 — Tenho uma clínica maior ou rede (mais de 10 profissionais)`
+A — Sou médico(a) ou terapeuta solo (atendo sozinho)
+B — Tenho uma clínica com equipe (2 a 10 profissionais)
+C — Tenho uma clínica maior ou rede (mais de 10 profissionais)`
 ]
 
 export const MSG_FLUXO_1A_SOLO = [
@@ -172,8 +172,8 @@ Cria sua conta agora mesmo, em 2 minutos, e explora tudo sem compromisso. Sem ca
 
 *Qual prefere?*
 
-🅰️ *A* — Quero demonstração com especialista
-🅱️ *B* — Quero criar minha conta de teste agora`
+A — Quero demonstração com especialista
+B — Quero criar minha conta de teste agora`
 ]
 
 // ========== TRIAL ==========
@@ -346,11 +346,11 @@ export const MSG_FLUXO_5_NUM = [
 export const MSG_FLUXO_5_DOR = [
   `*Qual é a sua principal dor hoje?* (escolha a que mais te representa)
 
-🅰️ — Organizar a agenda e reduzir faltas
-🅱️ — Controlar o financeiro e o repasse
-🅲 — Digitalizar o prontuário
-🅳 — Faturamento de convênios (TISS)
-🅴 — Outro assunto`
+A — Organizar a agenda e reduzir faltas
+B — Controlar o financeiro e o repasse
+C — Digitalizar o prontuário
+D — Faturamento de convênios (TISS)
+E — Outro assunto`
 ]
 
 // ========== OBJEÇÕES ==========
