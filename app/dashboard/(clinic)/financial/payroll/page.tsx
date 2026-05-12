@@ -54,6 +54,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
+import { NotaRepasseButton } from './components/NotaRepasseButton';
 
 interface Payroll {
     id: string;
@@ -414,6 +415,23 @@ export default function PayrollPage() {
                                                             Pagar
                                                         </Button>
                                                     )}
+                                                    
+                                                    {/* SPRINT 1 - NOTA DE REPASSE EM PDF */}
+                                                    {payroll.doctor?.id && selectedMonth && (
+                                                        <NotaRepasseButton 
+                                                            doctorId={payroll.doctor.id}
+                                                            periodStart={`${selectedMonth}-01`}
+                                                            periodEnd={
+                                                                (() => {
+                                                                    const date = new Date(`${selectedMonth}-01T00:00:00`);
+                                                                    date.setMonth(date.getMonth() + 1);
+                                                                    date.setDate(0);
+                                                                    return date.toISOString().split('T')[0];
+                                                                })()
+                                                            }
+                                                        />
+                                                    )}
+
                                                     <Link href={`/dashboard/financial/payroll/${payroll.id}`}>
                                                         <Button size="sm" variant="ghost">
                                                             <ChevronRight className="w-4 h-4" />

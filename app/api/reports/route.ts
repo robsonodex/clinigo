@@ -106,6 +106,15 @@ export async function GET(request: NextRequest) {
                 return await getPatientSessions(supabase, clinicId, startDate, endDate, patientId)
             }
 
+            case 'ltv':
+                return await getLTVReport(supabase, clinicId, startDate, endDate)
+
+            case 'glosas':
+                return await getGlosasReport(supabase, clinicId, startDate, endDate)
+
+            case 'dre_costcenter':
+                return await getDreCostCenter(supabase, clinicId, startDate, endDate)
+
             default:
                 return NextResponse.json({ error: 'Tipo de relatório inválido' }, { status: 400 })
         }
@@ -882,4 +891,111 @@ async function getPatientSessions(
             cancelled: sessions.filter(s => s.status === 'CANCELLED').length,
         }
     })
+}
+
+// ==========================================
+// NEW REPORTS: LTV, Glosas, DRE by Cost Center
+// ==========================================
+
+async function getLTVReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    // Busca os pacientes e calcula o total de receita por paciente na tabela financial_entries
+    const { data: entries } = await supabase
+        .from('financial_entries')
+        .select('patient_id, amount, patients(full_name, created_at)')
+        .eq('clinic_id', clinicId)
+        .eq('entry_type', 'INCOME')
+        .eq('status', 'PAID')
+        .gte('due_date', startDate)
+        .lte('due_date', endDate);
+
+    const ltvMap: Record<string, { name: string, ltv: number, since: string }> = {};
+    for (const entry of (entries || [])) {
+        if (!entry.patient_id) continue;
+        const patientName = (entry.patients as any)?.full_name || 'Desconhecido';
+        const createdAt = (entry.patients as any)?.created_at || new Date().toISOString();
+        if (!ltvMap[entry.patient_id]) {
+            ltvMap[entry.patient_id] = { name: patientName, ltv: 0, since: createdAt.split('T')[0] };
+        }
+        ltvMap[entry.patient_id].ltv += Number(entry.amount) || 0;
+    }
+
+    const result = Object.values(ltvMap).sort((a, b) => b.ltv - a.ltv);
+    
+    // Calcula LTV medio
+    const totalLTV = result.reduce((acc, curr) => acc + curr.ltv, 0);
+    const avgLTV = result.length > 0 ? totalLTV / result.length : 0;
+
+    return NextResponse.json({ 
+        data: result,
+        summary: {
+            total_patients: result.length,
+            average_ltv: avgLTV,
+            top_ltv: result.length > 0 ? result[0].ltv : 0
+        }
+    });
+}
+
+async function getGlosasReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    const { data: guides } = await supabase
+        .from('tiss_guides')
+        .select(`
+            id, total_amount, glosa_amount, status, execution_date,
+            tiss_batches(operator:insurance_operators(name)),
+            patient:patients(full_name)
+        `)
+        .eq('clinic_id', clinicId)
+        .gt('glosa_amount', 0)
+        .gte('execution_date', startDate)
+        .lte('execution_date', endDate);
+
+    const mapped = (guides || []).map(g => ({
+        id: g.id,
+        date: g.execution_date,
+        operator: (g.tiss_batches as any)?.operator?.name || 'N/A',
+        patient: (g.patient as any)?.full_name || 'N/A',
+        total: Number(g.total_amount) || 0,
+        glosa: Number(g.glosa_amount) || 0,
+        status: g.status
+    }));
+
+    return NextResponse.json({
+        data: mapped,
+        summary: {
+            total_guides_with_glosa: mapped.length,
+            total_glosa_value: mapped.reduce((acc, curr) => acc + curr.glosa, 0)
+        }
+    });
+}
+
+async function getDreCostCenter(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+    // Mapeia todas as despesas por centro de custo
+    const { data: entries } = await supabase
+        .from('financial_entries')
+        .select(`
+            amount,
+            category:financial_categories(name, cost_center_id),
+            cost_center:cost_centers(name)
+        `)
+        .eq('clinic_id', clinicId)
+        .eq('entry_type', 'EXPENSE')
+        .eq('status', 'PAID')
+        .gte('due_date', startDate)
+        .lte('due_date', endDate);
+
+    const ccMap: Record<string, number> = {};
+    for (const e of (entries || [])) {
+        // Assume que a entrada pode ter cost_center vinculado diretamente ou via category
+        const ccName = (e.cost_center as any)?.name || (e.category as any)?.cost_center_id || 'Sem Centro de Custo';
+        ccMap[ccName] = (ccMap[ccName] || 0) + (Number(e.amount) || 0);
+    }
+
+    const result = Object.entries(ccMap).map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+
+    return NextResponse.json({
+        data: result,
+        summary: {
+            total_expenses: result.reduce((acc, curr) => acc + curr.total, 0),
+            centers_count: result.length
+        }
+    });
 }

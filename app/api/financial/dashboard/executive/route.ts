@@ -161,6 +161,40 @@ export async function GET(request: NextRequest) {
         // Monthly Evolution (Simulated last 6 months grouping to simplify here, in production we'd do a group by over date)
         const evolution = []; // Could use a DB rpc for this, or just return mock format for UI implementation
 
+        // 7. Inadimplência (Default rate)
+        // Valor atrasado (OVERDUE INCOME) / Valor Total (PAID + OVERDUE)
+        const { data: overdueData } = await supabase
+            .from('financial_entries')
+            .select('amount')
+            .eq('clinic_id', clinicId)
+            .eq('entry_type', 'INCOME')
+            .eq('status', 'OVERDUE')
+            .gte('due_date', startDate)
+            .lte('due_date', endDate);
+        const totalOverdue = overdueData?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
+        const inadimplencia_rate = (totalIncome + totalOverdue) > 0 ? (totalOverdue / (totalIncome + totalOverdue)) * 100 : 0;
+
+        // 8. Meta do Mês (Goal)
+        const currentYear = parseInt(startDate.split('-')[0]);
+        const currentMonth = parseInt(startDate.split('-')[1]);
+        const { data: goalData } = await supabase
+            .from('financial_goals')
+            .select('target_revenue')
+            .eq('clinic_id', clinicId)
+            .eq('year', currentYear)
+            .eq('month', currentMonth)
+            .eq('goal_type', 'CLINIC')
+            .single();
+        
+        const goal = goalData ? Number(goalData.target_revenue) : 0;
+        const goal_progress = goal > 0 ? (totalIncome / goal) * 100 : 0;
+
+        // 9. Mix de Receitas (Particular vs Convênio)
+        const mix = [
+            { name: 'Particular', value: totalIncome * 0.4 }, // Mocked until proper link with appt is done
+            { name: 'Convênio', value: totalIncome * 0.6 }
+        ];
+
         return NextResponse.json({
             success: true,
             data: {
@@ -168,10 +202,15 @@ export async function GET(request: NextRequest) {
                     total_income: totalIncome,
                     total_glosas: totalGlosas,
                     total_receivables: totalAReceber,
-                    net_result: result
+                    net_result: result,
+                    inadimplencia_rate,
+                    goal,
+                    goal_progress,
+                    total_overdue: totalOverdue
                 },
                 top_income_insurances: topIncomeArr,
-                top_glosa_rate_insurances: topGlosaRateArr
+                top_glosa_rate_insurances: topGlosaRateArr,
+                mix
             }
         });
 

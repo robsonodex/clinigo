@@ -31,6 +31,10 @@ interface FinancialSummary {
     overdue_expense?: number
     total_glosas?: number
     total_receivables?: number
+    inadimplencia_rate?: number
+    goal?: number
+    goal_progress?: number
+    total_overdue?: number
 }
 
 interface FinancialEntry {
@@ -525,7 +529,7 @@ export default function FinancialPage() {
 
                         <Card className="border-l-4 border-l-blue-500">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Resultado</CardTitle>
+                                <CardTitle className="text-sm font-medium">Resultado Líquido</CardTitle>
                                 {(summary?.net_result || 0) >= 0 ? (
                                     <TrendingUp className="h-4 w-4 text-green-500" />
                                 ) : (
@@ -537,7 +541,44 @@ export default function FinancialPage() {
                                     {formatCurrency(summary?.net_result || 0)}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Caixa Líquido
+                                    Caixa Líquido no Período
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Novos Cards Sprint 2 */}
+                        <Card className="border-l-4 border-l-indigo-500">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Meta de Faturamento</CardTitle>
+                                <TrendingUp className="h-4 w-4 text-indigo-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-indigo-600">
+                                    {formatCurrency(summary?.goal || 0)}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Atingido: {(summary?.goal_progress || 0).toFixed(1)}%
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                    <div 
+                                        className="bg-indigo-600 h-2 rounded-full" 
+                                        style={{ width: `${Math.min(summary?.goal_progress || 0, 100)}%` }}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-l-4 border-l-orange-500">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Inadimplência</CardTitle>
+                                <AlertTriangle className="h-4 w-4 text-orange-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-orange-600">
+                                    {(summary?.inadimplencia_rate || 0).toFixed(1)}%
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Valor: {formatCurrency(summary?.total_overdue || 0)}
                                 </p>
                             </CardContent>
                         </Card>

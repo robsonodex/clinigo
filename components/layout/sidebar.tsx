@@ -213,6 +213,12 @@ const navigationSections: NavSection[] = [
                 minPlan: 'AVANCADO',
             },
             {
+                title: 'Meu Financeiro',
+                href: '/dashboard/meu-financeiro',
+                icon: Wallet,
+                roles: ['DOCTOR'],
+            },
+            {
                 title: 'DRE',
                 href: '/dashboard/financial/dre',
                 icon: TrendingUp,
