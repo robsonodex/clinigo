@@ -51,9 +51,18 @@ import {
     MessagesSquare,
     ClipboardList,
     UserX,
+    Crown,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 interface NavItem {
     title: string
@@ -639,39 +648,60 @@ function NavItemComponent({
     const touchClass = isMobile ? 'min-h-[44px]' : ''
 
     if (hasChildren) {
+        // Check if user has access to this item's required plan
+        const PLAN_ORDER_PARENT: Record<string, number> = {
+            'BASICO': 1, 'AVANCADO': 2, 'PROFESSIONAL': 3, 'ENTERPRISE': 4, 'NETWORK': 5
+        }
+        const parentCurrentLevel = PLAN_ORDER_PARENT[currentPlan] || 0
+        const parentRequiredLevel = PLAN_ORDER_PARENT[item.minPlan || 'BASICO'] || 0
+        const parentIsLocked = parentCurrentLevel < parentRequiredLevel
+
+        const [showUpgrade, setShowUpgrade] = useState(false)
+
         return (
             <div>
                 <button
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => {
+                        if (parentIsLocked) {
+                            setShowUpgrade(true)
+                        } else {
+                            setIsOpen(!isOpen)
+                        }
+                    }}
                     className={cn(
                         'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                         touchClass,
-                        isActive
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                        parentIsLocked
+                            ? 'text-muted-foreground/50 hover:bg-muted/50'
+                            : isActive
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
                     )}
                 >
                     <div className="flex items-center gap-3">
                         <item.icon className="w-5 h-5" />
                         {item.title}
-                        {item.badge && (
+                        {item.badge && !parentIsLocked && (
                             <span className={cn(
                                 "px-1.5 py-0.5 text-[10px] font-bold rounded",
                                 item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
                                     item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
-                                        "bg-gray-100 text-gray-700"
+                                        item.badge === 'AVÇ' ? "bg-emerald-100 text-emerald-700" :
+                                            "bg-gray-100 text-gray-700"
                             )}>
                                 {item.badge}
                             </span>
                         )}
                     </div>
-                    {isOpen ? (
+                    {parentIsLocked ? (
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                    ) : isOpen ? (
                         <ChevronDown className="w-4 h-4" />
                     ) : (
                         <ChevronRight className="w-4 h-4" />
                     )}
                 </button>
-                {isOpen && (
+                {isOpen && !parentIsLocked && (
                     <div className="ml-4 pl-4 border-l mt-1 space-y-1">
                         {item.children?.map((child) => (
                             <VisualLock
@@ -694,6 +724,26 @@ function NavItemComponent({
                             </VisualLock>
                         ))}
                     </div>
+                )}
+                {/* UpgradeModal para itens bloqueados com children */}
+                {parentIsLocked && (
+                    <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
+                        <DialogContent className="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Crown className="h-5 w-5 text-amber-500" />
+                                    Recurso Premium
+                                </DialogTitle>
+                                <DialogDescription>
+                                    <strong>{item.title}</strong> requer o plano <strong>{item.minPlan}</strong> ou superior.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex gap-2 pt-4">
+                                <Button variant="outline" className="flex-1" onClick={() => setShowUpgrade(false)}>Depois</Button>
+                                <Button className="flex-1" onClick={() => { window.location.href = '/dashboard/configuracoes/plano' }}>Ver Planos</Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 )}
             </div>
         )
@@ -908,7 +958,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                     <div
                                         className={cn(
                                             "overflow-hidden transition-all duration-200 ease-in-out",
-                                            isOpen ? "max-h-[800px] opacity-100 pb-1.5 px-1" : "max-h-0 opacity-0"
+                                            isOpen ? "max-h-[2000px] opacity-100 pb-1.5 px-1" : "max-h-0 opacity-0"
                                         )}
                                     >
                                         <div className="space-y-0.5">
