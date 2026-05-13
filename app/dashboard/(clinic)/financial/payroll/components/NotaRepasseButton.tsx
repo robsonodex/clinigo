@@ -164,8 +164,35 @@ export function NotaRepasseButton({ doctorId, periodStart, periodEnd }: NotaRepa
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                        <Button variant="secondary" onClick={() => toast.info('Integração com Resend em breve')}>
-                            <Mail className="w-4 h-4 mr-2" />
+                        <Button 
+                            variant="secondary" 
+                            disabled={loading || !notaData?.profissional?.email}
+                            onClick={async () => {
+                                if (!notaData?.profissional?.email) {
+                                    toast.error('Profissional não possui e-mail cadastrado.');
+                                    return;
+                                }
+                                setLoading(true);
+                                try {
+                                    const res = await fetch('/api/payroll/send-email', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ 
+                                            notaData,
+                                            email: notaData.profissional.email
+                                        })
+                                    });
+                                    const json = await res.json();
+                                    if (!json.success) throw new Error(json.error);
+                                    toast.success('E-mail enviado com sucesso!');
+                                } catch (err: any) {
+                                    toast.error(err.message || 'Erro ao enviar e-mail');
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                        >
+                            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
                             Enviar E-mail
                         </Button>
                         <Button onClick={handleDownloadPdf}>

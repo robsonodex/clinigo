@@ -3,27 +3,130 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, TrendingDown, TrendingUp, DollarSign, Scale } from 'lucide-react';
+import { AlertCircle, TrendingDown, Scale, FileSpreadsheet, RefreshCw, Download, Filter, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ContestGlosaDialog } from '@/components/tiss/contest-glosa-dialog';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 export default function GlosasPage() {
+    const defaultEnd = new Date().toISOString().split('T')[0];
+    const defaultStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0];
+
+    const [startDate, setStartDate] = useState(defaultStart);
+    const [endDate, setEndDate] = useState(defaultEnd);
+    const [filterApplied, setFilterApplied] = useState({ start: defaultStart, end: defaultEnd });
+    
     const [selectedGlosa, setSelectedGlosa] = useState<{ id: string, value: number, code: string } | null>(null);
+    const [isExportingExcel, setIsExportingExcel] = useState(false);
+    const [isExportingPDF, setIsExportingPDF] = useState(false);
 
     // Buscar glosas
     const { data: glosas, isLoading, refetch } = useQuery({
-        queryKey: ['tiss-glosas'],
+        queryKey: ['tiss-glosas', filterApplied],
         queryFn: async () => {
-            const response = await fetch('/api/tiss/glosas');
+            const response = await fetch(`/api/tiss/glosas?startDate=${filterApplied.start}&endDate=${filterApplied.end}`);
             if (!response.ok) throw new Error('Erro ao buscar glosas');
             const result = await response.json();
             return result.data || [];
         },
     });
+
+    const hasActiveFilter = startDate !== defaultStart || endDate !== defaultEnd;
+
+    const handleApplyFilter = () => {
+        setFilterApplied({ start: startDate, end: endDate });
+        toast.success('Filtros aplicados com sucesso!');
+    };
+
+    const handleClearFilter = () => {
+        setStartDate(defaultStart);
+        setEndDate(defaultEnd);
+        setFilterApplied({ start: defaultStart, end: defaultEnd });
+        toast.info('Filtros removidos!');
+    };
+
+    const handleExportExcel = async () => {
+        if (!glosas || glosas.length === 0) return;
+        setIsExportingExcel(true);
+        try {
+            const ExcelJS = (await import('exceljs')).default;
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Glosas TISS');
+            
+            worksheet.columns = [
+                { header: 'Código', key: 'code', width: 15 },
+                { header: 'Descrição', key: 'desc', width: 40 },
+                { header: 'Categoria', key: 'cat', width: 20 },
+                { header: 'Valor Glosado', key: 'val', width: 20 },
+                { header: 'Status', key: 'status', width: 20 },
+            ];
+            
+            glosas.forEach((g: any) => {
+                worksheet.addRow({
+                    code: g.glosa_code || '-',
+                    desc: g.glosa_description,
+                    cat: g.category,
+                    val: g.glosa_value,
+                    status: g.contest_status || 'Sem Recurso'
+                });
+            });
+            
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `glosas-tiss-${filterApplied.start}-a-${filterApplied.end}.xlsx`;
+            a.click();
+            toast.success('Excel exportado com sucesso!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Erro ao gerar Excel');
+        } finally {
+            setIsExportingExcel(false);
+        }
+    };
+
+    const handleExportPDF = async () => {
+        if (!glosas || glosas.length === 0) return;
+        setIsExportingPDF(true);
+        try {
+            const { jsPDF } = await import('jspdf');
+            await import('jspdf-autotable');
+            
+            const doc = new jsPDF();
+            doc.text(`Relatório de Glosas TISS - ${format(new Date(filterApplied.start), 'dd/MM/yyyy')} a ${format(new Date(filterApplied.end), 'dd/MM/yyyy')}`, 14, 15);
+            
+            const tableData = glosas.map((g: any) => [
+                g.glosa_code || '-',
+                g.glosa_description.substring(0, 40) + '...',
+                g.category,
+                formatCurrency(g.glosa_value),
+                g.contest_status || 'Sem Recurso'
+            ]);
+            
+            (doc as any).autoTable({
+                head: [['Código', 'Descrição', 'Categoria', 'Valor Glosado', 'Status']],
+                body: tableData,
+                startY: 25,
+            });
+            
+            doc.save(`glosas-tiss-${filterApplied.start}-a-${filterApplied.end}.pdf`);
+            toast.success('PDF exportado com sucesso!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Erro ao gerar PDF');
+        } finally {
+            setIsExportingPDF(false);
+        }
+    };
 
     // Calcular estatísticas
     const stats = glosas ? {
@@ -39,12 +142,74 @@ export default function GlosasPage() {
     return (
         <div className="flex flex-col gap-6 p-6">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Análise de Glosas</h1>
-                <p className="text-muted-foreground mt-1">
-                    Gestão e acompanhamento de glosas nas guias TISS
-                </p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Análise de Glosas</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Gestão e acompanhamento de glosas nas guias TISS
+                    </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => { refetch(); toast.success('Dados atualizados!'); }}
+                        disabled={isLoading}
+                    >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        Atualizar
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportExcel}
+                        disabled={!glosas || glosas.length === 0 || isExportingExcel}
+                    >
+                        <FileSpreadsheet className={`w-4 h-4 mr-2 ${isExportingExcel ? 'animate-pulse' : ''}`} />
+                        Exportar Excel
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportPDF}
+                        disabled={!glosas || glosas.length === 0 || isExportingPDF}
+                    >
+                        <Download className={`w-4 h-4 mr-2 ${isExportingPDF ? 'animate-bounce' : ''}`} />
+                        Exportar PDF
+                    </Button>
+                </div>
             </div>
+
+            {/* Filtros */}
+            <Card className="bg-muted/30 border-dashed">
+                <CardContent className="p-4 flex flex-col md:flex-row items-end gap-4">
+                    <div className="w-full md:w-auto">
+                        <label className="text-sm font-medium mb-1 block">Data Inicial</label>
+                        <Input 
+                            type="date" 
+                            value={startDate} 
+                            onChange={(e) => setStartDate(e.target.value)} 
+                        />
+                    </div>
+                    <div className="w-full md:w-auto">
+                        <label className="text-sm font-medium mb-1 block">Data Final</label>
+                        <Input 
+                            type="date" 
+                            value={endDate} 
+                            onChange={(e) => setEndDate(e.target.value)} 
+                        />
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <Button onClick={handleApplyFilter} disabled={isLoading}>
+                            <Filter className="w-4 h-4 mr-2" />
+                            Aplicar filtro
+                        </Button>
+                        {hasActiveFilter && (
+                            <Button variant="ghost" onClick={handleClearFilter}>
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Limpar filtros
+                            </Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Stats */}
             {isLoading ? (
@@ -69,11 +234,7 @@ export default function GlosasPage() {
                         <CardHeader className="pb-3">
                             <CardDescription>Valor Glosado</CardDescription>
                             <CardTitle className="text-3xl">
-                                {new Intl.NumberFormat('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL',
-                                    minimumFractionDigits: 0,
-                                }).format(stats.totalValue)}
+                                {formatCurrency(stats.totalValue)}
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -148,7 +309,7 @@ export default function GlosasPage() {
                                             <Badge variant="outline">{glosa.category}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right font-medium text-destructive">
-                                            -R$ {new Intl.NumberFormat('pt-BR').format(glosa.glosa_value)}
+                                            -{formatCurrency(glosa.glosa_value)}
                                         </TableCell>
                                         <TableCell>
                                             {glosa.contest_status === 'REVERSED' ? (
@@ -206,4 +367,3 @@ export default function GlosasPage() {
         </div>
     );
 }
-

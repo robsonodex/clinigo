@@ -33,15 +33,28 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        const searchParams = request.nextUrl.searchParams;
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+
         // Buscar glosas
-        const { data: glosas, error } = await supabase
+        let query = supabase
             .from('tiss_glosas')
             .select(`
         *,
         guide:tiss_guides(guide_number, patient_name, procedure_name),
         return:tiss_returns(return_file_name)
       `)
-            .eq('clinic_id', profile.clinic_id)
+            .eq('clinic_id', profile.clinic_id);
+
+        if (startDate) {
+            query = query.gte('created_at', startDate);
+        }
+        if (endDate) {
+            query = query.lte('created_at', `${endDate}T23:59:59.999Z`);
+        }
+
+        const { data: glosas, error } = await query
             .order('created_at', { ascending: false })
             .limit(100);
 

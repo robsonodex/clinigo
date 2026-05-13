@@ -929,7 +929,8 @@ async function getLTVReport(supabase: SupabaseClient<any, "public", any>, clinic
         data: result,
         summary: {
             total_patients: result.length,
-            average_ltv: avgLTV,
+            avgLTV: avgLTV,
+            totalLTV: totalLTV,
             top_ltv: result.length > 0 ? result[0].ltv : 0
         }
     });
@@ -989,12 +990,12 @@ async function getDreCostCenter(supabase: SupabaseClient<any, "public", any>, cl
         ccMap[ccName] = (ccMap[ccName] || 0) + (Number(e.amount) || 0);
     }
 
-    const result = Object.entries(ccMap).map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+    const result = Object.entries(ccMap).map(([name, total]) => ({ category: name, total })).sort((a, b) => b.total - a.total);
 
     return NextResponse.json({
         data: result,
         summary: {
-            total_expenses: result.reduce((acc, curr) => acc + curr.total, 0),
+            totalExpenses: result.reduce((acc, curr) => acc + curr.total, 0),
             centers_count: result.length
         }
     });
