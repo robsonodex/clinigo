@@ -68,9 +68,7 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
 
         // Apply role-based filtering
-        if (userRole === 'DOCTOR' && doctorId) {
-            queryBuilder = queryBuilder.eq('doctor_id', doctorId)
-        } else if (currentUser?.clinic_id) {
+        if (currentUser?.clinic_id) {
             queryBuilder = queryBuilder.eq('clinic_id', currentUser.clinic_id)
         }
 

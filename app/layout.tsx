@@ -11,7 +11,7 @@ import ChatbotProvider from '@/components/chatbot/ChatbotProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-    title: 'CliniGo - Teleconsultoria',
+    title: 'CliniGO',
     description: 'Sistema de teleconsultoria médica',
     manifest: '/manifest.json',
     icons: {

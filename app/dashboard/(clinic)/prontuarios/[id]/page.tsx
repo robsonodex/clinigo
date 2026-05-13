@@ -403,7 +403,16 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
         handleChange('physical_exam', 'Paciente Lúcido, Orientado no Tempo e Espaço (LOTE). Eupneico, acianótico, anictérico.\nACV: RCR, em 2T, BNT, sem sopros.\nAR: MV+, bilateralmente, sem RA.\nABD: Plano, flácido, indolor à palpação, RHA+. \nEXT: Sem edemas.')
     }
 
-
+    const insertTerapiaTemplate = () => {
+        const template = `* Data e horário do atendimento: \n* Objetivo terapêutico: \n* Estratégias/intervenções utilizadas: \n* Desempenho do paciente: \n* Intercorrências: \n* Orientações aos responsáveis: `
+        if (professionType === 'PSICOLOGO') {
+            handleChange('evolucao_psicologica', template)
+        } else if (professionType === 'TERAPEUTA') {
+            handleChange('atividades_realizadas', template)
+        } else {
+             handleChange('history_present_illness', template)
+        }
+    }
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -708,7 +717,10 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>Evolução Psicológica (Registro Subjetivo e Comportamental)</Label>
+                                    <div className="flex justify-between items-end">
+                                        <Label>Evolução Psicológica (Registro Subjetivo e Comportamental)</Label>
+                                        <Button variant="ghost" size="sm" onClick={insertTerapiaTemplate} className="print:hidden text-xs text-primary h-6 px-2">Inserir Template Padrão</Button>
+                                    </div>
                                     <Textarea className="min-h-[150px] print-friendly-textarea" placeholder="Descreva os progressos, elaborações, mecanismos de defesa..." value={formData.evolucao_psicologica} onChange={(e) => handleChange('evolucao_psicologica', e.target.value)} />
                                 </div>
 
@@ -760,7 +772,10 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                                 </div>
 
                                 <div className="space-y-2 mt-4">
-                                    <Label>Atividades Realizadas e Resposta Motora/Sensorial</Label>
+                                    <div className="flex justify-between items-end">
+                                        <Label>Atividades Realizadas e Resposta Motora/Sensorial</Label>
+                                        <Button variant="ghost" size="sm" onClick={insertTerapiaTemplate} className="print:hidden text-xs text-primary h-6 px-2">Inserir Template Padrão</Button>
+                                    </div>
                                     <Textarea className="min-h-[120px] print-friendly-textarea" placeholder="Descreva os exercícios de resistência, cognição, fono ou dinâmicas TO..." value={formData.atividades_realizadas} onChange={(e) => handleChange('atividades_realizadas', e.target.value)} />
                                 </div>
 

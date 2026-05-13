@@ -225,8 +225,7 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <strong className="text-foreground/90 block mb-0.5 text-xs uppercase tracking-wider mt-3">Evolução Resumida</strong>
-                                                    <p className="line-clamp-3">{contentSnippet}</p>
+                                                    <p className="whitespace-pre-wrap">{contentSnippet}</p>
                                                 </div>
                                             </div>
                                         </CardContent>

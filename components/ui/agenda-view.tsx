@@ -329,7 +329,6 @@ export default function AgendaPage() {
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
-                a.status !== 'CANCELLED' &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         )
@@ -341,7 +340,7 @@ export default function AgendaPage() {
         const dateStr = format(date, 'yyyy-MM-dd')
         const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
-            (a) => a.appointment_date === dateStr && a.status !== 'CANCELLED' &&
+            (a) => a.appointment_date === dateStr &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
@@ -823,7 +822,8 @@ export default function AgendaPage() {
                                                     {(expandedSlots.has(`${day.toISOString()}-${time}`) ? slotAppointments : slotAppointments.slice(0, 2)).map((appointment) => {
                                                         const doctorColor = getDoctorColor(appointment.doctor.id)
                                                         const isOnline = (appointment as any).appointment_type === 'online'
-                                                        const isCancelled = appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'
+                                                        const isCancelled = appointment.status === 'CANCELLED'
+                                                        const isCompleted = appointment.status === 'COMPLETED'
                                                         const duration = (appointment.doctor as any).consultation_duration || 60
                                                         const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
 
@@ -832,15 +832,17 @@ export default function AgendaPage() {
                                                                 <Tooltip delayDuration={200}>
                                                                     <TooltipTrigger asChild>
                                                                         <div
-                                                                            draggable={!isCancelled}
+                                                                            draggable={!isCancelled && !isCompleted}
                                                                             onDragStart={(e) => handleDragStart(e, appointment)}
                                                                             className={cn(
                                                                                 'w-full rounded-lg border-l-4 p-1.5 text-xs flex flex-col shadow-sm cursor-pointer hover:shadow-lg transition-all',
                                                                                 isCancelled
-                                                                                    ? 'bg-gray-100 border-l-gray-400 text-gray-500 opacity-60'
-                                                                                    : `${doctorColor.bg} ${doctorColor.text}`,
-                                                                                !isCancelled && doctorColor.border.replace('border-', 'border-l-'),
-                                                                                isOnline && !isCancelled && 'ring-2 ring-green-400 ring-offset-1',
+                                                                                    ? 'bg-red-50 border-l-red-500 text-red-700 opacity-80'
+                                                                                    : isCompleted
+                                                                                        ? 'bg-gray-100 border-l-gray-400 text-gray-500 opacity-60'
+                                                                                        : `${doctorColor.bg} ${doctorColor.text}`,
+                                                                                (!isCancelled && !isCompleted) && doctorColor.border.replace('border-', 'border-l-'),
+                                                                                isOnline && !isCancelled && !isCompleted && 'ring-2 ring-green-400 ring-offset-1',
                                                                                 draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
                                                                             )}
                                                                             onClick={(e) => {
@@ -940,6 +942,9 @@ export default function AgendaPage() {
                                                                                 <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
                                                                                 {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
                                                                                     <p className="text-red-600"><strong>Motivo falta:</strong> {(appointment as any).no_show_reason}</p>
+                                                                                )}
+                                                                                {appointment.status === 'CANCELLED' && (appointment as any).cancellation_reason && (
+                                                                                    <p className="text-red-600"><strong>Motivo cancelamento:</strong> {(appointment as any).cancellation_reason}</p>
                                                                                 )}
                                                                                 {(appointment as any).type && (
                                                                                     <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>
@@ -1063,7 +1068,8 @@ export default function AgendaPage() {
                                                         <div className="flex items-start gap-0.5 p-0.5 flex-wrap">
                                                             {slotAppointments.map((appointment) => {
                                                                 const timelineColor = getTimelineColor(appointment.doctor.id)
-                                                                const isCancelled = appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'
+                                                                const isCancelled = appointment.status === 'CANCELLED'
+                                                                const isCompleted = appointment.status === 'COMPLETED'
                                                                 const duration = (appointment.doctor as any).consultation_duration || 60
                                                                 const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
                                                                 const doctorName = appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'
@@ -1075,11 +1081,15 @@ export default function AgendaPage() {
                                                                         <Tooltip delayDuration={200}>
                                                                             <TooltipTrigger asChild>
                                                                                 <div
-                                                                                    draggable={!isCancelled}
+                                                                                    draggable={!isCancelled && !isCompleted}
                                                                                     onDragStart={(e) => handleDragStart(e, appointment)}
                                                                                     className={cn(
                                                                                         'px-2 py-0.5 text-white cursor-pointer hover:brightness-110 transition-all flex flex-col justify-center overflow-hidden rounded-sm relative group/item',
-                                                                                        isCancelled ? 'bg-gray-400 opacity-60' : timelineColor,
+                                                                                        isCancelled
+                                                                                            ? 'bg-red-500 opacity-80'
+                                                                                            : isCompleted
+                                                                                                ? 'bg-gray-400 opacity-60'
+                                                                                                : timelineColor,
                                                                                         draggedAppointment?.id === appointment.id && 'opacity-50 border-dashed'
                                                                                     )}
                                                                                     onClick={(e) => {
@@ -1158,6 +1168,9 @@ export default function AgendaPage() {
                                                                                         <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
                                                                                         {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
                                                                                             <p className="text-red-600"><strong>Motivo falta:</strong> {(appointment as any).no_show_reason}</p>
+                                                                                        )}
+                                                                                        {appointment.status === 'CANCELLED' && (appointment as any).cancellation_reason && (
+                                                                                            <p className="text-red-600"><strong>Motivo cancelamento:</strong> {(appointment as any).cancellation_reason}</p>
                                                                                         )}
                                                                                         {(appointment as any).type && (
                                                                                             <p><strong>Tipo:</strong> {(appointment as any).type === 'TELEMEDICINA' ? 'Telemedicina' : 'Presencial'}</p>

@@ -41,12 +41,7 @@ interface PaymentOption {
 }
 
 const paymentOptions: PaymentOption[] = [
-    { value: 'cash', label: 'Dinheiro', icon: <Banknote className="h-4 w-4" />, showPrice: true },
-    { value: 'debit_card', label: 'Cartão Débito', icon: <CreditCard className="h-4 w-4" />, showPrice: true },
-    { value: 'credit_card', label: 'Cartão Crédito', icon: <CreditCard className="h-4 w-4" />, showPrice: true },
-    { value: 'pix_presencial', label: 'PIX no Balcão', icon: <QrCode className="h-4 w-4" />, showPrice: true },
     { value: 'health_insurance', label: 'Convênio', icon: <Shield className="h-4 w-4" /> },
-    { value: 'payment_link', label: 'Enviar Link de Pagamento', icon: <Link className="h-4 w-4" />, description: 'Paciente paga depois' },
     { value: 'courtesy', label: 'Cortesia (Gratuito)', icon: <Gift className="h-4 w-4" /> },
     { value: 'to_be_paid', label: 'A Pagar', icon: <Clock className="h-4 w-4" />, description: 'Sem pagamento agora' },
 ]
@@ -156,12 +151,6 @@ export function PaymentMethodSelector({
                 </div>
             )}
 
-            {/* Payment link note */}
-            {selectedType === 'payment_link' && (
-                <div className="p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
-                    📧 Um link de pagamento será enviado ao paciente por SMS/WhatsApp
-                </div>
-            )}
         </div>
     )
 }

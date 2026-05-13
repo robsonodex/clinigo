@@ -335,18 +335,12 @@ export function RecurringAppointmentModal({
                                 <Clock className="h-4 w-4" />
                                 Horário Fixo
                             </Label>
-                            <Select value={appointmentTime} onValueChange={setAppointmentTime}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o horário" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {TIME_OPTIONS.map((time) => (
-                                        <SelectItem key={time} value={time}>
-                                            {time}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Input
+                                type="time"
+                                value={appointmentTime}
+                                onChange={(e) => setAppointmentTime(e.target.value)}
+                                className="w-full"
+                            />
                         </div>
 
                         {/* Date Range */}
