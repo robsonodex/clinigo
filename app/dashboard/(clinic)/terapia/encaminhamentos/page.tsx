@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowRightLeft, Plus, Trash2, Edit, Download, FileSpreadsheet } from 'lucide-react'
+import { ArrowRightLeft, Plus, Trash2, Edit, Download, FileSpreadsheet, Send } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function EncaminhamentosPage() {
@@ -124,7 +124,7 @@ export default function EncaminhamentosPage() {
                         </div>
                         <div><Label>Motivo</Label><textarea value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" /></div>
                         <div><Label>Observações</Label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-16" /></div>
-                        <Button onClick={handleSave} className="w-full">Registrar Encaminhamento</Button>
+                        <Button onClick={handleSave} className="w-full"><Send className="h-4 w-4 mr-2" />Registrar Encaminhamento</Button>
                     </div>
                 </DialogContent>
             </Dialog>

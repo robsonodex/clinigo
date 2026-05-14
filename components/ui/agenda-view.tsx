@@ -329,6 +329,7 @@ export default function AgendaPage() {
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
+                a.status !== 'CANCELLED' &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         )
@@ -341,6 +342,7 @@ export default function AgendaPage() {
         const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
+                a.status !== 'CANCELLED' &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
