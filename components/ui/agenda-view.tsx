@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     Calendar as CalendarIcon,
@@ -72,7 +72,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { useRole } from '@/lib/hooks/use-auth'
+import { useRole, useAuth } from '@/lib/hooks/use-auth'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
 import { RecurringAppointmentModal } from '@/components/appointments/RecurringAppointmentModal'
 import { EditSeriesModal } from '@/components/appointments/EditSeriesModal'
@@ -180,6 +180,7 @@ function calcEndTime(startTime: string, durationMinutes: number = 60): string {
 export default function AgendaPage() {
     const router = useRouter()
     const { isDoctor } = useRole()
+    const { user } = useAuth()
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [view, setView] = useState<'week' | 'day'>('week')
     const [calendarStyle, setCalendarStyle] = useState<'standard' | 'timeline'>('standard')
@@ -209,6 +210,16 @@ export default function AgendaPage() {
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     })
+
+    // Auto-lock filter to own agenda when logged in as DOCTOR
+    useEffect(() => {
+        if (isDoctor && user && doctorsList && Array.isArray(doctorsList)) {
+            const myDoctor = doctorsList.find((d: any) => d.user_id === user.id)
+            if (myDoctor) {
+                setSelectedDoctorFilter(myDoctor.id)
+            }
+        }
+    }, [isDoctor, user, doctorsList])
 
     // Fetch schedules for free slots view (Agenda Inversa)
     const { data: schedulesData } = useQuery({
@@ -554,7 +565,7 @@ export default function AgendaPage() {
                             {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
                         </Button>
                         <div className="w-px h-6 bg-border mx-1" />
-                        <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter}>
+                        <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor}>
                             <SelectTrigger className="w-[220px] md:w-[320px] lg:w-[350px] h-8 text-sm">
                                 <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
                                 <div className="flex-1 truncate text-left">
