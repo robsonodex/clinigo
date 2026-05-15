@@ -5,6 +5,7 @@ import { Sidebar } from './sidebar'
 import { Header } from './header'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { SupportChatWrapper } from '@/components/support/support-chat-wrapper'
+import { ChatNotificationPopup } from '@/components/chat/ChatNotificationPopup'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
@@ -33,6 +34,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             {/* Support Chat Widget (PRO/Enterprise only) */}
             <SupportChatWrapper />
+
+            {/* Chat Internal Notification Popup */}
+            <ChatNotificationPopup />
         </div>
     )
 }

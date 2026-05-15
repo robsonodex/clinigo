@@ -16,6 +16,7 @@ interface ConversationListProps {
     isLoading: boolean
     isSuperAdmin?: boolean
     currentUserId: string
+    onlineUsers?: Set<string>
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -50,12 +51,19 @@ export function ConversationList({
     isLoading,
     isSuperAdmin = false,
     currentUserId,
+    onlineUsers = new Set(),
 }: ConversationListProps) {
     const [search, setSearch] = useState('')
     const [showNewChat, setShowNewChat] = useState(false)
     const [clinicUsers, setClinicUsers] = useState<Array<{ id: string; full_name: string; role: string }>>([])
     const [clinics, setClinics] = useState<Array<{ id: string; name: string }>>([])
     const [loadingUsers, setLoadingUsers] = useState(false)
+    
+    // Group creation state
+    const [showNewGroupModal, setShowNewGroupModal] = useState(false)
+    const [groupName, setGroupName] = useState('')
+    const [groupSearch, setGroupSearch] = useState('')
+    const [selectedGroupUsers, setSelectedGroupUsers] = useState<Set<string>>(new Set())
 
     const filtered = conversations.filter(c => {
         if (!search) return true
@@ -124,6 +132,16 @@ export function ConversationList({
             onNewConversation('support', [], 'Suporte CliniGo')
         }
         setShowNewChat(false)
+    }
+
+    const handleCreateGroup = () => {
+        if (selectedGroupUsers.size === 0) return
+        onNewConversation('internal', Array.from(selectedGroupUsers), groupName || 'Novo Grupo')
+        setShowNewGroupModal(false)
+        setShowNewChat(false)
+        setSelectedGroupUsers(new Set())
+        setGroupName('')
+        setGroupSearch('')
     }
 
     const handleAdminToClinic = async (clinicId: string, clinicName: string) => {
@@ -199,6 +217,20 @@ export function ConversationList({
                             <div>
                                 <p className="text-sm font-medium">Falar com Suporte</p>
                                 <p className="text-xs text-gray-500">Contato com a equipe CliniGo</p>
+                            </div>
+                        </button>
+                    )}
+
+                    {/* New Group Button */}
+                    {!isSuperAdmin && clinicUsers.length > 0 && (
+                        <button
+                            onClick={() => setShowNewGroupModal(true)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white border border-gray-200 hover:bg-sky-50 hover:border-sky-300 transition-colors text-left"
+                        >
+                            <Users className="w-5 h-5 text-sky-600" />
+                            <div>
+                                <p className="text-sm font-medium">Criar Grupo</p>
+                                <p className="text-xs text-gray-500">Conversa com múltiplos membros</p>
                             </div>
                         </button>
                     )}
@@ -283,13 +315,19 @@ export function ConversationList({
                                     isSelected && "bg-sky-50 border-l-2 border-l-sky-500"
                                 )}
                             >
-                                <div className={cn(
-                                    "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                                    conv.type === 'support' ? "bg-amber-100 text-amber-700" :
-                                    conv.type === 'admin_to_clinic' ? "bg-emerald-100 text-emerald-700" :
-                                    "bg-sky-100 text-sky-700"
-                                )}>
-                                    <Icon className="w-5 h-5" />
+                                <div className="relative">
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                                        conv.type === 'support' ? "bg-amber-100 text-amber-700" :
+                                        conv.type === 'admin_to_clinic' ? "bg-emerald-100 text-emerald-700" :
+                                        "bg-sky-100 text-sky-700"
+                                    )}>
+                                        <Icon className="w-5 h-5" />
+                                    </div>
+                                    {/* Indicador de presença online */}
+                                    {conv.participants.some(p => p.user_id !== currentUserId && onlineUsers.has(p.user_id)) && (
+                                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between">
@@ -322,6 +360,90 @@ export function ConversationList({
                     })
                 )}
             </div>
+
+            {/* New Group Modal */}
+            {showNewGroupModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-5 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 className="font-semibold text-lg text-gray-900">Novo Grupo</h3>
+                            <button onClick={() => setShowNewGroupModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <Plus className="w-5 h-5 rotate-45" />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Grupo</label>
+                                <input
+                                    type="text"
+                                    value={groupName}
+                                    onChange={(e) => setGroupName(e.target.value)}
+                                    placeholder="Ex: Equipe Recepção"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Selecione os Participantes</label>
+                                <div className="relative mb-2">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={groupSearch}
+                                        onChange={(e) => setGroupSearch(e.target.value)}
+                                        placeholder="Buscar por nome..."
+                                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                                    />
+                                </div>
+                                <div className="max-h-48 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-2">
+                                    {clinicUsers.length === 0 ? (
+                                        <p className="text-sm text-gray-500 text-center py-4">Nenhum usuário disponível.</p>
+                                    ) : (
+                                        clinicUsers
+                                            .filter(user => user.full_name.toLowerCase().includes(groupSearch.toLowerCase()))
+                                            .map(user => (
+                                                <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-sky-50 rounded-lg cursor-pointer transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedGroupUsers.has(user.id)}
+                                                        onChange={(e) => {
+                                                            const next = new Set(selectedGroupUsers)
+                                                            if (e.target.checked) next.add(user.id)
+                                                            else next.delete(user.id)
+                                                            setSelectedGroupUsers(next)
+                                                        }}
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 border-gray-300 rounded"
+                                                    />
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
+                                                        <p className="text-xs text-gray-500 capitalize">{(user.role || '').replace('_', ' ').toLowerCase()}</p>
+                                                    </div>
+                                                </label>
+                                            ))
+                                    )}
+                                    {clinicUsers.length > 0 && clinicUsers.filter(user => user.full_name.toLowerCase().includes(groupSearch.toLowerCase())).length === 0 && (
+                                        <p className="text-sm text-gray-500 text-center py-4">Nenhum usuário encontrado.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowNewGroupModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleCreateGroup}
+                                disabled={selectedGroupUsers.size === 0}
+                                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg disabled:opacity-50 transition-colors"
+                            >
+                                Criar Grupo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     )
 }

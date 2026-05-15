@@ -86,10 +86,25 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
     // Audio recording
     const startRecording = async () => {
         try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Seu navegador não suporta gravação de áudio.')
+                return
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg',
-            })
+            
+            // Determine best supported mime type
+            const types = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/aac']
+            let mimeType = ''
+            for (const t of types) {
+                if (MediaRecorder.isTypeSupported(t)) {
+                    mimeType = t
+                    break
+                }
+            }
+
+            const options = mimeType ? { mimeType } : undefined
+            const mediaRecorder = new MediaRecorder(stream, options)
 
             chunksRef.current = []
             mediaRecorderRef.current = mediaRecorder
@@ -101,9 +116,13 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
             }
 
             mediaRecorder.onstop = async () => {
-                const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType })
-                const ext = mediaRecorder.mimeType.includes('webm') ? 'webm' : 'ogg'
-                const file = new File([blob], `audio_${Date.now()}.${ext}`, { type: mediaRecorder.mimeType })
+                const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' })
+                let ext = 'webm'
+                if (mediaRecorder.mimeType.includes('ogg')) ext = 'ogg'
+                else if (mediaRecorder.mimeType.includes('mp4')) ext = 'm4a'
+                else if (mediaRecorder.mimeType.includes('aac')) ext = 'aac'
+                
+                const file = new File([blob], `audio_${Date.now()}.${ext}`, { type: blob.type })
 
                 // Stop all tracks
                 stream.getTracks().forEach(track => track.stop())

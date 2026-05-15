@@ -536,7 +536,7 @@ const navigationSections: NavSection[] = [
                 title: 'Estoque',
                 href: '/dashboard/estoque',
                 icon: Package,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 // Acessível a todos os planos (BASICO+)
             },
             {
@@ -557,7 +557,7 @@ const navigationSections: NavSection[] = [
                 title: 'Importação',
                 href: '/dashboard/importacao',
                 icon: Upload,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },

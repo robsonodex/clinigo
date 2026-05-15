@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import type { ChatConversation, ChatMessage } from './ChatLayout'
+import { UserPlus, X, Search } from 'lucide-react'
 
 interface MessageAreaProps {
     conversationId: string
@@ -23,6 +24,14 @@ export function MessageArea({
     const [isLoading, setIsLoading] = useState(true)
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
     const [editingContent, setEditingContent] = useState('')
+    
+    // Add participants state
+    const [showAddParticipants, setShowAddParticipants] = useState(false)
+    const [availableUsers, setAvailableUsers] = useState<Array<{ id: string; full_name: string; role: string }>>([])
+    const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
+    const [searchAvailableUsers, setSearchAvailableUsers] = useState('')
+    const [isAdding, setIsAdding] = useState(false)
+    
     const scrollRef = useRef<HTMLDivElement>(null)
     const isFirstLoad = useRef(true)
 
@@ -186,6 +195,55 @@ export function MessageArea({
         setEditingContent('')
     }
 
+    const loadAvailableUsers = async () => {
+        try {
+            const supabase = createClient()
+            const { data: profile } = await supabase
+                .from('users')
+                .select('clinic_id')
+                .eq('id', currentUserId)
+                .single()
+
+            if (profile?.clinic_id) {
+                const currentParticipantIds = conversation.participants.map(p => p.user_id)
+                const { data: users } = await supabase
+                    .from('users')
+                    .select('id, full_name, role')
+                    .eq('clinic_id', profile.clinic_id)
+                    .eq('is_active', true)
+                
+                if (users) {
+                    setAvailableUsers(users.filter(u => !currentParticipantIds.includes(u.id)))
+                }
+            }
+        } catch (error) {
+            console.error('[Chat] Error loading users:', error)
+        }
+    }
+
+    const handleAddParticipants = async () => {
+        if (selectedUsers.size === 0) return
+        setIsAdding(true)
+        try {
+            const res = await fetch(`/api/chat/conversations/${conversationId}/participants`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ participant_ids: Array.from(selectedUsers) })
+            })
+            if (res.ok) {
+                setShowAddParticipants(false)
+                setSelectedUsers(new Set())
+                onMessagesUpdated()
+            } else {
+                alert('Erro ao adicionar participantes.')
+            }
+        } catch (error) {
+            console.error('[Chat] Error adding participants:', error)
+        } finally {
+            setIsAdding(false)
+        }
+    }
+
     // Get names of other participants for subtitle
     const otherNames = conversation.participants
         .filter(p => p.user_id !== currentUserId)
@@ -211,6 +269,18 @@ export function MessageArea({
                     </p>
                 </div>
                 <div className="flex items-center gap-1">
+                    {conversation.type === 'internal' && (
+                        <button
+                            onClick={() => {
+                                setShowAddParticipants(true)
+                                loadAvailableUsers()
+                            }}
+                            className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-sky-600 rounded-md transition-colors"
+                            title="Adicionar Participantes"
+                        >
+                            <UserPlus className="w-4 h-4" />
+                        </button>
+                    )}
                     {conversation.type === 'support' && (
                         <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
                             Suporte
@@ -267,6 +337,77 @@ export function MessageArea({
                 conversationId={conversationId}
                 onSend={handleSendMessage}
             />
+
+            {/* Add Participants Modal */}
+            {showAddParticipants && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-5 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 className="font-semibold text-lg text-gray-900">Adicionar Participantes</h3>
+                            <button onClick={() => setShowAddParticipants(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-5 border-b border-gray-200">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={searchAvailableUsers}
+                                    onChange={(e) => setSearchAvailableUsers(e.target.value)}
+                                    placeholder="Buscar por nome..."
+                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="p-5 max-h-[50vh] overflow-y-auto space-y-2">
+                            {availableUsers.length === 0 ? (
+                                <p className="text-sm text-gray-500 text-center py-4">Nenhum usuário disponível para adicionar.</p>
+                            ) : (
+                                availableUsers
+                                    .filter(user => user.full_name.toLowerCase().includes(searchAvailableUsers.toLowerCase()))
+                                    .map(user => (
+                                        <label key={user.id} className="flex items-center gap-3 p-3 border border-gray-200 hover:bg-sky-50 rounded-lg cursor-pointer transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedUsers.has(user.id)}
+                                                onChange={(e) => {
+                                                    const next = new Set(selectedUsers)
+                                                    if (e.target.checked) next.add(user.id)
+                                                    else next.delete(user.id)
+                                                    setSelectedUsers(next)
+                                                }}
+                                                className="w-4 h-4 text-sky-600 focus:ring-sky-500 border-gray-300 rounded"
+                                            />
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
+                                                <p className="text-xs text-gray-500 capitalize">{(user.role || '').replace('_', ' ').toLowerCase()}</p>
+                                            </div>
+                                        </label>
+                                    ))
+                            )}
+                            {availableUsers.length > 0 && availableUsers.filter(user => user.full_name.toLowerCase().includes(searchAvailableUsers.toLowerCase())).length === 0 && (
+                                <p className="text-sm text-gray-500 text-center py-4">Nenhum usuário encontrado.</p>
+                            )}
+                        </div>
+                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowAddParticipants(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleAddParticipants}
+                                disabled={selectedUsers.size === 0 || isAdding}
+                                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg disabled:opacity-50 transition-colors"
+                            >
+                                {isAdding ? 'Adicionando...' : 'Adicionar Selecionados'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

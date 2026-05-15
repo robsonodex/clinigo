@@ -57,6 +57,7 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
     const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [showMobileMessages, setShowMobileMessages] = useState(false)
+    const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
     const notificationSoundRef = useRef<HTMLAudioElement | null>(null)
 
     // Create notification sound on mount
@@ -120,6 +121,45 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
         }
     }, [profile?.id, fetchConversations])
 
+    // Supabase Realtime Presence — rastrear quem está online na clínica
+    useEffect(() => {
+        if (!profile?.id || !profile?.clinic_id) return
+
+        const supabase = createClient()
+        const presenceChannel = supabase.channel(`presence:clinic:${profile.clinic_id}`, {
+            config: { presence: { key: profile.id } },
+        })
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState()
+                const ids = new Set<string>(Object.keys(state))
+                setOnlineUsers(ids)
+            })
+            .on('presence', { event: 'join' }, ({ key }) => {
+                setOnlineUsers(prev => new Set([...prev, key]))
+            })
+            .on('presence', { event: 'leave' }, ({ key }) => {
+                setOnlineUsers(prev => {
+                    const next = new Set(prev)
+                    next.delete(key)
+                    return next
+                })
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.track({
+                        user_id: profile.id,
+                        online_at: new Date().toISOString(),
+                    })
+                }
+            })
+
+        return () => {
+            supabase.removeChannel(presenceChannel)
+        }
+    }, [profile?.id, profile?.clinic_id])
+
     const handleSelectConversation = (id: string) => {
         setSelectedConversation(id)
         setShowMobileMessages(true)
@@ -165,7 +205,7 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
     const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0)
 
     return (
-        <div className="flex h-[calc(100vh-8rem)] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="flex h-[calc(100vh-11rem)] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             {/* Conversations List - Desktop always visible, mobile toggleable */}
             <div className={cn(
                 "w-full md:w-80 lg:w-96 border-r border-gray-200 flex flex-col",
@@ -179,6 +219,7 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
                     isLoading={isLoading}
                     isSuperAdmin={isSuperAdmin}
                     currentUserId={profile?.id || ''}
+                    onlineUsers={onlineUsers}
                 />
             </div>
 
@@ -211,6 +252,7 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
                             conversation={selectedConvData}
                             currentUserId={profile?.id || ''}
                             onMessagesUpdated={fetchConversations}
+                            onlineUsers={onlineUsers}
                         />
                     </>
                 ) : (

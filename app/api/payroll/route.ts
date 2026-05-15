@@ -128,10 +128,31 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Mês obrigatório' }, { status: 400 });
         }
 
-        const startDate = `${month}-01`;
-        const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + 1);
-        endDate.setDate(0); // Último dia do mês
+        // Buscar dia de corte financeiro da clínica
+        const { data: clinicConfig } = await supabase
+            .from('clinics')
+            .select('financial_cutoff_day')
+            .eq('id', profile.clinic_id)
+            .single();
+
+        const cutoffDay = clinicConfig?.financial_cutoff_day || 1;
+        const [year, monthNum] = month.split('-').map(Number);
+
+        let startDate: string;
+        let endDateStr: string;
+
+        if (cutoffDay === 1) {
+            // Período calendário padrão
+            startDate = `${month}-01`;
+            const endDate = new Date(year, monthNum, 0); // último dia do mês
+            endDateStr = endDate.toISOString().split('T')[0];
+        } else {
+            // Período customizado: dia [cutoff] do mês anterior ao dia [cutoff-1] do mês atual
+            const start = new Date(year, monthNum - 2, cutoffDay);
+            const end = new Date(year, monthNum - 1, cutoffDay - 1);
+            startDate = start.toISOString().split('T')[0];
+            endDateStr = end.toISOString().split('T')[0];
+        }
 
         // Buscar appointments concluídos do período que não têm payroll_item
         let query = supabase
@@ -140,7 +161,7 @@ export async function POST(request: NextRequest) {
             .eq('clinic_id', profile.clinic_id)
             .eq('status', 'COMPLETED')
             .gte('appointment_date', startDate)
-            .lte('appointment_date', endDate.toISOString().split('T')[0]);
+            .lte('appointment_date', endDateStr);
 
         if (doctor_id) {
             query = query.eq('doctor_id', doctor_id);

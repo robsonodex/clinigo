@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         // Busca a evolução atual para checar quem criou e se já foi finalizada
         const { data: existing, error: fetchError } = await supabase
             .from('session_evolutions')
-            .select('created_by, finalized_by, finalized_at')
+            .select('created_by, created_at, finalized_by, finalized_at')
             .eq('id', id)
             .single()
 
@@ -73,6 +73,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 { error: 'Esta evolução foi finalizada por outro profissional e não pode ser editada.' },
                 { status: 403 }
             )
+        }
+
+        // REGRA DE PRAZO: Bloquear edição após 48h da finalização (solicitação Espaço Incluir)
+        const EDIT_WINDOW_HOURS = 48
+        if (existing.finalized_at) {
+            const finalizedAt = new Date(existing.finalized_at)
+            const hoursElapsed = (Date.now() - finalizedAt.getTime()) / (1000 * 60 * 60)
+            if (hoursElapsed > EDIT_WINDOW_HOURS) {
+                return NextResponse.json(
+                    { error: `Prazo de ${EDIT_WINDOW_HOURS}h para edição expirado. Esta evolução foi finalizada há mais de 48 horas.` },
+                    { status: 403 }
+                )
+            }
         }
 
         const body = await request.json()
