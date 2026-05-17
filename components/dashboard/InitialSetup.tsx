@@ -2,7 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, UserPlus, Users, Clock, Mail } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { CheckCircle, UserPlus, Users, Clock, Mail, MessageCircle, Calendar, ArrowRight, Circle } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
@@ -11,8 +13,11 @@ interface SetupStatus {
     hasDoctor: boolean
     hasPatient: boolean
     hasSchedule: boolean
+    hasWhatsApp: boolean
+    hasAppointment: boolean
     hasSmtp: boolean
     planType: string
+    clinicCreatedAt: string | null
 }
 
 export function InitialSetup() {
@@ -21,8 +26,11 @@ export function InitialSetup() {
         hasDoctor: false,
         hasPatient: false,
         hasSchedule: false,
+        hasWhatsApp: false,
+        hasAppointment: false,
         hasSmtp: false,
-        planType: 'BASIC'
+        planType: 'BASIC',
+        clinicCreatedAt: null,
     })
     const [loading, setLoading] = useState(true)
 
@@ -46,32 +54,60 @@ export function InitialSetup() {
 
     const setupSteps = [
         {
-            title: `Cadastrar Primeiro ${profLabel.singular}`,
-            description: `Adicione os ${profLabel.plural.toLowerCase()} que irão atender na clínica`,
+            title: `Adicionar ${profLabel.singular}`,
+            description: `Cadastre os ${profLabel.plural.toLowerCase()} que irão atender na clínica`,
             icon: UserPlus,
             completed: status.hasDoctor,
             href: '/dashboard/medicos?action=novo',
-            action: 'Começar'
+            action: 'Cadastrar',
         },
         {
-            title: 'Cadastrar Primeiro Paciente',
-            description: 'Registre seus pacientes no sistema',
-            icon: Users,
-            completed: status.hasPatient,
-            href: '/dashboard/pacientes?action=novo',
-            action: 'Começar'
-        },
-        {
-            title: 'Configurar Horários de Atendimento',
-            description: `Defina os horários de cada ${profLabel.singular.toLowerCase()}`,
+            title: 'Configurar Horários',
+            description: `Defina os horários de atendimento de cada ${profLabel.singular.toLowerCase()}`,
             icon: Clock,
             completed: status.hasSchedule,
             href: '/dashboard/horarios',
-            action: 'Começar'
-        }
+            action: 'Configurar',
+        },
+        {
+            title: 'Cadastrar Primeiro Paciente',
+            description: 'Registre o primeiro paciente no sistema',
+            icon: Users,
+            completed: status.hasPatient,
+            href: '/dashboard/pacientes?action=novo',
+            action: 'Cadastrar',
+        },
+        {
+            title: 'Conectar WhatsApp',
+            description: 'Integre o WhatsApp para enviar lembretes e se comunicar',
+            icon: MessageCircle,
+            completed: status.hasWhatsApp,
+            href: '/dashboard/whatsapp',
+            action: 'Conectar',
+        },
+        {
+            title: 'Testar Agendamento',
+            description: 'Crie um agendamento para validar o fluxo completo',
+            icon: Calendar,
+            completed: status.hasAppointment,
+            href: '/dashboard/agenda',
+            action: 'Agendar',
+        },
     ]
 
-    const allCompleted = status.hasDoctor && status.hasPatient && status.hasSchedule
+    const completedCount = setupSteps.filter(s => s.completed).length
+    const totalSteps = setupSteps.length
+    const progressPercent = Math.round((completedCount / totalSteps) * 100)
+    const allCompleted = completedCount === totalSteps
+
+    // Verificar se clínica tem menos de 30 dias
+    const isNewClinic = (() => {
+        if (!status.clinicCreatedAt) return true
+        const created = new Date(status.clinicCreatedAt)
+        const now = new Date()
+        const diffDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
+        return diffDays < 30
+    })()
 
     if (loading) {
         return (
@@ -85,12 +121,12 @@ export function InitialSetup() {
         )
     }
 
-    // Tudo completo (setup + SMTP) → não renderiza nada
+    // Tudo completo e SMTP OK → não renderiza
     if (allCompleted && status.hasSmtp) {
         return null
     }
 
-    // Setup completo mas SMTP pendente → apenas banner discreto
+    // Setup completo mas SMTP pendente → banner discreto
     if (allCompleted && !status.hasSmtp) {
         return (
             <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800">
@@ -115,52 +151,120 @@ export function InitialSetup() {
         )
     }
 
-    // Setup incompleto → mostra card principal de configuração + banner SMTP discreto
+    // Se a clínica não é nova (> 30 dias) e não completou tudo, mostra versão compacta
+    if (!isNewClinic) {
+        return (
+            <Card className="border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20">
+                <CardContent className="py-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                    {completedCount}/{totalSteps}
+                                </Badge>
+                                <Progress value={progressPercent} className="w-24 h-2" />
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                                {progressPercent}% do onboarding concluído
+                            </p>
+                        </div>
+                        <Link href="/dashboard/onboarding">
+                            <Button variant="outline" size="sm" className="gap-1 whitespace-nowrap">
+                                Ver checklist
+                                <ArrowRight className="w-3 h-3" />
+                            </Button>
+                        </Link>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    // Setup incompleto + clínica nova → mostra card completo com barra de progresso
     return (
         <div className="space-y-4">
+            {/* Barra de progresso */}
+            <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+                <CardContent className="py-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-sm">Progresso do Onboarding</h3>
+                            <Badge variant={progressPercent === 100 ? 'default' : 'secondary'} className="text-xs">
+                                {progressPercent}%
+                            </Badge>
+                        </div>
+                        <Link href="/dashboard/onboarding">
+                            <Button variant="ghost" size="sm" className="text-xs gap-1 h-7">
+                                Ver checklist completo
+                                <ArrowRight className="w-3 h-3" />
+                            </Button>
+                        </Link>
+                    </div>
+                    <Progress value={progressPercent} className="h-2.5" />
+                    <p className="text-xs text-muted-foreground mt-2">
+                        {completedCount} de {totalSteps} etapas concluídas
+                    </p>
+                </CardContent>
+            </Card>
+
+            {/* Etapas de configuração */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-2xl">Configure seu CliniGo</CardTitle>
-                    <p className="text-muted-foreground">
-                        Complete as etapas essenciais para começar a usar o sistema
+                    <CardTitle className="text-xl">Configure seu CliniGo</CardTitle>
+                    <p className="text-muted-foreground text-sm">
+                        Complete as etapas para começar a usar o sistema
                     </p>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid md:grid-cols-3 gap-4">
-                        {setupSteps.map((step) => (
+                    <div className="grid md:grid-cols-5 gap-3">
+                        {setupSteps.map((step, index) => (
                             <Card
                                 key={step.title}
-                                className={step.completed ? 'border-green-200 bg-green-50' : ''}
+                                className={`transition-all ${step.completed
+                                        ? 'border-green-200 bg-green-50/60 dark:bg-green-950/20'
+                                        : 'hover:shadow-sm hover:border-primary/30'
+                                    }`}
                             >
-                                <CardContent className="pt-6">
-                                    <div className="flex flex-col items-center text-center space-y-3">
-                                        <div
-                                            className={`p-3 rounded-full ${step.completed
-                                                ? 'bg-green-100'
-                                                : 'bg-primary/10'
-                                                }`}
-                                        >
-                                            <step.icon
-                                                className={`w-6 h-6 ${step.completed
-                                                    ? 'text-green-600'
-                                                    : 'text-primary'
+                                <CardContent className="pt-5 pb-4 px-4">
+                                    <div className="flex flex-col items-center text-center space-y-2.5">
+                                        {/* Step number + icon */}
+                                        <div className="relative">
+                                            <div
+                                                className={`p-2.5 rounded-full ${step.completed
+                                                        ? 'bg-green-100 dark:bg-green-900/30'
+                                                        : 'bg-primary/10'
                                                     }`}
-                                            />
+                                            >
+                                                <step.icon
+                                                    className={`w-5 h-5 ${step.completed
+                                                            ? 'text-green-600'
+                                                            : 'text-primary'
+                                                        }`}
+                                                />
+                                            </div>
+                                            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step.completed
+                                                    ? 'bg-green-500 text-white'
+                                                    : 'bg-muted text-muted-foreground'
+                                                }`}>
+                                                {step.completed ? '✓' : index + 1}
+                                            </span>
                                         </div>
 
-                                        <h3 className="font-semibold">{step.title}</h3>
-                                        <p className="text-sm text-muted-foreground">
+                                        <h3 className="font-semibold text-sm leading-tight">{step.title}</h3>
+                                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                                             {step.description}
                                         </p>
 
                                         {step.completed ? (
-                                            <div className="flex items-center gap-2 text-green-600">
+                                            <div className="flex items-center gap-1.5 text-green-600">
                                                 <CheckCircle className="w-4 h-4" />
-                                                <span className="text-sm font-medium">Concluído</span>
+                                                <span className="text-xs font-medium">Concluído</span>
                                             </div>
                                         ) : (
                                             <Link href={step.href} className="w-full">
-                                                <Button className="w-full">{step.action}</Button>
+                                                <Button size="sm" className="w-full text-xs h-8">
+                                                    {step.action}
+                                                </Button>
                                             </Link>
                                         )}
                                     </div>

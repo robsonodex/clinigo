@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
                 chief_complaint,
                 diagnosis,
                 treatment_plan,
+                signed_by_patient,
+                signed_at,
+                signature_url,
                 patient:patients!inner(
                     id,
                     full_name
@@ -95,7 +98,9 @@ export async function GET(request: NextRequest) {
             specialty: c.doctor?.specialty || 'General',
             date: c.appointment?.appointment_date || c.created_at,
             chief_complaint: c.chief_complaint,
-            is_signed: false, // medical_records table might not have is_signed yet, default to false
+            is_signed: c.signed_by_patient || false,
+            signed_at: c.signed_at || null,
+            signature_url: c.signature_url || null,
             created_at: c.created_at,
         }))
 

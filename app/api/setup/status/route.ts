@@ -46,22 +46,39 @@ export async function GET() {
                 doc.schedules && doc.schedules.length > 0
         ) || false
 
-        // Verificar SMTP e plano da clínica
+        // Verificar WhatsApp conectado
+        const { count: whatsappCount } = await supabase
+            .from('whatsapp_sessions')
+            .select('*', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+            .eq('status', 'connected')
+
+        // Verificar agendamentos existentes
+        const { count: appointmentCount } = await supabase
+            .from('appointments')
+            .select('*', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+
+        // Verificar SMTP, plano e data de criação da clínica
         const { data: clinic } = await supabase
             .from('clinics')
-            .select('smtp_enabled, plan_type')
+            .select('smtp_enabled, plan_type, created_at')
             .eq('id', clinicId)
             .single()
 
         const hasSmtp = !!(clinic?.smtp_enabled)
         const planType = clinic?.plan_type ?? 'BASIC'
+        const clinicCreatedAt = clinic?.created_at ?? null
 
         return NextResponse.json({
             hasDoctor: (doctorCount || 0) > 0,
             hasPatient: (patientCount || 0) > 0,
             hasSchedule,
+            hasWhatsApp: (whatsappCount || 0) > 0,
+            hasAppointment: (appointmentCount || 0) > 0,
             hasSmtp,
-            planType
+            planType,
+            clinicCreatedAt,
         })
     } catch (error) {
         console.error('Error checking setup status:', error)
@@ -69,8 +86,11 @@ export async function GET() {
             hasDoctor: false,
             hasPatient: false,
             hasSchedule: false,
+            hasWhatsApp: false,
+            hasAppointment: false,
             hasSmtp: false,
-            planType: 'BASIC'
+            planType: 'BASIC',
+            clinicCreatedAt: null,
         })
     }
 }

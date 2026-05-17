@@ -53,6 +53,7 @@ import {
     UserX,
     Crown,
     Brain,
+    CheckCircle2,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
@@ -91,6 +92,13 @@ const navigationSections: NavSection[] = [
                 title: 'Dashboard',
                 href: '/dashboard',
                 icon: LayoutDashboard,
+            },
+            {
+                title: 'Checklist Inicial',
+                href: '/dashboard/onboarding',
+                icon: CheckCircle2,
+                roles: ['CLINIC_ADMIN'],
+                // Visível apenas para CLINIC_ADMIN — após 30 dias some automaticamente
             },
         ],
     },
@@ -526,6 +534,20 @@ const navigationSections: NavSection[] = [
                 roles: ['CLINIC_ADMIN'],
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
+                children: [
+                    {
+                        title: 'Automações',
+                        href: '/dashboard/crm',
+                        icon: Megaphone,
+                        minPlan: 'AVANCADO',
+                    },
+                    {
+                        title: 'Pipeline',
+                        href: '/dashboard/crm/pipeline',
+                        icon: TrendingUp,
+                        minPlan: 'AVANCADO',
+                    },
+                ],
             },
         ],
     },
@@ -922,7 +944,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
         }))
         .filter(section => {
             // STRICT BLOCK: Remove 'Financeiro' entirely for Receptionists/Staff
-            if (section.title === 'Financeiro' && (role === 'RECEPTIONIST' || role === 'STAFF')) return false;
+            if (section.title === 'Financeiro' && (['RECEPTIONIST', 'STAFF'] as string[]).includes(role as string)) return false;
             
             return section.items.length > 0;
         })
