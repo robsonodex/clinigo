@@ -771,8 +771,46 @@ export default function DashboardPage() {
                                     </CardContent>
                                 </Card>
                             </Link>
+
+                            {/* Atalhos Master Hub */}
+                            <Link href="/system-master-hub/clinicas">
+                                <Card className="hover:shadow-md transition-all cursor-pointer group border-indigo-200">
+                                    <CardContent className="pt-6 text-center">
+                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                                            <Building2 className="w-6 h-6 text-indigo-600" />
+                                        </div>
+                                        <p className="font-medium">Gestão de Clínicas</p>
+                                        <p className="text-xs text-muted-foreground">Master Hub</p>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+
+                            <Link href="/system-master-hub/clinics">
+                                <Card className="hover:shadow-md transition-all cursor-pointer group border-cyan-200">
+                                    <CardContent className="pt-6 text-center">
+                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-cyan-100 flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
+                                            <Users className="w-6 h-6 text-cyan-600" />
+                                        </div>
+                                        <p className="font-medium">Usuários</p>
+                                        <p className="text-xs text-muted-foreground">Master Hub</p>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+
+                            <Link href="/dashboard/auditoria">
+                                <Card className="hover:shadow-md transition-all cursor-pointer group border-orange-200">
+                                    <CardContent className="pt-6 text-center">
+                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                                            <BarChart3 className="w-6 h-6 text-orange-600" />
+                                        </div>
+                                        <p className="font-medium">Logs do Sistema</p>
+                                        <p className="text-xs text-muted-foreground">Auditoria</p>
+                                    </CardContent>
+                                </Card>
+                            </Link>
                         </div>
                     </div>
+
                 )
             }
 

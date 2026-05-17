@@ -930,7 +930,11 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
             items: section.items
                 .filter((item) => {
                     if (!item.roles) return true
-                    if (role && item.roles.includes(role)) return true
+                    if (role && item.roles.includes(role)) {
+                        // Remove 'Planos', 'Grupos' e 'Cobrança' para SUPER_ADMIN — não pertinentes ao contexto operacional
+                        if (role === 'SUPER_ADMIN' && ['/dashboard/planos', '/dashboard/grupos', '/dashboard/cobranca'].includes(item.href)) return false
+                        return true
+                    }
                     // Coordenadoras DOCTOR também veem Documentos
                     if (role === 'DOCTOR' && isCoordinator && item.href === '/dashboard/documentos') return true
                     return false
@@ -943,8 +947,8 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                 })),
         }))
         .filter(section => {
-            // STRICT BLOCK: Remove 'Financeiro' entirely for Receptionists/Staff
-            if (section.title === 'Financeiro' && (['RECEPTIONIST', 'STAFF'] as string[]).includes(role as string)) return false;
+            // STRICT BLOCK: Remove 'Financeiro' entirely for Receptionists/Staff and Super Admin
+            if (section.title === 'Financeiro' && (['RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'] as string[]).includes(role as string)) return false;
             
             return section.items.length > 0;
         })
