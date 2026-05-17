@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
 import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
 
 export default async function DashboardRootLayout({
     children,
@@ -44,6 +45,7 @@ export default async function DashboardRootLayout({
         <>
             <StaffSignatureGate>
                 <DashboardLayout>
+                    <ImpersonationBanner />
                     <DemoBanner isDemo={isDemo} />
                     <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
                     {children}

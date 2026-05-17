@@ -147,6 +147,57 @@ function createSupabaseClient(request: NextRequest) {
 }
 
 // ============================================
+// MAINTENANCE MODE — in-memory cache (60s TTL)
+// ============================================
+
+let _maintenanceCache: { value: boolean; expiresAt: number } | null = null
+
+async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
+    const now = Date.now()
+
+    // Cache válido
+    if (_maintenanceCache && now < _maintenanceCache.expiresAt) {
+        return _maintenanceCache.value
+    }
+
+    try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        if (!supabaseUrl || !serviceKey) return false
+
+        const res = await fetch(
+            `${supabaseUrl}/rest/v1/platform_settings?key=eq.maintenance_mode&select=value`,
+            {
+                headers: {
+                    apikey: serviceKey,
+                    Authorization: `Bearer ${serviceKey}`,
+                    'Content-Type': 'application/json',
+                },
+                // Edge-compatible: sem cache HTTP
+                cache: 'no-store',
+            }
+        )
+
+        if (!res.ok) {
+            _maintenanceCache = { value: false, expiresAt: now + 60_000 }
+            return false
+        }
+
+        const rows: Array<{ value: string }> = await res.json()
+        const isActive = rows.length > 0 ? JSON.parse(rows[0].value) === true : false
+
+        // Cachear por 60 segundos
+        _maintenanceCache = { value: isActive, expiresAt: now + 60_000 }
+        return isActive
+    } catch {
+        // Em caso de erro, nunca bloqueia o sistema
+        _maintenanceCache = { value: false, expiresAt: now + 60_000 }
+        return false
+    }
+}
+
+// ============================================
 // MAIN MIDDLEWARE
 // ============================================
 
@@ -235,6 +286,40 @@ export async function middleware(request: NextRequest) {
             if (profile?.role !== 'SUPER_ADMIN') {
                 return new NextResponse('Not Found', { status: 404 })
             }
+        }
+    }
+
+    // ----------------------------------------
+    // MAINTENANCE MODE CHECK (cached, 60s TTL)
+    // ----------------------------------------
+    // Skip: Super Admin routes, public API routes, auth routes, static, /manutencao itself
+    const MAINTENANCE_EXEMPT = [
+        '/manutencao',
+        '/login',
+        '/api/auth',
+        '/api/public',
+        '/api/super-admin',
+        '/system-master-hub',
+        '/api/webhooks',
+        '/api/billing/webhook',
+        '/api/payments/webhook',
+    ]
+
+    const isMaintenanceExempt = isSuperAdminRoute ||
+        MAINTENANCE_EXEMPT.some(route => pathname.startsWith(route))
+
+    if (!isMaintenanceExempt) {
+        const isMaintenanceActive = await checkMaintenanceMode(request)
+        if (isMaintenanceActive) {
+            // API routes get 503
+            if (pathname.startsWith('/api/')) {
+                return NextResponse.json(
+                    { error: 'Sistema em manutenção', code: 'MAINTENANCE_MODE' },
+                    { status: 503 }
+                )
+            }
+            // Pages redirect to /manutencao
+            return NextResponse.redirect(new URL('/manutencao', request.url))
         }
     }
 
@@ -593,6 +678,43 @@ export async function middleware(request: NextRequest) {
         if (userRole) requestHeaders.set('x-user-role', userRole)
         if (userClinicId) requestHeaders.set('x-clinic-id', userClinicId)
         requestHeaders.set('x-plan-type', userPlanType)
+
+        // ----------------------------------------
+        // IMPERSONATION CONTEXT (Super Admin only)
+        // ----------------------------------------
+        // Se o Super Admin está em modo impersonation, sobrescrever o clinic_id
+        // para que todas as queries downstream usem a clínica impersonada
+        if (userRole === 'SUPER_ADMIN' || SUPER_ADMIN_EMAILS.includes((user.email || '').toLowerCase())) {
+            const impersonationClinicId = request.cookies.get('impersonation_clinic_id')?.value
+            const impersonationClinicName = request.cookies.get('impersonation_clinic_name')?.value
+
+            if (impersonationClinicId) {
+                requestHeaders.set('x-clinic-id', impersonationClinicId)
+                requestHeaders.set('x-impersonation-active', 'true')
+                if (impersonationClinicName) {
+                    requestHeaders.set('x-impersonation-clinic-name', impersonationClinicName)
+                }
+                // Sobrescrever plan type da clínica impersonada
+                const { data: impClinic } = await supabase
+                    .from('clinics')
+                    .select('plan_type')
+                    .eq('id', impersonationClinicId)
+                    .single()
+                if (impClinic?.plan_type) {
+                    const impPlanMapping: Record<string, PlanType> = {
+                        'BASICO': 'BASICO',
+                        'AVANCADO': 'AVANCADO',
+                        'PROFESSIONAL': 'PROFESSIONAL',
+                        'ENTERPRISE': 'ENTERPRISE',
+                        'NETWORK': 'ENTERPRISE',
+                        'STARTER': 'BASICO',
+                        'BASIC': 'AVANCADO',
+                        'PRO': 'PROFESSIONAL',
+                    }
+                    requestHeaders.set('x-plan-type', impPlanMapping[impClinic.plan_type] || 'BASICO')
+                }
+            }
+        }
 
         // DEBUG: Tagging traffic as processed by full middleware
         requestHeaders.set('x-middleware-full', 'true')

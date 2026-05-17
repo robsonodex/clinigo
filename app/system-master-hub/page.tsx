@@ -31,6 +31,12 @@ import {
     KeyRound,
     Dices,
     Copy,
+    UserCog,
+    History,
+    Receipt,
+    Bot,
+    Settings,
+    Smartphone,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,6 +110,14 @@ export default function SuperAdminDashboard() {
     const [data, setData] = useState<DashboardData | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isImpersonating, setIsImpersonating] = useState<string | null>(null)
+    // Impersonation Dialog State
+    const [impersonateModal, setImpersonateModal] = useState<{
+        open: boolean
+        clinicId: string
+        clinicName: string
+    }>({ open: false, clinicId: '', clinicName: '' })
+    const [impersonateReason, setImpersonateReason] = useState('')
+    const [startingImpersonation, setStartingImpersonation] = useState(false)
     const [users, setUsers] = useState<DashboardData['users']>([])
     const [loadingUsers, setLoadingUsers] = useState(false)
     const [sendingBilling, setSendingBilling] = useState<string | null>(null)
@@ -220,20 +234,49 @@ export default function SuperAdminDashboard() {
         }
     }
 
-    const handleImpersonate = async (clinicId: string, clinicName: string) => {
+    const openImpersonateModal = (clinicId: string, clinicName: string) => {
+        setImpersonateModal({ open: true, clinicId, clinicName })
+        setImpersonateReason('')
+    }
+
+    const closeImpersonateModal = () => {
+        setImpersonateModal({ open: false, clinicId: '', clinicName: '' })
+        setImpersonateReason('')
+    }
+
+    const handleImpersonate = async () => {
+        if (impersonateReason.trim().length < 10) {
+            alert('O motivo deve ter pelo menos 10 caracteres.')
+            return
+        }
+
+        setStartingImpersonation(true)
         try {
-            const res = await fetch('/api/super-admin/impersonate', {
+            const res = await fetch('/api/super-admin/impersonation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clinicId, clinicName }),
+                body: JSON.stringify({
+                    clinic_id: impersonateModal.clinicId,
+                    reason: impersonateReason.trim(),
+                }),
             })
-            if (res.ok) {
-                setIsImpersonating(clinicId)
-                // Open in new tab
-                window.open(`/dashboard?impersonate=${clinicId}`, '_blank')
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error?.message || 'Falha ao iniciar impersonation')
             }
+
+            const result = await res.json()
+            setIsImpersonating(impersonateModal.clinicId)
+            closeImpersonateModal()
+
+            // Abrir dashboard em nova aba
+            window.open('/dashboard', '_blank')
         } catch (error) {
             console.error('Impersonation error:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setStartingImpersonation(false)
         }
     }
 
@@ -677,14 +720,34 @@ export default function SuperAdminDashboard() {
                             <p className="text-xs text-gray-500">CliniGo Control Center</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Button size="sm" onClick={openFeatureModal} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                             <Megaphone className="h-4 w-4 mr-2" />
-                            📢 Notificar Features
+                            📢 Notificar
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/chat')}>
                             <MessageCircle className="h-4 w-4 mr-2" />
                             Chat
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/impersonacoes')}>
+                            <History className="h-4 w-4 mr-2" />
+                            Impersonações
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/cobrancas')}>
+                            <Receipt className="h-4 w-4 mr-2" />
+                            Cobranças
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/chatbot')}>
+                            <Bot className="h-4 w-4 mr-2" />
+                            Chatbot
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/configuracoes')}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Config
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/clin-whatsapp')} className="border-green-300 text-green-700 hover:bg-green-50">
+                            <Smartphone className="h-4 w-4 mr-2" />
+                            WhatsApp QR
                         </Button>
                         <Button variant="outline" size="sm" onClick={loadDashboard}>
                             <RefreshCw className="h-4 w-4 mr-2" />
@@ -833,11 +896,11 @@ export default function SuperAdminDashboard() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => handleImpersonate(clinic.id, clinic.name)}
-                                                            className="text-blue-400 hover:text-blue-300"
+                                                            onClick={() => openImpersonateModal(clinic.id, clinic.name)}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                         >
-                                                            <Eye className="h-4 w-4 mr-1" />
-                                                            Ver
+                                                            <UserCog className="h-4 w-4 mr-1" />
+                                                            🔑 Entrar
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -1288,6 +1351,61 @@ export default function SuperAdminDashboard() {
                                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Redefinindo...</>
                             ) : (
                                 <><Key className="h-4 w-4 mr-2" /> Redefinir Senha</>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Impersonation Modal */}
+            <Dialog open={impersonateModal.open} onOpenChange={(open) => { if (!open) closeImpersonateModal() }}>
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <UserCog className="h-5 w-5 text-blue-600" />
+                            Entrar como Clínica
+                        </DialogTitle>
+                        <DialogDescription>
+                            Você está prestes a operar como <strong>{impersonateModal.clinicName}</strong>.
+                            Todas as suas ações serão registradas.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            <p className="text-sm text-orange-800 flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <span>Você verá e poderá modificar dados reais da clínica. Use com responsabilidade.</span>
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="impersonate-reason">Motivo da impersonação *</Label>
+                            <Textarea
+                                id="impersonate-reason"
+                                placeholder="Descreva o motivo (mínimo 10 caracteres)... Ex: Suporte técnico para configuração de agenda"
+                                value={impersonateReason}
+                                onChange={(e) => setImpersonateReason(e.target.value)}
+                                rows={3}
+                                className="resize-y"
+                            />
+                            <p className="text-xs text-gray-500">
+                                {impersonateReason.trim().length}/10 caracteres mínimos
+                                {impersonateReason.trim().length >= 10 && ' ✅'}
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={closeImpersonateModal} disabled={startingImpersonation}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleImpersonate}
+                            disabled={startingImpersonation || impersonateReason.trim().length < 10}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            {startingImpersonation ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Iniciando...</>
+                            ) : (
+                                <><UserCog className="h-4 w-4 mr-2" /> Confirmar e Entrar</>
                             )}
                         </Button>
                     </DialogFooter>
