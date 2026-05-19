@@ -166,19 +166,34 @@ export function useRequireAuth(redirectTo = '/clinica') {
 export function useRole() {
     const { profile } = useAuth()
     const [isImpersonating, setIsImpersonating] = useState(false)
+    const [impersonationClinicId, setImpersonationClinicId] = useState<string | null>(null)
 
     useEffect(() => {
         // Check if impersonation cookie exists (impersonation_active is httpOnly:false)
-        const hasImpersonation = document.cookie
-            .split(';')
-            .some(c => c.trim().startsWith('impersonation_active='))
+        const cookies = typeof document !== 'undefined'
+            ? document.cookie.split(';').reduce((acc, cookie) => {
+                const [key, value] = cookie.trim().split('=')
+                if (key) acc[key] = decodeURIComponent(value || '')
+                return acc
+            }, {} as Record<string, string>)
+            : {}
+
+        const hasImpersonation = cookies['impersonation_active'] === 'true'
         setIsImpersonating(hasImpersonation)
+        
+        if (hasImpersonation && cookies['impersonation_clinic_id']) {
+            setImpersonationClinicId(cookies['impersonation_clinic_id'])
+        }
     }, [])
 
     // When impersonating, act as CLINIC_ADMIN to show clinic menus
     const effectiveRole = (isImpersonating && profile?.role === 'SUPER_ADMIN')
         ? 'CLINIC_ADMIN'
         : profile?.role || null
+
+    const effectiveClinicId = (isImpersonating && profile?.role === 'SUPER_ADMIN' && impersonationClinicId)
+        ? impersonationClinicId
+        : profile?.clinic_id
 
     return {
         role: effectiveRole,
@@ -187,7 +202,7 @@ export function useRole() {
         isDoctor: effectiveRole === 'DOCTOR',
         isReceptionist: effectiveRole === 'RECEPTIONIST',
         isCoordinator: !!profile?.is_coordinator,
-        clinicId: profile?.clinic_id,
+        clinicId: effectiveClinicId,
         isImpersonating,
     }
 }

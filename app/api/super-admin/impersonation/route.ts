@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
         const cookieStore = await cookies()
 
         cookieStore.set('impersonation_clinic_id', clinic.id, {
-            httpOnly: true,
+            httpOnly: false, // Permitir leitura pelo frontend para injeção de plano e clinic_id
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             path: '/',

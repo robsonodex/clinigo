@@ -34,13 +34,35 @@ export function usePlan(): UsePlanResult {
                     return
                 }
 
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('clinic_id')
-                    .eq('id', user.id)
-                    .single()
+                // Verificar modo impersonation no client-side
+                const cookies = typeof document !== 'undefined'
+                    ? document.cookie.split(';').reduce((acc, cookie) => {
+                        const [key, value] = cookie.trim().split('=')
+                        if (key) acc[key] = decodeURIComponent(value || '')
+                        return acc
+                    }, {} as Record<string, string>)
+                    : {}
 
-                if (!(userData as any)?.clinic_id) {
+                const isImpersonating = cookies['impersonation_active'] === 'true'
+                const impersonationClinicId = cookies['impersonation_clinic_id']
+
+                let targetClinicId = null
+
+                if (isImpersonating && impersonationClinicId) {
+                    targetClinicId = impersonationClinicId
+                } else {
+                    const { data: userData } = await supabase
+                        .from('users')
+                        .select('clinic_id')
+                        .eq('id', user.id)
+                        .single()
+
+                    if ((userData as any)?.clinic_id) {
+                        targetClinicId = (userData as any).clinic_id
+                    }
+                }
+
+                if (!targetClinicId) {
                     setIsLoading(false)
                     return
                 }
@@ -48,7 +70,7 @@ export function usePlan(): UsePlanResult {
                 const { data: clinic } = await supabase
                     .from('clinics')
                     .select('plan_type')
-                    .eq('id', (userData as any).clinic_id)
+                    .eq('id', targetClinicId)
                     .single()
 
                 if (clinic) {

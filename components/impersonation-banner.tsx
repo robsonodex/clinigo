@@ -49,6 +49,7 @@ export function ImpersonationBanner() {
             }
 
             // Limpar cookies client-side como fallback
+            document.cookie = 'impersonation_clinic_id=; path=/; max-age=0'
             document.cookie = 'impersonation_clinic_name=; path=/; max-age=0'
             document.cookie = 'impersonation_active=; path=/; max-age=0'
 
