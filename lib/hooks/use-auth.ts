@@ -161,18 +161,34 @@ export function useRequireAuth(redirectTo = '/clinica') {
 
 /**
  * Hook to check user role
+ * When in impersonation mode (Super Admin), returns CLINIC_ADMIN as effective role
  */
 export function useRole() {
     const { profile } = useAuth()
+    const [isImpersonating, setIsImpersonating] = useState(false)
+
+    useEffect(() => {
+        // Check if impersonation cookie exists
+        const hasImpersonation = document.cookie
+            .split(';')
+            .some(c => c.trim().startsWith('impersonation_clinic_id='))
+        setIsImpersonating(hasImpersonation)
+    }, [])
+
+    // When impersonating, act as CLINIC_ADMIN to show clinic menus
+    const effectiveRole = (isImpersonating && profile?.role === 'SUPER_ADMIN')
+        ? 'CLINIC_ADMIN'
+        : profile?.role || null
 
     return {
-        role: profile?.role || null,
-        isSuperAdmin: profile?.role === 'SUPER_ADMIN',
-        isClinicAdmin: profile?.role === 'CLINIC_ADMIN',
-        isDoctor: profile?.role === 'DOCTOR',
-        isReceptionist: profile?.role === 'RECEPTIONIST',
+        role: effectiveRole,
+        isSuperAdmin: profile?.role === 'SUPER_ADMIN', // Real role stays for admin-only checks
+        isClinicAdmin: effectiveRole === 'CLINIC_ADMIN',
+        isDoctor: effectiveRole === 'DOCTOR',
+        isReceptionist: effectiveRole === 'RECEPTIONIST',
         isCoordinator: !!profile?.is_coordinator,
         clinicId: profile?.clinic_id,
+        isImpersonating,
     }
 }
 

@@ -152,7 +152,7 @@ function SuperAdminStats() {
 
 export default function DashboardPage() {
     const { profile } = useAuth()
-    const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
+    const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist, isImpersonating } = useRole()
     const profLabel = useProfessionalLabel()
     const [appointmentView, setAppointmentView] = useState<'list' | 'cards' | 'expanded'>('list')
 
@@ -239,7 +239,7 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground">
                         {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
                         {isDoctor && 'Acompanhe suas consultas e pacientes.'}
-                        {isSuperAdmin && 'Monitore a plataforma CliniGo.'}
+                        {isSuperAdmin && !isImpersonating && 'Monitore a plataforma CliniGo.'}
                         {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
                     </p>
                 </div>
@@ -334,9 +334,9 @@ export default function DashboardPage() {
                 )
             }
 
-            {/* Stats Cards - Super Admin */}
+            {/* Stats Cards - Super Admin (only when NOT impersonating) */}
             {
-                isSuperAdmin && (
+                isSuperAdmin && !isImpersonating && (
                     <SuperAdminStats />
                 )
             }
@@ -718,9 +718,9 @@ export default function DashboardPage() {
                 )
             }
 
-            {/* Quick Actions - Super Admin */}
+            {/* Quick Actions - Super Admin (only when NOT impersonating) */}
             {
-                isSuperAdmin && (
+                isSuperAdmin && !isImpersonating && (
                     <div>
                         <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

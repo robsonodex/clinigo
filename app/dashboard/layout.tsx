@@ -1,6 +1,7 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
@@ -20,6 +21,10 @@ export default async function DashboardRootLayout({
         redirect('/clinica')
     }
 
+    // Check impersonation cookie
+    const cookieStore = await cookies()
+    const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value
+
     // Fetch clinic slug to check if demo
     const { data: profile } = await supabase
         .from('users')
@@ -27,14 +32,17 @@ export default async function DashboardRootLayout({
         .eq('id', user.id)
         .single()
 
+    // Use impersonation clinic_id if active, otherwise use profile clinic_id
+    const effectiveClinicId = impersonationClinicId || profile?.clinic_id
+
     let isDemo = false
     let approvalStatus: string | null = null
     let trialEndsAt: string | null = null
-    if (profile?.clinic_id) {
+    if (effectiveClinicId) {
         const { data: clinic } = await supabase
             .from('clinics')
             .select('slug, approval_status, trial_ends_at')
-            .eq('id', profile.clinic_id)
+            .eq('id', effectiveClinicId)
             .single()
         isDemo = clinic?.slug === 'demo'
         approvalStatus = clinic?.approval_status ?? null
