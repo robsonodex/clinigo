@@ -68,8 +68,11 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
 
         // Apply role-based filtering
-        if (currentUser?.clinic_id) {
-            queryBuilder = queryBuilder.eq('clinic_id', currentUser.clinic_id)
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const effectiveClinicId = headerClinicId || currentUser?.clinic_id
+
+        if (effectiveClinicId) {
+            queryBuilder = queryBuilder.eq('clinic_id', effectiveClinicId)
         }
 
         // Apply query filters

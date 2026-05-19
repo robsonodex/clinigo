@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
-        const clinicId = profile.clinic_id
+        const headerClinicId = req.headers.get('x-clinic-id')
+        const clinicId = headerClinicId || profile.clinic_id
 
         // Use cached stats
         const stats = await cached(

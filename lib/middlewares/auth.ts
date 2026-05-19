@@ -70,13 +70,26 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<AuthResult>
             }
         }
 
+        // Obter o clinic_id efetivo do header (o middleware seta x-clinic-id já resolvendo impersonation)
+        let effectiveClinicId = profile.clinic_id
+        try {
+            const { headers } = await import('next/headers')
+            const headersList = await headers()
+            const headerClinicId = headersList.get('x-clinic-id')
+            if (headerClinicId) {
+                effectiveClinicId = headerClinicId
+            }
+        } catch (e) {
+            // Ignorar erro se não estiver no contexto Next.js (ex: cron jobs ou testes soltos)
+        }
+
         return {
             authorized: true,
             user: {
                 id: user.id,
                 email: user.email || '',
                 role: userRole,
-                clinic_id: profile.clinic_id
+                clinic_id: effectiveClinicId
             }
         }
 
