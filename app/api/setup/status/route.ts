@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 
 export async function GET() {
     try {
@@ -10,18 +11,23 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Buscar clinic_id do usuário
-        const { data: userData } = await supabase
-            .from('users')
-            .select('clinic_id, role')
-            .eq('id', user.id)
-            .single() as { data: { clinic_id: string | null; role: string } | null }
+        // Tentar obter o clinicId diretamente do header (resolvendo impersonation de forma limpa)
+        const headersList = await headers()
+        let clinicId = headersList.get('x-clinic-id')
 
-        if (!userData || !userData.clinic_id) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        if (!clinicId) {
+            // Buscar clinic_id do usuário como fallback
+            const { data: userData } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', user.id)
+                .single() as { data: { clinic_id: string | null; role: string } | null }
+
+            if (!userData || !userData.clinic_id) {
+                return NextResponse.json({ error: 'User not found' }, { status: 404 })
+            }
+            clinicId = userData.clinic_id
         }
-
-        const clinicId = userData.clinic_id
 
         // Verificar médico
         const { count: doctorCount } = await supabase
