@@ -71,15 +71,22 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. Glosas do Mês (from tiss_guides)
-        const { data: glosasData } = await supabase
-            .from('tiss_guides')
-            .select('glosa_amount')
-            .eq('clinic_id', clinicId)
-            .gt('glosa_amount', 0)
-            .gte('execution_date', startDate)
-            .lte('execution_date', endDate);
-        
-        const totalGlosas = glosasData?.reduce((acc, curr) => acc + (Number(curr.glosa_amount) || 0), 0) || 0;
+        let totalGlosas = 0;
+        try {
+            const { data: glosasData, error: glosaErr } = await supabase
+                .from('tiss_guides')
+                .select('glosa_amount')
+                .eq('clinic_id', clinicId)
+                .gt('glosa_amount', 0)
+                .gte('execution_date', startDate)
+                .lte('execution_date', endDate);
+            
+            if (!glosaErr && glosasData) {
+                totalGlosas = glosasData.reduce((acc, curr) => acc + (Number(curr.glosa_amount) || 0), 0);
+            }
+        } catch (err) {
+            console.error('Error fetching glosas in executive summary:', err);
+        }
 
         // 3. A Receber (PENDING INCOME financial_entries + PENDING tiss_guides?)
         // Let's just use pending from financial_entries for now, representing billed amounts
@@ -108,55 +115,69 @@ export async function GET(request: NextRequest) {
         const result = totalIncome - totalExpense;
 
         // 5. Top Convênios por Receita
-        const { data: topInsuranceIncome } = await supabase
-            .from('insurance_payments')
-            .select(`
-                net_amount,
-                health_insurances(name)
-            `)
-            .eq('clinic_id', clinicId)
-            .gte('credit_date', startDate)
-            .lte('credit_date', endDate);
+        let topIncomeArr: any[] = [];
+        try {
+            const { data: topInsuranceIncome, error: topIncomeErr } = await supabase
+                .from('insurance_payments')
+                .select(`
+                    net_amount,
+                    health_insurances(name)
+                `)
+                .eq('clinic_id', clinicId)
+                .gte('credit_date', startDate)
+                .lte('credit_date', endDate);
 
-        const insuranceIncomeMap: Record<string, number> = {};
-        for (const payment of (topInsuranceIncome || [])) {
-            const name = (payment.health_insurances as any)?.name || 'Desconhecido';
-            insuranceIncomeMap[name] = (insuranceIncomeMap[name] || 0) + Number(payment.net_amount);
+            if (!topIncomeErr && topInsuranceIncome) {
+                const insuranceIncomeMap: Record<string, number> = {};
+                for (const payment of topInsuranceIncome) {
+                    const name = (payment.health_insurances as any)?.name || 'Desconhecido';
+                    insuranceIncomeMap[name] = (insuranceIncomeMap[name] || 0) + Number(payment.net_amount);
+                }
+                topIncomeArr = Object.entries(insuranceIncomeMap)
+                    .map(([name, amount]) => ({ name, amount }))
+                    .sort((a, b) => b.amount - a.amount)
+                    .slice(0, 5);
+            }
+        } catch (err) {
+            console.error('Error fetching top insurances in executive summary:', err);
         }
-        const topIncomeArr = Object.entries(insuranceIncomeMap)
-            .map(([name, amount]) => ({ name, amount }))
-            .sort((a, b) => b.amount - a.amount)
-            .slice(0, 5);
 
         // 6. Top Convênios por Taxa de Glosa
-        const { data: topGlosaGuides } = await supabase
-            .from('tiss_guides')
-            .select(`
-                total_amount,
-                glosa_amount,
-                tiss_batches(
-                    operator:insurance_operators(name)
-                )
-            `)
-            .eq('clinic_id', clinicId)
-            .gte('execution_date', startDate)
-            .lte('execution_date', endDate);
+        let topGlosaRateArr: any[] = [];
+        try {
+            const { data: topGlosaGuides, error: topGlosaErr } = await supabase
+                .from('tiss_guides')
+                .select(`
+                    total_amount,
+                    glosa_amount,
+                    tiss_batches(
+                        operator:insurance_operators(name)
+                    )
+                `)
+                .eq('clinic_id', clinicId)
+                .gte('execution_date', startDate)
+                .lte('execution_date', endDate);
 
-        const glosaStatsMap: Record<string, { total: number, glosa: number }> = {};
-        for(const guide of (topGlosaGuides || [])) {
-             const operatorName = (guide.tiss_batches as any)?.operator?.name || 'Desconhecido';
-             if (!glosaStatsMap[operatorName]) glosaStatsMap[operatorName] = { total: 0, glosa: 0 };
-             glosaStatsMap[operatorName].total += Number(guide.total_amount) || 0;
-             glosaStatsMap[operatorName].glosa += Number(guide.glosa_amount) || 0;
+            if (!topGlosaErr && topGlosaGuides) {
+                const glosaStatsMap: Record<string, { total: number, glosa: number }> = {};
+                for(const guide of topGlosaGuides) {
+                     const operatorName = (guide.tiss_batches as any)?.operator?.name || 'Desconhecido';
+                     if (!glosaStatsMap[operatorName]) glosaStatsMap[operatorName] = { total: 0, glosa: 0 };
+                     glosaStatsMap[operatorName].total += Number(guide.total_amount) || 0;
+                     glosaStatsMap[operatorName].glosa += Number(guide.glosa_amount) || 0;
+                }
+
+                topGlosaRateArr = Object.entries(glosaStatsMap)
+                    .map(([name, stats]) => ({
+                        name,
+                        rate: stats.total > 0 ? (stats.glosa / stats.total) * 100 : 0
+                    }))
+                    .sort((a, b) => b.rate - a.rate)
+                    .slice(0, 5);
+            }
+        } catch (err) {
+            console.error('Error fetching top glosas rate in executive summary:', err);
         }
-
-        const topGlosaRateArr = Object.entries(glosaStatsMap)
-            .map(([name, stats]) => ({
-                name,
-                rate: stats.total > 0 ? (stats.glosa / stats.total) * 100 : 0
-            }))
-            .sort((a, b) => b.rate - a.rate)
-            .slice(0, 5);
 
         // Monthly Evolution (Simulated last 6 months grouping to simplify here, in production we'd do a group by over date)
         const evolution = []; // Could use a DB rpc for this, or just return mock format for UI implementation
@@ -175,19 +196,26 @@ export async function GET(request: NextRequest) {
         const inadimplencia_rate = (totalIncome + totalOverdue) > 0 ? (totalOverdue / (totalIncome + totalOverdue)) * 100 : 0;
 
         // 8. Meta do Mês (Goal)
-        const currentYear = parseInt(startDate.split('-')[0]);
-        const currentMonth = parseInt(startDate.split('-')[1]);
-        const { data: goalData } = await supabase
-            .from('financial_goals')
-            .select('target_revenue')
-            .eq('clinic_id', clinicId)
-            .eq('year', currentYear)
-            .eq('month', currentMonth)
-            .eq('goal_type', 'CLINIC')
-            .single();
-        
-        const goal = goalData ? Number(goalData.target_revenue) : 0;
-        const goal_progress = goal > 0 ? (totalIncome / goal) * 100 : 0;
+        let goal = 0;
+        let goal_progress = 0;
+        try {
+            const currentYear = parseInt(startDate.split('-')[0]);
+            const currentMonth = parseInt(startDate.split('-')[1]);
+            const { data: goalData, error: goalErr } = await supabase
+                .from('financial_goals')
+                .select('target_revenue')
+                .eq('clinic_id', clinicId)
+                .eq('year', currentYear)
+                .eq('month', currentMonth)
+                .single();
+            
+            if (!goalErr && goalData) {
+                goal = Number(goalData.target_revenue);
+                goal_progress = goal > 0 ? (totalIncome / goal) * 100 : 0;
+            }
+        } catch (err) {
+            console.error('Error fetching goals in executive summary:', err);
+        }
 
         // 9. Mix de Receitas (Particular vs Convênio)
         const mix = [
