@@ -48,8 +48,9 @@ export function ImpersonationBanner() {
                 }
             }
 
-            // Limpar cookie client-side como fallback
+            // Limpar cookies client-side como fallback
             document.cookie = 'impersonation_clinic_name=; path=/; max-age=0'
+            document.cookie = 'impersonation_active=; path=/; max-age=0'
 
             // Redirecionar para Master Hub
             router.push('/system-master-hub')

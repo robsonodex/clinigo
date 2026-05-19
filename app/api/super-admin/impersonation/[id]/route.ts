@@ -74,6 +74,7 @@ export async function DELETE(
         cookieStore.delete('impersonation_clinic_id')
         cookieStore.delete('impersonation_session_id')
         cookieStore.delete('impersonation_clinic_name')
+        cookieStore.delete('impersonation_active')
 
         return successResponse({
             message: 'Sessão de impersonation encerrada',

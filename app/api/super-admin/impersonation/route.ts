@@ -178,6 +178,15 @@ export async function POST(request: NextRequest) {
             maxAge: 60 * 60 * 4,
         })
 
+        // Flag legível pelo JS para sidebar/dashboard detectar impersonation
+        cookieStore.set('impersonation_active', 'true', {
+            httpOnly: false,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 4,
+        })
+
         return successResponse({
             session_id: session.id,
             clinic_id: clinic.id,

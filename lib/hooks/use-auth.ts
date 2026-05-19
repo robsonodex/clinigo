@@ -168,10 +168,10 @@ export function useRole() {
     const [isImpersonating, setIsImpersonating] = useState(false)
 
     useEffect(() => {
-        // Check if impersonation cookie exists
+        // Check if impersonation cookie exists (impersonation_active is httpOnly:false)
         const hasImpersonation = document.cookie
             .split(';')
-            .some(c => c.trim().startsWith('impersonation_clinic_id='))
+            .some(c => c.trim().startsWith('impersonation_active='))
         setIsImpersonating(hasImpersonation)
     }, [])
 
