@@ -34,14 +34,15 @@ import {
 interface ImpersonationSession {
     id: string
     admin_id: string
+    admin_email: string
     target_clinic_id: string
+    target_clinic_name: string | null
     reason: string
     started_at: string
     ended_at: string | null
     ip_address: string | null
     is_active: boolean
     clinics: { id: string; name: string } | null
-    admin: { id: string; email: string } | null
 }
 
 export default function ImpersonacoesPage() {
@@ -81,7 +82,7 @@ export default function ImpersonacoesPage() {
         const term = searchTerm.toLowerCase()
         return (
             s.clinics?.name?.toLowerCase().includes(term) ||
-            s.admin?.email?.toLowerCase().includes(term) ||
+            s.admin_email?.toLowerCase().includes(term) ||
             s.reason?.toLowerCase().includes(term)
         )
     })
@@ -268,7 +269,7 @@ export default function ImpersonacoesPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-sm">
-                                                {session.admin?.email || '—'}
+                                                {session.admin_email || '—'}
                                             </TableCell>
                                             <TableCell className="font-medium">
                                                 {session.clinics?.name || '—'}

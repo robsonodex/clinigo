@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
         let query = supabaseAdmin
             .from('impersonation_sessions')
-            .select('*, clinics:target_clinic_id(id, name), admin:admin_id(id, email)')
+            .select('*, clinics:target_clinic_id(id, name)')
             .order('started_at', { ascending: false })
             .limit(100)
 
