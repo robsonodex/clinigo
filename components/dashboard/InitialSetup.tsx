@@ -121,9 +121,10 @@ export function InitialSetup() {
         )
     }
 
-    // Tudo completo e SMTP OK → não renderiza
-    if (allCompleted && status.hasSmtp) {
-        return null
+    // Oculta onboarding completamente se a clínica já tiver os cadastros básicos (médico, paciente e agendamento) ou se for uma clínica antiga (> 30 dias)
+    const hasBasicSetup = status.hasDoctor && status.hasPatient && status.hasAppointment;
+    if (hasBasicSetup || !isNewClinic || allCompleted) {
+        return null;
     }
 
     // Setup completo mas SMTP pendente → banner discreto
@@ -148,35 +149,6 @@ export function InitialSetup() {
                     </Link>
                 </div>
             </div>
-        )
-    }
-
-    // Se a clínica não é nova (> 30 dias) e não completou tudo, mostra versão compacta
-    if (!isNewClinic) {
-        return (
-            <Card className="border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20">
-                <CardContent className="py-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                    {completedCount}/{totalSteps}
-                                </Badge>
-                                <Progress value={progressPercent} className="w-24 h-2" />
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate">
-                                {progressPercent}% do onboarding concluído
-                            </p>
-                        </div>
-                        <Link href="/dashboard/onboarding">
-                            <Button variant="outline" size="sm" className="gap-1 whitespace-nowrap">
-                                Ver checklist
-                                <ArrowRight className="w-3 h-3" />
-                            </Button>
-                        </Link>
-                    </div>
-                </CardContent>
-            </Card>
         )
     }
 
