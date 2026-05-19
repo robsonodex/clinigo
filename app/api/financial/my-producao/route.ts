@@ -32,10 +32,52 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Período obrigatório' }, { status: 400 });
         }
 
+        // Buscar todas as regras de reembolso de pacientes ativas da clínica
+        const { data: reimbursementRules } = await supabase
+            .from('patient_reimbursement_rules')
+            .select('patient_id, therapy_type, billing_amount')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('is_active', true);
+
+        const rulesMap = new Map<string, any[]>();
+        for (const rule of reimbursementRules || []) {
+            if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
+            rulesMap.get(rule.patient_id)!.push(rule);
+        }
+
+        // Buscar lançamentos financeiros vinculados
+        const { data: financialEntries } = await supabase
+            .from('financial_entries')
+            .select('appointment_id, amount')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('entry_type', 'INCOME')
+            .not('appointment_id', 'is', null);
+
+        const financialMap = new Map<string, number>();
+        financialEntries?.forEach(e => {
+            if (e.appointment_id) {
+                financialMap.set(e.appointment_id, Number(e.amount) || 0);
+            }
+        });
+
+        const getAppointmentPrice = (appt: any) => {
+            if (financialMap.has(appt.id)) {
+                return financialMap.get(appt.id)!;
+            }
+            const patientRules = rulesMap.get(appt.patient_id);
+            if (patientRules && patientRules.length > 0) {
+                const matchedRule = patientRules.find(
+                    (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+                ) || patientRules[0];
+                return Number(matchedRule.billing_amount) || 0;
+            }
+            return 0;
+        };
+
         // Buscar appointments do profissional
         const { data: appointments } = await supabase
             .from('appointments')
-            .select('status, price, health_insurance_id, appointment_date')
+            .select('id, status, patient_id, appointment_type, health_insurance_plan_id, appointment_date')
             .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .gte('appointment_date', periodStart)
@@ -44,9 +86,9 @@ export async function GET(request: NextRequest) {
         const completed = (appointments || []).filter(a => a.status === 'COMPLETED');
         const noShow = (appointments || []).filter(a => a.status === 'NO_SHOW');
 
-        const receitaTotal = completed.reduce((s, a) => s + (a.price || 0), 0);
-        const receitaParticular = completed.filter(a => !a.health_insurance_id).reduce((s, a) => s + (a.price || 0), 0);
-        const receitaConvenio = completed.filter(a => !!a.health_insurance_id).reduce((s, a) => s + (a.price || 0), 0);
+        const receitaTotal = completed.reduce((s, a) => s + getAppointmentPrice(a), 0);
+        const receitaParticular = completed.filter(a => !a.health_insurance_plan_id).reduce((s, a) => s + getAppointmentPrice(a), 0);
+        const receitaConvenio = completed.filter(a => !!a.health_insurance_plan_id).reduce((s, a) => s + getAppointmentPrice(a), 0);
 
         const taxaNoShow = (completed.length + noShow.length) > 0
             ? (noShow.length / (completed.length + noShow.length)) * 100
@@ -67,14 +109,14 @@ export async function GET(request: NextRequest) {
         // Média da clínica (sem identificar nomes)
         const { data: allClinicApts } = await supabase
             .from('appointments')
-            .select('price')
+            .select('id, patient_id, appointment_type, status')
             .eq('clinic_id', profile.clinic_id)
             .eq('status', 'COMPLETED')
             .gte('appointment_date', periodStart)
             .lte('appointment_date', periodEnd);
 
         const clinicAvgTicket = (allClinicApts && allClinicApts.length > 0)
-            ? allClinicApts.reduce((s, a) => s + (a.price || 0), 0) / allClinicApts.length
+            ? allClinicApts.reduce((s, a) => s + getAppointmentPrice(a), 0) / allClinicApts.length
             : 0;
 
         // Evolução mensal (últimos 12 meses)
@@ -87,7 +129,7 @@ export async function GET(request: NextRequest) {
 
             const { data: mApts } = await supabase
                 .from('appointments')
-                .select('price')
+                .select('id, patient_id, appointment_type, status')
                 .eq('clinic_id', profile.clinic_id)
                 .eq('doctor_id', doctor.id)
                 .eq('status', 'COMPLETED')
@@ -97,7 +139,7 @@ export async function GET(request: NextRequest) {
             evolution.push({
                 month: `${String(m.getMonth() + 1).padStart(2, '0')}/${m.getFullYear()}`,
                 atendimentos: (mApts || []).length,
-                receita: (mApts || []).reduce((s, a) => s + (a.price || 0), 0)
+                receita: (mApts || []).reduce((s, a) => s + getAppointmentPrice(a), 0)
             });
         }
 

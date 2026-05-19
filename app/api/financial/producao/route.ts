@@ -65,10 +65,52 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: true, data: [] });
         }
 
+        // Buscar todas as regras de reembolso de pacientes ativas da clínica
+        const { data: reimbursementRules } = await supabase
+            .from('patient_reimbursement_rules')
+            .select('patient_id, therapy_type, billing_amount')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('is_active', true);
+
+        const rulesMap = new Map<string, any[]>();
+        for (const rule of reimbursementRules || []) {
+            if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
+            rulesMap.get(rule.patient_id)!.push(rule);
+        }
+
+        // Buscar lançamentos financeiros vinculados
+        const { data: financialEntries } = await supabase
+            .from('financial_entries')
+            .select('appointment_id, amount')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('entry_type', 'INCOME')
+            .not('appointment_id', 'is', null);
+
+        const financialMap = new Map<string, number>();
+        financialEntries?.forEach(e => {
+            if (e.appointment_id) {
+                financialMap.set(e.appointment_id, Number(e.amount) || 0);
+            }
+        });
+
+        const getAppointmentPrice = (appt: any) => {
+            if (financialMap.has(appt.id)) {
+                return financialMap.get(appt.id)!;
+            }
+            const patientRules = rulesMap.get(appt.patient_id);
+            if (patientRules && patientRules.length > 0) {
+                const matchedRule = patientRules.find(
+                    (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+                ) || patientRules[0];
+                return Number(matchedRule.billing_amount) || 0;
+            }
+            return 0;
+        };
+
         // 2. Buscar agendamentos do período
         let aptQuery = supabase
             .from('appointments')
-            .select('doctor_id, status, price, health_insurance_id')
+            .select('id, doctor_id, status, patient_id, appointment_type, health_insurance_plan_id')
             .eq('clinic_id', profile.clinic_id)
             .gte('appointment_date', periodStart)
             .lte('appointment_date', periodEnd);
@@ -104,9 +146,9 @@ export async function GET(request: NextRequest) {
             let receita_convenio = 0;
             
             docApts.filter(a => a.status === 'COMPLETED').forEach(a => {
-                const val = a.price || 0;
+                const val = getAppointmentPrice(a);
                 receita_total += val;
-                if (a.health_insurance_id) {
+                if (a.health_insurance_plan_id) {
                     receita_convenio += val;
                 } else {
                     receita_particular += val;
