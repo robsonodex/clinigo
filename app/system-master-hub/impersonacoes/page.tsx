@@ -33,12 +33,13 @@ import {
 
 interface ImpersonationSession {
     id: string
-    super_admin_id: string
-    clinic_id: string
+    admin_id: string
+    target_clinic_id: string
     reason: string
     started_at: string
     ended_at: string | null
     ip_address: string | null
+    is_active: boolean
     clinics: { id: string; name: string } | null
     admin: { id: string; email: string } | null
 }
@@ -192,7 +193,7 @@ export default function ImpersonacoesPage() {
                         <CardContent>
                             <div className="flex items-center justify-between">
                                 <span className="text-3xl font-bold">
-                                    {new Set(sessions.map(s => s.clinic_id)).size}
+                                    {new Set(sessions.map(s => s.target_clinic_id)).size}
                                 </span>
                                 <Shield className="h-8 w-8 text-green-500" />
                             </div>

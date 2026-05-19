@@ -47,12 +47,12 @@ export async function GET(request: NextRequest) {
 
         let query = supabaseAdmin
             .from('impersonation_sessions')
-            .select('*, clinics:clinic_id(id, name), admin:super_admin_id(id, email)')
+            .select('*, clinics:target_clinic_id(id, name), admin:admin_id(id, email)')
             .order('started_at', { ascending: false })
             .limit(100)
 
         if (clinicFilter) {
-            query = query.eq('clinic_id', clinicFilter)
+            query = query.eq('target_clinic_id', clinicFilter)
         }
         if (dateFrom) {
             query = query.gte('started_at', dateFrom)
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
         // Encerrar sessões anteriores abertas deste admin
         await supabaseAdmin
             .from('impersonation_sessions')
-            .update({ ended_at: new Date().toISOString() })
-            .eq('super_admin_id', user.id)
+            .update({ ended_at: new Date().toISOString(), is_active: false })
+            .eq('admin_id', user.id)
             .is('ended_at', null)
 
         // Criar nova sessão
@@ -119,11 +119,14 @@ export async function POST(request: NextRequest) {
         const { data: session, error: insertError } = await supabaseAdmin
             .from('impersonation_sessions')
             .insert({
-                super_admin_id: user.id,
-                clinic_id: clinic.id,
+                admin_id: user.id,
+                admin_email: user.email || '',
+                target_clinic_id: clinic.id,
+                target_clinic_name: clinic.name,
                 reason: reason.trim(),
                 ip_address: ipAddress,
                 started_at: new Date().toISOString(),
+                is_active: true,
             })
             .select()
             .single()

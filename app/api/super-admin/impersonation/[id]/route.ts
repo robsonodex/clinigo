@@ -43,10 +43,10 @@ export async function DELETE(
         // Encerrar sessão
         const { data: session, error } = await supabaseAdmin
             .from('impersonation_sessions')
-            .update({ ended_at: new Date().toISOString() })
+            .update({ ended_at: new Date().toISOString(), is_active: false })
             .eq('id', sessionId)
             .is('ended_at', null)
-            .select('*, clinics:clinic_id(name)')
+            .select('*, clinics:target_clinic_id(name)')
             .single()
 
         if (error) {
