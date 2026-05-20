@@ -154,18 +154,19 @@ export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocum
                                                 </p>
                                             </div>
                                         </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(doc)}>
-                                            <Edit2 className="w-4 h-4 text-blue-500" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <a href={doc.storage_path || doc.file_url} target="_blank" rel="noopener noreferrer">
-                                                <Download className="w-4 h-4" />
-                                            </a>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)}>
-                                            <Trash2 className="w-4 h-4 text-destructive" />
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => handleEditClick(doc)}>
+                                                <Edit2 className="w-4 h-4 text-blue-500" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" asChild>
+                                                <a href={doc.storage_path || doc.file_url} target="_blank" rel="noopener noreferrer">
+                                                    <Download className="w-4 h-4" />
+                                                </a>
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)}>
+                                                <Trash2 className="w-4 h-4 text-destructive" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 )
                             })}
