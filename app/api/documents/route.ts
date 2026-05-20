@@ -99,6 +99,11 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false })
             .limit(50) // Limite de performance
 
+        // SECURITY: Se o usuário não for Admin, ele não tem acesso a documentos pessoais ('personal')
+        if (user.role !== 'CLINIC_ADMIN' && user.role !== 'SUPER_ADMIN') {
+            query = query.neq('category', 'personal')
+        }
+
         // SECURITY: Filtrar por pacientes permitidos (DOCTOR não-coordenador)
         if (allowedPatientIds) {
             query = query.in('patient_id', allowedPatientIds)

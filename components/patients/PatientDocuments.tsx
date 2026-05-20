@@ -17,9 +17,10 @@ import { Textarea } from '@/components/ui/textarea'
 interface PatientDocumentsProps {
     patientId: string
     clinicId: string
+    userRole?: string
 }
 
-export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps) {
+export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocumentsProps) {
     const [documents, setDocuments] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [editingDoc, setEditingDoc] = useState<any>(null)
@@ -103,14 +104,20 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
             report: 'Laudo',
             referral: 'Encaminhamento',
             consent: 'Termo de Consentimento',
-            other: 'Outro'
+            other: 'Outro',
+            personal: 'Documento Pessoal (Apenas ADM)',
+            CONVENIO_CARD: 'Carteirinha de Convênio',
+            EXAM: 'Exame',
+            CONSENT_TERM: 'Termo de Consentimento',
+            PRESCRIPTION: 'Receita',
+            OTHER: 'Outro'
         }
         return labels[type] || type
     }
 
     return (
         <div className="space-y-6">
-            <DocumentUpload patientId={patientId} clinicId={clinicId} onUploadComplete={loadDocuments} />
+            <DocumentUpload patientId={patientId} clinicId={clinicId} onUploadComplete={loadDocuments} userRole={userRole} />
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -125,19 +132,28 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
                         <div className="text-center p-4 text-muted-foreground">Nenhum documento encontrado.</div>
                     ) : (
                         <div className="space-y-3">
-                            {documents.map(doc => (
-                                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-primary/10 rounded">
-                                            <FileText className="w-5 h-5 text-primary" />
+                            {documents.map(doc => {
+                                const isPersonal = (doc.document_type || doc.category) === 'personal'
+                                return (
+                                    <div key={doc.id} className={`flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-all ${isPersonal ? 'bg-amber-50/50 border-amber-200 shadow-sm' : ''}`}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded ${isPersonal ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'}`}>
+                                                <FileText className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-medium text-sm">{doc.name || doc.file_name}</p>
+                                                    {isPersonal && (
+                                                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-amber-300">
+                                                            🔒 Apenas ADM
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {format(new Date(doc.created_at), 'dd/MM/yyyy HH:mm')} • {getDocTypeLabel(doc.document_type || doc.category)}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-medium text-sm">{doc.name || doc.file_name}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {format(new Date(doc.created_at), 'dd/MM/yyyy HH:mm')} • {getDocTypeLabel(doc.document_type || doc.category)}
-                                            </p>
-                                        </div>
-                                    </div>
                                     <div className="flex items-center gap-2">
                                         <Button variant="ghost" size="sm" onClick={() => handleEditClick(doc)}>
                                             <Edit2 className="w-4 h-4 text-blue-500" />
@@ -151,8 +167,8 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
                                             <Trash2 className="w-4 h-4 text-destructive" />
                                         </Button>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </CardContent>
@@ -187,6 +203,10 @@ export function PatientDocuments({ patientId, clinicId }: PatientDocumentsProps)
                                     <SelectItem value="referral">Encaminhamento</SelectItem>
                                     <SelectItem value="consent">Termo de Consentimento</SelectItem>
                                     <SelectItem value="other">Outro</SelectItem>
+                                    <SelectItem value="CONVENIO_CARD">Carteirinha de Convênio</SelectItem>
+                                    {(userRole === 'CLINIC_ADMIN' || userRole === 'SUPER_ADMIN') && (
+                                        <SelectItem value="personal">Documento Pessoal (Apenas ADM)</SelectItem>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>

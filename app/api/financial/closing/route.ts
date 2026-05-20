@@ -1,6 +1,26 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+function calculateFinancialPeriod(month: string, cutoffDay: number): { startDate: string; endDate: string } {
+    const [year, monthNum] = month.split('-').map(Number);
+
+    if (cutoffDay === 1) {
+        const start = new Date(year, monthNum - 1, 1);
+        const end = new Date(year, monthNum, 0);
+        return {
+            startDate: start.toISOString().split('T')[0],
+            endDate: end.toISOString().split('T')[0],
+        };
+    }
+
+    const start = new Date(year, monthNum - 2, cutoffDay);
+    const end = new Date(year, monthNum - 1, cutoffDay - 1);
+    return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+    };
+}
+
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -21,17 +41,22 @@ export async function GET(request: NextRequest) {
         const month = parseInt(searchParams.get('month') || String(new Date().getMonth() + 1));
         const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()));
 
-        // Date range for selected month
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+        // Buscar dia de corte contábil da clínica
+        const { data: clinicConfig } = await supabase
+            .from('clinics')
+            .select('financial_cutoff_day')
+            .eq('id', clinicId)
+            .single();
+
+        const cutoffDay = clinicConfig?.financial_cutoff_day || 1;
+        const monthString = `${year}-${String(month).padStart(2, '0')}`;
+        const { startDate, endDate } = calculateFinancialPeriod(monthString, cutoffDay);
 
         // Previous month for comparison
         const prevMonth = month === 1 ? 12 : month - 1;
         const prevYear = month === 1 ? year - 1 : year;
-        const prevStartDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
-        const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
-        const prevEndDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${prevLastDay}`;
+        const prevMonthString = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        const { startDate: prevStartDate, endDate: prevEndDate } = calculateFinancialPeriod(prevMonthString, cutoffDay);
 
         // === 1. RECEITAS DO MÊS (PAID INCOME) ===
         const { data: incomeEntries } = await supabase
@@ -112,6 +137,35 @@ export async function GET(request: NextRequest) {
             .lte('appointment_date', prevEndDate);
 
         // === 6. BREAKDOWN POR PROFISSIONAL ===
+        const referenceMonthString = `${year}-${String(month).padStart(2, '0')}-01`;
+        const { data: payrollData } = await supabase
+            .from('medical_payroll')
+            .select(`
+                doctor_id, 
+                gross_revenue, 
+                gross_payroll, 
+                total_appointments,
+                doctor:doctors(id, user:users(full_name))
+            `)
+            .eq('clinic_id', clinicId)
+            .eq('reference_month', referenceMonthString);
+
+        const byProfessional: Record<string, { name: string; sessions: number; revenue: number; payroll: number }> = {};
+
+        // Injetar os dados reais de medical_payroll se houver
+        if (payrollData && payrollData.length > 0) {
+            for (const p of payrollData) {
+                if (!p.doctor_id) continue;
+                const docName = (p.doctor as any)?.user?.full_name || 'Sem nome';
+                byProfessional[p.doctor_id] = {
+                    name: docName,
+                    sessions: p.total_appointments || 0,
+                    revenue: Number(p.gross_revenue) || 0,
+                    payroll: Number(p.gross_payroll) || 0,
+                };
+            }
+        }
+
         const doctorIds = [...new Set([
             ...(incomeEntries || []).map(e => e.doctor_id).filter(Boolean),
             ...(completedSessions || []).map(s => s.doctor_id).filter(Boolean)
@@ -131,7 +185,6 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        const byProfessional: Record<string, { name: string; sessions: number; revenue: number }> = {};
         for (const session of (completedSessions || [])) {
             if (!session.doctor_id) continue;
             if (!byProfessional[session.doctor_id]) {
@@ -139,9 +192,12 @@ export async function GET(request: NextRequest) {
                     name: doctorNames[session.doctor_id] || 'Sem nome',
                     sessions: 0,
                     revenue: 0,
+                    payroll: 0,
                 };
             }
-            byProfessional[session.doctor_id].sessions++;
+            if (!payrollData || payrollData.length === 0) {
+                byProfessional[session.doctor_id].sessions++;
+            }
         }
 
         for (const entry of (incomeEntries || [])) {
@@ -151,9 +207,13 @@ export async function GET(request: NextRequest) {
                     name: doctorNames[entry.doctor_id] || 'Sem nome',
                     sessions: 0,
                     revenue: 0,
+                    payroll: 0,
                 };
             }
-            byProfessional[entry.doctor_id].revenue += Number(entry.amount) || 0;
+            // Adiciona receita manual se não veio do payroll, ou acumula
+            if (!payrollData || payrollData.length === 0) {
+                byProfessional[entry.doctor_id].revenue += Number(entry.amount) || 0;
+            }
         }
 
         const professionalBreakdown = Object.values(byProfessional)

@@ -33,33 +33,75 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
     const [sessionValue, setSessionValue] = useState<string>('')
     const [isModalOpen, setIsModalOpen] = useState(false)
 
+    const [reimbursementRules, setReimbursementRules] = useState<any[]>([])
+    const [activeRule, setActiveRule] = useState<any | null>(null)
+
     useEffect(() => {
-        const loadDoctors = async () => {
-            const { data } = await supabase
+        const loadData = async () => {
+            // Buscar regras de reembolso do paciente
+            const { data: rules } = await supabase
+                .from('patient_reimbursement_rules')
+                .select('*')
+                .eq('patient_id', patientId)
+                .eq('is_active', true)
+
+            const activeRules = rules || []
+            setReimbursementRules(activeRules)
+
+            // Buscar médicos
+            const { data: docs } = await supabase
                 .from('doctors')
                 .select('id, specialty, crm, crm_state, consultation_price, users(full_name)')
                 .eq('clinic_id', clinicId)
             
-            if (data) {
-                setDoctors(data)
-                if (data.length > 0) {
-                    setSelectedDoctorId(data[0].id)
-                    if (data[0].consultation_price) {
-                        setSessionValue(data[0].consultation_price.toString())
+            if (docs) {
+                setDoctors(docs)
+                if (docs.length > 0) {
+                    const firstDocId = docs[0].id
+                    setSelectedDoctorId(firstDocId)
+
+                    // Verificar regra de reembolso correspondente
+                    const doc = docs[0]
+                    const docSpecialty = (doc.specialty || '').trim().toLowerCase()
+                    const rule = activeRules.find(r => {
+                        const ruleTherapy = (r.therapy_type || '').trim().toLowerCase()
+                        return ruleTherapy === docSpecialty || docSpecialty.includes(ruleTherapy) || ruleTherapy.includes(docSpecialty)
+                    })
+
+                    if (rule) {
+                        setActiveRule(rule)
+                        setSessionValue((rule.billing_amount || rule.reimbursement_amount || 0).toString())
+                    } else if (doc.consultation_price) {
+                        setActiveRule(null)
+                        setSessionValue(doc.consultation_price.toString())
                     }
                 }
             }
         }
-        if (clinicId) loadDoctors()
-    }, [clinicId])
+        if (clinicId && patientId) loadData()
+    }, [clinicId, patientId])
 
     const handleDoctorChange = (docId: string) => {
         setSelectedDoctorId(docId)
         const doc = doctors.find(d => d.id === docId)
-        if (doc && doc.consultation_price) {
-            setSessionValue(doc.consultation_price.toString())
+        if (!doc) return
+
+        const docSpecialty = (doc.specialty || '').trim().toLowerCase()
+        const rule = reimbursementRules.find(r => {
+            const ruleTherapy = (r.therapy_type || '').trim().toLowerCase()
+            return ruleTherapy === docSpecialty || docSpecialty.includes(ruleTherapy) || ruleTherapy.includes(docSpecialty)
+        })
+
+        if (rule) {
+            setActiveRule(rule)
+            setSessionValue((rule.billing_amount || rule.reimbursement_amount || 0).toString())
         } else {
-            setSessionValue('')
+            setActiveRule(null)
+            if (doc.consultation_price) {
+                setSessionValue(doc.consultation_price.toString())
+            } else {
+                setSessionValue('')
+            }
         }
     }
 
@@ -297,9 +339,16 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                                         value={sessionValue}
                                         onChange={(e) => setSessionValue(e.target.value)}
                                     />
-                                    <p className="text-xs text-muted-foreground">
-                                        Este valor será multiplicado pelo número de sessões encontradas no mês.
-                                    </p>
+                                    {activeRule ? (
+                                        <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5 flex items-center gap-1.5 mt-1.5">
+                                            <span>🛡️</span>
+                                            <span>Regra de Reembolso Ativa para {activeRule.therapy_type}: <strong>R$ {Number(activeRule.billing_amount).toFixed(2).replace('.', ',')}</strong> por sessão.</span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Nenhuma regra de reembolso específica para esta especialidade. Usando o valor padrão do terapeuta.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

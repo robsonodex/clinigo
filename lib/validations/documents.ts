@@ -13,7 +13,8 @@ export const DocumentCategoryEnum = z.enum([
     'certificate',
     'imaging',
     'lab_result',
-    'other'
+    'other',
+    'personal'
 ])
 
 // File Type Enum (common medical document types)

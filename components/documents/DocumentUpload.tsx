@@ -25,9 +25,10 @@ interface DocumentUploadProps {
     patientId: string
     clinicId: string
     onUploadComplete?: () => void
+    userRole?: string
 }
 
-export function DocumentUpload({ patientId, clinicId, onUploadComplete }: DocumentUploadProps) {
+export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole }: DocumentUploadProps) {
     const [uploading, setUploading] = useState(false)
     const [documentType, setDocumentType] = useState('OTHER')
     const supabase = createClient()
@@ -106,6 +107,9 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete }: Docume
                             <SelectItem value="CONSENT_TERM">Termo de Consentimento</SelectItem>
                             <SelectItem value="PRESCRIPTION">Receita</SelectItem>
                             <SelectItem value="OTHER">Outro</SelectItem>
+                            {(userRole === 'CLINIC_ADMIN' || userRole === 'SUPER_ADMIN') && (
+                                <SelectItem value="personal">Documento Pessoal (Apenas ADM)</SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>

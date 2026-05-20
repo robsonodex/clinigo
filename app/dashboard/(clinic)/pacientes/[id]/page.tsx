@@ -647,7 +647,7 @@ export default function PatientDetailsPage() {
 
                 {/* Tab: Documentos */}
                 <TabsContent value="documents">
-                    {clinicId && <PatientDocuments patientId={patientId} clinicId={clinicId} />}
+                    {clinicId && <PatientDocuments patientId={patientId} clinicId={clinicId} userRole={user?.role} />}
                 </TabsContent>
 
                 {/* Tab: Evoluções */}

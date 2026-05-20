@@ -26,7 +26,19 @@ export async function GET(request: NextRequest) {
 
         let query = supabase
             .from('appointments')
-            .select('id, status, patient_id, doctor_id, appointment_date, was_late_cancel, therapy_modality, doctors!inner(name)')
+            .select(`
+                id, 
+                status, 
+                patient_id, 
+                doctor_id, 
+                appointment_date, 
+                was_late_cancel, 
+                therapy_modality, 
+                doctors!inner(
+                    id,
+                    user:users(full_name)
+                )
+            `)
             .eq('clinic_id', profile.clinic_id)
             .gte('appointment_date', startDate)
             .lte('appointment_date', endDate)
@@ -54,11 +66,13 @@ export async function GET(request: NextRequest) {
         const noShowRate = total > 0 ? Math.round((noShow / total) * 100) : 0
 
         // By doctor
-        const doctorStats: Record<string, { name: string, attended: number, total: number }> = {}
+        const doctorStats: Record<string, { name: string; attended: number; total: number }> = {}
         appointments?.forEach((apt: any) => {
             const did = apt.doctor_id
+            const docUser = (apt.doctors as any)?.user
+            const docName = docUser ? (Array.isArray(docUser) ? docUser[0]?.full_name : (docUser as any)?.full_name) : 'N/A'
             if (!doctorStats[did]) {
-                doctorStats[did] = { name: apt.doctors?.name || 'N/A', attended: 0, total: 0 }
+                doctorStats[did] = { name: docName || 'N/A', attended: 0, total: 0 }
             }
             doctorStats[did].total++
             const s = (apt.status || '').toLowerCase()

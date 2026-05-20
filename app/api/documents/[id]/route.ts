@@ -65,12 +65,17 @@ export async function DELETE(
         // Get document info first (include patient_id for security check)
         const { data: document } = await supabase
             .from('patient_documents')
-            .select('file_url, uploaded_by, patient_id')
+            .select('file_url, uploaded_by, patient_id, category')
             .eq('id', documentId)
-            .single() as { data: { file_url: string; uploaded_by: string; patient_id: string } | null }
+            .single() as { data: { file_url: string; uploaded_by: string; patient_id: string; category: string } | null }
 
         if (!document) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+        }
+
+        // SECURITY: Se o documento for do tipo 'personal', apenas administradores podem ter acesso (deletar)
+        if (document.category === 'personal' && role !== 'CLINIC_ADMIN' && role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Acesso negado - apenas administradores podem gerenciar documentos pessoais' }, { status: 403 })
         }
 
         // Check permission (Admins can delete anything, others only their own)
@@ -132,9 +137,9 @@ export async function PATCH(
         // SECURITY: Buscar o documento primeiro para verificar acesso
         const { data: existingDoc } = await supabase
             .from('patient_documents')
-            .select('patient_id')
+            .select('patient_id, category')
             .eq('id', documentId)
-            .single() as { data: { patient_id: string } | null }
+            .single() as { data: { patient_id: string; category: string } | null }
 
         if (!existingDoc) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 })
@@ -149,6 +154,12 @@ export async function PATCH(
         }
 
         const body = await request.json()
+
+        // SECURITY: Se o documento for 'personal' ou se o usuário estiver tentando mudar para 'personal'
+        const isTryingToSetPersonal = body.category === 'personal' || body.document_type === 'personal'
+        if ((existingDoc.category === 'personal' || isTryingToSetPersonal) && role !== 'CLINIC_ADMIN' && role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Acesso negado - apenas administradores podem gerenciar documentos pessoais' }, { status: 403 })
+        }
 
         const { name, category, document_type, description, tags, notes } = body
 

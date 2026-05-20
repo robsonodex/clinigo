@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
 
         let query = supabase
             .from('waiting_list')
-            .select('*, doctors:preferred_doctor_id(name)')
+            .select(`
+                *,
+                doctors:preferred_doctor_id(
+                    id,
+                    user:users(full_name)
+                )
+            `)
             .eq('clinic_id', profile.clinic_id)
             .order('created_at', { ascending: true })
 
@@ -60,11 +66,15 @@ export async function GET(request: NextRequest) {
                 avg_wait_days: avgWaitDays,
                 conversion_rate: conversionRate,
             },
-            items: list?.map((i: any) => ({
-                ...i,
-                preferred_doctor_name: i.doctors?.name || null,
-                wait_days: Math.floor((Date.now() - new Date(i.created_at).getTime()) / (1000 * 60 * 60 * 24)),
-            })),
+            items: list?.map((i: any) => {
+                const docUser = i.doctors?.user
+                const docName = docUser ? (Array.isArray(docUser) ? docUser[0]?.full_name : (docUser as any)?.full_name) : null
+                return {
+                    ...i,
+                    preferred_doctor_name: docName || null,
+                    wait_days: Math.floor((Date.now() - new Date(i.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+                }
+            }),
         })
     } catch (error: any) {
         console.error('[API] waiting-list GET error:', error)
