@@ -178,7 +178,7 @@ export default function PayrollDetailPage() {
                     <div>
                         <h1 className="text-2xl font-bold flex items-center gap-3">
                             <User className="w-6 h-6" />
-                            {data.doctor?.name || profLabel.singular}
+                            {data.doctor?.user?.full_name || (data.doctor as any)?.name || profLabel.singular}
                             <Badge className={status.color}>{status.label}</Badge>
                         </h1>
                         <p className="text-muted-foreground">

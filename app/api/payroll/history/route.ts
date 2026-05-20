@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
                 id, reference_month, status, 
                 gross_production, net_payroll, deductions, 
                 created_at, updated_at,
-                doctor:doctors(id, name, specialty)
+                doctor:doctors(id, specialty, user:users(full_name))
             `)
             .eq('clinic_id', profile.clinic_id)
             .like('reference_month', `${year}-%`)
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
             return {
                 id: item.id,
                 month: item.reference_month,
-                doctor_name: item.doctor?.name,
+                doctor_name: (item.doctor as any)?.user?.full_name || (item.doctor as any)?.name || 'Sem nome',
                 doctor_id: item.doctor?.id,
                 gross_production: item.gross_production,
                 net_payroll: item.net_payroll,

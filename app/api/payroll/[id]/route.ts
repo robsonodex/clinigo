@@ -56,7 +56,7 @@ export async function GET(
             .from('medical_payroll')
             .select(`
         *,
-        doctor:doctors(id, name, crm, specialty, user:users(email, avatar_url)),
+        doctor:doctors(id, crm, specialty, user:users(full_name, email, avatar_url)),
         approved_by_user:users!approved_by(name, email),
         paid_by_user:users!paid_by(name, email)
       `)

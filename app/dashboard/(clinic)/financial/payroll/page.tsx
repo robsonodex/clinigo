@@ -368,7 +368,7 @@ export default function PayrollPage() {
                                         <TableRow key={payroll.id}>
                                             <TableCell>
                                                 <div>
-                                                    <div className="font-medium">{payroll.doctor?.name}</div>
+                                                    <div className="font-medium">{payroll.doctor?.user?.full_name || payroll.doctor?.name || 'Sem nome'}</div>
                                                     <div className="text-sm text-muted-foreground">
                                                         CRM {payroll.doctor?.crm} • {payroll.doctor?.specialty}
                                                     </div>

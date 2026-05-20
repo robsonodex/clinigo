@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             .from('medical_payroll')
             .select(`
         *,
-        doctor:doctors(id, name, crm, specialty, user:users(email, avatar_url))
+        doctor:doctors(id, crm, specialty, user:users(full_name, email, avatar_url))
       `)
             .eq('clinic_id', profile.clinic_id)
             .order('reference_month', { ascending: false });
