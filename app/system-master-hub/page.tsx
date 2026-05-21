@@ -709,6 +709,31 @@ export default function SuperAdminDashboard() {
         alert('Todas as credenciais foram copiadas para a área de transferência!')
     }
 
+    const handleExtendTrial = async (clinicId: string, clinicName: string) => {
+        const confirmed = confirm(`⚠️ CONFIRMAÇÃO: Deseja liberar mais 7 dias de testes gratuitos para a clínica "${clinicName}"?\n\nEsta ação reativará a clínica no sistema e prorrogará o período de testes por 7 dias a partir de hoje (payment_confirmed será ativo temporariamente).`)
+        if (!confirmed) return
+
+        try {
+            const res = await fetch('/api/super-admin/extend-trial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinicId, days: 7 }),
+            })
+
+            const result = await res.json()
+
+            if (!res.ok) {
+                throw new Error(result.error || 'Erro ao estender período de testes')
+            }
+
+            alert(`✅ ${result.message}`)
+            loadDashboard()
+        } catch (error) {
+            console.error('Extend trial error:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        }
+    }
+
     const handleGenerateBoleto = async (clinicId: string, clinicName: string, planType: string) => {
         const confirmed = confirm(`Deseja gerar um boleto referente ao plano ${planType} para a clínica "${clinicName}"?\n\nO boleto será registrado no sistema e a clínica será notificada imediatamente.`)
         if (!confirmed) return
@@ -991,6 +1016,16 @@ export default function SuperAdminDashboard() {
                                                         >
                                                             <KeyRound className="h-4 w-4 mr-1" />
                                                             🔑 Resetar Senhas
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleExtendTrial(clinic.id, clinic.name)}
+                                                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                            title="Reativar e conceder mais 7 dias de testes gratuitos para esta clínica"
+                                                        >
+                                                            <Clock className="h-4 w-4 mr-1" />
+                                                            +7d Testes
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
