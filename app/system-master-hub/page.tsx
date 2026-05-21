@@ -145,6 +145,22 @@ export default function SuperAdminDashboard() {
     const [resettingPwd, setResettingPwd] = useState(false)
     const [sendingFeature, setSendingFeature] = useState(false)
 
+    // Reset Passwords by Clinic State
+    const [searchClinic, setSearchClinic] = useState('')
+    const [resetClinicModal, setResetClinicModal] = useState<{
+        open: boolean
+        clinicId: string
+        clinicName: string
+    }>({ open: false, clinicId: '', clinicName: '' })
+    const [resetClinicResult, setResetClinicResult] = useState<Array<{
+        email: string
+        fullName: string
+        newPassword: string
+        success: boolean
+        error?: string
+    }> | null>(null)
+    const [resettingClinicPwd, setResettingClinicPwd] = useState(false)
+
     useEffect(() => {
         loadDashboard()
         loadUsers()
@@ -642,6 +658,57 @@ export default function SuperAdminDashboard() {
         }
     }
 
+    // === Reset Passwords by Clinic Handlers ===
+    const openResetClinicPwdModal = (clinicId: string, clinicName: string) => {
+        setResetClinicModal({ open: true, clinicId, clinicName })
+        setResetClinicResult(null)
+        setResettingClinicPwd(false)
+    }
+
+    const closeResetClinicPwdModal = () => {
+        setResetClinicModal({ open: false, clinicId: '', clinicName: '' })
+        setResetClinicResult(null)
+        setResettingClinicPwd(false)
+    }
+
+    const handleResetClinicPasswords = async () => {
+        const { clinicId, clinicName } = resetClinicModal
+        if (!clinicId) return
+
+        setResettingClinicPwd(true)
+        try {
+            const res = await fetch('/api/super-admin/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinicId }),
+            })
+
+            const result = await res.json()
+
+            if (!res.ok) {
+                throw new Error(result.error || 'Erro ao resetar senhas da clínica')
+            }
+
+            setResetClinicResult(result.results || [])
+        } catch (error) {
+            console.error('Reset clinic passwords error:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setResettingClinicPwd(false)
+        }
+    }
+
+    const copyAllClinicCredentials = () => {
+        if (!resetClinicResult) return
+        const text = resetClinicResult
+            .filter(r => r.success)
+            .map(r => `E-mail: ${r.email}\nSenha: ${r.newPassword}`)
+            .join('\n\n')
+        
+        navigator.clipboard.writeText(text)
+        alert('Todas as credenciais foram copiadas para a área de transferência!')
+    }
+
     const handleGenerateBoleto = async (clinicId: string, clinicName: string, planType: string) => {
         const confirmed = confirm(`Deseja gerar um boleto referente ao plano ${planType} para a clínica "${clinicName}"?\n\nO boleto será registrado no sistema e a clínica será notificada imediatamente.`)
         if (!confirmed) return
@@ -825,11 +892,21 @@ export default function SuperAdminDashboard() {
                     {/* Clinics Tab */}
                     <TabsContent value="clinics">
                         <Card className="bg-white border-gray-200">
-                            <CardHeader>
-                                <CardTitle className="text-gray-900">Todas as Clínicas</CardTitle>
-                                <CardDescription className="text-gray-600">
-                                    Gerencie e monitore todas as clínicas
-                                </CardDescription>
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
+                                <div>
+                                    <CardTitle className="text-gray-900">Todas as Clínicas</CardTitle>
+                                    <CardDescription className="text-gray-600">
+                                        Gerencie e monitore todas as clínicas do sistema
+                                    </CardDescription>
+                                </div>
+                                <div className="w-full sm:w-72">
+                                    <Input
+                                        placeholder="🔍 Localizar clínica pelo nome..."
+                                        value={searchClinic}
+                                        onChange={(e) => setSearchClinic(e.target.value)}
+                                        className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -844,8 +921,10 @@ export default function SuperAdminDashboard() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {data.clinics.map((clinic) => (
-                                            <TableRow key={clinic.id} className="border-gray-200 hover:bg-gray-50">
+                                        {data.clinics
+                                            .filter((clinic) => clinic.name.toLowerCase().includes(searchClinic.toLowerCase()))
+                                            .map((clinic) => (
+                                                <TableRow key={clinic.id} className="border-gray-200 hover:bg-gray-50">
                                                 <TableCell className="font-medium">
                                                     <div className="flex items-center gap-1.5">
                                                         {clinic.name}
@@ -898,9 +977,20 @@ export default function SuperAdminDashboard() {
                                                             size="sm"
                                                             onClick={() => openImpersonateModal(clinic.id, clinic.name)}
                                                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            title="Entrar impersonado na clínica"
                                                         >
                                                             <UserCog className="h-4 w-4 mr-1" />
                                                             🔑 Entrar
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => openResetClinicPwdModal(clinic.id, clinic.name)}
+                                                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                            title="Redefinir as senhas de todos os usuários desta clínica"
+                                                        >
+                                                            <KeyRound className="h-4 w-4 mr-1" />
+                                                            🔑 Resetar Senhas
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -1409,6 +1499,127 @@ export default function SuperAdminDashboard() {
                             )}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reset Clinic Passwords Modal */}
+            <Dialog open={resetClinicModal.open} onOpenChange={(open) => { if (!open) closeResetClinicPwdModal() }}>
+                <DialogContent className="sm:max-w-[600px] bg-white border-gray-200">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                            <KeyRound className="h-5 w-5 text-amber-600" />
+                            Reset de Senha por Clínica
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-600">
+                            Clínica: <strong>{resetClinicModal.clinicName}</strong>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {resetClinicResult === null ? (
+                        <>
+                            <div className="space-y-4 py-2 text-gray-900">
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <p className="text-sm text-red-800 flex items-start gap-2 font-medium">
+                                        <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-red-600" />
+                                        <span>⚠️ AVISO CRÍTICO E DE EXTREMA IMPORTÂNCIA:</span>
+                                    </p>
+                                    <p className="text-sm text-red-700 mt-2 pl-7 leading-relaxed font-bold">
+                                        Esta ação redefinirá a senha de TODOS os colaboradores vinculados à clínica {resetClinicModal.clinicName} de maneira instantânea e permanente no Supabase.
+                                    </p>
+                                    <p className="text-sm text-red-700 mt-2 pl-7">
+                                        Esta ação não pode ser desfeita. Novas senhas seguras serão geradas pelo servidor do CliniGo e notificações serão disparadas diretamente para cada usuário.
+                                    </p>
+                                </div>
+                                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                                    <p>Confirmar reset geral das senhas dos usuários da clínica <strong>{resetClinicModal.clinicName}</strong>?</p>
+                                </div>
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-0 mt-4">
+                                <Button variant="outline" onClick={closeResetClinicPwdModal} disabled={resettingClinicPwd} className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleResetClinicPasswords}
+                                    disabled={resettingClinicPwd}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                                >
+                                    {resettingClinicPwd ? (
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</>
+                                    ) : (
+                                        <><KeyRound className="h-4 w-4 mr-2" /> Confirmar e Resetar Senhas</>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    ) : (
+                        <>
+                            <div className="space-y-4 py-2 text-gray-900">
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                                    <p className="text-sm text-emerald-800 flex items-start gap-2 font-medium">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                                        <span>Todas as senhas foram redefinidas! Copie as credenciais de acesso abaixo:</span>
+                                    </p>
+                                </div>
+
+                                <div className="max-h-[300px] overflow-y-auto border border-gray-200 rounded-lg">
+                                    <Table>
+                                        <TableHeader className="bg-gray-50">
+                                            <TableRow>
+                                                <TableHead className="text-gray-700 font-bold">Colaborador</TableHead>
+                                                <TableHead className="text-gray-700 font-bold">E-mail</TableHead>
+                                                <TableHead className="text-gray-700 font-bold">Nova Senha</TableHead>
+                                                <TableHead className="text-gray-700 w-16"></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {resetClinicResult.map((res, idx) => (
+                                                <TableRow key={idx} className="border-gray-200 hover:bg-gray-50">
+                                                    <TableCell className="font-semibold text-xs max-w-[120px] truncate" title={res.fullName}>
+                                                        {res.fullName}
+                                                    </TableCell>
+                                                    <TableCell className="text-xs truncate max-w-[150px]" title={res.email}>
+                                                        {res.email}
+                                                    </TableCell>
+                                                    <TableCell className="text-xs font-mono font-bold text-emerald-600 select-all">
+                                                        {res.success ? res.newPassword : <span className="text-red-500 font-normal">Falhou: {res.error}</span>}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {res.success && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(`E-mail: ${res.email}\nSenha: ${res.newPassword}`)
+                                                                    alert('Copiado com sucesso!')
+                                                                }}
+                                                                className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600"
+                                                                title="Copiar dados de acesso do colaborador"
+                                                            >
+                                                                <Copy className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between items-center mt-4">
+                                <Button
+                                    variant="outline"
+                                    onClick={copyAllClinicCredentials}
+                                    className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 w-full sm:w-auto"
+                                >
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Copiar Todos em Lote
+                                </Button>
+                                <Button onClick={closeResetClinicPwdModal} className="bg-gray-900 hover:bg-gray-800 text-white w-full sm:w-auto">
+                                    Fechar
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

@@ -8,7 +8,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const MASTER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'robsonfenriz@gmail.com'
+const MASTER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
 
 const SUPER_ADMIN_ROUTES = [
     '/system-master-hub',
@@ -38,8 +40,8 @@ export async function isMasterAdmin(request: NextRequest): Promise<boolean> {
 
         if (!user) return false
 
-        // Only the master email can access
-        if (user.email !== MASTER_ADMIN_EMAIL) return false
+        // Only whitelisted master emails can access
+        if (!user.email || !MASTER_ADMIN_EMAILS.includes(user.email.toLowerCase())) return false
 
         // Double-check role from database
         const { data: profile } = await supabase
@@ -49,7 +51,7 @@ export async function isMasterAdmin(request: NextRequest): Promise<boolean> {
             .single()
 
         // Allow if role is SUPER_ADMIN or if it's the master email
-        return profile?.role === 'SUPER_ADMIN' || user.email === MASTER_ADMIN_EMAIL
+        return profile?.role === 'SUPER_ADMIN' || (user.email && MASTER_ADMIN_EMAILS.includes(user.email.toLowerCase())) || false
 
     } catch (error) {
         console.error('[SuperAdmin Middleware] Error:', error)
