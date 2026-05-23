@@ -742,6 +742,16 @@ function planMeetsMinimum(currentPlan: PlanType, requiredPlan: PlanType): boolea
 
 import { VisualLock } from '@/components/sidebar/visual-lock'
 
+// Helper function to normalize titles for anchors (matches sidebars)
+function getHelpAnchor(title: string) {
+    return title.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+        .replace(/[^a-z0-9]+/g, '-') // substitui caracteres nao alfa por hifen
+        .replace(/(^-|-$)+/g, '') // limpa hifens no inicio/fim
+}
+
+import { HelpCircle } from 'lucide-react'
+
 function NavItemComponent({
     item,
     isActive,
@@ -781,7 +791,7 @@ function NavItemComponent({
                         }
                     }}
                     className={cn(
-                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group',
                         touchClass,
                         parentIsLocked
                             ? 'text-muted-foreground/50 hover:bg-muted/50'
@@ -792,7 +802,19 @@ function NavItemComponent({
                 >
                     <div className="flex items-center gap-3">
                         <item.icon className="w-5 h-5" />
-                        {item.title}
+                        <span className="flex items-center">
+                            {item.title}
+                            {!parentIsLocked && (
+                                <Link
+                                    href={`/dashboard/help#${getHelpAnchor(item.title)}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full hover:bg-white/20 text-muted-foreground hover:text-foreground inline-flex items-center justify-center cursor-help"
+                                    title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
+                                >
+                                    <HelpCircle className="w-3.5 h-3.5" />
+                                </Link>
+                            )}
+                        </span>
                         {item.badge && !parentIsLocked && (
                             <span className={cn(
                                 "px-1.5 py-0.5 text-[10px] font-bold rounded",
@@ -825,13 +847,23 @@ function NavItemComponent({
                                 <Link
                                     href={child.href}
                                     className={cn(
-                                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                                        'flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors group',
                                         touchClass,
                                         'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
                                     )}
                                 >
-                                    <child.icon className="w-4 h-4" />
-                                    {child.title}
+                                    <span className="flex items-center gap-3">
+                                        <child.icon className="w-4 h-4" />
+                                        {child.title}
+                                        <Link
+                                            href={`/dashboard/help#${getHelpAnchor(child.title)}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full hover:bg-slate-200/50 text-muted-foreground hover:text-foreground inline-flex items-center justify-center cursor-help"
+                                            title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
+                                        >
+                                            <HelpCircle className="w-3 h-3" />
+                                        </Link>
+                                    </span>
                                 </Link>
                             </VisualLock>
                         ))}
@@ -873,7 +905,7 @@ function NavItemComponent({
         <Link
             href={item.href}
             className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative',
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group',
                 touchClass,
                 isActive
                     ? 'bg-primary text-primary-foreground'
@@ -883,7 +915,19 @@ function NavItemComponent({
             )}
         >
             <item.icon className="w-5 h-5" />
-            <span className="flex-1">{item.title}</span>
+            <span className="flex-1 flex items-center">
+                {item.title}
+                {!isLocked && (
+                    <Link
+                        href={`/dashboard/help#${getHelpAnchor(item.title)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full hover:bg-white/20 text-muted-foreground hover:text-foreground inline-flex items-center justify-center cursor-help"
+                        title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
+                    >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                    </Link>
+                )}
+            </span>
             {isLocked && (
                 <Lock className="h-3.5 w-3.5 text-muted-foreground" />
             )}
