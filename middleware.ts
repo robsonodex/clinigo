@@ -28,6 +28,7 @@ const MASTER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0]
 
 // Public routes that don't require any authentication
 const PUBLIC_ROUTES = [
+    '/api/health', // Health check público para monitores externos (UptimeRobot, Sentry, etc.)
     '/api/appointments-list', // Moved list/create endpoint (POST public, GET auth)
     '/api/appointments/', // Allow dynamic appointment routes like /api/appointments/[id]
     '/api/appointments/details/', // Temporary fix for 404 issue in production
