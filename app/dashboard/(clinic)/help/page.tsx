@@ -107,7 +107,7 @@ const helpItems: HelpItem[] = [
         category: 'Agendamento',
         icon: Video,
         whatIsIt: 'Painel de controle focado nos atendimentos do dia. Integra ferramentas para iniciar chamadas de vídeo, abrir prontuários instantaneamente e realizar triagem.',
-        whenToUse: 'No momento do atendimento de teleconsulta ou consulta presencial para fazer a recepção do paciente na sala clínica.',
+        whenToUse: 'No momento do atendimento da teleconsulta do paciente.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'DOCTOR'],
         tags: ['telemedicina', 'vídeo', 'atendimento', 'sala de espera']
