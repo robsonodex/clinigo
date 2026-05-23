@@ -309,142 +309,112 @@ const navigationSections: NavSection[] = [
         title: 'Financeiro',
         items: [
             {
-                title: 'Pagamentos',
-                href: '/dashboard/pagamentos',
-                icon: CreditCard,
-                roles: ['CLINIC_ADMIN'],
-                // Acessível a todos os planos (BASICO+) - Apenas admin
-            },
-            {
-                title: 'Financeiro',
+                title: 'Transações e Caixa',
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
                 roles: ['CLINIC_ADMIN'],
-                // Acessível a todos os planos - apenas Novo Lançamento (receita/despesa) - Apenas admin
+                children: [
+                    {
+                        title: 'Lançamentos',
+                        href: '/dashboard/financeiro',
+                        icon: DollarSign,
+                    },
+                    {
+                        title: 'Pagamentos',
+                        href: '/dashboard/pagamentos',
+                        icon: CreditCard,
+                    },
+                    {
+                        title: 'Fechamentos de Caixa',
+                        href: '/dashboard/financeiro/fechamento',
+                        icon: FileText,
+                    },
+                    {
+                        title: 'Créditos de Pacientes',
+                        href: '/dashboard/financial/credits',
+                        icon: Wallet,
+                        minPlan: 'PROFESSIONAL',
+                    },
+                ]
             },
             {
-                title: '__REPASSE_LABEL__',
+                title: 'Repasses & Produção',
                 href: '/dashboard/financial/payroll',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
+                children: [
+                    {
+                        title: 'Folha de Repasse',
+                        href: '/dashboard/financial/payroll',
+                        icon: Users,
+                    },
+                    {
+                        title: 'Histórico de Repasses',
+                        href: '/dashboard/financial/payroll/historico',
+                        icon: FileText,
+                    },
+                    {
+                        title: 'Produção por Profissional',
+                        href: '/dashboard/financial/producao',
+                        icon: TrendingUp,
+                    },
+                ]
             },
             {
-                title: 'Meu Financeiro',
-                href: '/dashboard/meu-financeiro',
-                icon: Wallet,
-                roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+                title: 'Controladoria & BI',
+                href: '/dashboard/financial/dre',
+                icon: BarChart3,
+                roles: ['CLINIC_ADMIN'],
                 badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
-                        title: 'Meu Painel',
-                        href: '/dashboard/meu-financeiro',
-                        icon: Wallet,
-                        minPlan: 'AVANCADO',
+                        title: 'DRE Consolidada',
+                        href: '/dashboard/financial/dre',
+                        icon: TrendingUp,
                     },
                     {
-                        title: 'Meu Histórico',
-                        href: '/dashboard/meu-financeiro/historico',
-                        icon: FileText,
-                        minPlan: 'AVANCADO',
+                        title: 'DRE Centro de Custos',
+                        href: '/dashboard/financial/dre-costcenter',
+                        icon: TrendingDown,
                     },
                     {
-                        title: 'Minha Produção',
-                        href: '/dashboard/meu-financeiro/producao',
+                        title: 'Análise de LTV',
+                        href: '/dashboard/financial/ltv',
+                        icon: Target,
+                        minPlan: 'PROFESSIONAL',
+                    },
+                    {
+                        title: 'Mix de Receita',
+                        href: '/dashboard/financeiro/mix',
                         icon: BarChart3,
-                        minPlan: 'AVANCADO',
-                    }
+                        minPlan: 'PROFESSIONAL',
+                    },
+                    {
+                        title: 'Projeção de Caixa',
+                        href: '/dashboard/financeiro/projecao',
+                        icon: Calendar,
+                        minPlan: 'PROFESSIONAL',
+                    },
+                    {
+                        title: 'Projeção de Faturamento',
+                        href: '/dashboard/financial/goals',
+                        icon: Target,
+                        minPlan: 'PROFESSIONAL',
+                    },
+                    {
+                        title: 'Gestão de Inadimplência',
+                        href: '/dashboard/financeiro/inadimplencia',
+                        icon: UserX,
+                    },
+                    {
+                        title: 'Auditoria de Lançamentos',
+                        href: '/dashboard/financial/audit',
+                        icon: ShieldAlert,
+                    },
                 ]
-            },
-            {
-                title: 'Créditos de Pacientes',
-                href: '/dashboard/financial/credits',
-                icon: Wallet,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
-            },
-            {
-                title: 'DRE',
-                href: '/dashboard/financial/dre',
-                icon: TrendingUp,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
-                minPlan: 'AVANCADO',
-            },
-            {
-                title: 'DRE (Centro Custo)',
-                href: '/dashboard/financial/dre-costcenter',
-                icon: TrendingDown,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
-                minPlan: 'AVANCADO',
-            },
-            {
-                title: 'Auditoria',
-                href: '/dashboard/financial/audit',
-                icon: ShieldAlert,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
-                minPlan: 'AVANCADO',
-            },
-            {
-                title: 'Análise LTV',
-                href: '/dashboard/financial/ltv',
-                icon: TrendingUp,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
-            },
-            {
-                title: 'Projeção de Faturamento',
-                href: '/dashboard/financial/goals',
-                icon: Target,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
-            },
-            {
-                title: 'Histórico de Repasses',
-                href: '/dashboard/financial/payroll/historico',
-                icon: FileText,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
-                minPlan: 'AVANCADO',
-            },
-            {
-                title: 'Produção por Profissional',
-                href: '/dashboard/financial/producao',
-                icon: TrendingUp,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
-                minPlan: 'AVANCADO',
-            },
-            {
-                title: 'Inadimplência',
-                href: '/dashboard/financeiro/inadimplencia',
-                icon: UserX,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
-                minPlan: 'AVANCADO',
-            },
-            {
-                title: 'Projeção de Caixa',
-                href: '/dashboard/financeiro/projecao',
-                icon: Calendar,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
-            },
-            {
-                title: 'Mix de Receita',
-                href: '/dashboard/financeiro/mix',
-                icon: BarChart3,
-                roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
-                minPlan: 'PROFESSIONAL',
             },
             {
                 title: 'Faturamento TISS',
@@ -458,46 +428,66 @@ const navigationSections: NavSection[] = [
                         title: 'Guias e Lotes',
                         href: '/dashboard/tiss',
                         icon: Receipt,
-                        minPlan: 'PROFESSIONAL',
                     },
                     {
                         title: 'Gestão de Glosas',
                         href: '/dashboard/tiss/glosas',
                         icon: ShieldAlert,
-                        minPlan: 'PROFESSIONAL',
                     },
                     {
                         title: 'Perdas (BI)',
                         href: '/dashboard/tiss/reports/loss-analysis',
                         icon: TrendingDown,
-                        minPlan: 'PROFESSIONAL',
                     }
                 ]
             },
             {
-                title: 'Convênios',
+                title: 'Meu Financeiro',
+                href: '/dashboard/meu-financeiro',
+                icon: Wallet,
+                roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+                badge: 'AVÇ',
+                minPlan: 'AVANCADO',
+                children: [
+                    {
+                        title: 'Meu Painel',
+                        href: '/dashboard/meu-financeiro',
+                        icon: Wallet,
+                    },
+                    {
+                        title: 'Meu Histórico',
+                        href: '/dashboard/meu-financeiro/historico',
+                        icon: FileText,
+                    },
+                    {
+                        title: 'Minha Produção',
+                        href: '/dashboard/meu-financeiro/producao',
+                        icon: BarChart3,
+                    }
+                ]
+            },
+            {
+                title: 'Convênios e Reembolsos',
                 href: '/dashboard/convenios',
                 icon: Shield,
                 roles: ['CLINIC_ADMIN'],
-                // Acessível a todos os planos (BASICO+)
-            },
-            {
-                title: 'Fechamento',
-                href: '/dashboard/financeiro/fechamento',
-                icon: FileText,
-                roles: ['CLINIC_ADMIN'],
-            },
-            {
-                title: 'Reembolso',
-                href: '/dashboard/configuracoes/reembolso',
-                icon: Receipt,
-                roles: ['CLINIC_ADMIN'],
-            },
-            {
-                title: 'Reembolso Paciente',
-                href: '/dashboard/configuracoes/reembolso-paciente',
-                icon: Users,
-                roles: ['CLINIC_ADMIN'],
+                children: [
+                    {
+                        title: 'Convênios',
+                        href: '/dashboard/convenios',
+                        icon: Shield,
+                    },
+                    {
+                        title: 'Regras de Reembolso',
+                        href: '/dashboard/configuracoes/reembolso',
+                        icon: Receipt,
+                    },
+                    {
+                        title: 'Reembolso por Paciente',
+                        href: '/dashboard/configuracoes/reembolso-paciente',
+                        icon: Users,
+                    },
+                ]
             },
         ],
     },
