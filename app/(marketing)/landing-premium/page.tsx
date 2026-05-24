@@ -21,6 +21,16 @@ export default function LandingPremium() {
                         <Image src="/logo-clinigo.png" alt="CliniGo" width={160} height={40} className="h-10 w-auto" />
                     </Link>
 
+                    {/* Acesso Rápido Móvel (Exibido apenas em celulares) */}
+                    <div className="flex md:hidden items-center gap-2">
+                        <Link href="/clinica" className="h-8 px-3.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
+                            Clínica
+                        </Link>
+                        <Link href="/medico" className="h-8 px-3.5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 font-semibold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
+                            Médico
+                        </Link>
+                    </div>
+
                     <div className="hidden md:flex items-center gap-6">
                         <a href="#funcionalidades" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Funcionalidades</a>
                         <a href="#planos" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Planos</a>

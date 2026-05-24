@@ -27,12 +27,19 @@ export function MobileBottomNav() {
     const pathname = usePathname()
     const { role } = useRole()
 
-    const filteredItems = navItems.filter(item => {
-        if (item.href === '/dashboard/financeiro') {
-            return role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN'
-        }
-        return true
-    })
+    const filteredItems = navItems
+        .map(item => {
+            if (item.href === '/dashboard/agenda' && role === 'DOCTOR') {
+                return { ...item, href: '/dashboard/minha-agenda' }
+            }
+            return item
+        })
+        .filter(item => {
+            if (item.href === '/dashboard/financeiro') {
+                return role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN'
+            }
+            return true
+        })
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 safe-area-bottom">
