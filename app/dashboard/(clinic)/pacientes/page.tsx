@@ -211,24 +211,25 @@ export default function PacientesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <UserPlus className="w-7 h-7" />
                         Pacientes
                     </h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground text-sm sm:text-base">
                         Gerencie os pacientes da sua clínica
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center">
                         <Download className="w-4 h-4 mr-2" />
                         Exportar
                     </Button>
-                    <Button onClick={() => setShowCreateModal(true)}>
+                    <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-initial justify-center">
                         <Plus className="w-4 h-4 mr-2" />
-                        Novo Paciente
+                        <span className="hidden sm:inline">Novo Paciente</span>
+                        <span className="inline sm:hidden">Novo</span>
                     </Button>
                 </div>
             </div>
