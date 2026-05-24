@@ -24,6 +24,7 @@ import {
     UserPlus,
     EyeOff,
     Search,
+    SlidersHorizontal,
 } from 'lucide-react'
 import {
     format,
@@ -491,128 +492,156 @@ export default function AgendaPage() {
         setRescheduleConfirmOpen(true)
     }
 
+    const [showMobileFilters, setShowMobileFilters] = useState(false)
+
     return (
-        <div className="flex flex-col h-[calc(100vh-6rem)]">
+        <div className="flex flex-col h-[calc(100vh-11rem)] md:h-[calc(100vh-6rem)]">
             {/* Toolbar */}
-            {/* Toolbar */}
-            <div className="flex flex-col gap-4 mb-4">
-                
+            <div className="flex flex-col gap-3 mb-3">
                 {/* Linha 1: Título e Ações Principais */}
-                <div className="flex flex-wrap items-center gap-6">
-                    <h1 className="text-xl md:text-2xl font-bold">Agenda</h1>
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-xl md:text-2xl font-bold">Agenda</h1>
+                        {/* Botão de Filtros/Ações exclusivo para Celular */}
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="flex md:hidden gap-1.5 h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200"
+                            onClick={() => setShowMobileFilters(!showMobileFilters)}
+                        >
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            {showMobileFilters ? 'Ocultar Filtros' : 'Filtros e Ações'}
+                        </Button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                         <Button
                             size="sm"
-                            className="gap-2"
+                            className="gap-1.5 h-8 text-xs md:text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
                             onClick={() => {
                                 setPreselectedSlot(null)
                                 setManualAppointmentOpen(true)
                             }}
                         >
                             <PlusCircle className="h-4 w-4" />
-                            Novo Agendamento
+                            <span className="hidden sm:inline">Novo Agendamento</span>
+                            <span className="inline sm:hidden">Novo</span>
                         </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            onClick={() => setRecurringAppointmentOpen(true)}
-                        >
-                            <Repeat className="h-4 w-4" />
-                            Recorrente
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            onClick={() => setAbsenceModalOpen(true)}
-                        >
-                            <UserX className="h-4 w-4" />
-                            Ausência
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            onClick={() => setSuggestionModalOpen(true)}
-                        >
-                            <Lightbulb className="h-4 w-4" />
-                            Sugerir
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
-                            onClick={() => {
-                                setPreselectedSlot(null)
-                                setIsEncaixeMode(true)
-                                setManualAppointmentOpen(true)
-                            }}
-                        >
-                            <UserPlus className="h-4 w-4" />
-                            Encaixe
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={showFreeSlots ? 'default' : 'outline'}
-                            className={cn(
-                                'gap-2',
-                                showFreeSlots && 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                            )}
-                            onClick={() => setShowFreeSlots(!showFreeSlots)}
-                        >
-                            <EyeOff className="h-4 w-4" />
-                            {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
-                        </Button>
-                        <div className="w-px h-6 bg-border mx-1" />
-                        <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor}>
-                            <SelectTrigger className="w-[220px] md:w-[320px] lg:w-[350px] h-8 text-sm">
-                                <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
-                                <div className="flex-1 truncate text-left">
-                                    <SelectValue placeholder="Profissional" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Profissionais</SelectItem>
-                                {doctorsList?.filter((d: any) => d.id && d.user).map((doctor: any) => {
-                                    const avail = professionalAvailability.find((p) => p.id === doctor.id)
-                                    return (
-                                        <SelectItem key={doctor.id} value={doctor.id}>
-                                            <div className="flex items-center gap-2 overflow-hidden w-full">
-                                                <span className={cn(
-                                                    'w-2 h-2 rounded-full shrink-0',
-                                                    avail?.isBusy ? 'bg-red-500' : 'bg-green-500'
-                                                )} />
-                                                <span className="truncate min-w-0 font-medium">
-                                                    {doctor.user?.full_name || 'Profissional'}{' '}
-                                                    <span className="text-muted-foreground text-xs font-normal">
-                                                        ({doctor.specialty || 'Geral'})
-                                                    </span>
+                    </div>
+                </div>
+
+                {/* Filtros e Ações Secundárias */}
+                {/* No Desktop: Sempre Visível (md:flex) */}
+                {/* No Mobile: Visível apenas se showMobileFilters for verdadeiro */}
+                <div className={cn(
+                    "flex-wrap items-center gap-2 border-t pt-3 md:pt-0 md:border-0",
+                    showMobileFilters ? "flex" : "hidden md:flex"
+                )}>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 h-8 text-xs"
+                        onClick={() => setRecurringAppointmentOpen(true)}
+                    >
+                        <Repeat className="h-4 w-4" />
+                        Recorrente
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 h-8 text-xs"
+                        onClick={() => setAbsenceModalOpen(true)}
+                    >
+                        <UserX className="h-4 w-4" />
+                        Ausência
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 h-8 text-xs"
+                        onClick={() => setSuggestionModalOpen(true)}
+                    >
+                        <Lightbulb className="h-4 w-4" />
+                        Sugerir
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 h-8 text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+                        onClick={() => {
+                            setPreselectedSlot(null)
+                            setIsEncaixeMode(true)
+                            setManualAppointmentOpen(true)
+                        }}
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        Encaixe
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={showFreeSlots ? 'default' : 'outline'}
+                        className={cn(
+                            'gap-2 h-8 text-xs',
+                            showFreeSlots && 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        )}
+                        onClick={() => setShowFreeSlots(!showFreeSlots)}
+                    >
+                        <EyeOff className="h-4 w-4" />
+                        {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
+                    </Button>
+                    
+                    <div className="hidden md:block w-px h-6 bg-border mx-1" />
+                    
+                    <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor}>
+                        <SelectTrigger className="w-full md:w-[220px] lg:w-[280px] h-8 text-xs">
+                            <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
+                            <div className="flex-1 truncate text-left">
+                                <SelectValue placeholder="Profissional" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos os Profissionais</SelectItem>
+                            {doctorsList?.filter((d: any) => d.id && d.user).map((doctor: any) => {
+                                const avail = professionalAvailability.find((p) => p.id === doctor.id)
+                                return (
+                                    <SelectItem key={doctor.id} value={doctor.id}>
+                                        <div className="flex items-center gap-2 overflow-hidden w-full">
+                                            <span className={cn(
+                                                'w-2 h-2 rounded-full shrink-0',
+                                                avail?.isBusy ? 'bg-red-500' : 'bg-green-500'
+                                            )} />
+                                            <span className="truncate min-w-0 font-medium">
+                                                {doctor.user?.full_name || 'Profissional'}{' '}
+                                                <span className="text-muted-foreground text-xs font-normal">
+                                                    ({doctor.specialty || 'Geral'})
                                                 </span>
-                                            </div>
-                                        </SelectItem>
-                                    )
-                                })}
-                            </SelectContent>
-                        </Select>
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Buscar paciente..."
-                                value={patientSearch}
-                                onChange={(e) => setPatientSearch(e.target.value)}
-                                className="h-8 w-[180px] md:w-[220px] pl-8 pr-8 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
-                            />
-                            {patientSearch && (
-                                <button
-                                    onClick={() => setPatientSearch('')}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                >
-                                    <X className="h-3.5 w-3.5" />
-                                </button>
-                            )}
-                        </div>
+                                            </span>
+                                        </div>
+                                    </SelectItem>
+                                )
+                            })}
+                        </SelectContent>
+                    </Select>
+                    
+                    <div className="relative w-full md:w-auto">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Buscar paciente..."
+                            value={patientSearch}
+                            onChange={(e) => setPatientSearch(e.target.value)}
+                            className="h-8 w-full md:w-[180px] pl-8 pr-8 text-xs rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                        />
+                        {patientSearch && (
+                            <button
+                                type="button"
+                                onClick={() => setPatientSearch('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -720,9 +749,9 @@ export default function AgendaPage() {
 
 
             {/* Calendar Grid */}
-            <Card className="flex-1 overflow-auto">
+            <Card className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin select-none touch-pan-x touch-pan-y relative border shadow-inner">
                 {calendarStyle === 'standard' ? (
-                <div className="min-w-[800px]">
+                <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row */}
                     <div className="grid grid-cols-8 border-b sticky top-0 bg-white z-10">
                         <div className="p-4 text-xs font-medium text-muted-foreground border-r text-center">
