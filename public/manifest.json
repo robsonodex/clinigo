@@ -1,6 +1,6 @@
 {
-  "name": "CliniGo",
-  "short_name": "CliniGo",
+  "name": "CliniGO",
+  "short_name": "CliniGO",
   "description": "Gestão clínica inteligente — agenda, prontuários e fila de espera na palma da mão.",
   "start_url": "/dashboard",
   "display": "standalone",
