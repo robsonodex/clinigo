@@ -43,6 +43,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
             .single()
 
         if (error) throw error
+        
+        if (data && data.template_type === 'soap' && (data.data_description || data.content)) {
+            data.template_type = 'multidisciplinar'
+        }
+
         return NextResponse.json({ data })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -91,6 +96,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const body = await request.json()
         const { finalize, ...rest } = body
         const cleanBody = sanitizeBody(rest)
+
+        if (cleanBody.template_type === 'multidisciplinar') {
+            cleanBody.template_type = 'soap'
+        }
 
         // Se a requisição pede finalização, grava o carimbo de tempo
         // NOTA: signed_at NÃO é preenchido aqui — ele é exclusivo da assinatura ICP-Brasil

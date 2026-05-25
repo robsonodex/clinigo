@@ -203,17 +203,6 @@ const helpItems: HelpItem[] = [
         tags: ['soap', 'cif', 'dap', 'modelos', 'padronização']
     },
     {
-        id: 'template-multidisciplinar',
-        title: 'Template Multidisciplinar',
-        category: 'Prontuário',
-        icon: FileText,
-        whatIsIt: 'Modelo de evolução estruturado especificamente para clínicas de terapia integrada e multidisciplinar. Contém 6 campos essenciais: Data/Horário, Objetivo Terapêutico, Estratégias Utilizadas, Desempenho do Paciente, Intercorrências e Orientações aos Responsáveis.',
-        whenToUse: 'Sempre que registrar o progresso de atendimentos de fonoaudiologia, terapia ocupacional, psicopedagogia, fisioterapia ou psicologia com foco na comunicação e orientações claras à família.',
-        minPlan: 'Básico',
-        roles: ['CLINIC_ADMIN', 'DOCTOR'],
-        tags: ['multidisciplinar', 'evolução', 'terapias', 'campos integrados']
-    },
-    {
         id: 'planos-terapeuticos',
         title: 'Planos Terapêuticos',
         category: 'Prontuário',
@@ -674,8 +663,8 @@ export default function HelpPage() {
                                         <span className={cn(
                                             "text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1 border",
                                             item.minPlan === 'Básico' ? "bg-slate-50 text-slate-600 border-slate-100" :
-                                            item.minPlan === 'Avançado' ? "bg-amber-50 text-amber-700 border-amber-100" :
-                                            "bg-indigo-50 text-indigo-700 border-indigo-100"
+                                                item.minPlan === 'Avançado' ? "bg-amber-50 text-amber-700 border-amber-100" :
+                                                    "bg-indigo-50 text-indigo-700 border-indigo-100"
                                         )}>
                                             <Crown className="w-3 h-3" />
                                             {item.minPlan}

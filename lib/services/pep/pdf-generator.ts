@@ -48,6 +48,16 @@ export interface PEPDocumentData {
     evolucaoFuncional?: string
     objetivosSessao?: string
 
+    isMultidisciplinar?: boolean
+    multidisciplinarData?: {
+        dataDescription?: string
+        subjective?: string
+        objective?: string
+        assessment?: string
+        planNotes?: string
+        content?: string
+    }
+
     // Signature metadata (when document is signed)
     signatureInfo?: {
         signerName: string
@@ -160,7 +170,14 @@ export function generatePEPPdf(data: PEPDocumentData): Buffer {
     }
 
     // Medical content
-    if (data.professionType === 'MEDICO') {
+    if (data.isMultidisciplinar) {
+        addSection('Data e Horário do Atendimento', data.multidisciplinarData?.dataDescription)
+        addSection('Objetivo Terapêutico', data.multidisciplinarData?.subjective)
+        addSection('Estratégias/Intervenções Utilizadas', data.multidisciplinarData?.objective)
+        addSection('Desempenho do Paciente', data.multidisciplinarData?.assessment)
+        addSection('Intercorrências', data.multidisciplinarData?.planNotes)
+        addSection('Orientações aos Responsáveis', data.multidisciplinarData?.content)
+    } else if (data.professionType === 'MEDICO') {
         // Vital Signs
         if (data.weight || data.bloodPressure || data.heartRate) {
             doc.setFontSize(10)

@@ -92,6 +92,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Evolução não encontrada' }, { status: 404 })
         }
 
+        if (record && record.template_type === 'soap' && (record.data_description || record.content)) {
+            record.template_type = 'multidisciplinar'
+        }
+
         if (record.signature_hash) {
             return NextResponse.json({
                 error: 'Documento já assinado',
@@ -137,6 +141,16 @@ export async function POST(request: Request) {
                 appointmentDate: new Date(record.evolution_date).toLocaleDateString('pt-BR'),
                 professionType: doctorData?.profession_type === 'psicologo' ? 'PSICOLOGO' : doctorData?.profession_type === 'terapeuta' ? 'TERAPEUTA' : 'MEDICO',
                 
+                isMultidisciplinar: record.template_type === 'multidisciplinar',
+                multidisciplinarData: record.template_type === 'multidisciplinar' ? {
+                    dataDescription: record.data_description,
+                    subjective: record.subjective,
+                    objective: record.objective,
+                    assessment: record.assessment,
+                    planNotes: record.plan_notes,
+                    content: record.content
+                } : undefined,
+
                 // Map based on template type
                 chiefComplaint: record.template_type === 'soap' ? record.subjective : undefined,
                 historyPresentIllness: record.template_type === 'soap' ? record.objective : undefined,

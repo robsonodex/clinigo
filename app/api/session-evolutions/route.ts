@@ -78,7 +78,14 @@ export async function GET(request: NextRequest) {
         const { data, error } = await query
         if (error) throw error
 
-        return NextResponse.json({ data })
+        const mappedData = (data || []).map((ev: any) => {
+            if (ev.template_type === 'soap' && (ev.data_description || ev.content)) {
+                return { ...ev, template_type: 'multidisciplinar' }
+            }
+            return ev
+        })
+
+        return NextResponse.json({ data: mappedData })
     } catch (error: any) {
         console.error('GET session-evolutions error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -96,6 +103,10 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json()
         const cleanBody = sanitizeBody(body)
+
+        if (cleanBody.template_type === 'multidisciplinar') {
+            cleanBody.template_type = 'soap'
+        }
 
         const { data, error } = await supabase
             .from('session_evolutions')

@@ -52,6 +52,9 @@ export async function GET(request: NextRequest) {
         }
 
         const record = rawRecord as any
+        if (record && record.template_type === 'soap' && (record.data_description || record.content)) {
+            record.template_type = 'multidisciplinar'
+        }
 
         const doctorData = Array.isArray(record.doctors) ? record.doctors[0] : record.doctors
         const patientData = Array.isArray(record.patients) ? record.patients[0] : record.patients
