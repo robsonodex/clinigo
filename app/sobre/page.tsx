@@ -211,8 +211,8 @@ export default function SobrePage() {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Phone className="w-5 h-5 text-emerald-400" />
-                                            <a href="tel:+5521965532247" className="hover:text-emerald-400">
-                                                (21) 96553-2247
+                                            <a href="tel:+5521990400577" className="hover:text-emerald-400">
+                                                (21) 99040-0577
                                             </a>
                                         </div>
                                     </div>

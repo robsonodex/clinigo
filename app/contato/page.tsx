@@ -77,8 +77,8 @@ export default function ContatoPage() {
         {
             icon: Phone,
             title: 'Comercial',
-            value: '(21) 96553-2247',
-            href: 'https://wa.me/5521965532247?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações',
+            value: '(21) 99040-0577',
+            href: 'https://wa.me/5521990400577?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações',
             description: 'Atendimento rápido'
         },
         {
@@ -120,7 +120,7 @@ export default function ContatoPage() {
                             Voltar ao Início
                         </Link>
                         <a
-                            href="https://wa.me/5521965532247"
+                            href="https://wa.me/5521990400577"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#25D366] text-white rounded-xl font-semibold hover:bg-[#20bd5a] transition-colors"
@@ -343,7 +343,7 @@ export default function ContatoPage() {
 
                             {/* CTA WhatsApp */}
                             <a
-                                href="https://wa.me/5521965532247?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações"
+                                href="https://wa.me/5521990400577?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="block p-6 bg-gradient-to-r from-[#25D366] to-[#128C7E] rounded-2xl hover:scale-[1.02] transition-transform"
