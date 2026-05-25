@@ -84,6 +84,23 @@ export function PWAInitializer() {
         setShowPrompt(false)
     }
 
+    const handleShareClick = async () => {
+        if (typeof window === 'undefined') return
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'CliniGo',
+                    text: 'Acesse o CliniGo - App oficial da sua Clínica',
+                    url: window.location.href
+                })
+            } catch (error) {
+                console.log('[PWA] Share cancelled or failed:', error)
+            }
+        } else {
+            alert('O seu navegador não suporta compartilhamento direto. Por favor, use o botão de compartilhar do próprio navegador Safari.')
+        }
+    }
+
     const handleClose = () => {
         localStorage.setItem('clinigo-pwa-prompt-closed', new Date().toISOString())
         setShowPrompt(false)
@@ -146,25 +163,38 @@ export function PWAInitializer() {
                                 Instalar Aplicativo
                             </button>
                         ) : platform === 'ios' ? (
-                            <div className="bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 rounded-xl p-4 space-y-3.5">
-                                <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">Como instalar no iPhone/iPad:</h4>
-                                <div className="flex gap-3.5 items-start text-xs text-slate-600 dark:text-zinc-300">
-                                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700 font-bold text-slate-800 dark:text-zinc-200">1</div>
-                                    <p className="leading-relaxed">
-                                        Toque no ícone de <span className="inline-flex items-center gap-1 font-bold text-slate-900 dark:text-zinc-50"><Share className="w-3.5 h-3.5 text-blue-500 inline" /> Compartilhar</span> na barra do Safari.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3.5 items-start text-xs text-slate-600 dark:text-zinc-300">
-                                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700 font-bold text-slate-800 dark:text-zinc-200">2</div>
-                                    <p className="leading-relaxed">
-                                        Role a lista de ações para baixo e toque em <span className="inline-flex items-center gap-1 font-bold text-slate-900 dark:text-zinc-50"><PlusSquare className="w-3.5 h-3.5 inline" /> Adicionar à Tela de Início</span>.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3.5 items-start text-xs text-slate-600 dark:text-zinc-300">
-                                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700 font-bold text-slate-800 dark:text-zinc-200">3</div>
-                                    <p className="leading-relaxed">
-                                        Toque em <span className="font-bold text-slate-900 dark:text-zinc-50">Adicionar</span> no canto superior direito para confirmar.
-                                    </p>
+                            <div className="space-y-4 text-left">
+                                <button
+                                    onClick={handleShareClick}
+                                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98]"
+                                >
+                                    <Share className="w-4 h-4" />
+                                    Abrir Compartilhamento
+                                </button>
+
+                                <div className="bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 rounded-xl p-4 space-y-3.5">
+                                    <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">Como instalar no iPhone/iPad:</h4>
+                                    
+                                    <div className="flex gap-3.5 items-start text-xs text-slate-600 dark:text-zinc-300">
+                                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700 font-bold text-slate-800 dark:text-zinc-200">1</div>
+                                        <p className="leading-relaxed">
+                                            Toque no botão <button onClick={handleShareClick} className="inline-flex items-center gap-0.5 font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer bg-transparent border-none p-0 align-baseline"><Share className="w-3.5 h-3.5 inline mr-0.5" /> Compartilhar</button> acima (ou use o ícone de compartilhar na barra inferior do seu Safari).
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="flex gap-3.5 items-start text-xs text-slate-600 dark:text-zinc-300">
+                                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700 font-bold text-slate-800 dark:text-zinc-200">2</div>
+                                        <p className="leading-relaxed">
+                                            Na lista de opções que abrir, role para baixo e toque em <span className="inline-flex items-center gap-1 font-bold text-slate-900 dark:text-zinc-50"><PlusSquare className="w-3.5 h-3.5 inline" /> Adicionar à Tela de Início</span>.
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="flex gap-3.5 items-start text-xs text-slate-600 dark:text-zinc-300">
+                                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700 font-bold text-slate-800 dark:text-zinc-200">3</div>
+                                        <p className="leading-relaxed">
+                                            Toque em <span className="font-bold text-slate-900 dark:text-zinc-50">Adicionar</span> no canto superior direito para confirmar.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         ) : null}
