@@ -203,6 +203,17 @@ const helpItems: HelpItem[] = [
         tags: ['soap', 'cif', 'dap', 'modelos', 'padronização']
     },
     {
+        id: 'template-multidisciplinar',
+        title: 'Template Multidisciplinar',
+        category: 'Prontuário',
+        icon: FileText,
+        whatIsIt: 'Modelo de evolução estruturado especificamente para clínicas de terapia integrada e multidisciplinar. Contém 6 campos essenciais: Data/Horário, Objetivo Terapêutico, Estratégias Utilizadas, Desempenho do Paciente, Intercorrências e Orientações aos Responsáveis.',
+        whenToUse: 'Sempre que registrar o progresso de atendimentos de fonoaudiologia, terapia ocupacional, psicopedagogia, fisioterapia ou psicologia com foco na comunicação e orientações claras à família.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        tags: ['multidisciplinar', 'evolução', 'terapias', 'campos integrados']
+    },
+    {
         id: 'planos-terapeuticos',
         title: 'Planos Terapêuticos',
         category: 'Prontuário',
