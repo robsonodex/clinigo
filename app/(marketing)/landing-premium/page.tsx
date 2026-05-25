@@ -71,7 +71,7 @@ export default function LandingPremium() {
                         >
                             <div className="inline-flex items-center gap-2 py-1 px-4 rounded-full bg-teal-vibrant/5 border border-teal-vibrant/20 text-teal-vibrant text-xs font-bold tracking-wider uppercase mb-8 hover:bg-teal-vibrant/10 transition-colors cursor-default">
                                 <Sparkles className="w-3 h-3" />
-                                Gestão Médica Inteligente
+                                Otimizado para Psicologia, Terapias (T.O., Fono, Fisio) e Consultórios
                             </div>
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
                                 A Plataforma{' '}
@@ -85,7 +85,7 @@ export default function LandingPremium() {
                                 </span>
                             </h1>
                             <p className="text-lg md:text-xl text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
-                                Enquanto outros têm agenda e prontuário, o CliniGo tem totem, check-in facial, TISS completo e WhatsApp nativo — tudo integrado, do agendamento ao repasse. Não existe outro sistema assim. Agora existe.
+                                Desenvolvido sob medida para clínicas multidisciplinares, psicologia, reabilitação e consultórios de saúde. O único com agenda integrada, prontuários adaptativos e WhatsApp nativo para falar a língua da sua especialidade.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <a href="https://wa.me/5521965532247?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20CliniGo" target="_blank" rel="noopener noreferrer" className="h-14 px-8 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
