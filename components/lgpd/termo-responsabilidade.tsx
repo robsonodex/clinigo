@@ -13,7 +13,7 @@ interface TermoResponsabilidadeProps {
 
 const TERMO_COMPLETO = `
 # TERMO DE RESPONSABILIDADE E USO PROFISSIONAL
-## CliniGo - Plataforma de Teleconsultoria Médica
+## CliniGo - Plataforma de Gestão Clínica e Prontuário
 
 **Data de Vigência:** 01 de Janeiro de 2026
 **Versão:** 1.0
@@ -22,9 +22,9 @@ const TERMO_COMPLETO = `
 
 ### 1. NATUREZA DO SERVIÇO
 
-1.1. O CliniGo é uma plataforma tecnológica que fornece ferramentas para agendamento, gestão e realização de teleconsultas médicas.
+1.1. O CliniGo é uma plataforma tecnológica que fornece ferramentas para agendamento, prontuário eletrônico e gestão clínica.
 
-1.2. O CliniGo **NÃO** presta serviços médicos. Toda consulta é realizada por profissional de saúde devidamente habilitado, com registro ativo no Conselho Regional de Medicina.
+1.2. O CliniGo **NÃO** presta serviços médicos ou terapêuticos. Toda consulta ou sessão é realizada por profissional de saúde devidamente habilitado.
 
 1.3. A relação médico-paciente é estabelecida diretamente entre o profissional e o paciente. O CliniGo atua exclusivamente como intermediador tecnológico.
 

@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
     title: 'CliniGO',
-    description: 'Sistema de teleconsultoria médica',
+    description: 'Sistema de Gestão Clínica e Prontuário Eletrônico',
     manifest: '/manifest.json',
     icons: {
         icon: [

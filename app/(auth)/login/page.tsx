@@ -86,7 +86,7 @@ export default function LoginPage() {
                         />
                     </Link>
                     <p className="text-muted-foreground mt-2">
-                        Teleconsultoria médica
+                        Gestão clínica e prontuário
                     </p>
                 </div>
 

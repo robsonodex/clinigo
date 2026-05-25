@@ -129,7 +129,7 @@ function TriagemContent({ params }: PageProps) {
                         <Heart className="w-4 h-4 text-rose-500" />
                         <span>Sua saúde em primeiro lugar</span>
                     </div>
-                    <p>© 2026 {clinic?.name || 'CliniGo'}. Teleconsultoria médica.</p>
+                    <p>© 2026 {clinic?.name || 'CliniGo'}. Gestão clínica e prontuário eletrônico.</p>
                 </div>
             </footer>
         </div>
