@@ -25,11 +25,11 @@ const navItems: NavItem[] = [
 
 export function MobileBottomNav() {
     const pathname = usePathname()
-    const { role } = useRole()
+    const { role, isCoordinator } = useRole()
 
     const filteredItems = navItems
         .map(item => {
-            if (item.href === '/dashboard/agenda' && role === 'DOCTOR') {
+            if (item.href === '/dashboard/agenda' && role === 'DOCTOR' && !isCoordinator) {
                 return { ...item, href: '/dashboard/minha-agenda' }
             }
             return item

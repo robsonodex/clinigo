@@ -969,8 +969,8 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         if (role === 'SUPER_ADMIN' && ['/dashboard/planos', '/dashboard/grupos', '/dashboard/cobranca'].includes(item.href)) return false
                         return true
                     }
-                    // Coordenadoras DOCTOR também veem Documentos
-                    if (role === 'DOCTOR' && isCoordinator && item.href === '/dashboard/documentos') return true
+                    // Coordenadoras DOCTOR também veem Documentos e Agenda Geral
+                    if (role === 'DOCTOR' && isCoordinator && ['/dashboard/documentos', '/dashboard/agenda'].includes(item.href)) return true
                     return false
                 })
                 .map(item => ({

@@ -132,10 +132,24 @@ export async function GET(
             }
         }
 
+        // Safe fetch for user who cancelled the appointment
+        let cancelledByName = null
+        if ((appointment as any).cancelled_by) {
+            const { data: canceller } = await supabase
+                .from('users')
+                .select('full_name')
+                .eq('id', (appointment as any).cancelled_by)
+                .single()
+            if (canceller) {
+                cancelledByName = canceller.full_name
+            }
+        }
+
         return successResponse({
             ...(appointment as any),
             qr_code: qrCode,
-            video_room: videoRoom
+            video_room: videoRoom,
+            cancelled_by_name: cancelledByName
         })
 
     } catch (error) {

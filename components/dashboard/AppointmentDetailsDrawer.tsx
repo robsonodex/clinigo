@@ -338,9 +338,47 @@ export function AppointmentDetailsDrawer({
                             </div>
                             <div>
                                 <Label>Status</Label>
-                                <Badge>{appointment.status}</Badge>
+                                <div className="mt-1">
+                                    <Badge variant="outline" className={
+                                        appointment.status === 'PENDING' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200' :
+                                        appointment.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 font-medium' :
+                                        appointment.status === 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 border-red-200 font-semibold' :
+                                        appointment.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200' :
+                                        'bg-slate-100 text-slate-800 dark:bg-slate-950/30 dark:text-slate-400 border-slate-200'
+                                    }>
+                                        {
+                                            appointment.status === 'PENDING' ? 'Pendente' :
+                                            appointment.status === 'CONFIRMED' ? 'Confirmado' :
+                                            appointment.status === 'CANCELLED' ? 'Cancelado' :
+                                            appointment.status === 'COMPLETED' ? 'Realizado' :
+                                            appointment.status === 'NO_SHOW' ? 'Falta' : appointment.status
+                                        }
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
+
+                        {appointment.status === 'CANCELLED' && (
+                            <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/50 rounded-lg p-4 space-y-2.5">
+                                <h4 className="font-semibold text-sm text-red-800 dark:text-red-400 flex items-center gap-1.5">
+                                    ⚠️ Informações do Cancelamento
+                                </h4>
+                                <div className="space-y-1.5 text-xs">
+                                    <div>
+                                        <span className="text-muted-foreground font-medium">Justificativa:</span>
+                                        <p className="mt-0.5 text-sm text-foreground bg-white dark:bg-slate-900 border border-red-200/40 p-2 rounded italic">
+                                            &ldquo;{appointment.cancellation_reason || 'Nenhuma justificativa fornecida.'}&rdquo;
+                                        </p>
+                                    </div>
+                                    {appointment.cancelled_by_name && (
+                                        <div className="flex items-center gap-1 mt-1 text-muted-foreground">
+                                            <span>Responsável pelo cancelamento:</span>
+                                            <span className="font-semibold text-foreground">{appointment.cancelled_by_name}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="pt-2">
                             <Button 

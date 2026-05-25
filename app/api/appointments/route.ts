@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         // Get user's clinic and doctor_id if applicable
         const { data: currentUser } = await supabase
             .from('users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, is_coordinator')
             .eq('id', userId)
             .single()
 
@@ -79,8 +79,11 @@ export async function GET(request: NextRequest) {
         if (query.status) {
             queryBuilder = queryBuilder.eq('status', query.status)
         }
-        if (query.doctor_id && userRole !== 'DOCTOR') {
+        const isCoordinator = !!currentUser?.is_coordinator
+        if (query.doctor_id && (userRole !== 'DOCTOR' || isCoordinator)) {
             queryBuilder = queryBuilder.eq('doctor_id', query.doctor_id)
+        } else if (userRole === 'DOCTOR' && !isCoordinator && doctorId) {
+            queryBuilder = queryBuilder.eq('doctor_id', doctorId)
         }
         if (query.patient_id) {
             queryBuilder = queryBuilder.eq('patient_id', query.patient_id)

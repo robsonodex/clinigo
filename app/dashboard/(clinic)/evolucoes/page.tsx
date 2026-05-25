@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer, ChevronDown, ChevronUp } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
 
-const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP' }
+const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP', multidisciplinar: 'Multidisciplinar' }
 const MOOD_LABELS = ['Muito Baixo', 'Baixo', 'Neutro', 'Bom', 'Excelente']
 
 export default function SessionEvolutionsPage() {
@@ -23,6 +23,7 @@ export default function SessionEvolutionsPage() {
     const [patients, setPatients] = useState<any[]>([])
     const [doctors, setDoctors] = useState<any[]>([])
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [expandedEvolutions, setExpandedEvolutions] = useState<Set<string>>(new Set())
     const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
     const [currentDoctorId, setCurrentDoctorId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
@@ -34,6 +35,15 @@ export default function SessionEvolutionsPage() {
     const [templateType, setTemplateType] = useState('soap')
     const [signModalOpen, setSignModalOpen] = useState(false)
     const [recordToSign, setRecordToSign] = useState<string | null>(null)
+
+    const toggleExpand = (id: string) => {
+        setExpandedEvolutions(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
 
     const emptyForm = {
         patient_id: '', doctor_id: '', appointment_id: '', plan_id: '',
@@ -235,6 +245,35 @@ export default function SessionEvolutionsPage() {
                                     <div><Label>P — Plano</Label><Textarea placeholder="Plano de ação para próximas sessões..." value={form.plan_action} onChange={e => setForm(p => ({ ...p, plan_action: e.target.value }))} rows={3} /></div>
                                 </div>
                             )}
+                            {templateType === 'multidisciplinar' && (
+                                <div className="space-y-3 border border-emerald-200 dark:border-emerald-900 rounded-lg p-4 bg-emerald-50/10 dark:bg-emerald-950/5">
+                                    <h4 className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">Template Multidisciplinar</h4>
+                                    <div>
+                                        <Label>Data e Horário do Atendimento</Label>
+                                        <Input placeholder="Ex: 25/05/2026 às 14:00" value={form.data_description} onChange={e => setForm(p => ({ ...p, data_description: e.target.value }))} />
+                                    </div>
+                                    <div>
+                                        <Label>Objetivo Terapêutico</Label>
+                                        <Textarea placeholder="Descreva o objetivo terapêutico da sessão..." value={form.subjective} onChange={e => setForm(p => ({ ...p, subjective: e.target.value }))} rows={3} />
+                                    </div>
+                                    <div>
+                                        <Label>Estratégias/Intervenções Utilizadas</Label>
+                                        <Textarea placeholder="Descreva as estratégias e intervenções realizadas..." value={form.objective} onChange={e => setForm(p => ({ ...p, objective: e.target.value }))} rows={3} />
+                                    </div>
+                                    <div>
+                                        <Label>Desempenho do Paciente</Label>
+                                        <Textarea placeholder="Como foi o desempenho do paciente na sessão..." value={form.assessment} onChange={e => setForm(p => ({ ...p, assessment: e.target.value }))} rows={3} />
+                                    </div>
+                                    <div>
+                                        <Label>Intercorrências</Label>
+                                        <Textarea placeholder="Houve alguma intercorrência durante o atendimento?" value={form.plan_notes} onChange={e => setForm(p => ({ ...p, plan_notes: e.target.value }))} rows={3} />
+                                    </div>
+                                    <div>
+                                        <Label>Orientações aos Responsáveis</Label>
+                                        <Textarea placeholder="Orientações e recomendações passadas aos pais ou responsáveis..." value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))} rows={3} />
+                                    </div>
+                                </div>
+                            )}
                             {templateType === 'free' && (
                                 <div><Label>Conteúdo</Label><Textarea placeholder="Registre livremente a evolução da sessão..." value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))} rows={8} /></div>
                             )}
@@ -371,17 +410,79 @@ export default function SessionEvolutionsPage() {
                                             ) : null}
                                         </div>
                                         <p className="text-sm text-muted-foreground">Profissional: {getName(ev.doctors)}</p>
-                                        {ev.template_type === 'soap' && ev.subjective && <p className="text-sm mt-1 line-clamp-2"><strong>S:</strong> {ev.subjective}</p>}
-                                        {ev.template_type === 'cif' && ev.body_functions && <p className="text-sm mt-1 line-clamp-2"><strong>Funções:</strong> {ev.body_functions}</p>}
-                                        {ev.template_type === 'dap' && ev.data_description && <p className="text-sm mt-1 line-clamp-2"><strong>D:</strong> {ev.data_description}</p>}
-                                        {ev.template_type === 'free' && ev.content && <p className="text-sm mt-1 line-clamp-2">{ev.content}</p>}
+                                        {expandedEvolutions.has(ev.id) ? (
+                                            <div className="mt-4 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/40 space-y-3 text-sm">
+                                                {ev.template_type === 'soap' && (
+                                                    <>
+                                                        <div><strong className="text-slate-500">S — Subjetivo:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.subjective || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">O — Objetivo:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.objective || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">A — Avaliação:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.assessment || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">P — Plano:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.plan_notes || '-'}</p></div>
+                                                    </>
+                                                )}
+                                                {ev.template_type === 'cif' && (
+                                                    <>
+                                                        <div><strong className="text-slate-500">Funções do Corpo:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.body_functions || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">Atividades e Participação:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.activities_participation || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">Fatores Ambientais:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.environmental_factors || '-'}</p></div>
+                                                    </>
+                                                )}
+                                                {ev.template_type === 'dap' && (
+                                                    <>
+                                                        <div><strong className="text-slate-500">D — Dados:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.data_description || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">A — Avaliação:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.analysis || '-'}</p></div>
+                                                        <div><strong className="text-slate-500">P — Plano:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.plan_action || '-'}</p></div>
+                                                    </>
+                                                )}
+                                                {ev.template_type === 'multidisciplinar' && (
+                                                    <>
+                                                        <div><strong className="text-emerald-600 dark:text-emerald-400">Data e Horário do Atendimento:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.data_description || '-'}</p></div>
+                                                        <div><strong className="text-emerald-600 dark:text-emerald-400">Objetivo Terapêutico:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.subjective || '-'}</p></div>
+                                                        <div><strong className="text-emerald-600 dark:text-emerald-400">Estratégias/Intervenções Utilizadas:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.objective || '-'}</p></div>
+                                                        <div><strong className="text-emerald-600 dark:text-emerald-400">Desempenho do Paciente:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.assessment || '-'}</p></div>
+                                                        <div><strong className="text-emerald-600 dark:text-emerald-400">Intercorrências:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.plan_notes || '-'}</p></div>
+                                                        <div><strong className="text-emerald-600 dark:text-emerald-400">Orientações aos Responsáveis:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.content || '-'}</p></div>
+                                                    </>
+                                                )}
+                                                {ev.template_type === 'free' && (
+                                                    <div><strong className="text-slate-500">Conteúdo:</strong> <p className="mt-1 whitespace-pre-wrap">{ev.content || '-'}</p></div>
+                                                )}
+
+                                                <div className="pt-2 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                                    <div><strong className="text-slate-500">Resposta do Paciente:</strong> <p className="mt-1">{ev.patient_response || '-'}</p></div>
+                                                    <div><strong className="text-slate-500">Técnicas Utilizadas:</strong> <p className="mt-1">{ev.techniques_used || '-'}</p></div>
+                                                    <div className="sm:col-span-2"><strong className="text-slate-500">Objetivos para Próxima Sessão:</strong> <p className="mt-1">{ev.next_session_goals || '-'}</p></div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {ev.template_type === 'soap' && ev.subjective && <p className="text-sm mt-1 line-clamp-2"><strong>S:</strong> {ev.subjective}</p>}
+                                                {ev.template_type === 'cif' && ev.body_functions && <p className="text-sm mt-1 line-clamp-2"><strong>Funções:</strong> {ev.body_functions}</p>}
+                                                {ev.template_type === 'dap' && ev.data_description && <p className="text-sm mt-1 line-clamp-2"><strong>D:</strong> {ev.data_description}</p>}
+                                                {ev.template_type === 'multidisciplinar' && ev.subjective && <p className="text-sm mt-1 line-clamp-2"><strong>Objetivo:</strong> {ev.subjective}</p>}
+                                                {ev.template_type === 'free' && ev.content && <p className="text-sm mt-1 line-clamp-2">{ev.content}</p>}
+                                            </>
+                                        )}
                                         <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                                             {ev.mood_rating && <span>Humor: {MOOD_LABELS[ev.mood_rating - 1]}</span>}
                                             {ev.engagement_rating && <span>Engajamento: {MOOD_LABELS[ev.engagement_rating - 1]}</span>}
                                         </div>
                                     </div>
-                                    <div className="flex gap-1 ml-4">
-                                        <Button variant="ghost" size="icon" title="Imprimir / Exportar PDF" onClick={() => window.open(`/api/session-evolutions/pdf?id=${ev.id}`, '_blank')}>
+                                    <div className="flex gap-1 ml-4 items-center">
+                                        <Button variant="outline" size="sm" className="text-xs h-8 px-2.5 gap-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/50 dark:hover:bg-slate-900 border" onClick={() => toggleExpand(ev.id)}>
+                                            {expandedEvolutions.has(ev.id) ? (
+                                                <>
+                                                    <ChevronUp className="h-3.5 w-3.5" />
+                                                    Recolher
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronDown className="h-3.5 w-3.5" />
+                                                    Visualizar
+                                                </>
+                                            )}
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Imprimir / Exportar PDF" onClick={() => window.open(`/api/session-evolutions/pdf?id=${ev.id}`, '_blank')}>
                                             <Printer className="h-4 w-4" />
                                         </Button>
                                         {canEdit(ev) ? (

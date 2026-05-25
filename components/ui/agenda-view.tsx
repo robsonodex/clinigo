@@ -180,7 +180,7 @@ function calcEndTime(startTime: string, durationMinutes: number = 60): string {
 
 export default function AgendaPage() {
     const router = useRouter()
-    const { isDoctor } = useRole()
+    const { isDoctor, isCoordinator } = useRole()
     const { user } = useAuth()
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [view, setView] = useState<'week' | 'day'>('week')
@@ -217,10 +217,14 @@ export default function AgendaPage() {
         if (isDoctor && user && doctorsList && Array.isArray(doctorsList)) {
             const myDoctor = doctorsList.find((d: any) => d.user_id === user.id)
             if (myDoctor) {
-                setSelectedDoctorFilter(myDoctor.id)
+                if (isCoordinator) {
+                    setSelectedDoctorFilter(prev => prev === 'all' ? myDoctor.id : prev)
+                } else {
+                    setSelectedDoctorFilter(myDoctor.id)
+                }
             }
         }
-    }, [isDoctor, user, doctorsList])
+    }, [isDoctor, isCoordinator, user, doctorsList])
 
     // Fetch schedules for free slots view (Agenda Inversa)
     const { data: schedulesData } = useQuery({
@@ -341,20 +345,18 @@ export default function AgendaPage() {
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
-                a.status !== 'CANCELLED' &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         )
     }
 
-    // Get all non-cancelled appointments for a given day (for timeline view)
+    // Get all appointments for a given day (for timeline view)
     const getAppointmentsForDay = (date: Date): Appointment[] => {
         if (!appointments || !Array.isArray(appointments)) return []
         const dateStr = format(date, 'yyyy-MM-dd')
         const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
-                a.status !== 'CANCELLED' &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
@@ -593,7 +595,7 @@ export default function AgendaPage() {
                     
                     <div className="hidden md:block w-px h-6 bg-border mx-1" />
                     
-                    <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor}>
+                    <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor && !isCoordinator}>
                         <SelectTrigger className="w-full md:w-[220px] lg:w-[280px] h-8 text-xs">
                             <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
                             <div className="flex-1 truncate text-left">
@@ -879,7 +881,7 @@ export default function AgendaPage() {
                                                                             className={cn(
                                                                                 'w-full rounded-lg border-l-4 p-1.5 text-xs flex flex-col shadow-sm cursor-pointer hover:shadow-lg transition-all',
                                                                                 isCancelled
-                                                                                    ? 'bg-red-50 border-l-red-500 text-red-700 opacity-80'
+                                                                                    ? 'bg-red-50/90 dark:bg-red-950/20 border-l-red-500 text-red-700 dark:text-red-400 opacity-75 border-red-200/50'
                                                                                     : isCompleted
                                                                                         ? 'bg-gray-100 border-l-gray-400 text-gray-500 opacity-60'
                                                                                         : `${doctorColor.bg} ${doctorColor.text}`,
@@ -894,7 +896,7 @@ export default function AgendaPage() {
                                                                             }}
                                                                         >
                                                                             {/* Patient Name */}
-                                                                            <div className="font-bold truncate text-sm leading-tight">
+                                                                            <div className={cn("font-bold truncate text-sm leading-tight", isCancelled && "line-through opacity-70")}>
                                                                                 {appointment.patient.full_name}
                                                                             </div>
 
@@ -1128,7 +1130,7 @@ export default function AgendaPage() {
                                                                                     className={cn(
                                                                                         'px-2 py-0.5 text-white cursor-pointer hover:brightness-110 transition-all flex flex-col justify-center overflow-hidden rounded-sm relative group/item',
                                                                                         isCancelled
-                                                                                            ? 'bg-red-500 opacity-80'
+                                                                                            ? 'bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-900 text-red-800 dark:text-red-400 line-through font-medium opacity-80'
                                                                                             : isCompleted
                                                                                                 ? 'bg-gray-400 opacity-60'
                                                                                                 : timelineColor,

@@ -12,7 +12,7 @@ import { log } from '@/lib/logger'
 export const maxDuration = 15
 export const dynamic = 'force-dynamic'
 
-const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP' }
+const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP', multidisciplinar: 'Multidisciplinar' }
 
 export async function GET(request: NextRequest) {
     try {
@@ -133,6 +133,13 @@ export async function GET(request: NextRequest) {
             addSection('D — Dados', record.data_description)
             addSection('A — Avaliação', record.analysis)
             addSection('P — Plano', record.plan_action)
+        } else if (record.template_type === 'multidisciplinar') {
+            addSection('Data e Horário do Atendimento', record.data_description)
+            addSection('Objetivo Terapêutico', record.subjective)
+            addSection('Estratégias/Intervenções Utilizadas', record.objective)
+            addSection('Desempenho do Paciente', record.assessment)
+            addSection('Intercorrências', record.plan_notes)
+            addSection('Orientações aos Responsáveis', record.content)
         } else if (record.template_type === 'free') {
             addSection('Conteúdo', record.content)
         }
