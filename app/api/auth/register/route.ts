@@ -194,38 +194,62 @@ export async function POST(request: NextRequest) {
         // ============================================
         const { sendMail } = await import('@/lib/services/mail-service')
 
-        // Email 1: To Super Admin (notification of new clinic)
-        const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || process.env.SMTP_USER
-        if (superAdminEmail) {
-            const approveLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/super/clinicas-pendentes`
+        // Email 1: To Super Admin (notificação de novo trial de 7 dias para os e-mails informados)
+        const emailsToNotify = ['contato@clinigo.app', 'contato.clinigo@gmail.com']
+        const approveLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/dashboard/super/clinicas-pendentes`
 
-            await sendMail({
-                to: superAdminEmail,
-                subject: 'Nova Clínica Aguardando Aprovação - CliniGo',
-                html: `
-                    <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
-                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 24px;">Nova Clínica Aguardando Aprovação</h1>
-                        </div>
-                        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
-                            <h3 style="color: #1f2937; margin-top: 0;">Dados do Cadastro:</h3>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr><td style="padding: 8px 0; color: #6b7280;">Clínica:</td><td style="padding: 8px 0; font-weight: bold;">${data.clinic_name}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #6b7280;">CNPJ:</td><td style="padding: 8px 0;">${data.cnpj || 'Não informado'}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #6b7280;">Responsável:</td><td style="padding: 8px 0;">${data.full_name}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #6b7280;">E-mail:</td><td style="padding: 8px 0;">${data.email}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #6b7280;">Telefone:</td><td style="padding: 8px 0;">${data.phone || data.responsible_phone || 'Não informado'}</td></tr>
-                                <tr><td style="padding: 8px 0; color: #6b7280;">Plano:</td><td style="padding: 8px 0;">${data.plan_type || 'BASIC'}</td></tr>
-                            </table>
-                            <div style="text-align: center; margin: 25px 0;">
-                                <a href="${approveLink}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">
-                                    REVISAR E APROVAR
-                                </a>
-                            </div>
-                        </div>
+        const notificationHtml = `
+            <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+                <div style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">Novo Cliente Trial 7 Dias</h1>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
+                    <h3 style="color: #1f2937; margin-top: 0;">Dados do Cadastro:</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 8px 0; color: #6b7280;">Responsável:</td><td style="padding: 8px 0; font-weight: bold;">${data.full_name}</td></tr>
+                        <tr><td style="padding: 8px 0; color: #6b7280;">Nome da Clínica/Consultório:</td><td style="padding: 8px 0; font-weight: bold;">${data.clinic_name}</td></tr>
+                        <tr><td style="padding: 8px 0; color: #6b7280;">E-mail:</td><td style="padding: 8px 0;">${data.email}</td></tr>
+                        <tr><td style="padding: 8px 0; color: #6b7280;">WhatsApp/Telefone:</td><td style="padding: 8px 0; font-weight: bold;">${data.phone || 'Não informado'}</td></tr>
+                        <tr><td style="padding: 8px 0; color: #6b7280;">Plano:</td><td style="padding: 8px 0;">${data.plan_type || 'AVANCADO'}</td></tr>
+                    </table>
+                    <div style="text-align: center; margin: 25px 0;">
+                        <a href="${approveLink}" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">
+                            GERENCIAR NO PAINEL SUPER ADMIN
+                        </a>
                     </div>
-                `
-            })
+                </div>
+            </div>
+        `
+
+        for (const email of emailsToNotify) {
+            try {
+                await sendMail({
+                    to: email,
+                    subject: `🎁 Novo Cliente Trial 7 Dias - ${data.full_name}`,
+                    html: notificationHtml
+                })
+            } catch (mailErr) {
+                console.error(`[Register] Erro ao enviar e-mail de notificação para ${email}:`, mailErr)
+            }
+        }
+
+        // ============================================
+        // WHATSAPP NOTIFICATION
+        // ============================================
+        try {
+            const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
+            const waMessage = `🎁 *Novo Cliente Trial (7 Dias) se cadastrou!* 🎁\n\n` +
+                `👤 *Nome:* ${data.full_name}\n` +
+                `🏥 *Clínica/Consultório:* ${data.clinic_name}\n` +
+                `📧 *E-mail:* ${data.email}\n` +
+                `📱 *WhatsApp do cliente:* ${data.phone || 'Não informado'}\n\n` +
+                `🚀 _Acesse em segundos. Sem cartão._`
+
+            // Envia do bot 21 990400577 (clin-sales-bot) para o comercial 21 96553-2247
+            await sendWhatsAppMessage('clin-sales-bot', '21965532247', waMessage, 'trial-notification')
+            console.log('[Register] WhatsApp notification successfully sent to (21) 96553-2247')
+        } catch (waError) {
+            console.error('[Register] Failed to send WhatsApp notification:', waError)
         }
 
         // Email 2: To Clinic (Welcome with trial access and password)

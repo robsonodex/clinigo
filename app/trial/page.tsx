@@ -45,7 +45,7 @@ export default function TrialPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!form.full_name || !form.email || !form.clinic_name || !form.password) {
+        if (!form.full_name || !form.email || !form.phone || !form.password) {
             toast.error('Preencha todos os campos obrigatórios')
             return
         }
@@ -57,6 +57,10 @@ export default function TrialPage() {
 
         setIsLoading(true)
 
+        // Se o nome da clínica estiver vazio, salva automaticamente como "Consultório de [Primeiro Nome]"
+        const firstName = form.full_name.trim().split(' ')[0] || 'Profissional'
+        const finalClinicName = form.clinic_name.trim() || `Consultório de ${firstName}`
+
         try {
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
@@ -65,7 +69,7 @@ export default function TrialPage() {
                     email: form.email,
                     password: form.password,
                     full_name: form.full_name,
-                    clinic_name: form.clinic_name,
+                    clinic_name: finalClinicName,
                     phone: form.phone.replace(/\D/g, '') || undefined,
                 }),
             })
@@ -170,11 +174,14 @@ export default function TrialPage() {
 
                                 <div className="relative z-10">
                                     <div className="text-center mb-6">
+                                        <div className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-teal-vibrant/10 border border-teal-vibrant/20 text-teal-vibrant text-[11px] font-semibold mb-3">
+                                            <span>🎁 7 dias completos. Todas as funcionalidades liberadas.</span>
+                                        </div>
                                         <h2 className="text-xl font-bold text-white mb-1">
                                             Comece seu teste grátis
                                         </h2>
                                         <p className="text-sm text-slate-400">
-                                            Preencha os dados e acesse em segundos
+                                            Sem cartão. Cancele quando quiser. Acesse em segundos.
                                         </p>
                                     </div>
 
@@ -218,12 +225,13 @@ export default function TrialPage() {
                                         {/* Telefone */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                                WhatsApp / Telefone
+                                                WhatsApp / Telefone *
                                             </label>
                                             <div className="relative">
                                                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                                 <input
                                                     type="tel"
+                                                    required
                                                     value={form.phone}
                                                     onChange={e => updateField('phone', e.target.value)}
                                                     className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
@@ -235,17 +243,16 @@ export default function TrialPage() {
                                         {/* Nome da Clínica */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                                Nome da Clínica *
+                                                Nome da clínica ou consultório
                                             </label>
                                             <div className="relative">
                                                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                                 <input
                                                     type="text"
-                                                    required
                                                     value={form.clinic_name}
                                                     onChange={e => updateField('clinic_name', e.target.value)}
                                                     className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
-                                                    placeholder="Clínica Exemplo"
+                                                    placeholder="Clínica Exemplo ou Consultório Particular"
                                                 />
                                             </div>
                                         </div>
