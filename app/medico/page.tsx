@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -16,6 +16,22 @@ export default function MedicoLoginPage() {
         password: '',
         rememberMe: false
     })
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('clinigo_remember_medico')
+            if (saved) {
+                const parsed = JSON.parse(saved)
+                setFormData({
+                    crm: parsed.crm || '',
+                    password: parsed.password || '',
+                    rememberMe: true
+                })
+            }
+        } catch (e) {
+            console.error('Failed to load remembered credentials', e)
+        }
+    }, [])
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -41,6 +57,15 @@ export default function MedicoLoginPage() {
 
             if (!response.ok) {
                 throw new Error(data.error?.message || 'CRM/Email ou senha incorretos')
+            }
+
+            if (formData.rememberMe) {
+                localStorage.setItem('clinigo_remember_medico', JSON.stringify({
+                    crm: formData.crm,
+                    password: formData.password
+                }))
+            } else {
+                localStorage.removeItem('clinigo_remember_medico')
             }
 
             toast.success('Login realizado com sucesso!')

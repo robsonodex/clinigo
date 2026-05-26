@@ -17,6 +17,21 @@ export default function ClinicaLoginPage() {
         rememberMe: false
     })
 
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('clinigo_remember_clinica')
+            if (saved) {
+                const parsed = JSON.parse(saved)
+                setFormData({
+                    email: parsed.email || '',
+                    password: parsed.password || '',
+                    rememberMe: true
+                })
+            }
+        } catch (e) {
+            console.error('Failed to load remembered credentials', e)
+        }
+    }, [])
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -54,6 +69,15 @@ export default function ClinicaLoginPage() {
                     console.error('[LOGIN] Supabase code:', data.error.debug.supabaseCode)
                 }
                 throw new Error(data.error?.message || 'Email ou senha incorretos')
+            }
+
+            if (formData.rememberMe) {
+                localStorage.setItem('clinigo_remember_clinica', JSON.stringify({
+                    email: formData.email,
+                    password: formData.password
+                }))
+            } else {
+                localStorage.removeItem('clinigo_remember_clinica')
             }
 
             toast.success('Login realizado com sucesso!')

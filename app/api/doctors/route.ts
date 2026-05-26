@@ -24,18 +24,20 @@ export async function GET(request: NextRequest) {
         const query = listDoctorsQuerySchema.parse(Object.fromEntries(searchParams))
         const { page, pageSize, offset } = parsePaginationParams(searchParams)
 
-        // Use Service Role for CLINIC_ADMIN and RECEPTIONIST to bypass RLS issues (Trust inputs & filtering)
-        const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST')
+        const isPublicClinicRequest = !userRole && (!!query.clinic_slug || !!query.clinic_id)
+
+        // Use Service Role for CLINIC_ADMIN and RECEPTIONIST, or public requests to bypass RLS issues (Trust inputs & filtering)
+        const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || isPublicClinicRequest)
             ? createServiceRoleClient() as any
             : await createClient()
 
         console.log('[GET /api/doctors] Debug:', {
             userRole,
-            isServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST'),
+            isServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || isPublicClinicRequest),
             query: Object.fromEntries(searchParams)
         })
 
-        console.log('[GET /api/doctors] Using client:', userRole === 'SUPER_ADMIN' ? 'SERVICE_ROLE' : 'AUTHENTICATED')
+        console.log('[GET /api/doctors] Using client:', (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || isPublicClinicRequest) ? 'SERVICE_ROLE' : 'AUTHENTICATED')
 
         let clinicId: string | null = null
 

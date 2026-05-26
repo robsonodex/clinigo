@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -16,6 +16,22 @@ export default function PacienteLoginPage() {
         password: '',
         rememberMe: false
     })
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('clinigo_remember_paciente')
+            if (saved) {
+                const parsed = JSON.parse(saved)
+                setFormData({
+                    cpf: parsed.cpf || '',
+                    password: parsed.password || '',
+                    rememberMe: true
+                })
+            }
+        } catch (e) {
+            console.error('Failed to load remembered credentials', e)
+        }
+    }, [])
 
     const formatCPF = (value: string) => {
         const numbers = value.replace(/\D/g, '')
@@ -59,6 +75,15 @@ export default function PacienteLoginPage() {
 
             if (!response.ok) {
                 throw new Error(result.error || 'CPF ou senha incorretos')
+            }
+
+            if (formData.rememberMe) {
+                localStorage.setItem('clinigo_remember_paciente', JSON.stringify({
+                    cpf: formData.cpf,
+                    password: formData.password
+                }))
+            } else {
+                localStorage.removeItem('clinigo_remember_paciente')
             }
 
             toast.success(`Bem-vindo(a), ${result.patient?.name || 'Paciente'}!`)
