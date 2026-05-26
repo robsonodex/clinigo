@@ -87,38 +87,42 @@ export default function DoctorProfilePage({ params }: PageProps) {
             <main className="max-w-4xl mx-auto px-4 py-6">
                 {/* Perfil Horizontal */}
                 <div className="border-b pb-5 mb-5">
-                    <div className="flex gap-4 items-start">
-                        {/* Avatar */}
-                        {doctor.user.avatar_url ? (
-                            <Image
-                                src={doctor.user.avatar_url}
-                                alt={doctor.user.full_name}
-                                width={64}
-                                height={64}
-                                className="w-16 h-16 object-cover"
-                            />
-                        ) : (
-                            <div className="w-16 h-16 bg-gray-100 flex items-center justify-center text-sm font-medium">
-                                {getInitials(doctor.user.full_name)}
-                            </div>
-                        )}
-                        <div className="flex-1">
-                            <h1 className="font-medium">{doctor.user.full_name}</h1>
-                            <p className="text-sm text-gray-500">{doctor.specialty} - CRM {doctor.crm}/{doctor.crm_state}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                <span>Nota {rating.toFixed(1)} ({reviewCount} avaliacoes)</span>
-                                {experienceYears > 0 && (
-                                    <>
-                                        <span>|</span>
-                                        <span>{experienceYears}+ anos de experiencia</span>
-                                    </>
-                                )}
+                    <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
+                        <div className="flex gap-4 items-start flex-1 w-full">
+                            {/* Avatar */}
+                            {doctor.user.avatar_url ? (
+                                <Image
+                                    src={doctor.user.avatar_url}
+                                    alt={doctor.user.full_name}
+                                    width={64}
+                                    height={64}
+                                    className="w-16 h-16 rounded-full object-cover shrink-0"
+                                />
+                            ) : (
+                                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-medium shrink-0">
+                                    {getInitials(doctor.user.full_name)}
+                                </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <h1 className="font-semibold text-lg text-gray-900">{doctor.user.full_name}</h1>
+                                <p className="text-sm text-gray-600">{doctor.specialty} - CRM {doctor.crm}/{doctor.crm_state}</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-500">
+                                    <span className="bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded font-medium">★ {rating.toFixed(1)} ({reviewCount} avaliações)</span>
+                                    {experienceYears > 0 && (
+                                        <>
+                                            <span className="text-gray-300">|</span>
+                                            <span>{experienceYears}+ anos de experiência</span>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-lg font-medium">{formatCurrency(doctor.consultation_price)}</p>
-                            <p className="text-xs text-gray-500">por consulta</p>
-                            {hasTele && <p className="text-xs text-gray-400 mt-1">Teleconsulta disponivel</p>}
+                        <div className="text-left sm:text-right w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-0 border-gray-100 flex sm:flex-col justify-between items-center sm:items-end">
+                            <div>
+                                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(doctor.consultation_price)}</p>
+                                <p className="text-xs text-gray-500">por consulta</p>
+                            </div>
+                            {hasTele && <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full sm:mt-2">Teleconsulta</span>}
                         </div>
                     </div>
                 </div>
@@ -156,7 +160,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
                     <p className="text-sm font-medium mb-4">Horarios Disponiveis</p>
 
                     {/* Dias em abas */}
-                    <div className="flex border-b mb-4">
+                    <div className="flex border-b mb-4 overflow-x-auto whitespace-nowrap scrollbar-none scroll-smooth">
                         {dates.map((date, i) => {
                             const isSelected = selectedDate?.toDateString() === date.toDateString()
                             const isToday = date.toDateString() === today.toDateString()
@@ -167,12 +171,12 @@ export default function DoctorProfilePage({ params }: PageProps) {
                                         setSelectedDate(date)
                                         setSelectedTime(null)
                                     }}
-                                    className={`px-4 py-2 text-xs border-b-2 ${isSelected
-                                        ? 'border-black font-medium'
-                                        : 'border-transparent text-gray-400 hover:text-gray-600'
+                                    className={`px-4 py-2.5 text-xs font-medium border-b-2 shrink-0 transition-all ${isSelected
+                                        ? 'border-emerald-600 text-emerald-600 font-semibold'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
-                                    {isToday ? 'Hoje' : format(date, 'EEE', { locale: ptBR })} {format(date, 'd/MM')}
+                                    {isToday ? 'Hoje' : format(date, 'EEEE', { locale: ptBR })} {format(date, 'd/MM')}
                                 </button>
                             )
                         })}

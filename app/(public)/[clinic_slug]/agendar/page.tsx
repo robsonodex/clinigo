@@ -62,18 +62,18 @@ export default function BookingPage({ params }: PageProps) {
 
             <main className="max-w-4xl mx-auto px-4 py-6">
                 {/* Busca */}
-                <div className="flex gap-4 items-center border-b pb-5 mb-5">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center border-b pb-5 mb-5">
                     <input
                         type="text"
-                        placeholder="Buscar medico, especialidade..."
+                        placeholder="Buscar médico, especialidade..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="flex-1 h-9 px-3 text-sm border focus:outline-none focus:border-black"
+                        className="flex-1 h-10 px-3 text-sm border rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
                     />
                     <select
                         value={selectedSpecialty || ''}
                         onChange={(e) => setSelectedSpecialty(e.target.value || undefined)}
-                        className="h-9 px-3 text-sm border focus:outline-none focus:border-black"
+                        className="h-10 px-3 text-sm border rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-white"
                     >
                         <option value="">Todas especialidades</option>
                         {uniqueSpecialties.map(spec => (
