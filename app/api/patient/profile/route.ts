@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
                 date_of_birth,
                 health_score,
                 health_score_updated_at,
+                clinic_id,
                 created_at
             `)
             .eq('id', patient.sub)

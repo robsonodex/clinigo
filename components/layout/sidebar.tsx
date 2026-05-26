@@ -921,7 +921,7 @@ function NavItemComponent({
                     <Link
                         href={`/dashboard/help#${getHelpAnchor(item.title)}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full hover:bg-white/20 text-muted-foreground hover:text-foreground inline-flex items-center justify-center cursor-help"
+                        className="opacity-60 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 inline-flex items-center justify-center cursor-help"
                         title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
                     >
                         <HelpCircle className="w-3.5 h-3.5" />

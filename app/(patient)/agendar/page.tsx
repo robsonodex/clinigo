@@ -33,16 +33,32 @@ export default function PatientSchedulePage() {
     const [search, setSearch] = useState('')
 
     useEffect(() => {
-        loadClinics()
+        loadPatientProfileAndClinics()
     }, [])
 
-    const loadClinics = async () => {
+    const loadPatientProfileAndClinics = async () => {
         try {
-            // Buscar clínicas públicas do marketplace
+            // 1. Buscar perfil do paciente para identificar sua clínica vinculada
+            const profileRes = await fetch('/api/patient/profile')
+            let patientClinic = null
+            if (profileRes.ok) {
+                const profileData = await profileRes.json()
+                if (profileData?.patient?.clinic_id) {
+                    patientClinic = profileData.patient.clinic_id
+                }
+            }
+
+            // 2. Buscar clínicas públicas do marketplace
             const res = await fetch('/api/marketplace/clinics?limit=20')
             if (res.ok) {
                 const data = await res.json()
-                setClinics(data.clinics || [])
+                let allClinics = data.clinics || []
+                
+                // OBRIGATÓRIO: Se o paciente estiver logado e tiver clinic_id, filtrar para mostrar APENAS ela!
+                if (patientClinic) {
+                    allClinics = allClinics.filter((c: Clinic) => c.id === patientClinic)
+                }
+                setClinics(allClinics)
             }
         } catch (error) {
             console.error('Erro ao carregar clínicas:', error)
