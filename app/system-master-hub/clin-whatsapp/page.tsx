@@ -2,6 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { RefreshCw, Send, Trash2 } from 'lucide-react'
+
+interface AdminUser {
+  id: string
+  name: string
+  email: string
+  phone: string
+  role: string
+  clinicName: string
+  clinicId: string | null
+}
 
 export default function ClinWhatsAppPage() {
   const [status, setStatus] = useState<'loading' | 'disconnected' | 'connecting' | 'connected'>('loading')
@@ -9,6 +20,16 @@ export default function ClinWhatsAppPage() {
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Estados do Envio Manual de WhatsApp
+  const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [selectedAdminId, setSelectedAdminId] = useState('')
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [loadingAdmins, setLoadingAdmins] = useState(false)
+  const [sendingMsg, setSendingMsg] = useState(false)
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   const checkStatus = useCallback(async () => {
     try {
@@ -31,9 +52,85 @@ export default function ClinWhatsAppPage() {
     }
   }, [])
 
+  const loadAdmins = useCallback(async () => {
+    setLoadingAdmins(true)
+    try {
+      const res = await fetch('/api/super-admin/admins')
+      if (res.ok) {
+        const result = await res.json()
+        setAdmins(result.data || [])
+      }
+    } catch (e) {
+      console.error('Erro ao buscar administradores:', e)
+    } finally {
+      setLoadingAdmins(false)
+    }
+  }, [])
+
   useEffect(() => {
     checkStatus()
-  }, [checkStatus])
+    loadAdmins()
+  }, [checkStatus, loadAdmins])
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedAdminId) {
+      setSendError('Selecione um administrador para enviar a mensagem.')
+      return
+    }
+    if (!subject.trim()) {
+      setSendError('O campo Assunto é obrigatório.')
+      return
+    }
+    if (!message.trim()) {
+      setSendError('O campo Mensagem é obrigatório.')
+      return
+    }
+
+    const admin = admins.find(a => a.id === selectedAdminId)
+    if (!admin || !admin.phone) {
+      setSendError('Administrador selecionado não possui número de telefone cadastrado.')
+      return
+    }
+
+    setSendingMsg(true)
+    setSendError(null)
+    setSendSuccess(null)
+
+    const formattedText = `*Assunto:* ${subject.trim()}\n\n${message.trim()}`
+
+    try {
+      const res = await fetch('/api/clin-whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: admin.phone,
+          text: formattedText
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar mensagem')
+
+      setSendSuccess(`Mensagem enviada com sucesso para ${admin.name}!`)
+      setSubject('')
+      setMessage('')
+    } catch (err: any) {
+      setSendError(err.message || 'Erro inesperado ao enviar mensagem.')
+    } finally {
+      setSendingMsg(false)
+    }
+  }
+
+  const handleClearForm = () => {
+    if (confirm('Deseja limpar todos os campos?')) {
+      setSubject('')
+      setMessage('')
+      setSelectedAdminId('')
+      setSendSuccess(null)
+      setSendError(null)
+    }
+  }
 
   const handleConnect = async () => {
     setLoading(true)
@@ -213,6 +310,138 @@ export default function ClinWhatsAppPage() {
               </>
             )}
           </div>
+        </motion.div>
+
+        {/* Formulário de Envio Manual */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8 mt-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <span className="text-xl">💬</span>
+                Enviar Mensagem Manual
+              </h2>
+              <p className="text-gray-400 text-sm mt-1">
+                Envie mensagens estruturadas para o WhatsApp dos administradores cadastrados.
+              </p>
+            </div>
+            <button
+              onClick={loadAdmins}
+              disabled={loadingAdmins}
+              className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              title="Recarregar lista de administradores"
+            >
+              <RefreshCw className={`w-5 h-5 ${loadingAdmins ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {status !== 'connected' ? (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+              <p className="text-yellow-400 text-sm">
+                ⚠️ Conecte o WhatsApp no painel acima para habilitar o envio de mensagens manuais.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSendMessage} className="space-y-5">
+              {/* Dropdown Admins */}
+              <div>
+                <label className="text-gray-300 font-medium text-sm mb-2 block">
+                  Administrador & Clínica Destinatária
+                </label>
+                <select
+                  value={selectedAdminId}
+                  onChange={(e) => setSelectedAdminId(e.target.value)}
+                  className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                  required
+                >
+                  <option value="">Selecione o administrador...</option>
+                  {admins.map((admin) => (
+                    <option key={admin.id} value={admin.id}>
+                      {admin.clinicName} — {admin.name} ({admin.phone}) [{admin.role}]
+                    </option>
+                  ))}
+                </select>
+                {admins.length === 0 && !loadingAdmins && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Nenhum administrador com telefone cadastrado foi encontrado no banco de dados.
+                  </p>
+                )}
+              </div>
+
+              {/* Assunto */}
+              <div>
+                <label className="text-gray-300 font-medium text-sm mb-2 block">
+                  Assunto
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Confirmação de Assinatura, Atualização do Sistema..."
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                  required
+                />
+              </div>
+
+              {/* Mensagem */}
+              <div>
+                <label className="text-gray-300 font-medium text-sm mb-2 block">
+                  Mensagem
+                </label>
+                <textarea
+                  placeholder="Escreva o conteúdo detalhado da mensagem que será enviada pelo WhatsApp..."
+                  rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none"
+                  required
+                />
+              </div>
+
+              {/* Mensagens de feedback */}
+              {sendError && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                  <p className="text-red-400 text-sm">{sendError}</p>
+                </div>
+              )}
+
+              {sendSuccess && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                  <p className="text-emerald-400 text-sm">✅ {sendSuccess}</p>
+                </div>
+              )}
+
+              {/* Ações */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleClearForm}
+                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Limpar
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingMsg}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingMsg ? (
+                    <>Enviando...</>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Enviar Mensagem
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
         </motion.div>
 
         {/* How it works */}
