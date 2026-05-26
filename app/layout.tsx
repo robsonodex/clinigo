@@ -75,6 +75,9 @@ export const metadata: Metadata = {
     other: {
         'mobile-web-app-capable': 'yes',
     },
+    verification: {
+        google: 'KdqyntPwFiVd3T46JuwXlcL-bSerz4LX8fRdXOTzPLU',
+    },
 }
 
 export const viewport: Viewport = {
