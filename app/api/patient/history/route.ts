@@ -17,14 +17,13 @@ export async function GET(request: NextRequest) {
 
         // Buscar consultas realizadas (histórico)
         const { data: consultations, error: consultError } = await supabase
-            .from('consultations')
+            .from('appointments')
             .select(`
                 id,
-                date,
-                start_time,
-                end_time,
+                appointment_date,
+                appointment_time,
                 status,
-                consultation_type,
+                appointment_type,
                 doctor:doctors(
                     id,
                     specialty,
@@ -37,7 +36,7 @@ export async function GET(request: NextRequest) {
             `)
             .eq('patient_id', patient.sub)
             .eq('status', 'COMPLETED')
-            .order('date', { ascending: false })
+            .order('appointment_date', { ascending: false })
             .range(offset, offset + limit - 1)
 
         if (consultError) {
@@ -48,10 +47,10 @@ export async function GET(request: NextRequest) {
         // Formatar histórico (SEM dados do prontuário)
         const history = (consultations || []).map(c => ({
             id: c.id,
-            date: c.date,
-            startTime: c.start_time,
-            endTime: c.end_time,
-            type: c.consultation_type,
+            date: c.appointment_date,
+            startTime: c.appointment_time,
+            endTime: c.appointment_time,
+            type: c.appointment_type,
             doctor: {
                 name: (c.doctor as any)?.user?.full_name || 'Médico',
                 specialty: (c.doctor as any)?.specialty || 'Especialidade',
@@ -64,7 +63,7 @@ export async function GET(request: NextRequest) {
 
         // Contar total para paginação
         const { count } = await supabase
-            .from('consultations')
+            .from('appointments')
             .select('*', { count: 'exact', head: true })
             .eq('patient_id', patient.sub)
             .eq('status', 'COMPLETED')

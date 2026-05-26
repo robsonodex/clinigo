@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
                 appointment_date,
                 appointment_time,
                 status,
-                consultation_type,
+                appointment_type,
                 created_at,
                 doctor:doctors(
                     id,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
             date: apt.appointment_date,
             time: apt.appointment_time,
             status: apt.status,
-            type: apt.consultation_type,
+            type: apt.appointment_type,
             doctor: {
                 name: (apt.doctor as any)?.user?.full_name || 'Médico',
                 specialty: (apt.doctor as any)?.specialty || 'Especialidade',

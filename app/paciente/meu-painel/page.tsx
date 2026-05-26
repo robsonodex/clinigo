@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -130,7 +131,8 @@ export default function PatientDashboardPage() {
 
     const handleLogout = async () => {
         document.cookie = 'patient_token=; path=/paciente; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-        router.push('/paciente/entrar')
+        document.cookie = 'patient_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        router.push('/paciente')
     }
 
     const getStatusBadge = (status: string) => {
@@ -187,10 +189,15 @@ export default function PatientDashboardPage() {
             <header className="bg-white border-b border-slate-100 sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-blue-500 flex items-center justify-center shadow-sm">
-                            <Stethoscope className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-bold text-lg text-slate-800">Portal do Paciente</span>
+                        <Image
+                            src="/logo_black.svg"
+                            alt="CliniGo"
+                            width={110}
+                            height={28}
+                            className="h-7 w-auto"
+                        />
+                        <span className="text-slate-300 font-light text-lg">|</span>
+                        <span className="font-semibold text-base text-slate-800 tracking-tight">Portal do Paciente</span>
                     </div>
                     <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-destructive transition-colors">
                         <LogOut className="h-4 w-4 mr-2" />

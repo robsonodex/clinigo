@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,6 +33,11 @@ function formatCPF(value: string) {
 export default function PatientLoginPage() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        // Limpar cookie antigo com path restrito (/paciente) se houver, para evitar conflitos
+        document.cookie = 'patient_token=; path=/paciente; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    }, [])
 
     const {
         register,
@@ -67,6 +73,8 @@ export default function PatientLoginPage() {
                 throw new Error(result.error || 'Erro ao fazer login')
             }
 
+            // Garantir que limpamos o cookie com path restrito antes do push
+            document.cookie = 'patient_token=; path=/paciente; expires=Thu, 01 Jan 1970 00:00:00 GMT'
             toast.success(`Bem-vindo(a), ${result.patient.name}!`)
             router.push('/paciente/meu-painel')
 
@@ -80,11 +88,17 @@ export default function PatientLoginPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
             <Card className="w-full max-w-md shadow-lg">
-                <CardHeader className="text-center space-y-2">
-                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Stethoscope className="w-8 h-8 text-primary" />
+                <CardHeader className="text-center space-y-3">
+                    <div className="flex justify-center mb-1">
+                        <Image
+                            src="/logo_black.svg"
+                            alt="CliniGo"
+                            width={150}
+                            height={38}
+                            className="h-9 w-auto"
+                        />
                     </div>
-                    <CardTitle className="text-2xl">Portal do Paciente</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-slate-800 tracking-tight">Portal do Paciente</CardTitle>
                     <CardDescription>
                         Acesse seu histórico, consultas e agende atendimentos
                     </CardDescription>
