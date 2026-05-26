@@ -11,17 +11,58 @@ import ChatbotProvider from '@/components/chatbot/ChatbotProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-    title: 'CliniGO',
-    description: 'Sistema de Gestão Clínica e Prontuário Eletrônico',
+    title: 'CliniGO | O Melhor Sistema de Gestão de Clínicas e Consultórios',
+    description: 'CliniGO é o melhor software de gestão para clínicas e consultórios médicos e terapêuticos. Prontuário eletrônico adaptativo, agenda anti-overbooking, faturamento TISS, check-in facial e WhatsApp integrado. Teste grátis por 7 dias!',
+    keywords: [
+        'sistema de clinica',
+        'software para clinica',
+        'sistema para consultorio',
+        'prontuario eletronico',
+        'software de psicologia',
+        'faturamento TISS',
+        'check-in facial',
+        'agenda medica',
+        'clinigo',
+        'gestao de clinicas',
+        'software de terapia'
+    ],
     manifest: '/manifest.json',
     icons: {
         icon: [
-            { url: '/favicon.svg', type: 'image/svg+xml' },
+            { url: '/favicon.png', type: 'image/png' },
+            { url: '/favicon.ico', sizes: 'any' },
             { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
         apple: [
             { url: '/icons/icon-512x512.png', sizes: '512x512' },
         ],
+    },
+    openGraph: {
+        title: 'CliniGO | O Melhor Sistema de Gestão de Clínicas e Consultórios',
+        description: 'Prontuário eletrônico adaptativo, agenda integrada anti-overbooking, faturamento TISS completo, check-in facial inovador e automação por WhatsApp. Conheça o CliniGO.',
+        url: 'https://clinigo.app',
+        siteName: 'CliniGO',
+        images: [
+            {
+                url: 'https://clinigo.app/dashboard-preview.png',
+                width: 1200,
+                height: 630,
+                alt: 'CliniGO - Sistema de Gestão de Clínicas',
+            }
+        ],
+        locale: 'pt_BR',
+        type: 'website',
+    },
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            'max-video-preview': -1,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+        },
     },
     appleWebApp: {
         capable: true,

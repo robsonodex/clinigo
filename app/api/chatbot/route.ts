@@ -103,18 +103,9 @@ export async function POST(request: NextRequest) {
     // ========== BUSCAR OU CRIAR SESSÃO ==========
     const { data: existingSession } = await supabaseAdmin
       .from('chatbot_sessions')
-      .select('id, message_count, status, conversation_state')
+      .select('id, message_count, status, conversation_state, updated_at')
       .eq('session_id', sessionId)
       .single()
-
-    if (existingSession && existingSession.message_count >= MAX_MESSAGES_PER_SESSION) {
-      return NextResponse.json({
-        reply: 'Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp! 📱',
-        messages: ['Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp! 📱'],
-        transfer: true,
-        whatsappUrl: 'https://wa.me/5521990400577?text=Olá!%20Vim%20do%20chat%20do%20site%20e%20gostaria%20de%20continuar%20a%20conversa'
-      })
-    }
 
     // Carregar ou criar estado de conversa
     let convState: ConversationState
@@ -124,6 +115,41 @@ export async function POST(request: NextRequest) {
       if (!convState.leadData) convState.leadData = {}
     } else {
       convState = createInitialState()
+    }
+
+    // Resetar sessão automaticamente se a última interação foi há mais de 1 hora
+    // Isso garante que usuários que falem no WhatsApp novamente após 1 hora reiniciem a conversa do bot perfeitamente
+    if (existingSession) {
+      const lastUpdate = existingSession.updated_at ? new Date(existingSession.updated_at).getTime() : 0
+      const now = Date.now()
+      const oneHour = 60 * 60 * 1000 // 1 hora
+      const timeDiff = now - lastUpdate
+
+      if (timeDiff > oneHour) {
+        await supabaseAdmin
+          .from('chatbot_sessions')
+          .update({
+            status: 'active',
+            conversation_state: createInitialState(),
+            message_count: 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_id', sessionId)
+
+        existingSession.status = 'active'
+        existingSession.message_count = 0
+        existingSession.conversation_state = createInitialState()
+        convState = createInitialState()
+      }
+    }
+
+    if (existingSession && existingSession.message_count >= MAX_MESSAGES_PER_SESSION) {
+      return NextResponse.json({
+        reply: 'Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp! 📱',
+        messages: ['Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp! 📱'],
+        transfer: true,
+        whatsappUrl: 'https://wa.me/5521990400577?text=Olá!%20Vim%20do%20chat%20do%20site%20e%20gostaria%20de%20continuar%20a%20conversa'
+      })
     }
 
     if (!existingSession) {
@@ -137,7 +163,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Se sessão já foi transferida, não processar automaticamente
+    // Se sessão já foi transferida, não processar automaticamente (a menos que seja o reset manual)
     if (existingSession?.status === 'transferred') {
       // RESETAR SESSÃO se o usuário enviar a mensagem padrão do botão do site
       if (message.trim().toLowerCase() === 'olá! gostaria de saber mais sobre o clinigo') {
