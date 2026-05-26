@@ -535,8 +535,11 @@ export async function middleware(request: NextRequest) {
 
                 // PAYMENT REQUIRED CHECK (v3.3.0)
                 // Block access if payment is not confirmed
-                // EXCEPTION: Demo accounts bypass payment verification
-                if (clinic.payment_confirmed === false && !clinic.is_demo) {
+                // EXCEPTION: Demo accounts, trial accounts, and manually activated accounts bypass this check
+                const isTrial = clinic.approval_status === 'trial'
+                const isManuallyApproved = clinic.approval_status === 'active'
+
+                if (clinic.payment_confirmed === false && !clinic.is_demo && !isTrial && !isManuallyApproved) {
                     // Allow billing-related API routes
                     if (pathname.startsWith('/api/billing')) {
                         // Allow through for payment processing

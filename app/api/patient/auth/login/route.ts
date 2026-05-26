@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         // 1. Buscar paciente pelo CPF
         const { data: patient, error: patientError } = await supabase
             .from('patients')
-            .select('id, full_name, email, cpf')
+            .select('id, full_name, email, cpf, date_of_birth')
             .eq('cpf', cpf)
             .single()
 
@@ -35,13 +35,24 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. Buscar credenciais
-        const { data: credentials, error: credError } = await supabase
+        const { data: credentials } = await supabase
             .from('patient_credentials')
             .select('*')
             .eq('patient_id', patient.id)
-            .single()
+            .maybeSingle()
 
-        if (credError || !credentials) {
+        // Verificar se a senha inserida coincide com a data de nascimento (primeiro acesso)
+        let isDOBValid = false
+        if (patient.date_of_birth) {
+            const [year, month, day] = patient.date_of_birth.split('-')
+            const expectedDOBPassword = `${day}${month}${year}` // DDMMAAAA
+            const cleanInputPassword = password.replace(/\D/g, '')
+            if (cleanInputPassword === expectedDOBPassword && expectedDOBPassword.length === 8) {
+                isDOBValid = true
+            }
+        }
+
+        if (!credentials && !isDOBValid) {
             return NextResponse.json(
                 { error: 'CPF ou senha incorretos' },
                 { status: 401 }
@@ -49,7 +60,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Verificar se está bloqueado
-        if (credentials.locked_until && new Date(credentials.locked_until) > new Date()) {
+        if (credentials && credentials.locked_until && new Date(credentials.locked_until) > new Date()) {
             const minutesLeft = Math.ceil(
                 (new Date(credentials.locked_until).getTime() - Date.now()) / 60000
             )
@@ -60,23 +71,44 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Verificar senha
-        const isValid = await bcrypt.compare(password, credentials.password_hash)
+        let isValid = false
+        if (credentials) {
+            isValid = await bcrypt.compare(password, credentials.password_hash)
+        }
+
+        // Se a senha por data de nascimento for válida, autentica o login
+        if (isDOBValid) {
+            isValid = true
+
+            // Se for o primeiro acesso (sem registro em patient_credentials), inicializa as credenciais
+            if (!credentials) {
+                const passwordHash = await bcrypt.hash(password, 12)
+                await supabase
+                    .from('patient_credentials')
+                    .insert({
+                        patient_id: patient.id,
+                        password_hash: passwordHash,
+                    })
+            }
+        }
 
         if (!isValid) {
-            // Incrementar tentativas
-            const newAttempts = (credentials.login_attempts || 0) + 1
-            const updates: any = { login_attempts: newAttempts }
+            if (credentials) {
+                // Incrementar tentativas
+                const newAttempts = (credentials.login_attempts || 0) + 1
+                const updates: any = { login_attempts: newAttempts }
 
-            // Bloquear após 5 tentativas
-            if (newAttempts >= 5) {
-                updates.locked_until = new Date(Date.now() + 15 * 60 * 1000) // 15 min
-                updates.login_attempts = 0
+                // Bloquear após 5 tentativas
+                if (newAttempts >= 5) {
+                    updates.locked_until = new Date(Date.now() + 15 * 60 * 1000) // 15 min
+                    updates.login_attempts = 0
+                }
+
+                await supabase
+                    .from('patient_credentials')
+                    .update(updates)
+                    .eq('id', credentials.id)
             }
-
-            await supabase
-                .from('patient_credentials')
-                .update(updates)
-                .eq('id', credentials.id)
 
             return NextResponse.json(
                 { error: 'CPF ou senha incorretos' },
@@ -85,13 +117,15 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Login bem sucedido - resetar tentativas
-        await supabase
-            .from('patient_credentials')
-            .update({
-                login_attempts: 0,
-                last_login: new Date().toISOString(),
-            })
-            .eq('id', credentials.id)
+        if (credentials) {
+            await supabase
+                .from('patient_credentials')
+                .update({
+                    login_attempts: 0,
+                    last_login: new Date().toISOString(),
+                })
+                .eq('id', credentials.id)
+        }
 
         // 6. Gerar JWT token
         const token = await new SignJWT({

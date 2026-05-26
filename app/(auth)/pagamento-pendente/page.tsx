@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, AlertCircle, RefreshCw, Mail, Loader2, CreditCard, ExternalLink } from 'lucide-react'
+import { Clock, AlertCircle, RefreshCw, Mail, Loader2, CreditCard, ExternalLink, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
@@ -123,6 +123,16 @@ export default function PagamentoPendentePage() {
         window.location.reload()
     }
 
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' })
+            window.location.href = '/clinica'
+        } catch (err) {
+            console.error('Error logging out:', err)
+            toast.error('Erro ao sair da conta')
+        }
+    }
+
     const planInfo = clinic ? (PLAN_PRICES[clinic.plan_type] || PLAN_PRICES.BASICO) : null
 
     return (
@@ -235,6 +245,11 @@ export default function PagamentoPendentePage() {
                                 <Mail className="w-4 h-4" />
                                 Entrar em Contato
                             </a>
+                        </Button>
+
+                        <Button variant="ghost" onClick={handleLogout} className="w-full text-muted-foreground hover:text-destructive mt-1" size="lg">
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Sair da Conta (Fazer Logout)
                         </Button>
                     </div>
 
