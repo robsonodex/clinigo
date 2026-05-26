@@ -117,3 +117,15 @@ Este documento rastreia as implantações cirúrgicas de UI/UX e Efeito UAU no s
   - CLINIC_ADMIN e RECEPTIONIST: sem alteração — acesso total à clínica.
   - Clínicas novas: `is_coordinator` default é `false`, então o mesmo comportamento se aplica. Para dar acesso a um terapeuta, basta marcar `is_coordinator = true`.
 * **Caminho de acesso:** Dashboard → Evoluções (terapeuta vê só as suas) | Dashboard → Documentos (oculto para terapeutas comuns)
+
+### Módulo: Faturamento & Cadastro (Trial / Onboarding)
+* **Submódulo:** Cadastro de Clientes Trial (7 dias) / Controle de Bloqueio por Pagamento
+* **Arquivos modificados:**
+  - `middleware.ts` (Bypass do bloqueio de faturamento para contas em trial e ativadas manualmente)
+  - `app/(auth)/pagamento-pendente/page.tsx` (Adicionado botão de Logout para clínicas bloqueadas)
+* **Data:** 26 de Maio de 2026
+* **O que foi feito:**
+  1. **Bypass de Trial no Middleware:** Ajustado o `PAYMENT REQUIRED CHECK` no middleware para pular o redirecionamento de pagamento pendente se a clínica estiver no status `'trial'` (com trial dentro da data de validade) ou no status `'active'` (ativada manualmente pelo administrador Robson/contato@clinigo.app/robsonfenriz@gmail.com).
+  2. **Banner de 7 Dias:** Garantida a exibição do `TrialBanner` em tempo real para as contas novas no dashboard do sistema, exibindo de forma elegante os dias restantes até a expiração.
+  3. **Botão de Logout em Pagamento Pendente:** Adicionado botão de Logout ("Sair da Conta") na página `/pagamento-pendente` para evitar que usuários ou administradores fiquem presos na tela de bloqueio de faturamento ao tentar alternar de conta.
+* **Caminho de acesso:** https://clinigo.app/trial (Cadastro de conta) → Login → Acesso direto ao Dashboard com Banner ativo → Bloqueio automático após 7 dias se não houver pagamento ou liberação do administrador.
