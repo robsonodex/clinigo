@@ -71,7 +71,7 @@ export default function PatientHistoryPage() {
             {/* Header */}
             <header className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <Link href="/paciente/dashboard">
+                    <Link href="/paciente/meu-painel">
                         <Button variant="ghost" size="icon">
                             <ArrowLeft className="h-5 w-5" />
                         </Button>

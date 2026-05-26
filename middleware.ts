@@ -82,6 +82,8 @@ const PATIENT_PORTAL_ROUTES = [
     '/api/patient/profile',
     '/api/patient/appointments',
     '/api/patient/history',
+    '/api/patient/evolutions',
+    '/api/patient/documents',
 ]
 
 // Super Admin hidden routes
