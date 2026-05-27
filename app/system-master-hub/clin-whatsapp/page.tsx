@@ -23,7 +23,9 @@ export default function ClinWhatsAppPage() {
 
   // Estados do Envio Manual de WhatsApp
   const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [sendMethod, setSendMethod] = useState<'registered' | 'manual'>('registered')
   const [selectedAdminId, setSelectedAdminId] = useState('')
+  const [customPhone, setCustomPhone] = useState('')
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [loadingAdmins, setLoadingAdmins] = useState(false)
@@ -74,22 +76,47 @@ export default function ClinWhatsAppPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedAdminId) {
-      setSendError('Selecione um administrador para enviar a mensagem.')
-      return
+
+    let targetPhone = ''
+    let destinationName = ''
+
+    if (sendMethod === 'registered') {
+      if (!selectedAdminId) {
+        setSendError('Selecione um administrador para enviar a mensagem.')
+        return
+      }
+      const admin = admins.find(a => a.id === selectedAdminId)
+      if (!admin || !admin.phone) {
+        setSendError('Administrador selecionado não possui número de telefone cadastrado.')
+        return
+      }
+      targetPhone = admin.phone
+      destinationName = admin.name
+    } else {
+      if (!customPhone.trim()) {
+        setSendError('Digite o número de telefone do destinatário.')
+        return
+      }
+      // Higienizar número
+      let sanitized = customPhone.replace(/\D/g, '')
+      if (sanitized.length < 10) {
+        setSendError('Por favor, insira um número válido com DDD (mínimo 10 dígitos).')
+        return
+      }
+      // Se não tem DDI (55), adiciona automaticamente
+      if (!sanitized.startsWith('55') && (sanitized.length === 10 || sanitized.length === 11)) {
+        sanitized = '55' + sanitized
+      }
+      targetPhone = sanitized
+      destinationName = customPhone.trim()
     }
+
     if (!subject.trim()) {
       setSendError('O campo Assunto é obrigatório.')
       return
     }
     if (!message.trim()) {
       setSendError('O campo Mensagem é obrigatório.')
-      return
-    }
-
-    const admin = admins.find(a => a.id === selectedAdminId)
-    if (!admin || !admin.phone) {
-      setSendError('Administrador selecionado não possui número de telefone cadastrado.')
       return
     }
 
@@ -104,7 +131,7 @@ export default function ClinWhatsAppPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: admin.phone,
+          to: targetPhone,
           text: formattedText
         })
       })
@@ -112,9 +139,11 @@ export default function ClinWhatsAppPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao enviar mensagem')
 
-      setSendSuccess(`Mensagem enviada com sucesso para ${admin.name}!`)
+      setSendSuccess(`Mensagem enviada com sucesso para ${destinationName}!`)
       setSubject('')
       setMessage('')
+      setCustomPhone('')
+      setSelectedAdminId('')
     } catch (err: any) {
       setSendError(err.message || 'Erro inesperado ao enviar mensagem.')
     } finally {
@@ -127,6 +156,7 @@ export default function ClinWhatsAppPage() {
       setSubject('')
       setMessage('')
       setSelectedAdminId('')
+      setCustomPhone('')
       setSendSuccess(null)
       setSendError(null)
     }
@@ -347,30 +377,86 @@ export default function ClinWhatsAppPage() {
             </div>
           ) : (
             <form onSubmit={handleSendMessage} className="space-y-5">
-              {/* Dropdown Admins */}
+              {/* Alternar Método de Envio */}
               <div>
-                <label className="text-gray-300 font-medium text-sm mb-2 block">
-                  Administrador & Clínica Destinatária
+                <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
+                  Método de Destino
                 </label>
-                <select
-                  value={selectedAdminId}
-                  onChange={(e) => setSelectedAdminId(e.target.value)}
-                  className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                  required
-                >
-                  <option value="">Selecione o administrador...</option>
-                  {admins.map((admin) => (
-                    <option key={admin.id} value={admin.id}>
-                      {admin.clinicName} — {admin.name} ({admin.phone}) [{admin.role}]
-                    </option>
-                  ))}
-                </select>
-                {admins.length === 0 && !loadingAdmins && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Nenhum administrador com telefone cadastrado foi encontrado no banco de dados.
-                  </p>
-                )}
+                <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSendMethod('registered')
+                      setSendError(null)
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      sendMethod === 'registered'
+                        ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-950/20'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
+                    }`}
+                  >
+                    <span>👥</span> Administrador Cadastrado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSendMethod('manual')
+                      setSendError(null)
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      sendMethod === 'manual'
+                        ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-950/20'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
+                    }`}
+                  >
+                    <span>📱</span> Digitar Número Manual
+                  </button>
+                </div>
               </div>
+
+              {/* Renderização Condicional do Campo de Destino */}
+              {sendMethod === 'registered' ? (
+                <div>
+                  <label className="text-gray-300 font-medium text-sm mb-2 block">
+                    Administrador & Clínica Destinatária
+                  </label>
+                  <select
+                    value={selectedAdminId}
+                    onChange={(e) => setSelectedAdminId(e.target.value)}
+                    className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                    required
+                  >
+                    <option value="">Selecione o administrador...</option>
+                    {admins.map((admin) => (
+                      <option key={admin.id} value={admin.id}>
+                        {admin.clinicName} — {admin.name} ({admin.phone}) [{admin.role}]
+                      </option>
+                    ))}
+                  </select>
+                  {admins.length === 0 && !loadingAdmins && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Nenhum administrador com telefone cadastrado foi encontrado no banco de dados.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="text-gray-300 font-medium text-sm mb-2 block">
+                    Número de WhatsApp Destinatário
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 11 99999-9999 ou 5511999999999"
+                    value={customPhone}
+                    onChange={(e) => setCustomPhone(e.target.value)}
+                    className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    Insira o número completo com DDD. Se omitido o código de país (55), adicionaremos automaticamente para o Brasil.
+                  </p>
+                </div>
+              )}
 
               {/* Assunto */}
               <div>
