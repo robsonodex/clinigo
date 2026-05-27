@@ -22,7 +22,7 @@ export async function GET() {
             return NextResponse.json({ error: 'Apenas Super Administradores podem acessar esta rota' }, { status: 403 })
         }
 
-        // 2. Buscar usuários que possuem telefone cadastrado e suas respectivas clínicas
+        // 2. Buscar usuários administradores e suas respectivas clínicas
         const { data: admins, error } = await supabaseAdmin
             .from('users')
             .select(`
@@ -33,26 +33,43 @@ export async function GET() {
                 phone,
                 clinic_id,
                 clinics!users_clinic_id_fkey (
-                    name
+                    name,
+                    phone,
+                    is_demo
                 )
             `)
-            .not('phone', 'is', null)
+            .in('role', ['CLINIC_ADMIN', 'SUPER_ADMIN'])
 
         if (error) {
             console.error('[SUPER_ADMIN admins] Erro ao buscar admins:', error)
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        // 3. Formatar dados de retorno
-        const formattedAdmins = admins?.map((admin: any) => ({
-            id: admin.id,
-            name: admin.full_name || 'Sem Nome',
-            email: admin.email || '-',
-            phone: admin.phone,
-            role: admin.role || 'USER',
-            clinicName: admin.clinics?.name || 'CliniGo',
-            clinicId: admin.clinic_id
-        })) || []
+        // 3. Filtrar e Formatar dados de retorno
+        const filteredAdmins = admins?.filter((admin: any) => {
+            // Excluir se for a clínica de demonstração ou se o email for de demo
+            const isDemoClinic = admin.clinics?.is_demo === true || admin.clinic_id === 'de000000-0000-0000-0000-000000000001'
+            const isDemoEmail = admin.email?.endsWith('@demo.clinigo.internal')
+            return !isDemoClinic && !isDemoEmail
+        }) || []
+
+        const formattedAdmins = filteredAdmins
+            .map((admin: any) => {
+                // Fallback de telefone: prioriza o telefone do usuário, senão usa o da clínica
+                const phone = admin.phone || admin.clinics?.phone || null
+
+                return {
+                    id: admin.id,
+                    name: (admin.full_name || 'Sem Nome').trim(),
+                    email: admin.email || '-',
+                    phone: phone,
+                    role: admin.role || 'USER',
+                    clinicName: admin.clinics?.name || 'CliniGo',
+                    clinicId: admin.clinic_id
+                }
+            })
+            // Filtrar apenas administradores que de fato possuem algum telefone resolvido
+            .filter((admin) => admin.phone !== null)
 
         // Ordenar os admins por nome da clínica, e depois por nome do administrador
         formattedAdmins.sort((a, b) => {
