@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth, useRole } from '@/lib/hooks/use-auth'
 import { api, type Appointment } from '@/lib/api-client'
 import { formatDate, formatCurrency } from '@/lib/utils'
@@ -36,6 +38,14 @@ import {
     LayoutList,
     LayoutGrid,
     Rows3,
+    Megaphone,
+    Pin,
+    Trash2,
+    Edit3,
+    AlertTriangle,
+    Loader2,
+    X,
+    AlertCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
@@ -193,6 +203,126 @@ export default function DashboardPage() {
         enabled: !!profile?.clinic_id,
         staleTime: 1000 * 60 * 5, // 5 minutes
     })
+
+    // Fetch bulletins para staff da clínica
+    const { data: bulletinsData, isLoading: bulletinsLoading, refetch: refetchBulletins } = useQuery({
+        queryKey: ['clinic-bulletins'],
+        queryFn: async () => {
+            const res = await fetch('/api/bulletins')
+            if (!res.ok) throw new Error('Falha ao carregar mural')
+            return res.json()
+        },
+        enabled: !!profile?.clinic_id && (isClinicAdmin || isDoctor || isReceptionist),
+    })
+    const bulletins = bulletinsData?.bulletins || []
+
+    // Estados do Mural de Recados
+    const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [editingBulletin, setEditingBulletin] = useState<any | null>(null)
+    const [bulletinTitle, setBulletinTitle] = useState('')
+    const [bulletinContent, setBulletinContent] = useState('')
+    const [bulletinType, setBulletinType] = useState<'info' | 'warning' | 'alert' | 'success'>('info')
+    const [bulletinTarget, setBulletinTarget] = useState<'internal' | 'patients' | 'all'>('internal')
+    const [bulletinPinned, setBulletinPinned] = useState(false)
+    const [isSubmittingBulletin, setIsSubmittingBulletin] = useState(false)
+    const [isDeletingBulletin, setIsDeletingBulletin] = useState(false)
+
+    // Salvar ou Editar Recado
+    const handleSaveBulletin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!bulletinTitle.trim() || !bulletinContent.trim()) return
+
+        setIsSubmittingBulletin(true)
+        try {
+            const method = editingBulletin ? 'PUT' : 'POST'
+            const payload = {
+                id: editingBulletin?.id,
+                title: bulletinTitle,
+                content: bulletinContent,
+                type: bulletinType,
+                target: bulletinTarget,
+                is_pinned: bulletinPinned,
+            }
+
+            const res = await fetch('/api/bulletins', {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao salvar recado')
+            }
+
+            setIsCreateOpen(false)
+            setEditingBulletin(null)
+            setBulletinTitle('')
+            setBulletinContent('')
+            setBulletinType('info')
+            setBulletinTarget('internal')
+            setBulletinPinned(false)
+            refetchBulletins()
+        } catch (error: any) {
+            alert(error.message || 'Erro ao salvar recado')
+        } finally {
+            setIsSubmittingBulletin(false)
+        }
+    }
+
+    // Preparar Edição
+    const handleStartEdit = (b: any) => {
+        setEditingBulletin(b)
+        setBulletinTitle(b.title)
+        setBulletinContent(b.content)
+        setBulletinType(b.type)
+        setBulletinTarget(b.target)
+        setBulletinPinned(b.is_pinned)
+        setIsCreateOpen(true)
+    }
+
+    // Excluir Recado com Alerta
+    const handleDeleteBulletin = async (id: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir este recado? Esta ação não pode ser desfeita.')) return
+
+        setIsDeletingBulletin(true)
+        try {
+            const res = await fetch(`/api/bulletins?id=${id}`, {
+                method: 'DELETE',
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao excluir')
+            }
+
+            refetchBulletins()
+        } catch (error: any) {
+            alert(error.message || 'Erro ao excluir')
+        } finally {
+            setIsDeletingBulletin(false)
+        }
+    }
+
+    // Alternar Pinagem Rápida
+    const handleTogglePin = async (b: any) => {
+        try {
+            const res = await fetch('/api/bulletins', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...b,
+                    id: b.id,
+                    is_pinned: !b.is_pinned,
+                }),
+            })
+
+            if (!res.ok) throw new Error('Erro ao fixar recado')
+            refetchBulletins()
+        } catch (error: any) {
+            alert(error.message || 'Erro ao fixar')
+        }
+    }
 
     // Open WhatsApp
     const openWhatsApp = (phone: string, patientName: string, videoLink?: string) => {
@@ -609,6 +739,268 @@ export default function DashboardPage() {
                     </Card>
                 )
             }
+
+            {/* Mural de Recados CliniGO */}
+            {(isClinicAdmin || isDoctor || isReceptionist) && (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Megaphone className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                            <h2 className="text-lg font-semibold">Mural de Recados</h2>
+                        </div>
+                        {(isClinicAdmin || isReceptionist) && (
+                            <Button 
+                                onClick={() => {
+                                    setEditingBulletin(null)
+                                    setBulletinTitle('')
+                                    setBulletinContent('')
+                                    setBulletinType('info')
+                                    setBulletinTarget('internal')
+                                    setBulletinPinned(false)
+                                    setIsCreateOpen(true)
+                                }}
+                                size="sm" 
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-md shadow-blue-500/10 flex items-center gap-1.5 rounded-xl"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Novo Recado
+                            </Button>
+                        )}
+                    </div>
+
+                    {bulletinsLoading ? (
+                        <div className="flex items-center justify-center p-8 bg-white/20 dark:bg-slate-900/20 backdrop-blur-sm rounded-2xl border border-white/10 dark:border-slate-800/10 min-h-[120px]">
+                            <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                            <span className="ml-2 text-sm text-muted-foreground">Carregando mural...</span>
+                        </div>
+                    ) : bulletins.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-8 bg-white/25 dark:bg-slate-900/25 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-slate-800/20 text-center min-h-[120px]">
+                            <Megaphone className="w-8 h-8 text-slate-400 mb-2 opacity-50" />
+                            <p className="font-medium text-sm text-slate-600 dark:text-slate-400">Mural limpo por aqui!</p>
+                            <p className="text-xs text-muted-foreground mt-1">Nenhum aviso importante ou recado interno registrado.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {bulletins.map((b: any) => {
+                                const typeStyles = {
+                                    info: 'bg-blue-50/70 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30 text-blue-950 dark:text-blue-200',
+                                    warning: 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30 text-amber-950 dark:text-amber-200',
+                                    alert: 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-200/50 dark:border-rose-800/30 text-rose-950 dark:text-rose-200',
+                                    success: 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30 text-emerald-950 dark:text-emerald-200',
+                                }[b.type || 'info'] || 'bg-white/40 dark:bg-slate-900/40 border-white/20 dark:border-slate-800/20 text-slate-950 dark:text-slate-200'
+
+                                const badgeTarget = {
+                                    internal: { label: 'Interno', style: 'bg-slate-200/60 dark:bg-slate-800 text-slate-800 dark:text-slate-350' },
+                                    patients: { label: 'Pacientes', style: 'bg-blue-100/60 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
+                                    all: { label: 'Todos', style: 'bg-indigo-100/60 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' },
+                                }[b.target || 'internal'] || { label: 'Interno', style: 'bg-slate-200/60 dark:bg-slate-800 text-slate-800 dark:text-slate-350' }
+
+                                return (
+                                    <div 
+                                        key={b.id} 
+                                        className={`relative group p-5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 flex flex-col justify-between ${typeStyles} ${b.is_pinned ? 'ring-1.5 ring-blue-500/30 dark:ring-blue-400/20' : ''}`}
+                                    >
+                                        <div>
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${badgeTarget.style}`}>
+                                                        {badgeTarget.label}
+                                                    </span>
+                                                    {b.is_pinned && (
+                                                        <span className="flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                                            <Pin className="w-3.5 h-3.5 fill-current rotate-45" />
+                                                            Fixado
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Ações Rápidas (Apenas Admin/Recepção) */}
+                                                {(isClinicAdmin || isReceptionist) && (
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                        <button 
+                                                            onClick={() => handleTogglePin(b)}
+                                                            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                                                            title={b.is_pinned ? "Desfixar recado" : "Fixar no topo"}
+                                                        >
+                                                            <Pin className={`w-3.5 h-3.5 ${b.is_pinned ? 'fill-current rotate-45 text-blue-600 dark:text-blue-400' : ''}`} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleStartEdit(b)}
+                                                            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                                                            title="Editar recado"
+                                                        >
+                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteBulletin(b.id)}
+                                                            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-rose-600 hover:text-rose-700 transition-colors"
+                                                            title="Excluir recado"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <h3 className="font-semibold text-sm mb-1 leading-snug">{b.title}</h3>
+                                            <p className="text-xs opacity-90 leading-relaxed whitespace-pre-line">{b.content}</p>
+                                        </div>
+
+                                        <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] opacity-75">
+                                            <span>Por: {b.sender_id ? 'Membro da Equipe' : 'Sistema'}</span>
+                                            <span>{new Date(b.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modal/Drawer de Criação e Edição de Recados */}
+            {isCreateOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm transition-all duration-300">
+                    <div className="w-full max-w-md h-full bg-white dark:bg-slate-900 border-l border-white/10 dark:border-slate-800 shadow-2xl p-6 flex flex-col justify-between animate-in slide-in-from-right duration-300">
+                        <div>
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                                <h3 className="text-base font-bold flex items-center gap-2">
+                                    <Megaphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    {editingBulletin ? 'Editar Recado' : 'Novo Recado'}
+                                </h3>
+                                <Button 
+                                    onClick={() => {
+                                        setIsCreateOpen(false)
+                                        setEditingBulletin(null)
+                                    }}
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+
+                            <form onSubmit={handleSaveBulletin} className="space-y-4 mt-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-slate-500">Título do Recado</label>
+                                    <Input
+                                        value={bulletinTitle}
+                                        onChange={(e) => setBulletinTitle(e.target.value)}
+                                        placeholder="Ex: Reunião Geral de Alinhamento"
+                                        required
+                                        maxLength={100}
+                                        className="rounded-xl"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-slate-500">Conteúdo / Descrição</label>
+                                    <Textarea
+                                        value={bulletinContent}
+                                        onChange={(e) => setBulletinContent(e.target.value)}
+                                        placeholder="Digite a mensagem completa..."
+                                        rows={4}
+                                        required
+                                        className="rounded-xl resize-none"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-slate-500">Visualização / Destino</label>
+                                        <select
+                                            value={bulletinTarget}
+                                            onChange={(e: any) => setBulletinTarget(e.target.value)}
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="internal">Apenas Interno (Equipe)</option>
+                                            <option value="patients">Apenas Pacientes</option>
+                                            <option value="all">Todos (Equipe e Pacientes)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-slate-500">Tipo de Alerta</label>
+                                        <select
+                                            value={bulletinType}
+                                            onChange={(e: any) => setBulletinType(e.target.value)}
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="info">💡 Informativo (Azul)</option>
+                                            <option value="success">✅ Positivo (Verde)</option>
+                                            <option value="warning">⚠️ Atenção (Amarelo)</option>
+                                            <option value="alert">🚨 Urgente (Vermelho)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="pinned"
+                                        checked={bulletinPinned}
+                                        onChange={(e) => setBulletinPinned(e.target.checked)}
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="pinned" className="text-xs font-medium text-slate-700 dark:text-slate-350 flex items-center gap-1 cursor-pointer">
+                                        <Pin className="w-3.5 h-3.5 rotate-45 fill-current text-blue-500" />
+                                        Fixar no topo do mural
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                            <Button
+                                onClick={() => {
+                                    if (window.confirm('Deseja limpar todos os campos?')) {
+                                        setBulletinTitle('')
+                                        setBulletinContent('')
+                                        setBulletinType('info')
+                                        setBulletinTarget('internal')
+                                        setBulletinPinned(false)
+                                    }
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="rounded-xl border-slate-200 text-slate-600"
+                            >
+                                Limpar
+                            </Button>
+                            
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={() => {
+                                        setIsCreateOpen(false)
+                                        setEditingBulletin(null)
+                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="rounded-xl text-slate-500"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleSaveBulletin}
+                                    disabled={isSubmittingBulletin || !bulletinTitle.trim() || !bulletinContent.trim()}
+                                    size="sm"
+                                    className="bg-blue-600 text-white hover:bg-blue-700 rounded-xl px-5 shadow-lg shadow-blue-500/10"
+                                >
+                                    {isSubmittingBulletin ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        'Salvar'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Quick Actions - Clinic Admin */}
             {

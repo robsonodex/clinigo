@@ -25,7 +25,9 @@ import {
     FileSpreadsheet,
     Shield,
     HelpCircle,
-    X
+    X,
+    Megaphone,
+    Pin
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -84,6 +86,7 @@ export default function PatientDashboardPage() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [evolutions, setEvolutions] = useState<Evolution[]>([])
     const [documents, setDocuments] = useState<Document[]>([])
+    const [bulletins, setBulletins] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<'overview' | 'evolutions' | 'documents'>('overview')
     const [isHelpOpen, setIsHelpOpen] = useState(false)
@@ -122,6 +125,13 @@ export default function PatientDashboardPage() {
             if (documentsRes.ok) {
                 const documentsData = await documentsRes.json()
                 setDocuments(documentsData.documents || [])
+            }
+
+            // Buscar boletins/avisos importantes da clínica para o paciente
+            const bulletinsRes = await fetch('/api/patient/bulletins')
+            if (bulletinsRes.ok) {
+                const bulletinsData = await bulletinsRes.json()
+                setBulletins(bulletinsData.bulletins || [])
             }
 
         } catch (error) {
@@ -249,6 +259,61 @@ export default function PatientDashboardPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Mural de Comunicados da Clínica para Pacientes */}
+                {bulletins.length > 0 && (
+                    <div className="mb-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Megaphone className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-bounce" />
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Comunicados da Clínica</h2>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {bulletins.map((b: any) => {
+                                const typeStyles = {
+                                    info: 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20 text-slate-800 dark:text-slate-200',
+                                    success: 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20 text-slate-800 dark:text-slate-200',
+                                    warning: 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20 text-slate-800 dark:text-slate-200',
+                                    alert: 'bg-rose-500/5 dark:bg-rose-500/10 border-rose-500/20 text-slate-800 dark:text-slate-200',
+                                }[b.type || 'info'] || 'bg-white/5 border-white/10 text-slate-200'
+
+                                const indicatorColors = {
+                                    info: 'bg-blue-500',
+                                    success: 'bg-emerald-500',
+                                    warning: 'bg-amber-500',
+                                    alert: 'bg-rose-500',
+                                }[b.type || 'info'] || 'bg-slate-400'
+
+                                return (
+                                    <div 
+                                        key={b.id} 
+                                        className={`relative p-5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:shadow-md flex flex-col justify-between ${typeStyles}`}
+                                    >
+                                        <div className="flex gap-3">
+                                            {/* Indicador visual de tipo de recado */}
+                                            <span className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${indicatorColors}`} />
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                                    <h3 className="font-bold text-sm leading-snug">{b.title}</h3>
+                                                    {b.is_pinned && (
+                                                        <span className="flex items-center gap-0.5 text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">
+                                                            <Pin className="w-2.5 h-2.5 fill-current rotate-45" />
+                                                            Importante
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs opacity-90 leading-relaxed whitespace-pre-line">{b.content}</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 pt-3 border-t border-slate-200/10 flex items-center justify-between text-[9px] opacity-75">
+                                            <span>Emitido pela Clínica</span>
+                                            <span>{new Date(b.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* Tab Navigation */}
                 <div className="flex border-b border-slate-200">
