@@ -16,6 +16,8 @@ import {
   MSG_OBJECAO_PRECO, MSG_OBJECAO_LGPD, MSG_INATIVIDADE,
   MSG_ENVIAR_INFO_ENTERPRISE, DOR_MAP,
   MSG_SAUDACAO_ACOLHIMENTO, MSG_FALLBACK_SIMPATICO,
+  MSG_TRIAL_DIRETO_FLUXO3, MSG_FLUXO_5_OUTRO_ASSUNTO,
+  MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO, MSG_RECUPERACAO_24H,
 } from './clin-messages'
 
 // ========== TYPES ==========
@@ -259,8 +261,18 @@ O que prefere fazer?
 
   // ===== STEP: FLUXO 3 DEMO =====
   if (currentStep === 'fluxo_3_demo') {
-    if (input === 'a') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    if (input === 'b') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === 'a') {
+      return result([
+        `Perfeito! Vou te conectar com um especialista para agendar sua demonstração. 🤝
+
+Antes de transferir, me conta rapidinho:
+
+*Qual é o seu nome?*
+
+🔙 *0* — Voltar ao menu principal`
+      ], 'fluxo_5_aguarda_nome')
+    }
+    if (input === 'b') return result(MSG_TRIAL_DIRETO_FLUXO3, 'enviar_trial_fluxo3', { sendFollowUp: true })
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -348,6 +360,10 @@ O que prefere fazer?
       dorText = DOR_MAP[dorKey]
       lead.dorPrincipal = dorText
 
+      if (dorKey === 'e') {
+        return result(MSG_FLUXO_5_OUTRO_ASSUNTO, 'fluxo_5_outro_assunto')
+      }
+
       // Mapear explicação específica para a dor selecionada (sem rodapés de menu)
       const cleanFooter = `\n\n🔁 *1* — Ver outra funcionalidade\n🚀 *2* — Testar grátis agora\n💬 *3* — Falar com especialista`
       if (dorKey === 'a') explicacaoDor = MSG_FUNC_4A[0].replace(cleanFooter, '')
@@ -385,6 +401,44 @@ O que prefere fazer?
     if (input === '1') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
     if (input === '2') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
     if (input === '3') return result(MSG_MENU, 'menu')
+    return handleIntentOrResentMenu(state, userMessage)
+  }
+
+  // ===== STEP: ENVIAR TRIAL FLUXO 3 =====
+  if (currentStep === 'enviar_trial_fluxo3') {
+    if (input === '1' || input === '2') {
+      return result(
+        [`Entendido! Vou te transferir para um especialista que vai te ajudar. 🤝`],
+        'transferred',
+        { transfer: true, transferTag: 'suporte' }
+      )
+    }
+    return handleIntentOrResentMenu(state, userMessage)
+  }
+
+  // ===== STEP: FLUXO 5 — OUTRO ASSUNTO =====
+  if (currentStep === 'fluxo_5_outro_assunto') {
+    lead.dorPrincipal = `Outro: ${userMessage.trim()}`
+    return result(MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO, 'fluxo_5_outro_assunto_confirmacao')
+  }
+
+  // ===== STEP: FLUXO 5 — OUTRO ASSUNTO CONFIRMAÇÃO =====
+  if (currentStep === 'fluxo_5_outro_assunto_confirmacao') {
+    if (input === '1') {
+      return result(
+        buildHandoffMessage(lead),
+        'transferred',
+        { transfer: true, transferTag: 'vendas', leadToSave: lead }
+      )
+    }
+    return handleIntentOrResentMenu(state, userMessage)
+  }
+
+  // ===== STEP: RECUPERACAO 24H =====
+  if (currentStep === 'recuperacao_24h') {
+    if (input === '1') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '2') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === '0') return result(MSG_MENU, 'menu')
     return handleIntentOrResentMenu(state, userMessage)
   }
 

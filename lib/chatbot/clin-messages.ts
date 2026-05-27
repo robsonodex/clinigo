@@ -330,19 +330,25 @@ export const MSG_FUNC_4H = [
 
 // ========== FLUXO 5 — COLETA DE DADOS ==========
 export const MSG_FLUXO_5_NOME = [
-  `💙 Vou te conectar com um dos nossos especialistas agora.
+  `💙 Vou te conectar com um de nossos especialistas agora.
 
 Antes de transferir, me conta rapidinho:
 
-*Qual é o seu nome?*`
+*Qual é o seu nome?*
+
+🔙 *0* — Voltar ao menu principal`
 ]
 
 export const MSG_FLUXO_5_CLINICA = [
-  `*Qual é o nome da sua clínica?*`
+  `*Qual é o nome da sua clínica?*
+
+🔙 *0* — Voltar ao menu principal`
 ]
 
 export const MSG_FLUXO_5_NUM = [
-  `*Quantos profissionais de saúde atendem na clínica?*`
+  `*Quantos profissionais de saúde atendem na clínica?*
+
+🔙 *0* — Voltar ao menu principal`
 ]
 
 export const MSG_FLUXO_5_DOR = [
@@ -352,7 +358,9 @@ A — Organizar a agenda e reduzir faltas
 B — Controlar o financeiro e o repasse
 C — Digitalizar o prontuário
 D — Faturamento de convênios (TISS)
-E — Outro assunto`
+E — Outro assunto
+
+🔙 *0* — Voltar ao menu principal`
 ]
 
 // ========== OBJEÇÕES ==========
@@ -445,4 +453,48 @@ export const MSG_FALLBACK_SIMPATICO = [
 
 Escolha uma das opções abaixo digitando o número correspondente para que eu possa te guiar:`,
   ...MSG_MENU
+]
+
+// ========== FLUXO 3 DETALHADO ==========
+export const MSG_TRIAL_DIRETO_FLUXO3 = [
+  `Incrível! Seu acesso gratuito está a um clique de distância. 🚀
+
+👉 *https://clinigo.app/trial*
+
+Você terá *7 dias completos* com acesso a todas as funcionalidades — agenda, prontuário, WhatsApp integrado, financeiro e muito mais.
+
+Qualquer dúvida durante o teste é só me chamar aqui. 💙
+
+✅ *1* — Já criei minha conta — preciso de ajuda
+💬 *2* — Tenho dúvida antes de começar
+🔙 *0* — Voltar ao menu principal`
+]
+
+// ========== OPÇÃO E — OUTRO ASSUNTO ==========
+export const MSG_FLUXO_5_OUTRO_ASSUNTO = [
+  `Sem problema! Me conta com suas palavras o que você precisa. 😊
+
+Pode digitar livremente que vou fazer o possível para te ajudar — e se precisar, conecto você com um especialista humano.`
+]
+
+export const MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO = [
+  `Entendi! Esse assunto é melhor resolvido diretamente com nossa equipe. 🤝
+
+Posso te conectar com um especialista agora?
+
+✅ *1* — Sim, quero falar com especialista
+🔙 *0* — Voltar ao menu principal`
+]
+
+// ========== RECUPERAÇÃO 24H ==========
+export const MSG_RECUPERACAO_24H = [
+  `Oi! Tudo bem? 😊
+
+Vi que você ficou com dúvida sobre o CliniGo.
+
+Se quiser, posso te conectar agora com um especialista — é rápido e sem compromisso.
+
+✅ *1* — Quero falar com especialista
+🚀 *2* — Prefiro testar grátis direto
+🔙 *0* — Ver o menu novamente`
 ]
