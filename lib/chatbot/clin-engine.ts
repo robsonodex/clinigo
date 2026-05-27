@@ -15,6 +15,7 @@ import {
   MSG_FLUXO_5_NOME, MSG_FLUXO_5_CLINICA, MSG_FLUXO_5_NUM, MSG_FLUXO_5_DOR,
   MSG_OBJECAO_PRECO, MSG_OBJECAO_LGPD, MSG_INATIVIDADE,
   MSG_ENVIAR_INFO_ENTERPRISE, DOR_MAP,
+  MSG_SAUDACAO_ACOLHIMENTO, MSG_FALLBACK_SIMPATICO,
 } from './clin-messages'
 
 // ========== TYPES ==========
@@ -128,7 +129,7 @@ O que você prefere?
 
 ✅ *1* — Testar grátis agora (7 dias sem cartão)
 💬 *2* — Falar com especialista pra tirar dúvidas
-🔙 *3* — Ver outras opções`
+🔙 *0* — Voltar ao menu principal`
   ]
 }
 
@@ -155,6 +156,11 @@ export function processStep(
     leadToSave: extra?.leadToSave,
     sendFollowUp: extra?.sendFollowUp,
   })
+
+  // SE DIGITAR 0, VOLTAR OU MENU -> RESET OU VOLTA AO MENU PRINCIPAL EM QUALQUER PASSO!
+  if (input === '0' || input === 'voltar' || input === 'menu' || input === 'reiniciar') {
+    return result(MSG_MENU, 'menu')
+  }
 
   // ===== STEP: MENU =====
   if (currentStep === 'menu' || currentStep === 'initial') {
@@ -236,7 +242,8 @@ O que prefere fazer?
 
 ✅ *1* — Quero testar grátis agora
 💬 *2* — Tenho dúvidas, quero falar com alguém
-❓ *3* — Quero ver as funcionalidades antes`
+❓ *3* — Quero ver as funcionalidades antes
+🔙 *0* — Voltar ao menu principal`
       ], 'fluxo_2_recomendacao')
     }
     return result([`Não entendi. *Quantos profissionais* atendem na sua clínica? (digite um número)`], currentStep)
@@ -399,6 +406,17 @@ function handleIntentOrResentMenu(
 ): EngineResult {
   const intent = detectIntent(userMessage)
   const lead = { ...state.leadData }
+  const input = normalizeInput(userMessage)
+
+  // Se for uma saudação comum livre
+  const saudacoes = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'opa', 'eae', 'hello', 'hi']
+  if (saudacoes.includes(input)) {
+    return {
+      messages: MSG_SAUDACAO_ACOLHIMENTO,
+      newState: { step: 'menu', leadData: lead },
+      transfer: false
+    }
+  }
 
   if (intent === 'jaECliente') {
     return {

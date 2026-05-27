@@ -63,7 +63,7 @@ Tudo isso por menos do que você gasta numa consulta. 😄`,
 
 ✅ *1* — Quero testar grátis por 7 dias
 💬 *2* — Quero falar com um especialista
-🔙 *3* — Ver outras opções`
+🔙 *0* — Voltar ao menu principal`
 ]
 
 export const MSG_FLUXO_1B_EQUIPE = [
@@ -107,7 +107,8 @@ export const MSG_FLUXO_1C_RECOMENDACAO_ENTERPRISE = [
 Posso te conectar com um especialista agora?
 
 ✅ *1* — Sim, quero falar com um especialista
-🕐 *2* — Agora não, me manda mais informações`
+🕐 *2* — Agora não, me manda mais informações
+🔙 *0* — Voltar ao menu principal`
 ]
 
 // ========== FLUXO 2 — PLANOS ==========
@@ -212,7 +213,8 @@ export const MSG_FLUXO_4_FUNCIONALIDADES = [
 
 export const MSG_FUNC_FOOTER = `\n\n🔁 *1* — Ver outra funcionalidade
 🚀 *2* — Testar grátis agora
-💬 *3* — Falar com especialista`
+💬 *3* — Falar com especialista
+🔙 *0* — Voltar ao menu principal`
 
 export const MSG_FUNC_4A = [
   `📅 O módulo de *Agendamento do CliniGo* é um dos mais completos do mercado:
@@ -366,7 +368,8 @@ Mas eu entendo que antes de decidir, você quer ter certeza. Por isso o teste de
 Quer começar o teste ou prefere falar com um especialista?
 
 ✅ *1* — Testar grátis agora
-💬 *2* — Falar com especialista`
+💬 *2* — Falar com especialista
+🔙 *0* — Voltar ao menu principal`
 ]
 
 export const MSG_OBJECAO_LGPD = [
@@ -385,7 +388,7 @@ Pode confiar. 💙
 
 ✅ *1* — Quero testar grátis
 💬 *2* — Falar com especialista
-🔙 *3* — Voltar ao menu`
+🔙 *0* — Voltar ao menu principal`
 ]
 
 export const MSG_INATIVIDADE = [
@@ -426,3 +429,20 @@ export const DOR_MAP: Record<string, string> = {
   'd': 'Faturamento de convênios (TISS)',
   'e': 'Outro assunto',
 }
+
+// ========== SAUDAÇÕES E FALLBACKS ==========
+export const MSG_SAUDACAO_ACOLHIMENTO = [
+  `👋 Olá! Que bom falar com você! 😊
+
+Eu sou o *Clin*, o assistente virtual do *CliniGo*. Estou aqui para te ajudar a automatizar e organizar a gestão da sua clínica de ponta a ponta.
+
+Para começarmos, escolha um dos assuntos abaixo digitando o número correspondente:`,
+  ...MSG_MENU
+]
+
+export const MSG_FALLBACK_SIMPATICO = [
+  `🤔 Hum, não consegui entender essa opção. Mas não se preocupe! 😊
+
+Escolha uma das opções abaixo digitando o número correspondente para que eu possa te guiar:`,
+  ...MSG_MENU
+]
