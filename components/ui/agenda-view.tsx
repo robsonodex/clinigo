@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -30,6 +31,7 @@ import {
     Edit3,
     Trash2,
     Plus,
+    HelpCircle,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -1655,6 +1657,14 @@ export default function AgendaPage() {
                                 <div className="flex items-center gap-2">
                                     <Megaphone className="w-5 h-5 text-amber-500 animate-pulse" />
                                     <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">Mural de Recados</h3>
+                                    <Link 
+                                        href="/dashboard/help#mural-de-recados" 
+                                        target="_blank"
+                                        className="text-slate-400 hover:text-emerald-500 transition-colors"
+                                        title="Para que serve? Clique para abrir o guia de ajuda."
+                                    >
+                                        <HelpCircle className="w-4 h-4" />
+                                    </Link>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {canManageBulletins && (

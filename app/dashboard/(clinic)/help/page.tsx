@@ -459,6 +459,17 @@ const helpItems: HelpItem[] = [
         tags: ['qr code', 'baileys', 'lembrete automático', 'confirmação']
     },
     {
+        id: 'mural-de-recados',
+        title: 'Mural de Recados',
+        category: 'Comunicação',
+        icon: Megaphone,
+        whatIsIt: 'Canal de comunicação instantânea e integrada diretamente na Agenda Geral da clínica. Exibe avisos com cores baseadas no nível de urgência e avisa a equipe ativa através de um badge de notificação pulsante quando há novos recados não lidos.',
+        whenToUse: 'Sempre que precisar deixar um aviso interno importante para toda a equipe da clínica (médicos, terapeutas, secretárias, administradores), como avisos operacionais, manutenções, comunicados rápidos ou eventos da clínica.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR', 'STAFF'],
+        tags: ['mural', 'avisos', 'recados', 'notificação', 'comunicado']
+    },
+    {
         id: 'fluxomed-crm',
         title: 'FluxoMed (CRM)',
         category: 'Comunicação',
