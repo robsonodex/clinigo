@@ -25,7 +25,13 @@ import {
     EyeOff,
     Search,
     SlidersHorizontal,
+    Megaphone,
+    Pin,
+    Edit3,
+    Trash2,
+    Plus,
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import {
     format,
     addDays,
@@ -203,6 +209,158 @@ export default function AgendaPage() {
     const [patientSearch, setPatientSearch] = useState('')
     // Free slots toggle (Agenda Inversa)
     const [showFreeSlots, setShowFreeSlots] = useState(false)
+
+    // Mural de Recados States
+    const [isMuralOpen, setIsMuralOpen] = useState(false)
+    const [isCreateOpen, setIsCreateOpen] = useState(false)
+    const [editingBulletin, setEditingBulletin] = useState<any | null>(null)
+    const [bulletinTitle, setBulletinTitle] = useState('')
+    const [bulletinContent, setBulletinContent] = useState('')
+    const [bulletinType, setBulletinType] = useState<'info' | 'success' | 'warning' | 'alert'>('info')
+    const [bulletinTarget, setBulletinTarget] = useState<'internal' | 'patients' | 'all'>('internal')
+    const [bulletinPinned, setBulletinPinned] = useState(false)
+    const [isSubmittingBulletin, setIsSubmittingBulletin] = useState(false)
+    const [unreadBulletinsCount, setUnreadBulletinsCount] = useState(0)
+
+    const isClinicAdmin = user?.role === 'CLINIC_ADMIN' || user?.role === 'SUPER_ADMIN'
+    const isReceptionist = user?.role === 'RECEPTIONIST'
+
+    // Fetch Bulletins (Mural)
+    const { data: bulletins = [], isLoading: bulletinsLoading, refetch: refetchBulletins } = useQuery({
+        queryKey: ['clinic-bulletins'],
+        queryFn: async () => {
+            const res = await fetch('/api/bulletins')
+            if (!res.ok) throw new Error('Falha ao carregar mural')
+            return res.json()
+        },
+        staleTime: 30 * 1000,
+    })
+
+    // Monitoramento de novos recados (Notificação ativa)
+    useEffect(() => {
+        if (bulletins && Array.isArray(bulletins)) {
+            try {
+                const readIdsString = localStorage.getItem('clinigo_read_bulletins') || '[]'
+                const readIds = JSON.parse(readIdsString) as string[]
+                const unread = bulletins.filter((b: any) => !readIds.includes(b.id))
+                setUnreadBulletinsCount(unread.length)
+            } catch (err) {
+                console.error(err)
+            }
+        }
+    }, [bulletins])
+
+    const handleOpenMural = () => {
+        setIsMuralOpen(true)
+        if (bulletins && Array.isArray(bulletins)) {
+            try {
+                const allIds = bulletins.map((b: any) => b.id)
+                localStorage.setItem('clinigo_read_bulletins', JSON.stringify(allIds))
+                setUnreadBulletinsCount(0)
+            } catch (err) {
+                console.error(err)
+            }
+        }
+    }
+
+    const handleSaveBulletin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!bulletinTitle.trim() || !bulletinContent.trim()) {
+            toast.error('Preencha todos os campos obrigatórios')
+            return
+        }
+
+        setIsSubmittingBulletin(true)
+        try {
+            const payload = {
+                title: bulletinTitle,
+                content: bulletinContent,
+                type: bulletinType,
+                target: bulletinTarget,
+                is_pinned: bulletinPinned,
+            }
+
+            const url = editingBulletin ? `/api/bulletins` : `/api/bulletins`
+            const method = editingBulletin ? 'PUT' : 'POST'
+            
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingBulletin ? { id: editingBulletin.id, ...payload } : payload)
+            })
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || 'Erro ao salvar comunicado')
+            }
+
+            toast.success(editingBulletin ? 'Comunicado atualizado com sucesso!' : 'Comunicado publicado com sucesso!')
+            refetchBulletins()
+            setIsCreateOpen(false)
+            setEditingBulletin(null)
+            setBulletinTitle('')
+            setBulletinContent('')
+            setBulletinType('info')
+            setBulletinTarget('internal')
+            setBulletinPinned(false)
+        } catch (error: any) {
+            toast.error(error.message || 'Erro inesperado ao salvar comunicado')
+        } finally {
+            setIsSubmittingBulletin(false)
+        }
+    }
+
+    const handleTogglePin = async (bulletin: any) => {
+        try {
+            const res = await fetch(`/api/bulletins`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: bulletin.id,
+                    title: bulletin.title,
+                    content: bulletin.content,
+                    type: bulletin.type,
+                    target: bulletin.target,
+                    is_pinned: !bulletin.is_pinned
+                })
+            })
+
+            if (!res.ok) throw new Error('Falha ao alterar fixação')
+            toast.success(bulletin.is_pinned ? 'Comunicado desafixado!' : 'Comunicado fixado no topo!')
+            refetchBulletins()
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao alterar fixação')
+        }
+    }
+
+    const handleDeleteBulletin = async (id: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir este comunicado? Esta ação não pode ser desfeita.')) {
+            return
+        }
+
+        try {
+            const res = await fetch(`/api/bulletins?id=${id}`, {
+                method: 'DELETE'
+            })
+
+            if (!res.ok) throw new Error('Falha ao excluir comunicado')
+            toast.success('Comunicado removido do mural!')
+            refetchBulletins()
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao excluir comunicado')
+        }
+    }
+
+    const handleStartEdit = (bulletin: any) => {
+        setEditingBulletin(bulletin)
+        setBulletinTitle(bulletin.title)
+        setBulletinContent(bulletin.content)
+        setBulletinType(bulletin.type || 'info')
+        setBulletinTarget(bulletin.target || 'internal')
+        setBulletinPinned(bulletin.is_pinned || false)
+        setIsCreateOpen(true)
+    }
+
 
     // Fetch doctors for filter
     const { data: doctorsList } = useQuery({
@@ -708,6 +866,26 @@ export default function AgendaPage() {
                                 Semana
                             </Button>
                         </div>
+
+                        {/* Botão Mural de Recados */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleOpenMural}
+                            className="bg-white shadow-sm h-8 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-md font-semibold text-amber-800 dark:text-amber-300"
+                            title="Ver recados e comunicados importantes"
+                        >
+                            <Megaphone className={cn("h-4 w-4 text-amber-500", unreadBulletinsCount > 0 && "animate-bounce")} />
+                            <span>Mural de Recados</span>
+                            {unreadBulletinsCount > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[10px] text-white font-extrabold items-center justify-center">
+                                        {unreadBulletinsCount}
+                                    </span>
+                                </span>
+                            )}
+                        </Button>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1466,6 +1644,297 @@ export default function AgendaPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal/Drawer de Visualização Geral do Mural de Recados */}
+            {isMuralOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm transition-all duration-300">
+                    <div className="w-full max-w-2xl h-full bg-slate-50 dark:bg-slate-950 border-l border-white/10 dark:border-slate-800 shadow-2xl p-6 flex flex-col justify-between animate-in slide-in-from-right duration-300">
+                        <div className="flex-1 flex flex-col min-h-0">
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-2">
+                                    <Megaphone className="w-5 h-5 text-amber-500 animate-pulse" />
+                                    <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">Mural de Recados</h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {(isClinicAdmin || isReceptionist) && (
+                                        <Button
+                                            onClick={() => {
+                                                setEditingBulletin(null)
+                                                setBulletinTitle('')
+                                                setBulletinContent('')
+                                                setBulletinType('info')
+                                                setBulletinTarget('internal')
+                                                setBulletinPinned(false)
+                                                setIsCreateOpen(true)
+                                            }}
+                                            size="sm"
+                                            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/10 font-semibold"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Novo Comunicado
+                                        </Button>
+                                    )}
+                                    <Button 
+                                        onClick={() => setIsMuralOpen(false)}
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="rounded-full hover:bg-slate-200 dark:hover:bg-slate-800"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Conteúdo do Mural */}
+                            <div className="flex-1 overflow-y-auto py-6 pr-1 space-y-4" style={{ scrollbarWidth: 'thin' }}>
+                                {bulletinsLoading ? (
+                                    <div className="flex flex-col items-center justify-center py-20">
+                                        <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-2" />
+                                        <span className="text-sm text-muted-foreground">Carregando mural de comunicados...</span>
+                                    </div>
+                                ) : bulletins.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8">
+                                        <Megaphone className="w-12 h-12 text-slate-400 mb-3 opacity-40" />
+                                        <p className="font-semibold text-slate-700 dark:text-slate-300">Nenhum recado cadastrado</p>
+                                        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                                            Avisos importantes, comunicados internos e notas da clínica aparecerão aqui.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+                                        {bulletins.map((b: any) => {
+                                            const typeStyles = {
+                                                info: 'bg-blue-50/80 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/30 text-blue-950 dark:text-blue-200',
+                                                success: 'bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30 text-emerald-950 dark:text-emerald-200',
+                                                warning: 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30 text-amber-950 dark:text-amber-200',
+                                                alert: 'bg-rose-50/80 dark:bg-rose-950/20 border-rose-200/50 dark:border-rose-800/30 text-rose-950 dark:text-rose-200',
+                                            }[b.type || 'info'] || 'bg-white dark:bg-slate-900 border-slate-200 text-slate-950'
+
+                                            const badgeTarget = {
+                                                internal: { label: 'Interno', style: 'bg-slate-200/60 dark:bg-slate-800 text-slate-800 dark:text-slate-300' },
+                                                patients: { label: 'Pacientes', style: 'bg-blue-100/60 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
+                                                all: { label: 'Todos', style: 'bg-indigo-100/60 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' },
+                                            }[b.target || 'internal'] || { label: 'Interno', style: 'bg-slate-200/60 dark:bg-slate-800 text-slate-800 dark:text-slate-350' }
+
+                                            return (
+                                                <div 
+                                                    key={b.id} 
+                                                    className={`relative group p-5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:shadow-md flex flex-col justify-between bg-white dark:bg-slate-900/90 ${typeStyles} ${b.is_pinned ? 'ring-1.5 ring-amber-500/30' : ''}`}
+                                                >
+                                                    <div>
+                                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${badgeTarget.style}`}>
+                                                                    {badgeTarget.label}
+                                                                </span>
+                                                                {b.is_pinned && (
+                                                                    <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                                                        <Pin className="w-3.5 h-3.5 fill-current rotate-45" />
+                                                                        Fixado
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            {/* Ações Rápidas (Apenas Admin/Recepção) */}
+                                                            {(isClinicAdmin || isReceptionist) && (
+                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                                    <button 
+                                                                        onClick={() => handleTogglePin(b)}
+                                                                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                                                                        title={b.is_pinned ? "Desfixar recado" : "Fixar no topo"}
+                                                                    >
+                                                                        <Pin className={`w-3.5 h-3.5 ${b.is_pinned ? 'fill-current rotate-45 text-amber-500' : ''}`} />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleStartEdit(b)}
+                                                                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                                                                        title="Editar comunicado"
+                                                                    >
+                                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleDeleteBulletin(b.id)}
+                                                                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-rose-600 hover:text-rose-700 transition-colors"
+                                                                        title="Excluir comunicado"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <h3 className="font-semibold text-sm mb-1 leading-snug">{b.title}</h3>
+                                                        <p className="text-xs opacity-90 leading-relaxed whitespace-pre-line">{b.content}</p>
+                                                    </div>
+
+                                                    <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] opacity-75">
+                                                        <span>Por: {b.author_name || 'Equipe CliniGo'}</span>
+                                                        <span>{new Date(b.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                            <Button
+                                onClick={() => setIsMuralOpen(false)}
+                                variant="outline"
+                                className="rounded-xl border-slate-200"
+                            >
+                                Fechar
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Criação e Edição de Recados (Sobreposição) */}
+            {isCreateOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+                    <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 flex flex-col justify-between animate-in zoom-in-95 duration-200">
+                        <div>
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                                <h3 className="text-base font-bold flex items-center gap-2">
+                                    <Megaphone className="w-5 h-5 text-amber-500" />
+                                    {editingBulletin ? 'Editar Comunicado' : 'Novo Comunicado'}
+                                </h3>
+                                <Button 
+                                    onClick={() => {
+                                        setIsCreateOpen(false)
+                                        setEditingBulletin(null)
+                                    }}
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+
+                            <form onSubmit={handleSaveBulletin} className="space-y-4 mt-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-slate-500">Título do Comunicado</label>
+                                    <Input
+                                        value={bulletinTitle}
+                                        onChange={(e) => setBulletinTitle(e.target.value)}
+                                        placeholder="Ex: Reunião Geral de Equipe"
+                                        required
+                                        maxLength={100}
+                                        className="rounded-xl"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-slate-500">Conteúdo / Descrição</label>
+                                    <Textarea
+                                        value={bulletinContent}
+                                        onChange={(e) => setBulletinContent(e.target.value)}
+                                        placeholder="Digite a mensagem completa que deseja transmitir..."
+                                        rows={4}
+                                        required
+                                        className="rounded-xl resize-none"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-slate-500">Visualização / Destino</label>
+                                        <select
+                                            value={bulletinTarget}
+                                            onChange={(e: any) => setBulletinTarget(e.target.value as any)}
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="internal">Apenas Interno (Equipe)</option>
+                                            <option value="patients">Apenas Pacientes (Portal)</option>
+                                            <option value="all">Todos (Equipe e Portal)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-slate-500">Tipo de Alerta</label>
+                                        <select
+                                            value={bulletinType}
+                                            onChange={(e: any) => setBulletinType(e.target.value as any)}
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="info">💡 Informativo (Azul)</option>
+                                            <option value="success">✅ Positivo (Verde)</option>
+                                            <option value="warning">⚠️ Atenção (Amarelo)</option>
+                                            <option value="alert">🚨 Urgente (Vermelho)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="pinned"
+                                        checked={bulletinPinned}
+                                        onChange={(e) => setBulletinPinned(e.target.checked)}
+                                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                                    />
+                                    <label htmlFor="pinned" className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1 cursor-pointer select-none">
+                                        <Pin className="w-3.5 h-3.5 rotate-45 fill-current text-amber-500" />
+                                        Fixar no topo do mural
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 mt-6">
+                            <Button
+                                onClick={() => {
+                                    if (window.confirm('Deseja limpar todos os campos do formulário?')) {
+                                        setBulletinTitle('')
+                                        setBulletinContent('')
+                                        setBulletinType('info')
+                                        setBulletinTarget('internal')
+                                        setBulletinPinned(false)
+                                    }
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="rounded-xl border-slate-200 text-slate-600"
+                            >
+                                Limpar
+                            </Button>
+                            
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={() => {
+                                        setIsCreateOpen(false)
+                                        setEditingBulletin(null)
+                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="rounded-xl text-slate-500"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleSaveBulletin}
+                                    disabled={isSubmittingBulletin || !bulletinTitle.trim() || !bulletinContent.trim()}
+                                    size="sm"
+                                    className="bg-amber-500 text-white hover:bg-amber-600 rounded-xl px-5 shadow-lg shadow-amber-500/10 font-semibold"
+                                >
+                                    {isSubmittingBulletin ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        'Salvar'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
