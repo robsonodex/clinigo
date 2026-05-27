@@ -334,14 +334,33 @@ O que prefere fazer?
   // ===== STEP: FLUXO 5 — COLETA DOR =====
   if (currentStep === 'fluxo_5_aguarda_dor') {
     const dorKey = input.charAt(0)
+    let dorText = ''
+    let explicacaoDor = ''
+
     if (DOR_MAP[dorKey]) {
-      lead.dorPrincipal = DOR_MAP[dorKey]
+      dorText = DOR_MAP[dorKey]
+      lead.dorPrincipal = dorText
+
+      // Mapear explicação específica para a dor selecionada (sem rodapés de menu)
+      const cleanFooter = `\n\n🔁 *1* — Ver outra funcionalidade\n🚀 *2* — Testar grátis agora\n💬 *3* — Falar com especialista`
+      if (dorKey === 'a') explicacaoDor = MSG_FUNC_4A[0].replace(cleanFooter, '')
+      if (dorKey === 'b') explicacaoDor = MSG_FUNC_4C[0].replace(cleanFooter, '')
+      if (dorKey === 'c') explicacaoDor = MSG_FUNC_4B[0].replace(cleanFooter, '')
+      if (dorKey === 'd') explicacaoDor = MSG_FUNC_4F[0].replace(cleanFooter, '')
     } else {
       lead.dorPrincipal = userMessage.trim()
     }
+
+    // Montar array de mensagens sequenciais
+    const responseMessages: string[] = []
+    if (explicacaoDor) {
+      responseMessages.push(explicacaoDor)
+    }
+    responseMessages.push(...buildHandoffMessage(lead))
+
     // HANDOFF
     return result(
-      buildHandoffMessage(lead),
+      responseMessages,
       'transferred',
       { transfer: true, transferTag: 'vendas', leadToSave: lead }
     )
