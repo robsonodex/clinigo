@@ -32,7 +32,7 @@ export async function GET() {
                 role,
                 phone,
                 clinic_id,
-                clinics (
+                clinics!users_clinic_id_fkey (
                     name
                 )
             `)
