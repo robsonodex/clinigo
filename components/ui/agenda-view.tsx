@@ -224,6 +224,7 @@ export default function AgendaPage() {
 
     const isClinicAdmin = user?.role === 'CLINIC_ADMIN' || user?.role === 'SUPER_ADMIN'
     const isReceptionist = user?.role === 'RECEPTIONIST'
+    const canManageBulletins = isClinicAdmin || isReceptionist || isDoctor || isCoordinator || !!user
 
     // Fetch Bulletins (Mural)
     const { data: bulletins = [], isLoading: bulletinsLoading, refetch: refetchBulletins } = useQuery({
@@ -1656,7 +1657,7 @@ export default function AgendaPage() {
                                     <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">Mural de Recados</h3>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {(isClinicAdmin || isReceptionist) && (
+                                    {canManageBulletins && (
                                         <Button
                                             onClick={() => {
                                                 setEditingBulletin(null)
@@ -1736,7 +1737,7 @@ export default function AgendaPage() {
                                                             </div>
                                                             
                                                             {/* Ações Rápidas (Apenas Admin/Recepção) */}
-                                                            {(isClinicAdmin || isReceptionist) && (
+                                                            {canManageBulletins && (
                                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                                     <button 
                                                                         onClick={() => handleTogglePin(b)}
