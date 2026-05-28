@@ -37,32 +37,56 @@ export async function POST(request: Request) {
     // 3. Fazer requisição para o serviço Clin Bot no Railway
     const url = `${getClinBotUrl()}/clin/send`
     
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
+    const cleanTo = to.replace(/\D/g, '')
+    const targets = [cleanTo]
     
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, text }),
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeout)
-      
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Erro reportado pelo serviço do WhatsApp')
+    // Fallback inteligente de nono dígito para o Brasil (DDD > 28)
+    if (cleanTo.startsWith('55') && cleanTo.length === 13) {
+      const ddd = parseInt(cleanTo.substring(2, 4), 10)
+      if (ddd > 28) {
+        const semNove = cleanTo.substring(0, 4) + cleanTo.substring(5)
+        targets.push(semNove)
       }
-
-      return NextResponse.json({ success: true })
-    } catch (err: any) {
-      clearTimeout(timeout)
-      if (err.name === 'AbortError') {
-        throw new Error('O serviço do WhatsApp (Clin Bot) não respondeu a tempo.')
-      }
-      throw err
     }
+
+    let success = false
+    let lastError = null
+
+    for (const target of targets) {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
+      
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: target, text }),
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeout)
+        
+        const data = await res.json()
+        if (res.ok) {
+          success = true
+        } else {
+          lastError = data.error || 'Erro reportado pelo serviço do WhatsApp'
+        }
+      } catch (err: any) {
+        clearTimeout(timeout)
+        if (err.name === 'AbortError') {
+          lastError = 'O serviço do WhatsApp (Clin Bot) não respondeu a tempo.'
+        } else {
+          lastError = err.message
+        }
+      }
+    }
+
+    if (!success) {
+      throw new Error(lastError || 'Falha ao enviar mensagem pelo WhatsApp')
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Clin WhatsApp Send Proxy]', error.message)
     return NextResponse.json({
