@@ -346,6 +346,54 @@ export async function middleware(request: NextRequest) {
             )
         }
 
+        // Check clinic status and trial expiration for patients
+        const { supabase: patientSupabase } = createSupabaseClient(request)
+        const { data: patientData, error: patientError } = await patientSupabase
+            .from('patients')
+            .select('clinic_id, clinics(is_active, approval_status, trial_ends_at)')
+            .eq('id', patient.sub)
+            .single()
+
+        if (patientError || !patientData) {
+            console.error('[MIDDLEWARE:PATIENT] Erro ao buscar dados da clínica do paciente:', patientError)
+            return NextResponse.json(
+                { error: 'Não autorizado ou clínica não encontrada', code: 'CLINIC_NOT_FOUND' },
+                { status: 401 }
+            )
+        }
+
+        const clinic = Array.isArray(patientData.clinics)
+            ? patientData.clinics[0]
+            : patientData.clinics
+
+        if (!clinic || !clinic.is_active) {
+            if (!pathname.startsWith('/api')) {
+                return NextResponse.redirect(new URL('/paciente/entrar?error=clinic_inactive', request.url))
+            }
+            return NextResponse.json(
+                { error: 'Clínica inativa', code: 'CLINIC_INACTIVE' },
+                { status: 403 }
+            )
+        }
+
+        // TRIAL EXPIRATION CHECK FOR PATIENTS
+        if (clinic.approval_status === 'trial' && clinic.trial_ends_at) {
+            const trialEnd = new Date(clinic.trial_ends_at)
+            if (trialEnd < new Date()) {
+                if (!pathname.startsWith('/api')) {
+                    return NextResponse.redirect(new URL('/paciente/entrar?error=trial_expired', request.url))
+                }
+                return NextResponse.json(
+                    {
+                        error: 'Período de teste expirado',
+                        code: 'TRIAL_EXPIRED',
+                        redirect_url: '/paciente/entrar?error=trial_expired'
+                    },
+                    { status: 402 }
+                )
+            }
+        }
+
         // Set patient headers
         const response = NextResponse.next()
         response.headers.set('x-patient-id', patient.sub)
