@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Send, Trash2 } from 'lucide-react'
+import { RefreshCw, Send, Trash2, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 interface AdminUser {
   id: string
@@ -227,6 +228,13 @@ export default function ClinWhatsAppPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
+          <Link
+            href="/system-master-hub"
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors duration-200 mb-4 group"
+          >
+            <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Voltar para o Master Hub</span>
+          </Link>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <span className="text-3xl">🤖</span>
             Clin — WhatsApp
