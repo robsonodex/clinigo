@@ -309,6 +309,29 @@ export async function POST(request: NextRequest) {
                     `
                 })
 
+                // Send WhatsApp notification
+                try {
+                    const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
+                    const waPhone = clinic.phone || clinic.responsible_phone
+                    if (waPhone) {
+                        const cleanPhone = waPhone.replace(/\D/g, '')
+                        const formattedPlan = clinic.plan_type === 'STARTER' ? 'Starter' : clinic.plan_type === 'AVANCADO' ? 'Avançado' : clinic.plan_type === 'PROFESSIONAL' ? 'Professional' : clinic.plan_type
+                        const waMessage = `🎉 *Pagamento Aprovado - Bem-vindo ao CliniGo!* 🎉\n\n` +
+                            `Olá *${clinic.responsible_name || 'Gestor'}*,\n` +
+                            `Seu pagamento foi confirmado pelo banco com sucesso!\n\n` +
+                            `🏥 *Clínica:* ${clinic.name}\n` +
+                            `💳 *Plano:* ${formattedPlan} (${billingCycle === 'ANNUAL' ? 'Anual' : 'Mensal'})\n` +
+                            `💰 *Valor Pago:* R$ ${paymentData.transaction_amount?.toFixed(2)}\n` +
+                            `🔢 *ID Transação:* #${paymentId}\n\n` +
+                            `✅ *Acesso Liberado!* Em instantes você receberá em seu e-mail (${clinic.email}) as credenciais de acesso.`
+                        
+                        await sendWhatsAppMessage('clin-sales-bot', cleanPhone, waMessage, 'clinic-payment-approved')
+                        logger.info({ clinicId, phone: cleanPhone }, 'Payment approved WhatsApp notification sent')
+                    }
+                } catch (waError) {
+                    logger.error({ clinicId, error: waError }, 'Failed to send payment approved WhatsApp notification')
+                }
+
                 // Wait 2 minutes then send credentials
                 setTimeout(async () => {
                     try {
@@ -461,14 +484,90 @@ export async function POST(request: NextRequest) {
                 } as SubscriptionUpdate as any)
                 .eq('id', subscriptionId)
 
-            // 🔥 CRITICAL: Update clinic plan_type for immediate access
+            // 🔥 CRITICAL: Update clinic plan_type, approval_status, and is_active for immediate access and trial removal
             await supabase
                 .from('clinics')
                 .update({
                     plan_type: sub.plan_type,
+                    approval_status: 'active',
+                    is_active: true,
                     updated_at: new Date().toISOString(),
                 } as ClinicPlanUpdate as any)
                 .eq('id', clinicId)
+
+            // Fetch clinic data for notification
+            const { data: clinic } = await supabase
+                .from('clinics')
+                .select('name, email, responsible_name, phone, responsible_phone')
+                .eq('id', clinicId)
+                .single()
+
+            if (clinic) {
+                // Send email notification
+                try {
+                    const { sendMail } = await import('@/lib/services/mail-service')
+                    const formattedPlan = sub.plan_type === 'STARTER' ? 'Starter' : sub.plan_type === 'AVANCADO' ? 'Avançado' : sub.plan_type === 'PROFESSIONAL' ? 'Professional' : sub.plan_type
+                    await sendMail({
+                        to: clinic.email,
+                        subject: '✅ Assinatura Ativada - Acesso Liberado no CliniGo!',
+                        html: `
+                            <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+                                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Plano Ativado com Sucesso!</h1>
+                                </div>
+                                <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
+                                    <p style="font-size: 18px; color: #1f2937;">Olá, <strong>${clinic.responsible_name || 'Gestor'}</strong>!</p>
+                                    <p style="color: #4b5563;">Sua assinatura foi ativada com sucesso e os limites de trial foram removidos!</p>
+                                    
+                                    <div style="background: #f0fdf4; border-radius: 10px; padding: 20px; margin: 20px 0;">
+                                        <h3 style="color: #166534; margin: 0 0 15px 0;">📋 Detalhes do Plano Contratado:</h3>
+                                        <table style="width: 100%; color: #374151;">
+                                            <tr><td><strong>Clínica:</strong></td><td>${clinic.name}</td></tr>
+                                            <tr><td><strong>Plano:</strong></td><td>${formattedPlan} (${sub.billing_cycle === 'ANNUAL' ? 'Anual' : 'Mensal'})</td></tr>
+                                            <tr><td><strong>Valor:</strong></td><td>R$ ${paymentData.transaction_amount?.toFixed(2)}</td></tr>
+                                            <tr><td><strong>Método:</strong></td><td>${paymentData.payment_method_id?.toUpperCase()}</td></tr>
+                                            <tr><td><strong>ID Transação:</strong></td><td>#${paymentId}</td></tr>
+                                        </table>
+                                    </div>
+                                    
+                                    <p style="color: #059669; font-weight: bold;">✅ Seu sistema está 100% liberado e ativo!</p>
+                                    <div style="text-align: center; margin: 25px 0;">
+                                        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/dashboard" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block;">
+                                            👉 ACESSAR O MEU PAINEL
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    })
+                    logger.info({ clinicId }, 'Subscription confirmation email sent')
+                } catch (emailError) {
+                    logger.error({ clinicId, error: emailError }, 'Failed to send subscription confirmation email')
+                }
+
+                // Send WhatsApp notification
+                try {
+                    const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
+                    const waPhone = clinic.phone || clinic.responsible_phone
+                    if (waPhone) {
+                        const cleanPhone = waPhone.replace(/\D/g, '')
+                        const formattedPlan = sub.plan_type === 'STARTER' ? 'Starter' : sub.plan_type === 'AVANCADO' ? 'Avançado' : sub.plan_type === 'PROFESSIONAL' ? 'Professional' : sub.plan_type
+                        const waMessage = `🎉 *Assinatura Ativada - Acesso Total CliniGo!* 🎉\n\n` +
+                            `Olá *${clinic.responsible_name || 'Gestor'}*,\n` +
+                            `Seu pagamento de assinatura foi aprovado pelo banco com sucesso!\n\n` +
+                            `🏥 *Clínica:* ${clinic.name}\n` +
+                            `💳 *Plano Contratado:* ${formattedPlan} (${sub.billing_cycle === 'ANNUAL' ? 'Anual' : 'Mensal'})\n` +
+                            `💰 *Valor Pago:* R$ ${paymentData.transaction_amount?.toFixed(2)}\n` +
+                            `🔢 *ID Transação:* #${paymentId}\n\n` +
+                            `🚀 *Acesso 100% Liberado!* Os limites de teste de 7 dias foram totalmente removidos e seu sistema está pronto para uso por tempo indeterminado.`
+                        
+                        await sendWhatsAppMessage('clin-sales-bot', cleanPhone, waMessage, 'clinic-subscription-approved')
+                        logger.info({ clinicId, phone: cleanPhone }, 'Subscription approved WhatsApp notification sent')
+                    }
+                } catch (waError) {
+                    logger.error({ clinicId, error: waError }, 'Failed to send subscription approved WhatsApp notification')
+                }
+            }
 
             logger.info({
                 event: 'subscription_activated',
