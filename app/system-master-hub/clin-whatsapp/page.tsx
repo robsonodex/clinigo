@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Send, Trash2, ArrowLeft } from 'lucide-react'
+import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 interface AdminUser {
   id: string
@@ -15,12 +16,28 @@ interface AdminUser {
   clinicId: string | null
 }
 
+interface ScheduledMessage {
+  id: string
+  created_at: string
+  scheduled_for: string
+  recipient_phone: string
+  recipient_name: string
+  subject: string
+  message: string
+  status: 'pending' | 'sent' | 'failed'
+  error_message: string | null
+  sent_at: string | null
+}
+
 export default function ClinWhatsAppPage() {
   const [status, setStatus] = useState<'loading' | 'disconnected' | 'connecting' | 'connected'>('loading')
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Sistema de Abas
+  const [activeTab, setActiveTab] = useState<'instant' | 'scheduled'>('instant')
 
   // Estados do Envio Manual de WhatsApp
   const [admins, setAdmins] = useState<AdminUser[]>([])
@@ -34,6 +51,14 @@ export default function ClinWhatsAppPage() {
   const [sendSuccess, setSendSuccess] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
 
+  // Estados de Agendamento
+  const [scheduledFor, setScheduledFor] = useState('')
+  const [scheduledMessages, setScheduledMessages] = useState<ScheduledMessage[]>([])
+  const [loadingScheduled, setLoadingScheduled] = useState(false)
+  const [schedulingMsg, setSchedulingMsg] = useState(false)
+  const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
+
   const checkStatus = useCallback(async () => {
     try {
       const res = await fetch('/api/clin-whatsapp/connect')
@@ -44,7 +69,6 @@ export default function ClinWhatsAppPage() {
           setStatus('connected')
           setQrCode(null)
         } else if (data.status === 'connecting') {
-          // Não resetar para disconnected se está connecting
           setStatus(prev => prev === 'loading' ? 'disconnected' : prev)
         } else {
           setStatus('disconnected')
@@ -70,10 +94,29 @@ export default function ClinWhatsAppPage() {
     }
   }, [])
 
+  const loadScheduledMessages = useCallback(async () => {
+    setLoadingScheduled(true)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('scheduled_whatsapp_messages')
+        .select('*')
+        .order('scheduled_for', { ascending: true })
+
+      if (error) throw error
+      setScheduledMessages(data || [])
+    } catch (e: any) {
+      console.error('Erro ao buscar mensagens agendadas:', e.message)
+    } finally {
+      setLoadingScheduled(false)
+    }
+  }, [])
+
   useEffect(() => {
     checkStatus()
     loadAdmins()
-  }, [checkStatus, loadAdmins])
+    loadScheduledMessages()
+  }, [checkStatus, loadAdmins, loadScheduledMessages])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,13 +141,11 @@ export default function ClinWhatsAppPage() {
         setSendError('Digite o número de telefone do destinatário.')
         return
       }
-      // Higienizar número
       let sanitized = customPhone.replace(/\D/g, '')
       if (sanitized.length < 10) {
         setSendError('Por favor, insira um número válido com DDD (mínimo 10 dígitos).')
         return
       }
-      // Se não tem DDI (55), adiciona automaticamente
       if (!sanitized.startsWith('55') && (sanitized.length === 10 || sanitized.length === 11)) {
         sanitized = '55' + sanitized
       }
@@ -152,14 +193,123 @@ export default function ClinWhatsAppPage() {
     }
   }
 
+  const handleScheduleMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    let targetPhone = ''
+    let destinationName = ''
+
+    if (sendMethod === 'registered') {
+      if (!selectedAdminId) {
+        setScheduleError('Selecione um administrador para agendar a mensagem.')
+        return
+      }
+      const admin = admins.find(a => a.id === selectedAdminId)
+      if (!admin || !admin.phone) {
+        setScheduleError('Administrador selecionado não possui número de telefone cadastrado.')
+        return
+      }
+      targetPhone = admin.phone
+      destinationName = admin.name
+    } else {
+      if (!customPhone.trim()) {
+        setScheduleError('Digite o número de telefone do destinatário.')
+        return
+      }
+      let sanitized = customPhone.replace(/\D/g, '')
+      if (sanitized.length < 10) {
+        setScheduleError('Por favor, insira um número válido com DDD (mínimo 10 dígitos).')
+        return
+      }
+      if (!sanitized.startsWith('55') && (sanitized.length === 10 || sanitized.length === 11)) {
+        sanitized = '55' + sanitized
+      }
+      targetPhone = sanitized
+      destinationName = customPhone.trim()
+    }
+
+    if (!subject.trim()) {
+      setScheduleError('O campo Assunto é obrigatório.')
+      return
+    }
+    if (!message.trim()) {
+      setScheduleError('O campo Mensagem é obrigatório.')
+      return
+    }
+    if (!scheduledFor) {
+      setScheduleError('Selecione a data e hora do agendamento.')
+      return
+    }
+
+    const scheduledDate = new Date(scheduledFor)
+    if (scheduledDate <= new Date()) {
+      setScheduleError('A data e hora do agendamento devem ser no futuro.')
+      return
+    }
+
+    setSchedulingMsg(true)
+    setScheduleError(null)
+    setScheduleSuccess(null)
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('scheduled_whatsapp_messages')
+        .insert({
+          scheduled_for: scheduledDate.toISOString(),
+          recipient_phone: targetPhone,
+          recipient_name: destinationName,
+          subject: subject.trim(),
+          message: message.trim(),
+          status: 'pending'
+        })
+
+      if (error) throw error
+
+      setScheduleSuccess(`Mensagem agendada com sucesso para ${destinationName}!`)
+      setSubject('')
+      setMessage('')
+      setCustomPhone('')
+      setSelectedAdminId('')
+      setScheduledFor('')
+      loadScheduledMessages()
+    } catch (err: any) {
+      setScheduleError(err.message || 'Erro ao agendar mensagem.')
+    } finally {
+      setSchedulingMsg(false)
+    }
+  }
+
+  const handleDeleteSchedule = async (id: string, name: string) => {
+    if (!confirm(`Tem certeza que deseja cancelar e excluir o agendamento programado para ${name}? Esta ação não pode ser desfeita.`)) {
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('scheduled_whatsapp_messages')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      loadScheduledMessages()
+    } catch (err: any) {
+      alert(err.message || 'Erro ao excluir agendamento.')
+    }
+  }
+
   const handleClearForm = () => {
     if (confirm('Deseja limpar todos os campos?')) {
       setSubject('')
       setMessage('')
       setSelectedAdminId('')
       setCustomPhone('')
+      setScheduledFor('')
       setSendSuccess(null)
       setSendError(null)
+      setScheduleSuccess(null)
+      setScheduleError(null)
     }
   }
 
@@ -175,7 +325,7 @@ export default function ClinWhatsAppPage() {
       if (data.qr_code) {
         setQrCode(data.qr_code)
         setStatus('connecting')
-        // Poll para verificar se conectou
+        
         const interval = setInterval(async () => {
           try {
             const statusRes = await fetch('/api/clin-whatsapp/connect')
@@ -187,7 +337,6 @@ export default function ClinWhatsAppPage() {
               setPhoneNumber(statusData.phone_number)
               setStatus('connected')
             } else if (statusData.status === 'disconnected') {
-              // QR expirou ou sessão inválida — parar polling
               clearInterval(interval)
               setQrCode(null)
               setStatus('disconnected')
@@ -197,7 +346,7 @@ export default function ClinWhatsAppPage() {
             console.error('[Clin Poll Error]', e)
           }
         }, 3000)
-        // Parar poll após 3 minutos
+        
         setTimeout(() => clearInterval(interval), 180000)
       } else if (data.status === 'connected') {
         setStatus('connected')
@@ -225,7 +374,7 @@ export default function ClinWhatsAppPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -240,7 +389,7 @@ export default function ClinWhatsAppPage() {
             Clin — WhatsApp
           </h1>
           <p className="text-gray-400 mt-2">
-            Conecte o número de vendas do CliniGo para o Clin responder automaticamente.
+            Conecte o número de vendas do CliniGo e controle o envio de mensagens instantâneas e agendadas.
           </p>
         </div>
 
@@ -350,193 +499,498 @@ export default function ClinWhatsAppPage() {
           </div>
         </motion.div>
 
-        {/* Formulário de Envio Manual */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8 mt-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                <span className="text-xl">💬</span>
-                Enviar Mensagem Manual
-              </h2>
-              <p className="text-gray-400 text-sm mt-1">
-                Envie mensagens estruturadas para o WhatsApp dos administradores cadastrados.
-              </p>
-            </div>
-            <button
-              onClick={loadAdmins}
-              disabled={loadingAdmins}
-              className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-              title="Recarregar lista de administradores"
-            >
-              <RefreshCw className={`w-5 h-5 ${loadingAdmins ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+        {/* Sistema de Abas */}
+        <div className="flex bg-gray-900/60 p-1.5 rounded-xl border border-gray-800 mt-8 mb-6 max-w-md">
+          <button
+            onClick={() => setActiveTab('instant')}
+            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+              activeTab === 'instant'
+                ? 'bg-emerald-600/90 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
+            }`}
+          >
+            <Send className="w-4 h-4" />
+            Envio Instantâneo
+          </button>
+          <button
+            onClick={() => setActiveTab('scheduled')}
+            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+              activeTab === 'scheduled'
+                ? 'bg-emerald-600/90 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            Mensagens Programadas
+          </button>
+        </div>
 
-          {status !== 'connected' ? (
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
-              <p className="text-yellow-400 text-sm">
-                ⚠️ Conecte o WhatsApp no painel acima para habilitar o envio de mensagens manuais.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSendMessage} className="space-y-5">
-              {/* Alternar Método de Envio */}
+        {/* ABA 1: ENVIO INSTANTÂNEO */}
+        {activeTab === 'instant' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8"
+          >
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
-                  Método de Destino
-                </label>
-                <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSendMethod('registered')
-                      setSendError(null)
-                    }}
-                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                      sendMethod === 'registered'
-                        ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-950/20'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
-                    }`}
-                  >
-                    <span>👥</span> Administrador Cadastrado
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSendMethod('manual')
-                      setSendError(null)
-                    }}
-                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                      sendMethod === 'manual'
-                        ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-950/20'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
-                    }`}
-                  >
-                    <span>📱</span> Digitar Número Manual
-                  </button>
-                </div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                  <span className="text-xl">💬</span>
+                  Enviar Mensagem Manual Instantânea
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  Envie mensagens estruturadas para o WhatsApp dos administradores imediatamente.
+                </p>
               </div>
+              <button
+                onClick={loadAdmins}
+                disabled={loadingAdmins}
+                className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                title="Recarregar lista de administradores"
+              >
+                <RefreshCw className={`w-5 h-5 ${loadingAdmins ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
 
-              {/* Renderização Condicional do Campo de Destino */}
-              {sendMethod === 'registered' ? (
+            {status !== 'connected' ? (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                <p className="text-yellow-400 text-sm">
+                  ⚠️ Conecte o WhatsApp no painel acima para habilitar o envio de mensagens.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSendMessage} className="space-y-5">
+                {/* Alternar Método de Envio */}
                 <div>
-                  <label className="text-gray-300 font-medium text-sm mb-2 block">
-                    Administrador & Clínica Destinatária
+                  <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
+                    Método de Destino
                   </label>
-                  <select
-                    value={selectedAdminId}
-                    onChange={(e) => setSelectedAdminId(e.target.value)}
-                    className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                    required
-                  >
-                    <option value="">Selecione o administrador...</option>
-                    {admins.map((admin) => (
-                      <option key={admin.id} value={admin.id}>
-                        {admin.clinicName} — {admin.name} ({admin.phone}) [{admin.role}]
-                      </option>
-                    ))}
-                  </select>
-                  {admins.length === 0 && !loadingAdmins && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Nenhum administrador com telefone cadastrado foi encontrado no banco de dados.
-                    </p>
-                  )}
+                  <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSendMethod('registered')
+                        setSendError(null)
+                      }}
+                      className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                        sendMethod === 'registered'
+                          ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                      }`}
+                    >
+                      <span>👥</span> Administrador Cadastrado
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSendMethod('manual')
+                        setSendError(null)
+                      }}
+                      className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                        sendMethod === 'manual'
+                          ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                      }`}
+                    >
+                      <span>📱</span> Digitar Número Manual
+                    </button>
+                  </div>
                 </div>
-              ) : (
+
+                {/* Renderização Condicional do Campo de Destino */}
+                {sendMethod === 'registered' ? (
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block">
+                      Administrador & Clínica Destinatária
+                    </label>
+                    <select
+                      value={selectedAdminId}
+                      onChange={(e) => setSelectedAdminId(e.target.value)}
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                      required
+                    >
+                      <option value="">Selecione o administrador...</option>
+                      {admins.map((admin) => (
+                        <option key={admin.id} value={admin.id}>
+                          {admin.clinicName} — {admin.name} ({admin.phone}) [{admin.role}]
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block">
+                      Número de WhatsApp Destinatário
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 88 98807-3740"
+                      value={customPhone}
+                      onChange={(e) => setCustomPhone(e.target.value)}
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                      required
+                    />
+                  </div>
+                )}
+
+                {/* Assunto */}
                 <div>
                   <label className="text-gray-300 font-medium text-sm mb-2 block">
-                    Número de WhatsApp Destinatário
+                    Assunto
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: 11 99999-9999 ou 5511999999999"
-                    value={customPhone}
-                    onChange={(e) => setCustomPhone(e.target.value)}
+                    placeholder="Ex: Confirmação de Assinatura, Atualização do Sistema..."
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
                     className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1.5">
-                    Insira o número completo com DDD. Se omitido o código de país (55), adicionaremos automaticamente para o Brasil.
+                </div>
+
+                {/* Mensagem */}
+                <div>
+                  <label className="text-gray-300 font-medium text-sm mb-2 block">
+                    Mensagem
+                  </label>
+                  <textarea
+                    placeholder="Escreva o conteúdo detalhado da mensagem que será enviada pelo WhatsApp..."
+                    rows={5}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none"
+                    required
+                  />
+                </div>
+
+                {/* Mensagens de feedback */}
+                {sendError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                    <p className="text-red-400 text-sm">{sendError}</p>
+                  </div>
+                )}
+
+                {sendSuccess && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                    <p className="text-emerald-400 text-sm">✅ {sendSuccess}</p>
+                  </div>
+                )}
+
+                {/* Ações */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleClearForm}
+                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Limpar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sendingMsg}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {sendingMsg ? 'Enviando...' : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Enviar Mensagem
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </motion.div>
+        )}
+
+        {/* ABA 2: MENSAGENS PROGRAMADAS */}
+        {activeTab === 'scheduled' && (
+          <div className="space-y-6">
+            {/* Formulário de Agendamento */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-emerald-400" />
+                    Programar Novo Envio
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Crie e salve uma mensagem para ser enviada automaticamente em uma data futura.
                   </p>
                 </div>
-              )}
-
-              {/* Assunto */}
-              <div>
-                <label className="text-gray-300 font-medium text-sm mb-2 block">
-                  Assunto
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Confirmação de Assinatura, Atualização do Sistema..."
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                  required
-                />
               </div>
 
-              {/* Mensagem */}
-              <div>
-                <label className="text-gray-300 font-medium text-sm mb-2 block">
-                  Mensagem
-                </label>
-                <textarea
-                  placeholder="Escreva o conteúdo detalhado da mensagem que será enviada pelo WhatsApp..."
-                  rows={5}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none"
-                  required
-                />
-              </div>
-
-              {/* Mensagens de feedback */}
-              {sendError && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                  <p className="text-red-400 text-sm">{sendError}</p>
+              {status !== 'connected' ? (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                  <p className="text-yellow-400 text-sm">
+                    ⚠️ Conecte o WhatsApp no painel acima para habilitar o agendamento de mensagens.
+                  </p>
                 </div>
-              )}
+              ) : (
+                <form onSubmit={handleScheduleMessage} className="space-y-5">
+                  {/* Alternar Método de Envio */}
+                  <div>
+                    <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
+                      Método de Destino
+                    </label>
+                    <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSendMethod('registered')
+                          setScheduleError(null)
+                        }}
+                        className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                          sendMethod === 'registered'
+                            ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                        }`}
+                      >
+                        <span>👥</span> Administrador Cadastrado
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSendMethod('manual')
+                          setScheduleError(null)
+                        }}
+                        className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                          sendMethod === 'manual'
+                            ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                        }`}
+                      >
+                        <span>📱</span> Digitar Número Manual
+                      </button>
+                    </div>
+                  </div>
 
-              {sendSuccess && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                  <p className="text-emerald-400 text-sm">✅ {sendSuccess}</p>
-                </div>
-              )}
-
-              {/* Ações */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleClearForm}
-                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Limpar
-                </button>
-                <button
-                  type="submit"
-                  disabled={sendingMsg}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {sendingMsg ? (
-                    <>Enviando...</>
+                  {/* Renderização Condicional do Campo de Destino */}
+                  {sendMethod === 'registered' ? (
+                    <div>
+                      <label className="text-gray-300 font-medium text-sm mb-2 block">
+                        Administrador & Clínica Destinatária
+                      </label>
+                      <select
+                        value={selectedAdminId}
+                        onChange={(e) => setSelectedAdminId(e.target.value)}
+                        className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full animate-none"
+                        required
+                      >
+                        <option value="">Selecione o administrador...</option>
+                        {admins.map((admin) => (
+                          <option key={admin.id} value={admin.id}>
+                            {admin.clinicName} — {admin.name} ({admin.phone})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Enviar Mensagem
-                    </>
+                    <div>
+                      <label className="text-gray-300 font-medium text-sm mb-2 block">
+                        Número de WhatsApp Destinatário
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: 88 98807-3740"
+                        value={customPhone}
+                        onChange={(e) => setCustomPhone(e.target.value)}
+                        className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                        required
+                      />
+                    </div>
                   )}
+
+                  {/* Data e Hora de Envio */}
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-400" />
+                      Data e Hora Programada para o Envio
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full color-scheme-dark"
+                      required
+                    />
+                  </div>
+
+                  {/* Assunto */}
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block">
+                      Assunto
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Alerta de Renovação de Plano..."
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                      required
+                    />
+                  </div>
+
+                  {/* Mensagem */}
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block">
+                      Mensagem
+                    </label>
+                    <textarea
+                      placeholder="Escreva a mensagem programada..."
+                      rows={4}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none"
+                      required
+                    />
+                  </div>
+
+                  {/* Mensagens de feedback */}
+                  {scheduleError && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                      <p className="text-red-400 text-sm">{scheduleError}</p>
+                    </div>
+                  )}
+
+                  {scheduleSuccess && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                      <p className="text-emerald-400 text-sm">✅ {scheduleSuccess}</p>
+                    </div>
+                  )}
+
+                  {/* Ações */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleClearForm}
+                      className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Limpar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={schedulingMsg}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {schedulingMsg ? 'Agendando...' : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          Agendar Envio
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+
+            {/* Lista de Mensagens Programadas */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-emerald-400" />
+                    Agendamentos Salvos
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Visualize e gerencie a fila de mensagens agendadas do sistema.
+                  </p>
+                </div>
+                <button
+                  onClick={loadScheduledMessages}
+                  disabled={loadingScheduled}
+                  className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                  title="Recarregar agendamentos"
+                >
+                  <RefreshCw className={`w-5 h-5 ${loadingScheduled ? 'animate-spin' : ''}`} />
                 </button>
               </div>
-            </form>
-          )}
-        </motion.div>
+
+              {loadingScheduled ? (
+                <div className="py-8 text-center text-gray-500 text-sm">Carregando agendamentos...</div>
+              ) : scheduledMessages.length === 0 ? (
+                <div className="py-12 border border-dashed border-gray-700/50 rounded-xl text-center text-gray-500 text-sm">
+                  📭 Nenhuma mensagem programada no momento.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-700/40">
+                  <table className="w-full text-left border-collapse bg-gray-900/20">
+                    <thead>
+                      <tr className="border-b border-gray-800 bg-gray-900/50 text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                        <th className="px-6 py-4">Destinatário</th>
+                        <th className="px-6 py-4">Agendado Para</th>
+                        <th className="px-6 py-4">Assunto</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-center">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800 text-sm text-gray-300">
+                      {scheduledMessages.map((msg) => (
+                        <tr key={msg.id} className="hover:bg-gray-800/20 transition-colors">
+                          <td className="px-6 py-4">
+                            <span className="font-semibold text-white block">{msg.recipient_name}</span>
+                            <span className="text-xs text-gray-500">{msg.recipient_phone}</span>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-medium">
+                            {new Date(msg.scheduled_for).toLocaleString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4 font-medium text-gray-200">
+                            {msg.subject}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                              msg.status === 'sent' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
+                              msg.status === 'failed' ? 'bg-red-500/10 border border-red-500/30 text-red-400' :
+                              'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 animate-pulse'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                msg.status === 'sent' ? 'bg-emerald-400' :
+                                msg.status === 'failed' ? 'bg-red-400' :
+                                'bg-yellow-400'
+                              }`} />
+                              {msg.status === 'sent' && 'Enviado'}
+                              {msg.status === 'failed' && 'Falhou'}
+                              {msg.status === 'pending' && 'Pendente'}
+                            </span>
+                            {msg.error_message && (
+                              <span className="text-[10px] text-red-400 block mt-1 max-w-[200px] truncate" title={msg.error_message}>
+                                {msg.error_message}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {msg.status === 'pending' ? (
+                              <button
+                                onClick={() => handleDeleteSchedule(msg.id, msg.recipient_name)}
+                                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors inline-flex items-center justify-center"
+                                title="Cancelar e Excluir Agendamento"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <span className="text-gray-600 text-xs">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
 
         {/* How it works */}
         <div className="mt-6 bg-gray-800/40 border border-gray-700/30 rounded-2xl p-6">
@@ -544,23 +998,26 @@ export default function ClinWhatsAppPage() {
           <div className="space-y-3 text-gray-400 text-sm">
             <div className="flex gap-3">
               <span className="text-emerald-500 font-bold">1.</span>
-              <span>Visitante clica em &quot;Fale com especialista&quot; no site</span>
+              <span>Conecte o número do seu celular de vendas do CliniGo no painel superior.</span>
             </div>
             <div className="flex gap-3">
               <span className="text-emerald-500 font-bold">2.</span>
-              <span>Abre o WhatsApp e envia mensagem para o número conectado</span>
+              <span>Escolha entre o envio instantâneo de mensagens ou o agendamento futuro na data desejada.</span>
             </div>
             <div className="flex gap-3">
               <span className="text-emerald-500 font-bold">3.</span>
-              <span>O Clin responde automaticamente: tira dúvidas, apresenta planos, captura dados</span>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-emerald-500 font-bold">4.</span>
-              <span>Quando o lead quer comprar ou fazer demo, o Clin avisa você para assumir a conversa</span>
+              <span>O cron job automatizado processa a fila de mensagens a cada 10 minutos, realizando os disparos perfeitamente.</span>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Estilos inline para o input de data no layout escuro */}
+      <style jsx global>{`
+        .color-scheme-dark {
+          color-scheme: dark;
+        }
+      `}</style>
     </div>
   )
 }
