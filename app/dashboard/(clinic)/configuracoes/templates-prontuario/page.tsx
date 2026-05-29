@@ -217,9 +217,12 @@ export default function TemplatesProntuarioPage() {
                         Crie modelos de prontuário padronizados por especialidade
                     </p>
                 </div>
-                <Button onClick={handleOpenNew}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Template
+                <Button
+                    onClick={handleOpenNew}
+                    className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0"
+                >
+                    <Plus className="w-4 h-4" />
+                    <span>Novo Template</span>
                 </Button>
             </div>
 
@@ -423,10 +426,26 @@ export default function TemplatesProntuarioPage() {
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowModal(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            {editingId ? 'Salvar' : 'Criar Template'}
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowModal(false)}
+                            className="rounded-xl h-10 px-5 text-sm font-semibold border-slate-200 dark:border-slate-800 transition-all duration-200"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Salvando...</span>
+                                </>
+                            ) : (
+                                <span>{editingId ? 'Salvar' : 'Criar Template'}</span>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

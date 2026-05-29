@@ -53,15 +53,33 @@ export default function RiscoEvasaoPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div><h1 className="text-2xl font-bold">Risco de Evasão</h1><p className="text-muted-foreground">Pacientes sem agendar há mais de 14 dias</p></div>
-                <div className="flex gap-2">
-                    <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                <div className="flex gap-2 items-center">
+                    <select
+                        value={riskFilter}
+                        onChange={e => setRiskFilter(e.target.value)}
+                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200"
+                    >
                         <option value="">Todos os riscos</option>
                         <option value="high">Alto (45+ dias)</option>
                         <option value="medium">Médio (21-44 dias)</option>
                         <option value="low">Baixo (14-20 dias)</option>
                     </select>
-                    <Button variant="outline" size="sm" onClick={exportExcel}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
-                    <Button variant="outline" size="sm" onClick={exportPDF}><Download className="h-4 w-4 mr-1" />PDF</Button>
+                    <Button
+                        variant="outline"
+                        onClick={exportExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Excel</span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={exportPDF}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <Download className="w-4 h-4 text-blue-600" />
+                        <span>PDF</span>
+                    </Button>
                 </div>
             </div>
 

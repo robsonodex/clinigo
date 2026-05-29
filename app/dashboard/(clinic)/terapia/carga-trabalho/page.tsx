@@ -44,7 +44,14 @@ export default function CargaTrabalhoPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div><h1 className="text-2xl font-bold">Carga de Trabalho</h1><p className="text-muted-foreground">Ocupação semanal dos terapeutas vs capacidade</p></div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={exportExcel}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
+                    <Button
+                        variant="outline"
+                        onClick={exportExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Excel</span>
+                    </Button>
                 </div>
             </div>
             {loading ? <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div> : (

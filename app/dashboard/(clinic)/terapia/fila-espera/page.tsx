@@ -91,11 +91,40 @@ export default function FilaEsperaPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div><h1 className="text-2xl font-bold">Fila de Espera</h1><p className="text-muted-foreground">Gestão de pacientes aguardando vaga</p></div>
-                <div className="flex gap-2">
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded px-2 py-1 text-sm"><option value="">Todos</option><option value="waiting">Aguardando</option><option value="contacted">Contatado</option><option value="scheduled">Agendado</option></select>
-                    <Button variant="outline" size="sm" onClick={exportExcel}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
-                    <Button onClick={() => { setEditingItem(null); setForm({ patient_name: '', patient_phone: '', patient_email: '', therapy_type: '', modality: 'individual', preferred_shift: 'any', urgency: 'normal', notes: '', lead_source: '', responsible_name: '' }); setDialogOpen(true) }}><Plus className="h-4 w-4 mr-1" />Adicionar</Button>
+                <div>
+                    <h1 className="text-2xl font-bold">Fila de Espera</h1>
+                    <p className="text-muted-foreground">Gestão de pacientes aguardando vaga</p>
+                </div>
+                <div className="flex gap-2 items-center">
+                    <select
+                        value={statusFilter}
+                        onChange={e => setStatusFilter(e.target.value)}
+                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200"
+                    >
+                        <option value="">Todos</option>
+                        <option value="waiting">Aguardando</option>
+                        <option value="contacted">Contatado</option>
+                        <option value="scheduled">Agendado</option>
+                    </select>
+                    <Button
+                        variant="outline"
+                        onClick={exportExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Excel</span>
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            setEditingItem(null);
+                            setForm({ patient_name: '', patient_phone: '', patient_email: '', therapy_type: '', modality: 'individual', preferred_shift: 'any', urgency: 'normal', notes: '', lead_source: '', responsible_name: '' });
+                            setDialogOpen(true);
+                        }}
+                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Adicionar</span>
+                    </Button>
                 </div>
             </div>
             {loading ? <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div> : (
@@ -207,7 +236,12 @@ export default function FilaEsperaPage() {
                             </div>
                         </div>
                         <div><Label>Observações</Label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" /></div>
-                        <Button onClick={handleSave} className="w-full">Adicionar à Fila</Button>
+                        <Button
+                            onClick={handleSave}
+                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                        >
+                            <span>Adicionar à Fila</span>
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

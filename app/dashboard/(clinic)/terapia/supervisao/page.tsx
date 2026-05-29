@@ -81,8 +81,21 @@ export default function SupervisaoPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div><h1 className="text-2xl font-bold">Supervisão Clínica</h1><p className="text-muted-foreground">Controle de horas de supervisão por terapeuta</p></div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={exportExcel}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
-                    <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" />Registrar Supervisão</Button>
+                    <Button
+                        variant="outline"
+                        onClick={exportExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Excel</span>
+                    </Button>
+                    <Button
+                        onClick={openNew}
+                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Registrar Supervisão</span>
+                    </Button>
                 </div>
             </div>
 
@@ -147,7 +160,12 @@ export default function SupervisaoPage() {
                         </div>
                         <div><Label>Tema</Label><Input value={form.topic} onChange={e => setForm({ ...form, topic: e.target.value })} /></div>
                         <div><Label>Observações</Label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" /></div>
-                        <Button onClick={handleSave} className="w-full">{editingRecord ? 'Salvar Alterações' : 'Registrar'}</Button>
+                        <Button
+                            onClick={handleSave}
+                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                        >
+                            <span>{editingRecord ? 'Salvar Alterações' : 'Registrar Supervisão'}</span>
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
