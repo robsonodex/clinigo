@@ -499,7 +499,8 @@ export default function RecepcaoPage() {
                         {/* Auto Atendimento */}
                         {currentUser?.clinic_id && (
                             <button
-                                className="h-16 px-4 flex items-center justify-between text-left text-white bg-[#003B5C] border border-[#002e48] hover:bg-[#002f4a] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
+                                className="h-16 px-4 flex items-center justify-between text-left text-white border border-[#002e48]/30 hover:bg-[#002f4a] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
+                                style={{ backgroundColor: '#003B5C' }}
                                 onClick={() => {
                                     const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
                                     window.open(url, '_blank')
@@ -520,7 +521,10 @@ export default function RecepcaoPage() {
 
                         {/* Check-in Fácil */}
                         <Link href="/dashboard/recepcao/face-checkin" className="w-full">
-                            <div className="h-16 px-4 flex items-center justify-between text-left text-white bg-[#007D40] border border-[#006835] hover:bg-[#006835] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md cursor-pointer">
+                            <div 
+                                className="h-16 px-4 flex items-center justify-between text-left text-white border border-[#006835]/30 hover:bg-[#006835] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md cursor-pointer"
+                                style={{ backgroundColor: '#007D40' }}
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-white/10 rounded-xl text-emerald-100">
                                         <CheckCircle className="w-5 h-5" />
@@ -534,8 +538,24 @@ export default function RecepcaoPage() {
                             </div>
                         </Link>
 
-                        {/* QR Scanner */}
-                        <QRScannerDialog onCheckIn={loadData} />
+                        {/* QR Scanner (Using customized premium card trigger) */}
+                        <QRScannerDialog onCheckIn={loadData}>
+                            <button 
+                                className="h-16 px-4 w-full flex items-center justify-between text-left text-white border border-[#00439b]/30 hover:bg-[#00439b] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md animate-none"
+                                style={{ backgroundColor: '#0051ba' }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-xl text-sky-100">
+                                        <QrCode className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold tracking-wide">Escanear QR Code</p>
+                                        <p className="text-[9px] text-sky-100/60 font-semibold mt-0.5">Buscar paciente</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-sky-300/40 group-hover:translate-x-0.5 transition-transform" />
+                            </button>
+                        </QRScannerDialog>
 
                         {/* Sem Agendamento */}
                         <Dialog open={showWalkInDialog} onOpenChange={(open) => {
@@ -543,7 +563,10 @@ export default function RecepcaoPage() {
                             if (!open) setIsCreatingPatient(false)
                         }}>
                             <DialogTrigger asChild>
-                                <button className="h-16 px-4 w-full flex items-center justify-between text-left text-white bg-[#0072CE] border border-[#005fa9] hover:bg-[#005fa9] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md">
+                                <button 
+                                    className="h-16 px-4 w-full flex items-center justify-between text-left text-white border border-[#005fa9]/30 hover:bg-[#005fa9] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
+                                    style={{ backgroundColor: '#0072CE' }}
+                                >
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-white/10 rounded-xl text-sky-100">
                                             <Plus className="w-5 h-5" />
