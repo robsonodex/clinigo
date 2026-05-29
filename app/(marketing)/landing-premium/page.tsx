@@ -218,7 +218,7 @@ export default function LandingPremium() {
                                     }}
                                 />
                                 <Image
-                                    src="/dashboard-preview.png"
+                                    src="/agenda-preview-premium.png"
                                     alt="CliniGo Dashboard - Sistema de Gestão para Clínicas"
                                     width={800}
                                     height={500}
