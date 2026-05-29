@@ -938,26 +938,26 @@ export default function AgendaPage() {
                 <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row */}
                     <div className="grid grid-cols-8 border-b sticky top-0 bg-white z-10">
-                        <div className="py-2 px-3 text-xs font-medium text-muted-foreground border-r text-center flex items-center justify-center h-full">
+                        <div className="py-1 px-3 text-[10px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
                             Horário
                         </div>
                         {(view === 'week' ? days : [currentDate]).map((day) => (
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    'py-2 px-3 text-center border-r last:border-r-0',
+                                    'py-1 px-3 text-center border-r last:border-r-0',
                                     isSameDay(day, new Date()) && 'bg-blue-50'
                                 )}
                             >
-                                <div className="text-xs font-medium text-muted-foreground uppercase">
+                                <div className="text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
                                     {format(day, 'EEE', { locale: ptBR })}
                                 </div>
                                 <div
                                     className={cn(
-                                        'text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center mx-auto mt-1',
+                                        'text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center mx-auto mt-0.5 transition-all duration-200',
                                         isSameDay(day, new Date())
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'text-foreground'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-foreground hover:bg-slate-100'
                                     )}
                                 >
                                     {format(day, 'd')}
