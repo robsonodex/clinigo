@@ -634,77 +634,77 @@ export default function RecepcaoPage() {
                 )}
             </div>
 
-            {/* Horizontal Stats List (4 capsule cards matching user's exact design) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Horizontal Stats Capsules (compact inline indicators) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {/* 1. Aguardando */}
-                <div className="flex items-center justify-between px-6 py-3 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full flex items-center justify-center">
-                            <Clock className="w-5 h-5" />
+                <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full flex items-center justify-center">
+                            <Clock className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                            <p className="text-base font-bold text-amber-600 dark:text-amber-500 tracking-wide flex items-baseline gap-1">
-                                <span className="text-xl font-extrabold">{stats.waiting_count}</span>
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-amber-600 dark:text-amber-500 flex items-baseline gap-1 whitespace-nowrap">
+                                <span className="text-sm font-extrabold">{stats.waiting_count}</span>
                                 <span>Aguardando</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-semibold leading-none mt-0.5">Na fila de espera</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Na fila de espera</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
                 </div>
 
                 {/* 2. Em Atendimento */}
-                <div className="flex items-center justify-between px-6 py-3 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-blue-50 dark:bg-blue-955/20 text-blue-500 rounded-full flex items-center justify-center">
-                            <Users className="w-5 h-5" />
+                <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-full flex items-center justify-center">
+                            <Users className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                            <p className="text-base font-bold text-blue-600 dark:text-blue-500 tracking-wide flex items-baseline gap-1">
-                                <span className="text-xl font-extrabold">{stats.in_service_count}</span>
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-blue-600 dark:text-blue-500 flex items-baseline gap-1 whitespace-nowrap">
+                                <span className="text-sm font-extrabold">{stats.in_service_count}</span>
                                 <span>Em Atendimento</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-semibold leading-none mt-0.5">Sendo atendidos</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Sendo atendidos</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
                 </div>
 
                 {/* 3. Atendidos Hoje */}
-                <div className="flex items-center justify-between px-6 py-3 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5" />
+                <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-500 tracking-wide flex items-baseline gap-1">
-                                <span className="text-xl font-extrabold">{stats.completed_count}</span>
-                                <span>Atendidos Hoje</span>
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500 flex items-baseline gap-1 whitespace-nowrap">
+                                <span className="text-sm font-extrabold">{stats.completed_count}</span>
+                                <span>Atendidos</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-semibold leading-none mt-0.5">Concluídos hoje</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Concluídos hoje</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
                 </div>
 
                 {/* 4. Não Compareceram */}
                 <div 
-                    className="flex items-center justify-between px-6 py-3 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                    className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer"
                     onClick={() => setShowNoShowList(true)}
                 >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-rose-50 dark:bg-rose-955/20 text-rose-550 rounded-full flex items-center justify-center">
-                            <UserX className="w-5 h-5" />
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-full flex items-center justify-center">
+                            <UserX className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                            <p className="text-base font-bold text-rose-600 dark:text-rose-550 tracking-wide flex items-baseline gap-1">
-                                <span className="text-xl font-extrabold">{stats.no_show_count}</span>
-                                <span>Não Compareceram</span>
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-rose-600 dark:text-rose-500 flex items-baseline gap-1 whitespace-nowrap">
+                                <span className="text-sm font-extrabold">{stats.no_show_count}</span>
+                                <span>Ausentes</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-semibold leading-none mt-0.5">Hoje</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Não compareceram</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
                 </div>
             </div>
 
