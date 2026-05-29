@@ -1711,3 +1711,25 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 
 - Módulo → Painel Master Admin → Integração → e:\Backup Clinigo 11-03-2026\clinigo\clinigo-producao\app\api\clin-whatsapp\send\route.ts → POST()
   - **Tratamento Inteligente de Nono Dígito de WhatsApp (Multiregiões do Brasil)**: Implementado no proxy local da API de envio de WhatsApp uma lógica de fallback automático para garantir a entrega de mensagens no Brasil. Se o número de destino for brasileiro, contiver 13 dígitos (com o nono dígito incluído) e possuir DDD maior que 28, a API automaticamente realiza o disparo para ambas as variações do JID no WhatsApp: com o nono dígito e sem o nono dígito. Isso elimina problemas de falhas de entrega silenciosas em contas mais antigas registradas no Meta sem o dígito 9.
+
+### 29/05/2026 - Compactação e Ajuste de Responsividade da Toolbar da Agenda (Sem Quebras e Corte)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Recepção → Agenda → components/ui/agenda-view.tsx → Toolbar Controls
+  - **Ajuste de Alturas e Escala Uniforme**: Redimensionamento e unificação da altura de todos os botões e seletores da barra de ferramentas da agenda para `h-10` (40px) e com bordas arredondadas `rounded-xl`, mantendo a harmonia visual de alto padrão da interface.
+  - **Prevenção de Esmagamento de Botões (shrink-0)**: Adicionada a propriedade `shrink-0` a todos os botões e subcontêineres da barra, e `min-w-full` ao contêiner flexbox interno. Isso impede que o navegador encolha e corte o texto dos botões ("Novo Agendamento" e "Mural de Recados") em resoluções menores, garantindo que o scroll horizontal funcione de forma ideal nas viewports desktop, tablet e mobile.
+  - **Texto Completo do Botão Principal**: Fixado o rótulo do botão principal sempre como "Novo Agendamento" em todas as resoluções, sem abreviações automáticas.
+
+### 29/05/2026 - Cartões Coloridos por Status na Recepção, Exibição de Notas e Padronização de Botões (Checklist & Alto Contraste)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Recepção → Fila de Espera / Atendimento → app/dashboard/(clinic)/recepcao/page.tsx → Grid de Colunas
+  - **Visual Colorido por Status**: Implementada nova estilização visual nos cards de paciente em cada uma das colunas do Kanban de recepção, garantindo legibilidade absoluta e alto contraste:
+    - **Aguardando**: Cards estilizados com fundo levemente laranja/âmbar (`bg-amber-50/70 dark:bg-amber-950/20`) e borda (`border-amber-250/70 dark:border-amber-900/30`), com contador numérico esférico golden.
+    - **Em Atendimento**: Cards estilizados com fundo levemente azul (`bg-blue-50/60 dark:bg-blue-950/20`) e borda (`border-blue-200/80 dark:border-blue-900/40`).
+    - **Concluídos**: Cards estilizados com fundo levemente verde (`bg-emerald-50/60 dark:bg-emerald-950/20`) e borda (`border-emerald-250/70 dark:border-emerald-900/40`).
+  - **Exibição Completa de Informações & Notas**: Adicionada a exibição destacada das observações clínicas e notas do agendamento (`notes`) em uma caixa estilizada translúcida com texto itálico no rodapé de cada card. Incorporados badges para identificar "Prioridade" (vermelho destrutivo) e "Encaixe" (azul celeste).
+  - **Padronização de Botões (Checklist de Botões)**: Substituição do antigo badge passivo de status "Atendido" na coluna de Concluídos por um botão premium verde completo, contendo o ícone `CheckCircle` e o rótulo "Atendido", padronizando a altura (`h-8`), cantos arredondados (`rounded-xl`) e feedbacks visuais em conformidade com as diretrizes de botões.
+

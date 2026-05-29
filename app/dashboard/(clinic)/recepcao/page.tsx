@@ -771,27 +771,49 @@ export default function RecepcaoPage() {
                             {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
                                 <div 
                                     key={item.id} 
-                                    className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border ${item.isPriority ? 'border-red-200 dark:border-red-900/40 bg-red-50/20 dark:bg-red-950/5' : 'border-slate-200/60 dark:border-slate-800'} shadow-sm hover:shadow-md transition-all duration-300 relative group`}
+                                    className={`p-4 rounded-2xl border ${
+                                        item.isPriority 
+                                            ? 'border-rose-200 dark:border-rose-900/40 bg-rose-50/80 dark:bg-rose-950/30' 
+                                            : 'border-amber-200 dark:border-amber-900/40 bg-amber-50/85 dark:bg-amber-950/30'
+                                    } shadow-sm hover:shadow-md transition-all duration-300 relative group`}
                                 >
                                     <div className="flex items-start gap-3">
                                         {/* Golden Circular Numbering */}
-                                        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-500 font-extrabold text-xs shrink-0 border border-amber-100/55 dark:border-amber-900/30">
+                                        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-extrabold text-xs shrink-0 border border-amber-200/60 dark:border-amber-800/40 shadow-sm">
                                             {index + 1}
                                         </div>
 
                                         <div className="min-w-0 flex-1">
-                                            <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                                <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate max-w-[180px]" title={item.patient?.full_name}>
+                                                    {item.patient?.full_name || 'Paciente'}
+                                                </h4>
+                                                
+                                                {/* Labels/Badges para deixar o card mais completo */}
+                                                {item.isPriority && (
+                                                    <Badge variant="destructive" className="text-[8px] px-1 py-0 font-extrabold uppercase shrink-0 bg-red-600 dark:bg-red-800">
+                                                        Prioridade
+                                                    </Badge>
+                                                )}
+                                                {item.type === 'walk-in' && (
+                                                    <Badge className="text-[8px] bg-sky-100 dark:bg-sky-950/60 text-sky-850 dark:text-sky-305 border border-sky-200 dark:border-sky-850 px-1 py-0 font-extrabold shrink-0 shadow-sm">
+                                                        Encaixe
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             
                                             {item.doctor && (
-                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1.5 mt-1.5">
-                                                    <User className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
-                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                <p className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 mt-1">
+                                                    <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-450 shrink-0" />
+                                                    <span className="truncate">
+                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                    </span>
                                                 </p>
                                             )}
 
-                                            <div className="flex items-center gap-3 mt-1.5 font-bold text-[10px] text-slate-400 dark:text-slate-500">
+                                            <div className="flex items-center gap-3 mt-1 font-semibold text-[10.5px] text-slate-600 dark:text-slate-400">
                                                 <span className="flex items-center gap-1.5">
-                                                    <Clock className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+                                                    <Clock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-450 shrink-0" />
                                                     {item.arrivalTime 
                                                         ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
                                                         : item.scheduledTime 
@@ -800,20 +822,27 @@ export default function RecepcaoPage() {
                                                     }
                                                 </span>
                                                 {item.status === 'WAITING' && (
-                                                    <Badge className="text-[8px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 px-1.5 py-0 font-extrabold">Chamado</Badge>
+                                                    <Badge className="text-[8px] bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0 font-extrabold shadow-sm">Chamado</Badge>
                                                 )}
                                             </div>
+
+                                            {/* Observações legíveis se existirem */}
+                                            {item.notes && (
+                                                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 bg-white/40 dark:bg-slate-950/20 p-1.5 rounded-lg border border-amber-200/40 dark:border-amber-900/10 italic leading-relaxed text-xs">
+                                                    <span className="font-bold not-italic text-slate-700 dark:text-slate-350">Obs:</span> {item.notes}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
                                     {/* Action Footbar */}
-                                    <div className="flex items-center justify-between gap-1.5 mt-4 pt-3 border-t border-slate-100 dark:border-slate-850">
+                                    <div className="flex items-center justify-between gap-1.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-800/80">
                                         <div className="flex items-center gap-1.5">
                                             {/* Prontuário / Documentos */}
                                             <Button 
                                                 size="sm" 
                                                 variant="ghost" 
-                                                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl" 
+                                                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xl" 
                                                 onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} 
                                                 title="Documentos"
                                             >
@@ -822,12 +851,12 @@ export default function RecepcaoPage() {
 
                                             {/* Chamar Paciente */}
                                             {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                     {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                 </Button>
                                             )}
                                             {item.status === 'WAITING' && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                     {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                 </Button>
                                             )}
@@ -837,32 +866,32 @@ export default function RecepcaoPage() {
                                             {/* Iniciar Atendimento */}
                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
                                                 <button 
-                                                    className="h-8 text-[11px] font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
+                                                    className="h-8 text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
                                                     onClick={() => isEspacoIncluir ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
                                                     disabled={actionId === item.id}
                                                 >
-                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />{isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}</>}
+                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-white" />{isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}</>}
                                                 </button>
                                             )}
                                             {item.status === 'WAITING' && (
                                                 <button 
-                                                    className="h-8 text-[11px] font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
+                                                    className="h-8 text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-650 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
                                                     onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
                                                     disabled={actionId === item.id}
                                                 >
-                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />Em Atendimento</>}
+                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-white" />Em Atendimento</>}
                                                 </button>
                                             )}
 
                                             {/* Desfazer */}
                                             {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xl shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                     <Undo2 className="w-4 h-4" />
                                                 </Button>
                                             )}
 
                                             {/* Não Compareceu */}
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-650 hover:bg-red-50/50 rounded-xl shrink-0" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-xl shrink-0" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
                                                 <UserX className="w-4 h-4" />
                                             </Button>
                                         </div>
@@ -901,22 +930,40 @@ export default function RecepcaoPage() {
                     ) : (
                         <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
                             {queue.filter(i => i.status === 'IN_PROGRESS').map((item) => (
-                                <div key={item.id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-blue-200/60 dark:border-blue-900/30 bg-blue-50/10 dark:bg-blue-950/5 shadow-sm hover:shadow-md transition-all duration-300">
+                                <div key={item.id} className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 shadow-sm hover:shadow-md transition-all duration-300">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
-                                            <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                                <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate max-w-[180px]" title={item.patient?.full_name}>
+                                                    {item.patient?.full_name || 'Paciente'}
+                                                </h4>
+                                                {item.type === 'walk-in' && (
+                                                    <Badge className="text-[8px] bg-sky-100 dark:bg-sky-950/60 text-sky-850 dark:text-sky-305 border border-sky-200 dark:border-sky-850 px-1 py-0 font-extrabold shrink-0 shadow-sm">
+                                                        Encaixe
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             {item.doctor && (
-                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1.5 mt-1.5">
-                                                    <User className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
-                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 mt-1">
+                                                    <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-450 shrink-0" />
+                                                    <span className="truncate">
+                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                    </span>
+                                                </p>
+                                            )}
+
+                                            {/* Observações legíveis se existirem */}
+                                            {item.notes && (
+                                                <p className="text-[11px] text-slate-650 dark:text-slate-355 mt-1.5 bg-white/40 dark:bg-slate-950/20 p-1.5 rounded-lg border border-blue-200/40 dark:border-blue-900/10 italic leading-relaxed text-xs">
+                                                    <span className="font-bold not-italic text-slate-700 dark:text-slate-350">Obs:</span> {item.notes}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-slate-850/60">
+                                    <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-805">
                                         {isEspacoIncluir && (
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                 <Undo2 className="w-4 h-4" />
                                             </Button>
                                         )}
@@ -963,24 +1010,45 @@ export default function RecepcaoPage() {
                     ) : (
                         <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
                             {queue.filter(i => i.status === 'COMPLETED').map((item) => (
-                                <div key={item.id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300">
+                                <div key={item.id} className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-250/70 dark:border-emerald-900/40 shadow-sm hover:shadow-md transition-all duration-300">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
-                                            <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                                <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate max-w-[180px]" title={item.patient?.full_name}>
+                                                    {item.patient?.full_name || 'Paciente'}
+                                                </h4>
+                                                {item.type === 'walk-in' && (
+                                                    <Badge className="text-[8px] bg-sky-100 dark:bg-sky-950/60 text-sky-850 dark:text-sky-305 border border-sky-200 dark:border-sky-850 px-1 py-0 font-extrabold shrink-0 shadow-sm">
+                                                        Encaixe
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             {item.doctor && (
-                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1.5 mt-1.5">
-                                                    <User className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
-                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 mt-1">
+                                                    <User className="w-3.5 h-3.5 text-slate-550 dark:text-slate-455 shrink-0" />
+                                                    <span className="truncate">
+                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                    </span>
+                                                </p>
+                                            )}
+
+                                            {/* Observações legíveis se existirem */}
+                                            {item.notes && (
+                                                <p className="text-[11px] text-slate-650 dark:text-slate-350 mt-1.5 bg-white/40 dark:bg-slate-950/20 p-1.5 rounded-lg border border-emerald-200/45 dark:border-emerald-900/10 italic leading-relaxed text-xs">
+                                                    <span className="font-bold not-italic text-slate-700 dark:text-slate-350">Obs:</span> {item.notes}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-850">
-                                        <Badge className="text-[9px] bg-slate-50 dark:bg-slate-900 text-slate-650 dark:text-slate-300 border border-slate-200/60 dark:border-slate-800 px-2 py-0.5 font-bold">Atendido</Badge>
+                                    <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-805">
+                                        <div className="h-8 w-full text-xs font-extrabold bg-[#007D40] text-white rounded-xl px-4 flex items-center justify-center gap-1.5 transition-all shadow-sm select-none opacity-90 cursor-default">
+                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-105" />
+                                            <span>Atendido</span>
+                                        </div>
                                         
                                         {isEspacoIncluir && (
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xl shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                 <Undo2 className="w-4 h-4" />
                                             </Button>
                                         )}
