@@ -634,73 +634,77 @@ export default function RecepcaoPage() {
                 )}
             </div>
 
-            {/* Horizontal Stats List (4 cards matching user's design) */}
+            {/* Horizontal Stats List (4 premium cards with high-end design & micro-animations) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. Aguardando */}
-                <div className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full">
-                            <Clock className="w-5 h-5" />
+                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-slate-900/95 dark:to-slate-950/90 border border-slate-250/60 dark:border-slate-850/80 rounded-2xl shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05),0_8px_16px_-6px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_-10px_rgba(245,158,11,0.15),0_4px_12px_-5px_rgba(0,0,0,0.03)] hover:border-amber-300 dark:hover:border-amber-900/60 transition-all duration-300 group cursor-pointer hover:-translate-y-1">
+                    <div className="flex items-center gap-3.5">
+                        <div className="p-3 bg-gradient-to-br from-amber-500/10 to-amber-600/5 dark:from-amber-500/25 dark:to-amber-600/5 text-amber-600 dark:text-amber-400 rounded-2xl ring-4 ring-amber-500/5 transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                            <Clock className="w-5.5 h-5.5 transition-transform duration-500 group-hover:rotate-12" />
                         </div>
                         <div>
-                            <p className="text-base font-bold text-amber-600 dark:text-amber-500 tracking-wide">
-                                <span className="text-xl font-extrabold mr-1">{stats.waiting_count}</span> Aguardando
+                            <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-500 tracking-tight flex items-baseline gap-1">
+                                {stats.waiting_count}
+                                <span className="text-[13px] font-bold text-amber-700/80 dark:text-amber-400/80 ml-1">Aguardando</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Na fila de espera</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold tracking-wider mt-0.5 uppercase">Na fila de espera</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4.5 h-4.5 text-slate-300 dark:text-slate-655 group-hover:translate-x-1 group-hover:text-amber-500 transition-all" />
                 </div>
 
                 {/* 2. Em Atendimento */}
-                <div className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-full">
-                            <Users className="w-5 h-5" />
+                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-slate-900/95 dark:to-slate-950/90 border border-slate-250/60 dark:border-slate-850/80 rounded-2xl shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05),0_8px_16px_-6px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_-10px_rgba(59,130,246,0.15),0_4px_12px_-5px_rgba(0,0,0,0.03)] hover:border-blue-300 dark:hover:border-blue-900/60 transition-all duration-300 group cursor-pointer hover:-translate-y-1">
+                    <div className="flex items-center gap-3.5">
+                        <div className="p-3 bg-gradient-to-br from-blue-500/10 to-blue-600/5 dark:from-blue-500/25 dark:to-blue-600/5 text-blue-600 dark:text-blue-400 rounded-2xl ring-4 ring-blue-500/5 transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                            <Users className="w-5.5 h-5.5 transition-transform duration-500 group-hover:-translate-y-0.5" />
                         </div>
                         <div>
-                            <p className="text-base font-bold text-blue-600 dark:text-blue-500 tracking-wide">
-                                <span className="text-xl font-extrabold mr-1">{stats.in_service_count}</span> Em Atendimento
+                            <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-500 tracking-tight flex items-baseline gap-1">
+                                {stats.in_service_count}
+                                <span className="text-[13px] font-bold text-blue-700/80 dark:text-blue-400/80 ml-1">Em Atendimento</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Sendo atendidos</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold tracking-wider mt-0.5 uppercase">Sendo atendidos</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4.5 h-4.5 text-slate-300 dark:text-slate-655 group-hover:translate-x-1 group-hover:text-blue-500 transition-all" />
                 </div>
 
                 {/* 3. Atendidos Hoje */}
-                <div className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full">
-                            <CheckCircle2 className="w-5 h-5" />
+                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-slate-900/95 dark:to-slate-950/90 border border-slate-250/60 dark:border-slate-850/80 rounded-2xl shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05),0_8px_16px_-6px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_-10px_rgba(16,185,129,0.15),0_4px_12px_-5px_rgba(0,0,0,0.03)] hover:border-emerald-300 dark:hover:border-emerald-900/60 transition-all duration-300 group cursor-pointer hover:-translate-y-1">
+                    <div className="flex items-center gap-3.5">
+                        <div className="p-3 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-500/25 dark:to-emerald-600/5 text-emerald-600 dark:text-emerald-400 rounded-2xl ring-4 ring-emerald-500/5 transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                            <CheckCircle2 className="w-5.5 h-5.5 transition-transform duration-500 group-hover:scale-110" />
                         </div>
                         <div>
-                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-500 tracking-wide">
-                                <span className="text-xl font-extrabold mr-1">{stats.completed_count}</span> Atendidos Hoje
+                            <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-500 tracking-tight flex items-baseline gap-1">
+                                {stats.completed_count}
+                                <span className="text-[13px] font-bold text-emerald-700/80 dark:text-emerald-400/80 ml-1">Atendidos Hoje</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Concluídos hoje</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold tracking-wider mt-0.5 uppercase">Concluídos hoje</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4.5 h-4.5 text-slate-300 dark:text-slate-655 group-hover:translate-x-1 group-hover:text-emerald-500 transition-all" />
                 </div>
 
                 {/* 4. Não Compareceram */}
                 <div 
-                    className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                    className="flex items-center justify-between px-5 py-4 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-slate-900/95 dark:to-slate-950/90 border border-slate-250/60 dark:border-slate-850/80 rounded-2xl shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05),0_8px_16px_-6px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_24px_-10px_rgba(244,63,94,0.15),0_4px_12px_-5px_rgba(0,0,0,0.03)] hover:border-rose-300 dark:hover:border-rose-900/60 transition-all duration-300 group cursor-pointer hover:-translate-y-1"
                     onClick={() => setShowNoShowList(true)}
                 >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-full">
-                            <UserX className="w-5 h-5" />
+                    <div className="flex items-center gap-3.5">
+                        <div className="p-3 bg-gradient-to-br from-rose-500/10 to-rose-600/5 dark:from-rose-500/25 dark:to-rose-600/5 text-rose-600 dark:text-rose-400 rounded-2xl ring-4 ring-rose-500/5 transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.15)]">
+                            <UserX className="w-5.5 h-5.5 transition-transform duration-500 group-hover:scale-105" />
                         </div>
                         <div>
-                            <p className="text-base font-bold text-red-600 dark:text-red-500 tracking-wide">
-                                <span className="text-xl font-extrabold mr-1">{stats.no_show_count}</span> Não Compareceram
+                            <p className="text-2xl font-extrabold text-rose-600 dark:text-rose-500 tracking-tight flex items-baseline gap-1">
+                                {stats.no_show_count}
+                                <span className="text-[13px] font-bold text-rose-700/80 dark:text-rose-400/80 ml-1">Não Compareceram</span>
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Hoje</p>
+                            <p className="text-[9px] text-slate-400 dark:text-slate-550 font-bold tracking-wider mt-0.5 uppercase">Hoje</p>
                         </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4.5 h-4.5 text-slate-300 dark:text-slate-655 group-hover:translate-x-1 group-hover:text-rose-500 transition-all" />
                 </div>
             </div>
 
