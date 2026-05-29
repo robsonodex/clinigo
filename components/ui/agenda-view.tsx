@@ -936,29 +936,28 @@ export default function AgendaPage() {
             <Card className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin select-none touch-pan-x touch-pan-y relative border shadow-inner">
                 {calendarStyle === 'standard' ? (
                 <div className="min-w-[950px] md:min-w-[1000px]">
-                    {/* Header Row */}
-                    {/* Header Row com Glassmorphism Translúcido Premium e Fundo Acetinado Pro (Maior Contraste) */}
-                    <div className="grid grid-cols-8 border-b sticky top-0 bg-slate-100/90 backdrop-blur-md dark:bg-slate-900/95 z-10 shadow-sm border-slate-200/80 transition-all duration-300">
-                        <div className="py-1 px-3 text-[11px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
+                    {/* Header Row com Layout Original e Fundo Acetinado Discreto */}
+                    <div className="grid grid-cols-8 border-b sticky top-0 bg-slate-50/90 backdrop-blur-md dark:bg-slate-900/90 z-10 shadow-sm border-slate-200/50 transition-all duration-300">
+                        <div className="py-2 px-3 text-xs font-medium text-muted-foreground border-r text-center flex items-center justify-center h-full">
                             Horário
                         </div>
                         {(view === 'week' ? days : [currentDate]).map((day) => (
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    'py-1 px-3 text-center border-r last:border-r-0 transition-colors duration-200',
-                                    isSameDay(day, new Date()) && 'bg-emerald-50/30 dark:bg-emerald-950/10'
+                                    'py-2 px-3 text-center border-r last:border-r-0 transition-colors duration-200',
+                                    isSameDay(day, new Date()) && 'bg-blue-50 dark:bg-blue-950/20'
                                 )}
                             >
-                                <div className="text-[11px] font-bold text-muted-foreground/75 uppercase tracking-wider">
+                                <div className="text-xs font-medium text-muted-foreground uppercase">
                                     {format(day, 'EEE', { locale: ptBR })}
                                 </div>
                                 <div
                                     className={cn(
-                                        'text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center mx-auto mt-0.5 transition-all duration-300',
+                                        'text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center mx-auto mt-1 transition-all duration-300',
                                         isSameDay(day, new Date())
-                                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20 ring-2 ring-emerald-400/20'
-                                            : 'text-foreground hover:bg-slate-100'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-foreground hover:bg-slate-200/50'
                                     )}
                                 >
                                     {format(day, 'd')}
@@ -977,8 +976,8 @@ export default function AgendaPage() {
 
                         {TIME_SLOTS.map((time) => (
                             <div key={time} id={`time-slot-${time}`} className="grid grid-cols-8 border-b min-h-[80px]">
-                                {/* Time Label com Fundo Acetinado Premium */}
-                                <div className="p-2 text-xs text-muted-foreground/90 text-center border-r font-semibold -mt-2 bg-slate-50/50 dark:bg-slate-900/20">
+                                {/* Time Label */}
+                                <div className="p-2 text-xs text-muted-foreground text-center border-r font-medium -mt-2">
                                     {time}
                                 </div>
 
