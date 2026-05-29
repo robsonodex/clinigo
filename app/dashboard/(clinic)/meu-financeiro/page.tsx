@@ -107,9 +107,9 @@ export default function MeuFinanceiroPage() {
                     </p>
                 </div>
                 
-                <div className="flex gap-3 flex-wrap">
+                <div className="flex gap-3 flex-wrap items-center">
                     <Select value={year} onValueChange={setYear}>
-                        <SelectTrigger className="w-[120px]">
+                        <SelectTrigger className="w-[120px] h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200">
                             <SelectValue placeholder="Ano" />
                         </SelectTrigger>
                         <SelectContent>
@@ -124,18 +124,20 @@ export default function MeuFinanceiroPage() {
                         variant="outline" 
                         onClick={() => { refetch(); toast.success('Dados atualizados!'); }}
                         disabled={isLoading}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                        Atualizar
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span>Atualizar</span>
                     </Button>
                     
                     <Button 
                         variant="outline" 
                         onClick={handleExportExcel}
                         disabled={!history || history.length === 0 || isExporting}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
-                        <FileSpreadsheet className={`w-4 h-4 mr-2 ${isExporting ? 'animate-pulse' : ''}`} />
-                        Exportar Excel
+                        <FileSpreadsheet className={`w-4 h-4 text-emerald-600 ${isExporting ? 'animate-pulse' : ''}`} />
+                        <span>Excel</span>
                     </Button>
                 </div>
             </div>

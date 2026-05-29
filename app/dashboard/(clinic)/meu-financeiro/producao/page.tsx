@@ -107,14 +107,32 @@ export default function MinhaProducaoPage() {
                     <p className="text-muted-foreground mt-1">Métricas pessoais de desempenho</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={() => { refetch(); toast.success('Atualizado!'); }} disabled={isLoading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Atualizar
+                    <Button
+                        variant="outline"
+                        onClick={() => { refetch(); toast.success('Atualizado!'); }}
+                        disabled={isLoading}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span>Atualizar</span>
                     </Button>
-                    <Button variant="outline" onClick={handleExportExcel} disabled={!data || isExportingExcel}>
-                        <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
+                    <Button
+                        variant="outline"
+                        onClick={handleExportExcel}
+                        disabled={!data || isExportingExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Excel</span>
                     </Button>
-                    <Button variant="outline" onClick={handleExportPDF} disabled={!data || isExportingPDF}>
-                        <Download className="w-4 h-4 mr-2" /> PDF
+                    <Button
+                        variant="outline"
+                        onClick={handleExportPDF}
+                        disabled={!data || isExportingPDF}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <Download className="w-4 h-4 text-blue-600" />
+                        <span>PDF</span>
                     </Button>
                 </div>
             </div>
@@ -124,17 +142,36 @@ export default function MinhaProducaoPage() {
                 <CardContent className="p-4 flex flex-col md:flex-row items-end gap-4">
                     <div className="w-full md:w-auto">
                         <label className="text-sm font-medium mb-1 block">Início</label>
-                        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="h-10 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200"
+                        />
                     </div>
                     <div className="w-full md:w-auto">
                         <label className="text-sm font-medium mb-1 block">Fim</label>
-                        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="h-10 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200"
+                        />
                     </div>
-                    <Button onClick={() => { setFilterApplied({ start: startDate, end: endDate }); toast.success('Filtros aplicados!'); }}>
-                        <Filter className="w-4 h-4 mr-2" /> Aplicar
+                    <Button
+                        onClick={() => { setFilterApplied({ start: startDate, end: endDate }); toast.success('Filtros aplicados!'); }}
+                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                    >
+                        <Filter className="w-4 h-4" />
+                        <span>Aplicar</span>
                     </Button>
-                    <Button variant="ghost" onClick={() => { setStartDate(defaultStart); setEndDate(defaultEnd); setFilterApplied({ start: defaultStart, end: defaultEnd }); }}>
-                        <XCircle className="w-4 h-4 mr-2" /> Limpar
+                    <Button
+                        variant="ghost"
+                        onClick={() => { setStartDate(defaultStart); setEndDate(defaultEnd); setFilterApplied({ start: defaultStart, end: defaultEnd }); }}
+                        className="flex gap-1.5 h-10 text-sm hover:bg-slate-100 transition-all duration-200 rounded-xl px-4 font-semibold text-slate-500 dark:text-slate-400 dark:hover:bg-slate-800"
+                    >
+                        <XCircle className="w-4 h-4 text-red-500" />
+                        <span>Limpar</span>
                     </Button>
                 </CardContent>
             </Card>
