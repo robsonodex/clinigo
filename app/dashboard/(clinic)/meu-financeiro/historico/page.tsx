@@ -97,14 +97,32 @@ export default function MeuHistoricoPage() {
                     <p className="text-muted-foreground mt-1">Detalhamento mensal dos seus repasses</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={() => { refetch(); toast.success('Atualizado!'); }} disabled={isLoading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Atualizar
+                    <Button
+                        variant="outline"
+                        onClick={() => { refetch(); toast.success('Atualizado!'); }}
+                        disabled={isLoading}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span>Atualizar</span>
                     </Button>
-                    <Button variant="outline" onClick={handleExportExcel} disabled={history.length === 0 || isExportingExcel}>
-                        <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
+                    <Button
+                        variant="outline"
+                        onClick={handleExportExcel}
+                        disabled={history.length === 0 || isExportingExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Excel</span>
                     </Button>
-                    <Button variant="outline" onClick={handleExportPDF} disabled={history.length === 0 || isExportingPDF}>
-                        <Download className="w-4 h-4 mr-2" /> PDF
+                    <Button
+                        variant="outline"
+                        onClick={handleExportPDF}
+                        disabled={history.length === 0 || isExportingPDF}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    >
+                        <Download className="w-4 h-4 text-blue-600" />
+                        <span>PDF</span>
                     </Button>
                 </div>
             </div>
@@ -115,7 +133,9 @@ export default function MeuHistoricoPage() {
                     <div className="w-full md:w-40">
                         <label className="text-sm font-medium mb-1 block">Ano</label>
                         <Select value={year} onValueChange={setYear}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200">
+                                <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
