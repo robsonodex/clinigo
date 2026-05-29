@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-    Users, Clock, CheckCircle, CheckCircle2, XCircle, AlertTriangle,
-    Plus, Search, QrCode, User, UserX, Calendar, Phone, MessageCircle, Settings, FileText,
-    Megaphone, Bell, Loader2, Tv, Monitor, Undo2
+    Users, Clock, CheckCircle2, QrCode, User, UserX, Settings, FileText,
+    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -81,7 +80,6 @@ export default function RecepcaoPage() {
     const [urgency, setUrgency] = useState<string>('normal')
     const [reason, setReason] = useState('')
     const [refreshInterval, setRefreshInterval] = useState<number>(() => {
-        // Load from localStorage or default to 60s
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('reception-refresh-interval')
             return saved ? Math.min(Number(saved), 300) : 60
@@ -98,12 +96,10 @@ export default function RecepcaoPage() {
     const [callingId, setCallingId] = useState<string | null>(null)
     const [actionId, setActionId] = useState<string | null>(null)
     const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([])
-    const [preCheckinCount, setPreCheckinCount] = useState(0)
-    const [preCheckinAlerts, setPreCheckinAlerts] = useState<Array<{ id: string; patientName: string; time: string }>>([])
     const [showNoShowList, setShowNoShowList] = useState(false)
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
-    
+
     // Espaço Incluir
     const isEspacoIncluir = currentUser?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
     const [checkInModal, setCheckInModal] = useState<{ open: boolean, appointmentId: string | null, notes: string }>({ open: false, appointmentId: null, notes: '' })
@@ -111,12 +107,10 @@ export default function RecepcaoPage() {
 
     useEffect(() => {
         loadData()
-        // Auto-refresh with configurable interval (in seconds)
         const interval = setInterval(loadData, refreshInterval * 1000)
         return () => clearInterval(interval)
-    }, [refreshInterval]) // Re-create interval when refreshInterval changes
+    }, [refreshInterval])
 
-    // Fetch clinic plan type for feature gating
     useEffect(() => {
         async function fetchPlanType() {
             try {
@@ -132,43 +126,10 @@ export default function RecepcaoPage() {
         fetchPlanType()
     }, [])
 
-    // Realtime subscription for pre-check-in notifications AND appointment updates (check-in, status changes)
     useEffect(() => {
         const supabase = createClient()
         const channel = supabase
-            .channel('reception_realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'pre_checkin_submissions',
-                },
-                async (payload: any) => {
-                    // A new pre-check-in was submitted — notify and refresh
-                    const newSubmission = payload.new
-                    if (newSubmission?.status === 'completed') {
-                        // Fetch patient name for the alert
-                        const { data: apt } = await (supabase as any)
-                            .from('appointments')
-                            .select('patients(full_name)')
-                            .eq('id', newSubmission.appointment_id)
-                            .single()
-
-                        const patientName = apt?.patients?.full_name || 'Paciente'
-                        setPreCheckinAlerts(prev => [
-                            { id: newSubmission.id, patientName, time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
-                            ...prev.slice(0, 4) // Keep max 5 alerts
-                        ])
-                        setPreCheckinCount(prev => prev + 1)
-                        toast({
-                            title: '📋 Novo Pré-Check-in Online!',
-                            description: `${patientName} completou o pré-check-in.`,
-                        })
-                        loadData() // Refresh queue
-                    }
-                }
-            )
+            .channel('reception_realtime_updates')
             .on(
                 'postgres_changes',
                 {
@@ -177,8 +138,6 @@ export default function RecepcaoPage() {
                     table: 'appointments',
                 },
                 () => {
-                    // Appointment updated (check-in facial, status change, etc.)
-                    // Refresh queue immediately so the "Chamar" button appears instantly
                     loadData()
                 }
             )
@@ -192,14 +151,12 @@ export default function RecepcaoPage() {
     async function loadData() {
         setLoading(true)
         try {
-            // Load queue and calculate stats locally for consistency
             const queueRes = await fetch('/api/reception/queue')
             if (queueRes.ok) {
                 const data = await queueRes.json()
                 const q: QueueItem[] = data.queue || []
                 setQueue(q)
 
-                // Calculate stats from queue (Dashboard API is redundant for counts)
                 setStats({
                     waiting_count: q.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length,
                     in_service_count: q.filter(i => i.status === 'IN_PROGRESS').length,
@@ -207,7 +164,6 @@ export default function RecepcaoPage() {
                     no_show_count: q.filter(i => i.status === 'NO_SHOW').length
                 })
             }
-            // Load consulting rooms
             const roomsRes = await fetch('/api/consulting-rooms')
             if (roomsRes.ok) {
                 const data = await roomsRes.json()
@@ -445,220 +401,287 @@ export default function RecepcaoPage() {
         }
     }
 
-    function getTimeWaiting(arrivalTime: string): string {
-        const now = new Date()
-        const arrival = new Date(arrivalTime)
-        const diffMs = now.getTime() - arrival.getTime()
-        const diffMins = Math.floor(diffMs / 60000)
-
-        if (diffMins < 60) return `${diffMins} min`
-        const hours = Math.floor(diffMins / 60)
-        const mins = diffMins % 60
-        return `${hours}h ${mins}min`
-    }
-
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
+            <div className="flex flex-row items-center justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100/80 dark:border-indigo-900/30">
+                        <Users className="w-6 h-6" />
+                    </div>
                     <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2">
-                            <Users className="w-7 h-7" />
+                        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
                             Recepção
                         </h1>
-                        <p className="text-muted-foreground">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
                             Gestão de fila e check-in de pacientes
                         </p>
                     </div>
-                    {/* Settings gear - moved here */}
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" title="Configurar atualização automática" className="text-muted-foreground hover:text-foreground">
-                                <Settings className="w-5 h-5" />
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Configurações de Atualização</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Intervalo de Atualização Automática</Label>
-                                    <Select
-                                        value={refreshInterval.toString()}
-                                        onValueChange={(value) => {
-                                            const interval = Number(value)
-                                            setRefreshInterval(interval)
-                                            localStorage.setItem('reception-refresh-interval', interval.toString())
-                                        }}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="30">30 segundos</SelectItem>
-                                            <SelectItem value="60">1 minuto (recomendado)</SelectItem>
-                                            <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
-                                            <SelectItem value="120">2 minutos</SelectItem>
-                                            <SelectItem value="180">3 minutos</SelectItem>
-                                            <SelectItem value="240">4 minutos</SelectItem>
-                                            <SelectItem value="300">5 minutos (máximo)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-xs text-muted-foreground">
-                                        A fila será atualizada automaticamente a cada {refreshInterval >= 60
-                                            ? `${Math.floor(refreshInterval / 60)} minuto${Math.floor(refreshInterval / 60) > 1 ? 's' : ''}${refreshInterval % 60 ? ` e ${refreshInterval % 60} segundos` : ''}`
-                                            : `${refreshInterval} segundos`}
-                                    </p>
-                                </div>
+                </div>
+
+                {/* Settings Configurations Button */}
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
+                            <Settings className="w-4 h-4 text-slate-400" />
+                            Configurações
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Configurações de Atualização</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Intervalo de Atualização Automática</Label>
+                                <Select
+                                    value={refreshInterval.toString()}
+                                    onValueChange={(value) => {
+                                        const interval = Number(value)
+                                        setRefreshInterval(interval)
+                                        localStorage.setItem('reception-refresh-interval', interval.toString())
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="30">30 segundos</SelectItem>
+                                        <SelectItem value="60">1 minuto (recomendado)</SelectItem>
+                                        <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
+                                        <SelectItem value="120">2 minutos</SelectItem>
+                                        <SelectItem value="180">3 minutos</SelectItem>
+                                        <SelectItem value="240">4 minutos</SelectItem>
+                                        <SelectItem value="300">5 minutos (máximo)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    A fila será atualizada automaticamente a cada {refreshInterval >= 60
+                                        ? `${Math.floor(refreshInterval / 60)} minuto${Math.floor(refreshInterval / 60) > 1 ? 's' : ''}${refreshInterval % 60 ? ` e ${refreshInterval % 60} segundos` : ''}`
+                                        : `${refreshInterval} segundos`}
+                                </p>
                             </div>
-                        </DialogContent>
-                    </Dialog>
-                </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
 
-                {/* Action Buttons - uniform grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {currentUser === undefined || isPlanLoading ? (
-                        <>
-                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
-                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
-                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
-                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
-                            <div className="h-12 rounded-lg bg-slate-200 animate-pulse shadow-sm" />
-                        </>
-                    ) : (
-                        <>
-                            {/* Painel TV */}
-                            {currentUser?.clinic_id && (
-                                <Button
-                                    className="h-12 gap-2 text-sm font-medium text-white border border-slate-600/50 bg-gradient-to-br from-slate-700 to-slate-900 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5"
-                                    onClick={() => {
-                                        const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
-                                        window.open(url, '_blank')
-                                    }}
-                                >
-                                    <Tv className="w-4 h-4" />
-                                    Painel TV
-                                </Button>
-                            )}
+            {/* Quick Action Grid (5 Buttons matching the layout exactly) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+                {currentUser === undefined || isPlanLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse shadow-sm" />
+                    ))
+                ) : (
+                    <>
+                        {/* Painel TV */}
+                        {currentUser?.clinic_id && (
+                            <button
+                                className="h-16 px-4 flex items-center justify-between text-left text-white bg-slate-950 dark:bg-slate-900 border border-slate-850 hover:bg-slate-900 dark:hover:bg-slate-800/80 rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
+                                onClick={() => {
+                                    const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
+                                    window.open(url, '_blank')
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-xl text-slate-100">
+                                        <Tv className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold tracking-wide">Painel TV</p>
+                                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">Exibir na recepção</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:translate-x-0.5 transition-transform" />
+                            </button>
+                        )}
 
-                            {/* Auto Atendimento */}
-                            {currentUser?.clinic_id && hasFeature(clinicPlanType, 'totem') && (
-                                <Button
-                                    className="h-12 gap-2 text-sm font-medium text-white border border-cyan-600/50 bg-gradient-to-br from-cyan-700 to-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5"
-                                    onClick={() => {
-                                        const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
-                                        window.open(url, '_blank')
-                                    }}
-                                >
-                                    <Monitor className="w-4 h-4" />
-                                    Auto Atendimento
-                                </Button>
-                            )}
+                        {/* Auto Atendimento */}
+                        {currentUser?.clinic_id && (
+                            <button
+                                className="h-16 px-4 flex items-center justify-between text-left text-white bg-[#003B5C] border border-[#002e48] hover:bg-[#002f4a] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
+                                onClick={() => {
+                                    const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
+                                    window.open(url, '_blank')
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-xl text-cyan-200">
+                                        <Monitor className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold tracking-wide">Auto Atendimento</p>
+                                        <p className="text-[9px] text-cyan-200/60 font-semibold mt-0.5">Totem e cadastro</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-cyan-300/40 group-hover:translate-x-0.5 transition-transform" />
+                            </button>
+                        )}
 
-                            {/* Check-in Fácil */}
-                            <Link href="/dashboard/recepcao/face-checkin">
-                                <Button className="h-12 w-full gap-2 text-sm font-medium text-white border border-emerald-500/50 bg-gradient-to-br from-emerald-600 to-teal-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    Check-in Fácil
-                                </Button>
-                            </Link>
+                        {/* Check-in Fácil */}
+                        <Link href="/dashboard/recepcao/face-checkin" className="w-full">
+                            <div className="h-16 px-4 flex items-center justify-between text-left text-white bg-[#007D40] border border-[#006835] hover:bg-[#006835] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-xl text-emerald-100">
+                                        <CheckCircle className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold tracking-wide">Check-in Fácil</p>
+                                        <p className="text-[9px] text-emerald-100/60 font-semibold mt-0.5">Iniciar atendimento</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-emerald-300/40 group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                        </Link>
 
-                            {/* QR Scanner */}
-                            <QRScannerDialog onCheckIn={loadData} />
+                        {/* QR Scanner */}
+                        <QRScannerDialog onCheckIn={loadData} />
 
-                            {/* Sem Agendamento */}
-                            <Dialog open={showWalkInDialog} onOpenChange={(open) => {
-                                setShowWalkInDialog(open)
-                                if (!open) setIsCreatingPatient(false)
-                            }}>
-                                <DialogTrigger asChild>
-                                    <Button className="h-12 gap-2 text-sm font-medium text-white border border-sky-400/50 bg-gradient-to-br from-sky-500 to-blue-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-md ring-1 ring-black/5">
-                                        <Plus className="w-4 h-4" />
-                                        Sem Agendamento
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>
-                                            {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
-                                        </DialogTitle>
-                                    </DialogHeader>
-
-                                    {isCreatingPatient ? (
-                                        <QuickPatientForm
-                                            onSubmit={handleCreatePatient}
-                                            onBack={() => setIsCreatingPatient(false)}
-                                            isSubmitting={isSubmittingPatient}
-                                        />
-                                    ) : (
-                                        <div className="space-y-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label>Paciente</Label>
-                                                <PatientSelector
-                                                    value={selectedPatientId}
-                                                    onChange={setSelectedPatientId}
-                                                    onNewPatient={() => setIsCreatingPatient(true)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Urgência</Label>
-                                                <Select value={urgency} onValueChange={setUrgency}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="normal">Normal</SelectItem>
-                                                        <SelectItem value="priority">Prioridade</SelectItem>
-                                                        <SelectItem value="urgent">Urgente</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Motivo</Label>
-                                                <Input
-                                                    placeholder="Motivo da consulta..."
-                                                    value={reason}
-                                                    onChange={(e) => setReason(e.target.value)}
-                                                />
-                                            </div>
-                                            <Button className="w-full hover:shadow-md transition-all duration-300" onClick={handleCreateWalkIn}>
-                                                Adicionar à Fila
-                                            </Button>
+                        {/* Sem Agendamento */}
+                        <Dialog open={showWalkInDialog} onOpenChange={(open) => {
+                            setShowWalkInDialog(open)
+                            if (!open) setIsCreatingPatient(false)
+                        }}>
+                            <DialogTrigger asChild>
+                                <button className="h-16 px-4 w-full flex items-center justify-between text-left text-white bg-[#0072CE] border border-[#005fa9] hover:bg-[#005fa9] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-white/10 rounded-xl text-sky-100">
+                                            <Plus className="w-5 h-5" />
                                         </div>
-                                    )}
-                                </DialogContent>
-                            </Dialog>
-                        </>
-                    )}
+                                        <div>
+                                            <p className="text-xs font-bold tracking-wide">Sem Agendamento</p>
+                                            <p className="text-[9px] text-sky-100/60 font-semibold mt-0.5">Atendimento avulso</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-sky-300/40 group-hover:translate-x-0.5 transition-transform" />
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>
+                                        {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
+                                    </DialogTitle>
+                                </DialogHeader>
+
+                                {isCreatingPatient ? (
+                                    <QuickPatientForm
+                                        onSubmit={handleCreatePatient}
+                                        onBack={() => setIsCreatingPatient(false)}
+                                        isSubmitting={isSubmittingPatient}
+                                    />
+                                ) : (
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label>Paciente</Label>
+                                            <PatientSelector
+                                                value={selectedPatientId}
+                                                onChange={setSelectedPatientId}
+                                                onNewPatient={() => setIsCreatingPatient(true)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Urgência</Label>
+                                            <Select value={urgency} onValueChange={setUrgency}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="normal">Normal</SelectItem>
+                                                    <SelectItem value="priority">Prioridade</SelectItem>
+                                                    <SelectItem value="urgent">Urgente</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Motivo</Label>
+                                            <Input
+                                                placeholder="Motivo da consulta..."
+                                                value={reason}
+                                                onChange={(e) => setReason(e.target.value)}
+                                            />
+                                        </div>
+                                        <Button className="w-full hover:shadow-md transition-all duration-300" onClick={handleCreateWalkIn}>
+                                            Adicionar à Fila
+                                        </Button>
+                                    </div>
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                    </>
+                )}
+            </div>
+
+            {/* Horizontal Stats List (4 cards matching user's design) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 1. Aguardando */}
+                <div className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full">
+                            <Clock className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-base font-bold text-amber-600 dark:text-amber-500 tracking-wide">
+                                <span className="text-xl font-extrabold mr-1">{stats.waiting_count}</span> Aguardando
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Na fila de espera</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+
+                {/* 2. Em Atendimento */}
+                <div className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-full">
+                            <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-base font-bold text-blue-600 dark:text-blue-500 tracking-wide">
+                                <span className="text-xl font-extrabold mr-1">{stats.in_service_count}</span> Em Atendimento
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Sendo atendidos</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+
+                {/* 3. Atendidos Hoje */}
+                <div className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full">
+                            <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-500 tracking-wide">
+                                <span className="text-xl font-extrabold mr-1">{stats.completed_count}</span> Atendidos Hoje
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Concluídos hoje</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+
+                {/* 4. Não Compareceram */}
+                <div 
+                    className="flex items-center justify-between px-4 py-4.5 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                    onClick={() => setShowNoShowList(true)}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-full">
+                            <UserX className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-base font-bold text-red-600 dark:text-red-500 tracking-wide">
+                                <span className="text-xl font-extrabold mr-1">{stats.no_show_count}</span> Não Compareceram
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Hoje</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-350 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
                 </div>
             </div>
 
-            {/* Stats Bar - compact */}
-            <div className="flex flex-wrap gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <Clock className="w-4 h-4 text-amber-600" />
-                    <span className="text-lg font-bold text-amber-600">{stats.waiting_count}</span>
-                    <span className="text-xs text-muted-foreground">Aguardando</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Users className="w-4 h-4 text-blue-600" />
-                    <span className="text-lg font-bold text-blue-600">{stats.in_service_count}</span>
-                    <span className="text-xs text-muted-foreground">Em Atendimento</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-lg font-bold text-green-600">{stats.completed_count}</span>
-                    <span className="text-xs text-muted-foreground">Atendidos Hoje</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors" onClick={() => setShowNoShowList(true)} role="button" tabIndex={0}>
-                    <UserX className="w-4 h-4 text-red-600" />
-                    <span className="text-lg font-bold text-red-600">{stats.no_show_count}</span>
-                    <span className="text-xs text-muted-foreground">Não Compareceram</span>
-                </div>
-            </div>
-
+            {/* Modals & Dialogs */}
             <Dialog open={checkInModal.open} onOpenChange={(open) => setCheckInModal({ ...checkInModal, open })}>
                 <DialogContent>
                     <DialogHeader>
@@ -707,27 +730,27 @@ export default function RecepcaoPage() {
                     <DialogHeader>
                         <DialogTitle>Pacientes que não compareceram</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pt-2">
                         {stats.no_show_count === 0 ? (
                             <p className="text-center text-muted-foreground py-4 text-sm">Nenhum paciente nesta lista.</p>
                         ) : (
                             <div className="space-y-2">
                                 {queue.filter(i => i.status === 'NO_SHOW').map(item => (
-                                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg bg-red-50/50 border-red-100">
+                                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-xl bg-red-50/50 dark:bg-red-950/10 border-red-100 dark:border-red-900/30">
                                         <div>
-                                            <p className="font-medium text-sm">{item.patient.full_name}</p>
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                                <Clock className="w-3 h-3" />
-                                                {item.arrivalTime ? `Chegada original: ${getTimeWaiting(item.arrivalTime)}` : 'Sem registro de chegada'}
+                                            <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{item.patient.full_name}</p>
+                                            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1 font-semibold">
+                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                Chegada original: {item.arrivalTime ? new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Sem registro'}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isEspacoIncluir && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                    <Undo2 className="w-3.5 h-3.5" />
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                    <Undo2 className="w-4 h-4" />
                                                 </Button>
                                             )}
-                                            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Ausente</Badge>
+                                            <Badge variant="outline" className="text-red-650 dark:text-red-400 border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 font-bold text-[10px]">Ausente</Badge>
                                         </div>
                                     </div>
                                 ))}
@@ -737,218 +760,262 @@ export default function RecepcaoPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Pre-Check-in Realtime Alerts */}
-            {
-                preCheckinAlerts.length > 0 && (
-                    <Card className="border-2 border-amber-300 bg-amber-50">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <Bell className="w-5 h-5 text-amber-600" />
-                                Pré-Check-ins Online Recentes
-                                <Badge className="bg-amber-600 text-white">{preCheckinAlerts.length}</Badge>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            <div className="space-y-2">
-                                {preCheckinAlerts.map((alert) => (
-                                    <div key={alert.id} className="flex items-center justify-between p-2 rounded-lg bg-white border border-amber-200">
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                                            <span className="font-medium text-sm">{alert.patientName}</span>
-                                        </div>
-                                        <span className="text-xs text-muted-foreground">{alert.time}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="mt-2 w-full text-amber-700 hover:bg-amber-100"
-                                onClick={() => setPreCheckinAlerts([])}
-                            >
-                                Limpar notificações
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )
-            }
-
-            {/* 3-Panel Queue Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Panel 1: Aguardando */}
-                <Card className="border-t-4 border-t-amber-500">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-amber-600" />
-                            Aguardando
-                            <Badge className="bg-amber-100 text-amber-800">
+            {/* 3-Panel Kanban Queue Layout (Highly premium, 100% matched design) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Column 1: Aguardando */}
+                <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col min-h-[500px]">
+                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800/60">
+                        <div className="flex items-center gap-2.5">
+                            <Clock className="w-5 h-5 text-amber-500" />
+                            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm tracking-wide">
+                                Aguardando
+                            </h3>
+                            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
                                 {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length}
-                            </Badge>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                        {loading ? (
-                            <p className="text-center py-6 text-muted-foreground text-sm">Carregando...</p>
-                        ) : queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length === 0 ? (
-                            <p className="text-center py-6 text-muted-foreground text-sm">Nenhum paciente aguardando</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
-                                    <div key={item.id} className={`p-3 rounded-lg border ${item.isPriority ? 'border-red-200 bg-red-50' : 'border-border'}`}>
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-bold text-sm shrink-0">
-                                                {index + 1}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <h4 className="font-semibold text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
-                                                {item.doctor && (
-                                                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                        <User className="w-3 h-3" />
-                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
-                                                    </span>
+                            </span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
+                            <MoreVertical className="w-4 h-4" />
+                        </Button>
+                    </div>
+
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-400 text-sm">
+                            <Loader2 className="w-6 h-6 animate-spin text-slate-400 mb-2" />
+                            Carregando...
+                        </div>
+                    ) : queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-400/80 dark:text-slate-500 text-center">
+                            <div className="p-3 bg-amber-50/50 dark:bg-amber-950/10 rounded-full text-amber-500 mb-3">
+                                <Clock className="w-6 h-6" />
+                            </div>
+                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Nenhum paciente aguardando</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 px-4">Os pacientes que chegarem na clínica serão listados aqui.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
+                            {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
+                                <div 
+                                    key={item.id} 
+                                    className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border ${item.isPriority ? 'border-red-200 dark:border-red-900/40 bg-red-50/20 dark:bg-red-950/5' : 'border-slate-200/60 dark:border-slate-800'} shadow-sm hover:shadow-md transition-all duration-300 relative group`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        {/* Golden Circular Numbering */}
+                                        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-500 font-extrabold text-xs shrink-0 border border-amber-100/55 dark:border-amber-900/30">
+                                            {index + 1}
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            
+                                            {item.doctor && (
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1.5 mt-1.5">
+                                                    <User className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                </p>
+                                            )}
+
+                                            <div className="flex items-center gap-3 mt-1.5 font-bold text-[10px] text-slate-400 dark:text-slate-500">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Clock className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+                                                    {item.arrivalTime 
+                                                        ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
+                                                        : item.scheduledTime 
+                                                            ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+                                                            : 'Sem horário'
+                                                    }
+                                                </span>
+                                                {item.status === 'WAITING' && (
+                                                    <Badge className="text-[8px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 px-1.5 py-0 font-extrabold">Chamado</Badge>
                                                 )}
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        {item.arrivalTime 
-                                                            ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
-                                                            : item.scheduledTime 
-                                                                ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
-                                                                : 'Sem horário definido'
-                                                        }
-                                                    </span>
-                                                    {item.status === 'WAITING' && (
-                                                        <Badge className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0">Chamado</Badge>
-                                                    )}
-                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex gap-1 flex-wrap">
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} title="Documentos">
-                                                <FileText className="w-3.5 h-3.5" />
+                                    </div>
+
+                                    {/* Action Footbar */}
+                                    <div className="flex items-center justify-between gap-1.5 mt-4 pt-3 border-t border-slate-100 dark:border-slate-850">
+                                        <div className="flex items-center gap-1.5">
+                                            {/* Prontuário / Documentos */}
+                                            <Button 
+                                                size="sm" 
+                                                variant="ghost" 
+                                                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl" 
+                                                onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} 
+                                                title="Documentos"
+                                            >
+                                                <FileText className="w-4 h-4" />
                                             </Button>
-                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => isEspacoIncluir ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} disabled={actionId === item.id}>
-                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle className="w-3.5 h-3.5 mr-1" />{isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}</>}
-                                                </Button>
-                                            )}
+
+                                            {/* Chamar Paciente */}
                                             {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
-                                                <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                     {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                 </Button>
                                             )}
                                             {item.status === 'WAITING' && (
-                                                <>
-                                                    <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
-                                                        {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
-                                                    </Button>
-                                                    <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStartService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
-                                                        {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>{isEspacoIncluir ? 'Em Atendimento' : '🩺 Em Atend.'}</>}
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                    <Undo2 className="w-3.5 h-3.5" />
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                    {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                 </Button>
                                             )}
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
-                                                <UserX className="w-3.5 h-3.5" />
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                            {/* Iniciar Atendimento */}
+                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
+                                                <button 
+                                                    className="h-8 text-[11px] font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
+                                                    onClick={() => isEspacoIncluir ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
+                                                    disabled={actionId === item.id}
+                                                >
+                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />{isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}</>}
+                                                </button>
+                                            )}
+                                            {item.status === 'WAITING' && (
+                                                <button 
+                                                    className="h-8 text-[11px] font-extrabold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
+                                                    onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
+                                                    disabled={actionId === item.id}
+                                                >
+                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />Em Atendimento</>}
+                                                </button>
+                                            )}
+
+                                            {/* Desfazer */}
+                                            {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                    <Undo2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+
+                                            {/* Não Compareceu */}
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-650 hover:bg-red-50/50 rounded-xl shrink-0" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                                <UserX className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                {/* Panel 2: Em Atendimento */}
-                <Card className="border-t-4 border-t-emerald-500">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Users className="w-5 h-5 text-emerald-600" />
-                            Em Atendimento
-                            <Badge className="bg-emerald-100 text-emerald-800">
+                {/* Column 2: Em Atendimento */}
+                <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col min-h-[500px]">
+                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800/60">
+                        <div className="flex items-center gap-2.5">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm tracking-wide">
+                                Em Atendimento
+                            </h3>
+                            <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
                                 {queue.filter(i => i.status === 'IN_PROGRESS').length}
-                            </Badge>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                        {queue.filter(i => i.status === 'IN_PROGRESS').length === 0 ? (
-                            <p className="text-center py-6 text-muted-foreground text-sm">Nenhum paciente em atendimento</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {queue.filter(i => i.status === 'IN_PROGRESS').map((item) => (
-                                    <div key={item.id} className="p-3 rounded-lg border border-emerald-200 bg-emerald-50">
-                                        <div className="flex items-center justify-between">
-                                            <div className="min-w-0">
-                                                <h4 className="font-semibold text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
-                                                {item.doctor && (
-                                                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                        <User className="w-3 h-3" />
-                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex gap-1 shrink-0">
-                                                <Button size="sm" className="h-8 text-xs bg-gray-600 hover:bg-gray-700 text-white" onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} disabled={actionId === item.id}>
-                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>✅ Concluir</>}
-                                                </Button>
-                                                {isEspacoIncluir && (
-                                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                        <Undo2 className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            </span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
+                            <MoreVertical className="w-4 h-4" />
+                        </Button>
+                    </div>
 
-                {/* Panel 3: Concluídos */}
-                <Card className="border-t-4 border-t-gray-400">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-gray-500" />
-                            Concluídos
-                            <Badge className="bg-gray-100 text-gray-600">
-                                {queue.filter(i => i.status === 'COMPLETED').length}
-                            </Badge>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                        {queue.filter(i => i.status === 'COMPLETED').length === 0 ? (
-                            <p className="text-center py-6 text-muted-foreground text-sm">Nenhum atendimento concluído</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {queue.filter(i => i.status === 'COMPLETED').map((item) => (
-                                    <div key={item.id} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
-                                        <div className="flex items-center justify-between">
-                                            <div className="min-w-0">
-                                                <h4 className="font-medium text-sm text-gray-600 truncate">{item.patient?.full_name || 'Paciente'}</h4>
-                                                {item.doctor && (
-                                                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                        <User className="w-3 h-3" />
-                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {isEspacoIncluir && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                    <Undo2 className="w-3.5 h-3.5" />
-                                                </Button>
+                    {queue.filter(i => i.status === 'IN_PROGRESS').length === 0 ? (
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-450 dark:text-slate-500 text-center">
+                            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-full flex items-center justify-center mb-3">
+                                <Users className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+                            </div>
+                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Nenhum paciente em atendimento</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 px-4">Os pacientes em atendimento aparecerão aqui.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
+                            {queue.filter(i => i.status === 'IN_PROGRESS').map((item) => (
+                                <div key={item.id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-blue-200/60 dark:border-blue-900/30 bg-blue-50/10 dark:bg-blue-950/5 shadow-sm hover:shadow-md transition-all duration-300">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            {item.doctor && (
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1.5 mt-1.5">
+                                                    <User className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                </p>
                                             )}
                                         </div>
                                     </div>
-                                ))}
+
+                                    <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-slate-850/60">
+                                        {isEspacoIncluir && (
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Undo2 className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                        
+                                        <button 
+                                            className="h-8 w-full text-xs font-extrabold bg-[#007D40] hover:bg-[#006835] text-white rounded-xl px-4 flex items-center justify-center gap-1.5 transition-all shadow-sm ml-auto" 
+                                            onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
+                                            disabled={actionId === item.id}
+                                        >
+                                            {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-100" />Concluir</>}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Column 3: Concluídos */}
+                <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col min-h-[500px]">
+                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800/60">
+                        <div className="flex items-center gap-2.5">
+                            <CheckCircle className="w-5 h-5 text-emerald-500" />
+                            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm tracking-wide">
+                                Concluídos
+                            </h3>
+                            <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                                {queue.filter(i => i.status === 'COMPLETED').length}
+                            </span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
+                            <MoreVertical className="w-4 h-4" />
+                        </Button>
+                    </div>
+
+                    {queue.filter(i => i.status === 'COMPLETED').length === 0 ? (
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-450 dark:text-slate-500 text-center">
+                            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center mb-3">
+                                <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-500" />
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Nenhum atendimento concluído</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 px-4">Os atendimentos concluídos aparecerão aqui.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
+                            {queue.filter(i => i.status === 'COMPLETED').map((item) => (
+                                <div key={item.id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{item.patient?.full_name || 'Paciente'}</h4>
+                                            {item.doctor && (
+                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1.5 mt-1.5">
+                                                    <User className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-850">
+                                        <Badge className="text-[9px] bg-slate-50 dark:bg-slate-900 text-slate-650 dark:text-slate-300 border border-slate-200/60 dark:border-slate-800 px-2 py-0.5 font-bold">Atendido</Badge>
+                                        
+                                        {isEspacoIncluir && (
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Undo2 className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Success Dialog */}
@@ -966,7 +1033,6 @@ export default function RecepcaoPage() {
                         </p>
                         <div className="flex gap-2 w-full">
                             <Button className="flex-1" variant="outline" onClick={() => window.open(createdWalkIn?.qrCode?.whatsappLink, '_blank')}>
-                                <MessageCircle className="w-4 h-4 mr-2" />
                                 Enviar WhatsApp
                             </Button>
                             <Button className="flex-1" onClick={() => setCreatedWalkIn(null)}>
@@ -978,19 +1044,17 @@ export default function RecepcaoPage() {
             </Dialog>
 
             {/* Documents Modal */}
-            {
-                selectedAppointmentId && (
-                    <CheckinDocumentsModal
-                        isOpen={documentsModalOpen}
-                        onClose={() => {
-                            setDocumentsModalOpen(false)
-                            setSelectedAppointmentId(null)
-                        }}
-                        appointmentId={selectedAppointmentId}
-                        patientName={selectedPatientName}
-                    />
-                )
-            }
-        </div >
+            {selectedAppointmentId && (
+                <CheckinDocumentsModal
+                    isOpen={documentsModalOpen}
+                    onClose={() => {
+                        setDocumentsModalOpen(false)
+                        setSelectedAppointmentId(null)
+                    }}
+                    appointmentId={selectedAppointmentId}
+                    patientName={selectedPatientName}
+                />
+            )}
+        </div>
     )
 }
