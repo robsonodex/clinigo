@@ -411,10 +411,13 @@ export default function RecepcaoPage() {
                         <Users className="w-6 h-6" />
                     </div>
                     <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
-                                Recepção
-                            </h1>
+                        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                            Recepção
+                        </h1>
+                        <div className="flex items-center gap-3 mt-1.5">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold">
+                                Gestão de fila e check-in de pacientes
+                            </p>
                             
                             {/* Filtros e Ações Dropdown Button */}
                             <DropdownMenu>
@@ -422,9 +425,9 @@ export default function RecepcaoPage() {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                                        className="flex gap-1.5 h-8 text-xs bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-3 font-bold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                                     >
-                                        <SlidersHorizontal className="h-4 w-4" />
+                                        <SlidersHorizontal className="h-3.5 w-3.5" />
                                         <span>Filtros e Ações</span>
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -489,9 +492,6 @@ export default function RecepcaoPage() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
-                            Gestão de fila e check-in de pacientes
-                        </p>
                     </div>
                 </div>
 
