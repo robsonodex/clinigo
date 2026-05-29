@@ -937,7 +937,8 @@ export default function AgendaPage() {
                 {calendarStyle === 'standard' ? (
                 <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row */}
-                    <div className="grid grid-cols-8 border-b sticky top-0 bg-white z-10">
+                    {/* Header Row com Glassmorphism Translúcido Premium */}
+                    <div className="grid grid-cols-8 border-b sticky top-0 bg-white/90 backdrop-blur-md dark:bg-slate-900/90 z-10 shadow-sm border-slate-100/80 transition-all duration-300">
                         <div className="py-1 px-3 text-[10px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
                             Horário
                         </div>
@@ -945,8 +946,8 @@ export default function AgendaPage() {
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    'py-1 px-3 text-center border-r last:border-r-0',
-                                    isSameDay(day, new Date()) && 'bg-blue-50'
+                                    'py-1 px-3 text-center border-r last:border-r-0 transition-colors duration-200',
+                                    isSameDay(day, new Date()) && 'bg-emerald-50/30 dark:bg-emerald-950/10'
                                 )}
                             >
                                 <div className="text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
@@ -954,9 +955,9 @@ export default function AgendaPage() {
                                 </div>
                                 <div
                                     className={cn(
-                                        'text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center mx-auto mt-0.5 transition-all duration-200',
+                                        'text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center mx-auto mt-0.5 transition-all duration-300',
                                         isSameDay(day, new Date())
-                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20 ring-2 ring-emerald-400/20'
                                             : 'text-foreground hover:bg-slate-100'
                                     )}
                                 >
@@ -990,7 +991,9 @@ export default function AgendaPage() {
                                         <div
                                             key={day.toISOString()}
                                             className={cn(
-                                                'border-r last:border-r-0 p-1 relative group hover:bg-muted/30 transition-colors cursor-pointer',
+                                                'border-r last:border-r-0 p-1 relative group transition-all duration-200 cursor-pointer',
+                                                isSameDay(day, new Date()) ? 'bg-emerald-50/[0.03] dark:bg-emerald-950/[0.01]' : '',
+                                                'hover:bg-emerald-50/25 dark:hover:bg-emerald-950/5 hover:shadow-[inset_0_0_8px_rgba(16,185,129,0.04)]',
                                                 !isSameMonth(day, currentDate) && 'bg-gray-50/50',
                                                 showFreeSlots && (() => {
                                                     const status = getSlotFreeStatus(day, time)
