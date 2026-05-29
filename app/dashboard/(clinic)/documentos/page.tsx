@@ -256,9 +256,9 @@ export default function DocumentsPage() {
 
                 <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
-                            <Upload className="h-4 w-4 mr-2" />
-                            Novo Upload
+                        <Button className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0">
+                            <Upload className="w-4 h-4" />
+                            <span>Novo Upload</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-lg">
@@ -334,9 +334,22 @@ export default function DocumentsPage() {
 
                             {/* Campo de OCR Ocultado. Funcionalidade futura. */}
 
-                            <Button onClick={handleUpload} disabled={uploading} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-                                {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                Enviar Documento
+                            <Button
+                                onClick={handleUpload}
+                                disabled={uploading}
+                                className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center"
+                            >
+                                {uploading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Enviando...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="w-4 h-4" />
+                                        <span>Enviar Documento</span>
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </DialogContent>
