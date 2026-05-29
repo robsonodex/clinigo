@@ -938,14 +938,14 @@ export default function AgendaPage() {
                 <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row */}
                     <div className="grid grid-cols-8 border-b sticky top-0 bg-white z-10">
-                        <div className="p-4 text-xs font-medium text-muted-foreground border-r text-center">
+                        <div className="py-2 px-3 text-xs font-medium text-muted-foreground border-r text-center flex items-center justify-center h-full">
                             Horário
                         </div>
                         {(view === 'week' ? days : [currentDate]).map((day) => (
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    'p-4 text-center border-r last:border-r-0',
+                                    'py-2 px-3 text-center border-r last:border-r-0',
                                     isSameDay(day, new Date()) && 'bg-blue-50'
                                 )}
                             >
