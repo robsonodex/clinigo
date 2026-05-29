@@ -93,22 +93,40 @@ export default function InadimplenciaPage() {
 
     return (
         <div className="space-y-6 p-6 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <AlertTriangle className="w-8 h-8 text-red-500" />
-                        Inadimplência
-                    </h1>
-                    <p className="text-muted-foreground mt-1">Pacientes com parcelas em atraso</p>
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)' }}>
+                        <AlertTriangle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Inadimplência</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pacientes com parcelas em atraso</p>
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={() => { refetch(); toast.success('Atualizado!'); }} disabled={isLoading}>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => { refetch(); toast.success('Atualizado!'); }} 
+                        disabled={isLoading}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Atualizar
                     </Button>
-                    <Button variant="outline" onClick={handleExportExcel} disabled={debtors.length === 0 || isExportingExcel}>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportExcel} 
+                        disabled={debtors.length === 0 || isExportingExcel}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
                     </Button>
-                    <Button variant="outline" onClick={handleExportPDF} disabled={debtors.length === 0 || isExportingPDF}>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportPDF} 
+                        disabled={debtors.length === 0 || isExportingPDF}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <Download className="w-4 h-4 mr-2" /> Exportar PDF
                     </Button>
                 </div>

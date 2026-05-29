@@ -92,42 +92,67 @@ export default function MixReceitaPage() {
 
     return (
         <div className="space-y-6 p-6 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <PieChart className="w-8 h-8 text-primary" />
-                        Mix de Receita
-                    </h1>
-                    <p className="text-muted-foreground mt-1">Comparativo Particular vs Convênios</p>
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' }}>
+                        <PieChart className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Mix de Receita</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Comparativo Particular vs Convênios</p>
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={() => { refetch(); toast.success('Atualizado!'); }} disabled={isLoading}>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => { refetch(); toast.success('Atualizado!'); }} 
+                        disabled={isLoading}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Atualizar
                     </Button>
-                    <Button variant="outline" onClick={handleExportExcel} disabled={mixData.length === 0 || isExportingExcel}>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportExcel} 
+                        disabled={mixData.length === 0 || isExportingExcel}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
                     </Button>
-                    <Button variant="outline" onClick={handleExportPDF} disabled={mixData.length === 0 || isExportingPDF}>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleExportPDF} 
+                        disabled={mixData.length === 0 || isExportingPDF}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <Download className="w-4 h-4 mr-2" /> Exportar PDF
                     </Button>
                 </div>
             </div>
 
             {/* Filtros */}
-            <Card className="bg-muted/30 border-dashed">
+            <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/10">
                 <CardContent className="p-4 flex flex-col md:flex-row items-end gap-4">
                     <div className="w-full md:w-auto">
-                        <label className="text-sm font-medium mb-1 block">Data Inicial</label>
-                        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                        <label className="text-sm font-semibold mb-1 block text-slate-700 dark:text-slate-300">Data Inicial</label>
+                        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-xl border-slate-200 dark:border-slate-800" />
                     </div>
                     <div className="w-full md:w-auto">
-                        <label className="text-sm font-medium mb-1 block">Data Final</label>
-                        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                        <label className="text-sm font-semibold mb-1 block text-slate-700 dark:text-slate-300">Data Final</label>
+                        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-xl border-slate-200 dark:border-slate-800" />
                     </div>
-                    <Button onClick={() => { setFilterApplied({ start: startDate, end: endDate }); toast.success('Filtros aplicados!'); }}>
+                    <Button 
+                        onClick={() => { setFilterApplied({ start: startDate, end: endDate }); toast.success('Filtros aplicados!'); }}
+                        className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center"
+                    >
                         <Filter className="w-4 h-4 mr-2" /> Aplicar filtro
                     </Button>
-                    <Button variant="ghost" onClick={() => { setStartDate(defaultStart); setEndDate(defaultEnd); setFilterApplied({ start: defaultStart, end: defaultEnd }); }}>
+                    <Button 
+                        variant="ghost" 
+                        onClick={() => { setStartDate(defaultStart); setEndDate(defaultEnd); setFilterApplied({ start: defaultStart, end: defaultEnd }); }}
+                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                    >
                         <XCircle className="w-4 h-4 mr-2" /> Limpar
                     </Button>
                 </CardContent>

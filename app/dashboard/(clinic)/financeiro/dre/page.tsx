@@ -61,15 +61,21 @@ export default function DrePage() {
 
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                <PageHeader 
-                    heading="DRE Consolidada" 
-                    text="Demonstração de Resultados do Exercício gerencial da sua clínica."
-                />
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                        <TableIcon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">DRE Consolidada</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Demonstração de Resultados do Exercício gerencial da sua clínica.</p>
+                    </div>
+                </div>
 
-                <div className="flex gap-2 mt-4 sm:mt-0">
+                <div className="flex gap-2">
                     <Select value={month} onValueChange={(val) => setMonth(val)}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-[180px] h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition-all">
                             <SelectValue placeholder="Selecione o Mês" />
                         </SelectTrigger>
                         <SelectContent>
@@ -84,11 +90,21 @@ export default function DrePage() {
             </div>
 
             <div className="flex gap-2 justify-end mb-4">
-                <Button variant="outline" onClick={handleExportExcel} disabled={loading || !dreData}>
+                <Button 
+                    variant="outline" 
+                    onClick={handleExportExcel} 
+                    disabled={loading || !dreData}
+                    className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 transition-all duration-200"
+                >
                     <TableIcon className="h-4 w-4 mr-2" />
                     Excel
                 </Button>
-                <Button variant="outline" onClick={handleExportPdf} disabled={loading || !dreData}>
+                <Button 
+                    variant="outline" 
+                    onClick={handleExportPdf} 
+                    disabled={loading || !dreData}
+                    className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 transition-all duration-200"
+                >
                     <Download className="h-4 w-4 mr-2" />
                     PDF
                 </Button>

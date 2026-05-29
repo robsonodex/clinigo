@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 export default function GlosasPage() {
   const [guides, setGuides] = useState<any[]>([]);
@@ -67,14 +67,20 @@ export default function GlosasPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <PageHeader 
-          heading="Gestão de Glosas e Recursos" 
-          text="Acompanhe as guias glosadas, cadastre justificativas e valide o retorno das operadoras."
-        />
+      {/* Header Premium */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+            <AlertTriangle className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Gestão de Glosas e Recursos</h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Acompanhe as guias glosadas, cadastre justificativas e valide o retorno das operadoras.</p>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-card overflow-hidden shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

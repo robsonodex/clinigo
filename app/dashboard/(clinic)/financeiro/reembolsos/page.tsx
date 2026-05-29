@@ -141,30 +141,39 @@ export default function ReimbursementsPage() {
 
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <div className="flex items-center justify-between">
-                <PageHeader 
-                    heading="Reembolsos (PIX)" 
-                    text="Solicitação e aprovação de estornos e devoluções para pacientes via PIX Banco Inter."
-                />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-3 text-slate-900 dark:text-white">
+                        <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl text-emerald-600 dark:text-emerald-400">
+                            <Plus className="h-6 w-6" />
+                        </div>
+                        Reembolsos (PIX)
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                        Solicitação e aprovação de estornos e devoluções para pacientes via PIX Banco Inter.
+                    </p>
+                </div>
                 
                 <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
                     <DialogTrigger asChild>
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Nova Solicitação
+                        <Button className="flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
+                            <Plus className="h-4 w-4" />
+                            <span>Nova Solicitação</span>
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md rounded-2xl border border-slate-200 dark:border-slate-800">
                         <DialogHeader>
                             <DialogTitle>Solicitar Reembolso</DialogTitle>
                             <DialogDescription>A solicitação será encaminhada para aprovação da administração.</DialogDescription>
                         </DialogHeader>
                         
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-1">
                                 <Label>Paciente *</Label>
                                 <Select value={form.patient_id} onValueChange={(v) => setForm(f => ({...f, patient_id: v}))}>
-                                    <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                                    <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
+                                        <SelectValue placeholder="Selecione o paciente" />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         {patients.map(p => (
                                             <SelectItem key={p.id} value={p.id}>{p.full_name} ({p.cpf})</SelectItem>
@@ -172,15 +181,23 @@ export default function ReimbursementsPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <Label>Valor (R$) *</Label>
-                                <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm(f => ({...f, amount: e.target.value}))} />
+                                <Input 
+                                    type="number" 
+                                    step="0.01" 
+                                    value={form.amount} 
+                                    onChange={(e) => setForm(f => ({...f, amount: e.target.value}))} 
+                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     <Label>Tipo de Chave *</Label>
                                     <Select value={form.pix_key_type} onValueChange={(v) => setForm(f => ({...f, pix_key_type: v}))}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
+                                            <SelectValue/>
+                                        </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="CPF">CPF</SelectItem>
                                             <SelectItem value="TELEFONE">Telefone</SelectItem>
@@ -189,24 +206,39 @@ export default function ReimbursementsPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     <Label>Chave PIX *</Label>
-                                    <Input value={form.pix_key} onChange={(e) => setForm(f => ({...f, pix_key: e.target.value}))} placeholder="Chave Exata" />
+                                    <Input 
+                                        value={form.pix_key} 
+                                        onChange={(e) => setForm(f => ({...f, pix_key: e.target.value}))} 
+                                        placeholder="Chave Exata" 
+                                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800" 
+                                    />
                                 </div>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <Label>Motivo *</Label>
-                                <Textarea value={form.reason} onChange={(e) => setForm(f => ({...f, reason: e.target.value}))} rows={3} />
+                                <Textarea 
+                                    value={form.reason} 
+                                    onChange={(e) => setForm(f => ({...f, reason: e.target.value}))} 
+                                    rows={3} 
+                                    className="rounded-xl border border-slate-200 dark:border-slate-800"
+                                />
                             </div>
-                            <Button onClick={handleSubmit} disabled={saving} className="w-full">
-                                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Salvar Solicitação
+                            <Button 
+                                onClick={handleSubmit} 
+                                disabled={saving} 
+                                className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold transition-all duration-200 border-0"
+                            >
+                                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} 
+                                <span>Salvar Solicitação</span>
                             </Button>
                         </div>
                     </DialogContent>
                 </Dialog>
             </div>
 
-            <div className="rounded-md border bg-card">
+            <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-card overflow-hidden shadow-sm">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -221,23 +253,23 @@ export default function ReimbursementsPage() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground"/></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-emerald-600"/></TableCell></TableRow>
                         ) : reimbursements.length === 0 ? (
                             <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Nenhum reembolso solicitado.</TableCell></TableRow>
                         ) : (
                             reimbursements.map(r => (
-                                <TableRow key={r.id}>
+                                <TableRow key={r.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
                                     <TableCell className="text-sm">{format(new Date(r.created_at), 'dd/MM/yy HH:mm')}</TableCell>
-                                    <TableCell className="font-medium">{r.patient?.full_name}</TableCell>
+                                    <TableCell className="font-medium text-slate-950 dark:text-slate-50">{r.patient?.full_name}</TableCell>
                                     <TableCell className="text-sm max-w-[200px] truncate" title={r.reason}>{r.reason}</TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">{r.pix_key_type}: {r.pix_key}</TableCell>
+                                    <TableCell className="text-sm text-slate-600 dark:text-slate-400">{r.pix_key_type}: {r.pix_key}</TableCell>
                                     <TableCell className="font-bold text-red-600">{formatCurrency(r.amount)}</TableCell>
                                     <TableCell>{getStatusBadge(r.status)}</TableCell>
                                     <TableCell className="text-right">
                                         {r.status === 'PENDING' && userRole === 'CLINIC_ADMIN' && (
                                             <Button 
                                                 size="sm" 
-                                                className="bg-green-600 hover:bg-green-700" 
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 rounded-lg font-semibold px-4 transition-all duration-200 shadow-sm border-0" 
                                                 disabled={processingId === r.id}
                                                 onClick={() => handleApprove(r.id, r.amount)}
                                             >

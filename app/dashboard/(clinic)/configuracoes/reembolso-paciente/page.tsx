@@ -176,25 +176,29 @@ export default function ReembolsoPacientePage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                        <Users className="w-6 h-6" />
-                        Reembolso por Paciente
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Configure regras de reembolso específicas por paciente e tipo de terapia
-                    </p>
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                        <Users className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Reembolso por Paciente</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Configure regras de reembolso específicas por paciente e tipo de terapia</p>
+                    </div>
                 </div>
-                <Button onClick={() => { setEditingId(null); setForm(INITIAL_FORM); setShowModal(true) }}>
+                <Button 
+                    onClick={() => { setEditingId(null); setForm(INITIAL_FORM); setShowModal(true) }}
+                    className="flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0"
+                >
                     <Plus className="w-4 h-4 mr-2" />
                     Nova Regra
                 </Button>
             </div>
 
-            <Card>
+            <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <CardTitle>Regras de Reembolso por Paciente</CardTitle>
                             <CardDescription>
@@ -202,7 +206,7 @@ export default function ReembolsoPacientePage() {
                             </CardDescription>
                         </div>
                         <Select value={filterPatient} onValueChange={setFilterPatient}>
-                            <SelectTrigger className="w-[250px]">
+                            <SelectTrigger className="w-full sm:w-[250px] h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition-all">
                                 <SelectValue placeholder="Filtrar por paciente" />
                             </SelectTrigger>
                             <SelectContent>
@@ -217,11 +221,11 @@ export default function ReembolsoPacientePage() {
                 <CardContent>
                     {isLoading ? (
                         <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
                         </div>
                     ) : filteredRules.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                            <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50 text-emerald-600" />
                             <p>Nenhuma regra de reembolso configurada.</p>
                             <p className="text-sm">Clique em "Nova Regra" para adicionar.</p>
                         </div>
@@ -242,31 +246,41 @@ export default function ReembolsoPacientePage() {
                             </TableHeader>
                             <TableBody>
                                 {filteredRules.map((rule) => (
-                                    <TableRow key={rule.id}>
-                                        <TableCell className="font-medium">
+                                    <TableRow key={rule.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
+                                        <TableCell className="font-medium text-slate-950 dark:text-slate-50">
                                             {rule.patient?.full_name || 'N/A'}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">{rule.therapy_type}</Badge>
+                                            <Badge variant="outline" className="rounded-lg font-semibold border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400">{rule.therapy_type}</Badge>
                                         </TableCell>
                                         <TableCell>
                                             {rule.billing_therapy_type ? (
-                                                <Badge variant="secondary">{rule.billing_therapy_type}</Badge>
+                                                <Badge variant="secondary" className="rounded-lg font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">{rule.billing_therapy_type}</Badge>
                                             ) : (
-                                                <span className="text-muted-foreground text-xs">Mesma</span>
+                                                <span className="text-muted-foreground text-xs font-semibold">Mesma</span>
                                             )}
                                         </TableCell>
-                                        <TableCell>{rule.guides_per_session}</TableCell>
-                                        <TableCell>R$ {Number(rule.billing_amount).toFixed(2)}</TableCell>
-                                        <TableCell>R$ {Number(rule.reimbursement_amount).toFixed(2)}</TableCell>
-                                        <TableCell>{rule.actual_session_duration} min</TableCell>
-                                        <TableCell>{rule.guide_session_duration} min</TableCell>
+                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">{rule.guides_per_session}x</TableCell>
+                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">R$ {Number(rule.billing_amount).toFixed(2)}</TableCell>
+                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">R$ {Number(rule.reimbursement_amount).toFixed(2)}</TableCell>
+                                        <TableCell className="text-slate-600 dark:text-slate-400">{rule.actual_session_duration} min</TableCell>
+                                        <TableCell className="text-slate-600 dark:text-slate-400">{rule.guide_session_duration} min</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex gap-1 justify-end">
-                                                <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}>
-                                                    <Pencil className="w-4 h-4" />
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    onClick={() => handleEdit(rule)}
+                                                    className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                >
+                                                    <Pencil className="w-4 h-4 text-slate-500" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDelete(rule.id)} className="text-destructive">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    onClick={() => handleDelete(rule.id)} 
+                                                    className="h-8 w-8 p-0 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500"
+                                                >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             </div>
@@ -281,7 +295,7 @@ export default function ReembolsoPacientePage() {
 
             {/* Dialog de criação/edição */}
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800">
                     <DialogHeader>
                         <DialogTitle>
                             {editingId ? 'Editar Regra' : 'Nova Regra de Reembolso por Paciente'}
@@ -291,11 +305,11 @@ export default function ReembolsoPacientePage() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4">
-                        <div className="space-y-2">
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-1">
                             <Label>Paciente *</Label>
                             <Select value={form.patient_id} onValueChange={(v) => setForm(prev => ({ ...prev, patient_id: v }))}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <SelectValue placeholder="Selecione o paciente" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -306,10 +320,10 @@ export default function ReembolsoPacientePage() {
                             </Select>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label>Terapia Real (na Agenda) *</Label>
                             <Select value={form.therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, therapy_type: v }))}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <SelectValue placeholder="Selecione a terapia real" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -321,10 +335,10 @@ export default function ReembolsoPacientePage() {
                             <p className="text-xs text-muted-foreground">Terapia que o paciente realmente faz</p>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label>Cobrar como (Terapia para Reembolso)</Label>
                             <Select value={form.billing_therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, billing_therapy_type: v }))}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <SelectValue placeholder="Selecione a terapia para faturamento" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -337,24 +351,25 @@ export default function ReembolsoPacientePage() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <Label>Guias por Sessão</Label>
                                 <Input
                                     type="number"
                                     min={1}
                                     value={form.guides_per_session}
                                     onChange={(e) => setForm(prev => ({ ...prev, guides_per_session: Number(e.target.value) }))}
+                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                                 />
                                 <p className="text-xs text-muted-foreground">Quantas guias gerar por atendimento real</p>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <Label>Valor Cobrado (R$)</Label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                                     <Input
                                         type="number"
                                         step="0.01"
-                                        className="pl-8"
+                                        className="pl-8 h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                                         value={form.billing_amount || ''}
                                         onChange={(e) => setForm(prev => ({ ...prev, billing_amount: Number(e.target.value) }))}
                                     />
@@ -363,57 +378,68 @@ export default function ReembolsoPacientePage() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <Label>Valor Reembolso (R$)</Label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                                     <Input
                                         type="number"
                                         step="0.01"
-                                        className="pl-8"
+                                        className="pl-8 h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                                         value={form.reimbursement_amount || ''}
                                         onChange={(e) => setForm(prev => ({ ...prev, reimbursement_amount: Number(e.target.value) }))}
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <Label>Duração Real (min)</Label>
                                 <Input
                                     type="number"
                                     value={form.actual_session_duration}
                                     onChange={(e) => setForm(prev => ({ ...prev, actual_session_duration: Number(e.target.value) }))}
+                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label>Duração da Guia (min)</Label>
                             <Input
                                 type="number"
                                 value={form.guide_session_duration}
                                 onChange={(e) => setForm(prev => ({ ...prev, guide_session_duration: Number(e.target.value) }))}
+                                className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                             />
                             <p className="text-xs text-muted-foreground">Duração que aparece na guia de reembolso</p>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label>Observações</Label>
                             <Textarea
                                 value={form.notes}
                                 onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
                                 placeholder="Notas adicionais..."
+                                className="rounded-xl border border-slate-200 dark:border-slate-800"
                                 rows={3}
                             />
                         </div>
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowModal(false)}>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setShowModal(false)}
+                            className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
+                        >
                             Cancelar
                         </Button>
-                        <Button onClick={handleSubmit} disabled={isSaving}>
+                        <Button 
+                            onClick={handleSubmit} 
+                            disabled={isSaving}
+                            className="flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                        >
                             {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {editingId ? 'Salvar' : 'Criar'}
+                            <span>{editingId ? 'Salvar' : 'Criar'}</span>
                         </Button>
                     </DialogFooter>
                 </DialogContent>

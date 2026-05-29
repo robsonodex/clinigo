@@ -264,10 +264,10 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
     }
 
     return (
-        <Card className="border-0 shadow-sm ring-1 ring-border/50">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Receipt className="w-5 h-5 text-primary" />
+        <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+                    <Receipt className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     Documentos Financeiros e Reembolso
                 </CardTitle>
                 <CardDescription>
@@ -275,49 +275,50 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex flex-col sm:flex-row items-center gap-4 p-6 border rounded-lg bg-muted/20">
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-5 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
                     <div className="flex-1">
-                        <h4 className="font-medium text-lg flex items-center gap-2">
+                        <h4 className="font-semibold text-base flex items-center gap-2 text-slate-900 dark:text-slate-100">
                             <FileText className="w-5 h-5 text-blue-500" />
                             Relatório para Reembolso (Plano de Saúde)
                         </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">
                             Gera um PDF contendo o detalhamento de todas as sessões realizadas pelo paciente em um determinado mês, com valores e dados do profissional. Padrão aceito pelos convênios.
                         </p>
                     </div>
                     
                     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                         <DialogTrigger asChild>
-                            <Button className="shrink-0 group">
-                                <FileDown className="w-4 h-4 mr-2 group-hover:-translate-y-1 transition-transform" />
+                            <Button className="shrink-0 flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
+                                <FileDown className="w-4 h-4" />
                                 Gerar Relatório
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800">
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
-                                    <Receipt className="w-5 h-5" />
+                                    <Receipt className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                                     Gerar Relatório de Reembolso
                                 </DialogTitle>
                                 <DialogDescription>
                                     Selecione o período e o profissional para listar as sessões no documento.
                                 </DialogDescription>
                             </DialogHeader>
-
+ 
                             <div className="grid gap-4 py-4">
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     <Label>Período (Mês/Ano)</Label>
                                     <Input 
                                         type="month" 
                                         value={selectedMonth}
                                         onChange={(e) => setSelectedMonth(e.target.value)}
+                                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                                     />
                                 </div>
-
-                                <div className="space-y-2">
+ 
+                                <div className="space-y-1">
                                     <Label>Profissional Responsável</Label>
                                     <Select value={selectedDoctorId} onValueChange={handleDoctorChange}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
                                             <SelectValue placeholder="Selecione o profissional" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -329,8 +330,8 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div className="space-y-2">
+ 
+                                <div className="space-y-1">
                                     <Label>Valor cobrado por sessão (R$)</Label>
                                     <Input 
                                         type="number" 
@@ -338,27 +339,38 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                                         placeholder="Ex: 150.00"
                                         value={sessionValue}
                                         onChange={(e) => setSessionValue(e.target.value)}
+                                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
                                     />
                                     {activeRule ? (
-                                        <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5 flex items-center gap-1.5 mt-1.5">
+                                        <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2 flex items-center gap-1.5 mt-2">
                                             <span>🛡️</span>
                                             <span>Regra de Reembolso Ativa para {activeRule.therapy_type}: <strong>R$ {Number(activeRule.billing_amount).toFixed(2).replace('.', ',')}</strong> por sessão.</span>
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-muted-foreground mt-1">
+                                        <p className="text-xs text-muted-foreground mt-1 font-medium">
                                             Nenhuma regra de reembolso específica para esta especialidade. Usando o valor padrão do terapeuta.
                                         </p>
                                     )}
                                 </div>
                             </div>
-
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                                <Button onClick={generatePDF} disabled={isGenerating}>
+ 
+                            <DialogFooter className="gap-2 sm:gap-0">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button 
+                                    onClick={generatePDF} 
+                                    disabled={isGenerating}
+                                    className="flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                                >
                                     {isGenerating ? (
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                     ) : (
-                                        <Download className="w-4 h-4 mr-2" />
+                                        <Download className="w-4 h-4" />
                                     )}
                                     Baixar PDF
                                 </Button>
