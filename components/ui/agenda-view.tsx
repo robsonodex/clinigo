@@ -665,12 +665,15 @@ export default function AgendaPage() {
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <h1 className="text-xl md:text-2xl font-bold">Agenda</h1>
-                        {/* Botão de Filtros/Ações exclusivo para Celular */}
+                        {/* Botão de Filtros/Ações unificado (Desktop e Celular) */}
                         <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="flex md:hidden gap-1.5 h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200"
+                            className={cn(
+                                "flex gap-1.5 h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200 transition-all duration-200",
+                                showMobileFilters && "bg-slate-200 border-slate-300 dark:bg-slate-800"
+                            )}
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
                         >
                             <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -694,12 +697,10 @@ export default function AgendaPage() {
                     </div>
                 </div>
 
-                {/* Filtros e Ações Secundárias */}
-                {/* No Desktop: Sempre Visível (md:flex) */}
-                {/* No Mobile: Visível apenas se showMobileFilters for verdadeiro */}
+                {/* Filtros e Ações Secundárias colapsáveis (Tanto Desktop quanto Mobile) */}
                 <div className={cn(
-                    "flex-wrap items-center gap-2 border-t pt-3 md:pt-0 md:border-0",
-                    showMobileFilters ? "flex" : "hidden md:flex"
+                    "flex-wrap items-center gap-2 border-t pt-3 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-lg border border-slate-200/60 transition-all duration-300 shadow-sm",
+                    showMobileFilters ? "flex" : "hidden"
                 )}>
                     <Button
                         size="sm"
