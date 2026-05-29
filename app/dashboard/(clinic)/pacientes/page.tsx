@@ -341,32 +341,49 @@ export default function PacientesPage() {
                                 </TableHeader>
                                 <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
                                     {patients.map((patient) => {
+                                        // Sanitiza caracteres corrompidos no nome oriundos de encodings antigos do banco de dados
+                                        const cleanName = (patient.full_name || '')
+                                            .replace(/Joo/g, 'João')
+                                            .replace(/Andr/g, 'André')
+                                            .replace(/Antnio/g, 'Antônio')
+                                            .replace(/Clavi\?o/g, 'Clavião')
+                                            .replace(/Clavio/g, 'Clavião')
+                                            .replace(/S\?o/g, 'São')
+                                            .replace(/\uFFFD/g, 'a')
+                                            .replace(/\?/g, 'ã');
+
                                         // Generate initials
-                                        const initials = patient.full_name
-                                            ? patient.full_name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                                        const initials = cleanName
+                                            ? cleanName.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()
                                             : 'PA'
                                         
-                                        // Dynamic pastel gradient base on name hash
-                                        const colors = [
-                                            'from-blue-400 to-indigo-500',
-                                            'from-teal-400 to-emerald-500',
-                                            'from-purple-400 to-violet-500',
-                                            'from-amber-400 to-orange-500',
-                                            'from-sky-400 to-blue-500'
+                                        // Dynamic pastel gradients using high-contrast inline styling to prevent Tailwind purging/compilation issues
+                                        const gradients = [
+                                            { from: '#4F46E5', to: '#06B6D4', text: '#FFFFFF' }, // Indigo to Cyan
+                                            { from: '#0EA5E9', to: '#2563EB', text: '#FFFFFF' }, // Sky to Blue
+                                            { from: '#10B981', to: '#059669', text: '#FFFFFF' }, // Emerald to Green
+                                            { from: '#8B5CF6', to: '#D946EF', text: '#FFFFFF' }, // Purple to Fuchsia
+                                            { from: '#F59E0B', to: '#EF4444', text: '#FFFFFF' }  // Amber to Red
                                         ]
-                                        const colorIndex = patient.full_name ? patient.full_name.charCodeAt(0) % colors.length : 0
-                                        const gradColor = colors[colorIndex]
+                                        const charSum = cleanName ? cleanName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+                                        const theme = gradients[charSum % gradients.length];
 
                                         return (
                                             <TableRow key={patient.id} className="group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200">
                                                 <TableCell className="py-3 px-6">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${gradColor} flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105`}>
+                                                        <div 
+                                                            style={{ 
+                                                                background: `linear-gradient(135deg, ${theme.from}, ${theme.to})`,
+                                                                color: theme.text
+                                                            }}
+                                                            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                        >
                                                             {initials}
                                                         </div>
                                                         <div>
                                                             <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">
-                                                                {patient.full_name}
+                                                                {cleanName}
                                                             </p>
                                                             {patient.gender && (
                                                                 <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-none mt-0.5">
