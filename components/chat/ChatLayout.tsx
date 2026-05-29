@@ -205,10 +205,10 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
     const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0)
 
     return (
-        <div className="flex h-[calc(100vh-11rem)] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="flex h-[calc(100vh-11rem)] bg-white/70 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden shadow-xl shadow-slate-200/30 dark:shadow-slate-950/40 transition-all duration-300">
             {/* Conversations List - Desktop always visible, mobile toggleable */}
             <div className={cn(
-                "w-full md:w-80 lg:w-96 border-r border-gray-200 flex flex-col",
+                "w-full md:w-80 lg:w-96 border-r border-slate-100 dark:border-slate-800/60 flex flex-col transition-all duration-300",
                 showMobileMessages ? "hidden md:flex" : "flex"
             )}>
                 <ConversationList
@@ -225,20 +225,21 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
 
             {/* Message Area */}
             <div className={cn(
-                "flex-1 flex flex-col",
+                "flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950/20 transition-all duration-300",
                 !showMobileMessages ? "hidden md:flex" : "flex"
             )}>
                 {selectedConversation && selectedConvData ? (
                     <>
                         {/* Mobile back button */}
-                        <div className="md:hidden flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
                             <button
                                 onClick={handleBackToList}
-                                className="p-1 rounded-lg hover:bg-gray-200 transition-colors"
+                                className="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200/30 dark:border-slate-700/30 text-slate-700 dark:text-slate-200 active:scale-95 transition-all"
+                                title="Voltar"
                             >
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
-                            <span className="font-medium text-sm truncate">
+                            <span className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
                                 {selectedConvData.title ||
                                     selectedConvData.participants
                                         .filter(p => p.user_id !== profile?.id)
@@ -256,11 +257,16 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
                         />
                     </>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-400">
-                        <div className="text-center">
-                            <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                            <p className="text-lg font-medium">Selecione uma conversa</p>
-                            <p className="text-sm mt-1">ou inicie uma nova conversa</p>
+                    <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500 p-6">
+                        <div className="text-center max-w-sm">
+                            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 flex items-center justify-center shadow-inner relative animate-pulse">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-emerald-500/5 to-teal-500/5 animate-ping duration-1000" />
+                                <MessageCircle className="w-10 h-10 text-emerald-600 dark:text-emerald-500" />
+                            </div>
+                            <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">Sua Central de Comunicação</p>
+                            <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 max-w-xs mx-auto">
+                                Selecione uma conversa na barra lateral ou inicie um novo chat com seus colegas de equipe.
+                            </p>
                         </div>
                     </div>
                 )}

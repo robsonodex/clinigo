@@ -185,7 +185,7 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
     }
 
     return (
-        <div className="border-t border-gray-200 bg-white px-4 py-3">
+        <div className="border-t border-slate-100 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-6 py-4.5 relative shadow-lg shadow-slate-100/50 dark:shadow-none">
             {/* Hidden file inputs */}
             <input
                 ref={imageInputRef}
@@ -207,55 +207,57 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={cancelRecording}
-                        className="p-2 rounded-full text-red-500 hover:bg-red-50 transition-colors"
+                        className="w-9.5 h-9.5 flex items-center justify-center rounded-xl text-red-500 hover:text-red-650 hover:bg-red-500/10 active:scale-90 transition-all duration-150 cursor-pointer"
                         title="Cancelar"
                     >
                         <X className="w-5 h-5" />
                     </button>
-                    <div className="flex-1 flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-sm font-medium text-red-600">
+                    <div className="flex-1 flex items-center gap-3 px-4 py-2.5 bg-red-500/5 dark:bg-red-500/10 border border-red-500/10 rounded-xl">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                        <span className="text-sm font-bold text-red-600 dark:text-red-400">
                             Gravando {formatTime(recordingTime)}
                         </span>
                     </div>
                     <button
                         onClick={stopRecording}
-                        className="p-2.5 rounded-full bg-sky-600 text-white hover:bg-sky-700 transition-colors shadow-sm"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 transition-all duration-200 shadow-md shadow-emerald-500/15 active:scale-90 cursor-pointer"
                         title="Enviar áudio"
                     >
                         <StopCircle className="w-5 h-5" />
                     </button>
                 </div>
             ) : (
-                <div className="flex items-end gap-2">
+                <div className="flex items-end gap-3">
                     {/* Attachment menu */}
                     <div className="relative">
                         <button
                             onClick={() => setShowAttachMenu(!showAttachMenu)}
                             className={cn(
-                                "p-2 rounded-lg transition-colors",
-                                showAttachMenu ? "bg-sky-100 text-sky-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                "w-9.5 h-9.5 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer active:scale-90 border",
+                                showAttachMenu 
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
+                                    : "border-transparent text-slate-400 hover:text-slate-655 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-805"
                             )}
                             disabled={isUploading}
                             title="Anexar"
                         >
-                            <Paperclip className="w-5 h-5" />
+                            <Paperclip className="w-4.5 h-4.5" />
                         </button>
 
                         {showAttachMenu && (
-                            <div className="absolute bottom-12 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-44 z-10">
+                            <div className="absolute bottom-13.5 left-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl shadow-xl shadow-slate-250/20 dark:shadow-none border border-slate-200/50 dark:border-slate-800/80 py-1.5 w-44 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
                                 <button
                                     onClick={() => imageInputRef.current?.click()}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+                                    className="w-full flex items-center gap-3.5 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/5 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
                                 >
-                                    <Image className="w-4 h-4 text-sky-600" />
+                                    <Image className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                     Foto
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+                                    className="w-full flex items-center gap-3.5 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/5 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
                                 >
-                                    <FileText className="w-4 h-4 text-emerald-600" />
+                                    <FileText className="w-4 h-4 text-teal-500 dark:text-teal-400" />
                                     Documento
                                 </button>
                             </div>
@@ -270,7 +272,7 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                             onChange={e => setText(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Digite sua mensagem..."
-                            className="w-full resize-none border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 max-h-32"
+                            className="w-full resize-none border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 bg-slate-50/50 dark:bg-slate-950/40 text-slate-850 dark:text-slate-100 placeholder:text-slate-400 max-h-32 transition-all duration-200"
                             rows={1}
                             onInput={(e) => {
                                 const target = e.target as HTMLTextAreaElement
@@ -285,26 +287,26 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                         <button
                             onClick={handleSend}
                             disabled={isUploading}
-                            className="p-2.5 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-colors shadow-sm disabled:opacity-50"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 transition-all duration-205 shadow-md shadow-emerald-500/15 disabled:opacity-40 active:scale-90 cursor-pointer shrink-0"
                             title="Enviar"
                         >
-                            <Send className="w-5 h-5" />
+                            <Send className="w-4.5 h-4.5" />
                         </button>
                     ) : (
                         <button
                             onClick={startRecording}
                             disabled={isUploading}
-                            className="p-2.5 rounded-lg text-gray-400 hover:text-sky-600 hover:bg-sky-50 transition-colors disabled:opacity-50"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-805 transition-all duration-205 disabled:opacity-40 active:scale-90 cursor-pointer border border-transparent hover:border-slate-200/40 dark:hover:border-slate-700/40 shrink-0"
                             title="Gravar áudio"
                         >
-                            <Mic className="w-5 h-5" />
+                            <Mic className="w-4.5 h-4.5" />
                         </button>
                     )}
 
                     {/* Upload indicator */}
                     {isUploading && (
-                        <div className="p-2">
-                            <div className="animate-spin w-5 h-5 border-2 border-sky-600 border-t-transparent rounded-full" />
+                        <div className="p-2 shrink-0">
+                            <div className="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full shadow-md shadow-emerald-500/10" />
                         </div>
                     )}
                 </div>

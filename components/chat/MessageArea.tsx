@@ -257,37 +257,36 @@ export function MessageArea({
     const headerSubtitle = otherNames.length > 0
         ? `Você e ${otherNames.join(', ')}`
         : 'Conversa'
-
     return (
         <div className="flex-1 flex flex-col min-h-0">
             {/* Header */}
-            <div className="hidden md:flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white">
+            <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md sticky top-0 z-10 shadow-sm shadow-slate-100/30 dark:shadow-none">
                 <div>
-                    <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
-                    <p className="text-xs text-gray-500">
+                    <h3 className="font-bold text-slate-850 dark:text-slate-100 text-sm">{title}</h3>
+                    <p className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">
                         {headerSubtitle}
                     </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                     {conversation.type === 'internal' && (
                         <button
                             onClick={() => {
                                 setShowAddParticipants(true)
                                 loadAvailableUsers()
                             }}
-                            className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-sky-600 rounded-md transition-colors"
+                            className="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-805 hover:text-emerald-600 dark:hover:text-emerald-500 rounded-xl border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50 transition-all duration-200 cursor-pointer active:scale-90"
                             title="Adicionar Participantes"
                         >
-                            <UserPlus className="w-4 h-4" />
+                            <UserPlus className="w-4.5 h-4.5" />
                         </button>
                     )}
                     {conversation.type === 'support' && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                        <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-500/10 shadow-sm shadow-amber-500/5">
                             Suporte
                         </span>
                     )}
                     {conversation.type === 'admin_to_clinic' && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
+                        <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/10 shadow-sm shadow-emerald-500/5">
                             Admin
                         </span>
                     )}
@@ -297,15 +296,19 @@ export function MessageArea({
             {/* Messages */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-gray-50/50"
+                className="flex-1 overflow-y-auto px-6 py-5 space-y-2 bg-slate-50/20 dark:bg-slate-950/5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-805"
             >
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin w-6 h-6 border-2 border-sky-600 border-t-transparent rounded-full" />
+                        <div className="animate-spin w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full shadow-md shadow-emerald-500/10" />
                     </div>
                 ) : messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                        Nenhuma mensagem ainda. Diga olá! 👋
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 p-6">
+                        <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center mb-3">
+                            <span className="text-2xl animate-bounce">👋</span>
+                        </div>
+                        <p className="text-sm font-semibold">Nenhuma mensagem por aqui ainda</p>
+                        <p className="text-xs text-slate-400/80 dark:text-slate-500/80 mt-1">Escreva uma mensagem para iniciar o papo!</p>
                     </div>
                 ) : (
                     messages.map((msg, idx) => {
@@ -340,34 +343,37 @@ export function MessageArea({
 
             {/* Add Participants Modal */}
             {showAddParticipants && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-200 flex justify-between items-center">
-                            <h3 className="font-semibold text-lg text-gray-900">Adicionar Participantes</h3>
-                            <button onClick={() => setShowAddParticipants(false)} className="text-gray-400 hover:text-gray-600">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-800/80 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-5 py-4.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/20">
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">Adicionar Participantes</h3>
+                            <button 
+                                onClick={() => setShowAddParticipants(false)} 
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-105 dark:hover:bg-slate-800 active:scale-90 transition-all cursor-pointer"
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-5 border-b border-gray-200">
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800/60">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                                 <input
                                     type="text"
                                     value={searchAvailableUsers}
                                     onChange={(e) => setSearchAvailableUsers(e.target.value)}
                                     placeholder="Buscar por nome..."
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                                    className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-950/50 border border-slate-250 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
                                 />
                             </div>
                         </div>
-                        <div className="p-5 max-h-[50vh] overflow-y-auto space-y-2">
+                        <div className="p-5 max-h-[50vh] overflow-y-auto space-y-1.5 bg-slate-50/30 dark:bg-slate-950/10">
                             {availableUsers.length === 0 ? (
-                                <p className="text-sm text-gray-500 text-center py-4">Nenhum usuário disponível para adicionar.</p>
+                                <p className="text-sm text-slate-400 text-center py-6">Nenhum usuário disponível para adicionar.</p>
                             ) : (
                                 availableUsers
                                     .filter(user => user.full_name.toLowerCase().includes(searchAvailableUsers.toLowerCase()))
                                     .map(user => (
-                                        <label key={user.id} className="flex items-center gap-3 p-3 border border-gray-200 hover:bg-sky-50 rounded-lg cursor-pointer transition-colors">
+                                        <label key={user.id} className="flex items-center gap-3.5 p-3 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/60 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/5 rounded-xl cursor-pointer transition-colors active:scale-[0.99]">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedUsers.has(user.id)}
@@ -377,30 +383,30 @@ export function MessageArea({
                                                     else next.delete(user.id)
                                                     setSelectedUsers(next)
                                                 }}
-                                                className="w-4 h-4 text-sky-600 focus:ring-sky-500 border-gray-300 rounded"
+                                                className="w-4.5 h-4.5 text-emerald-600 focus:ring-emerald-500/30 dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded"
                                             />
                                             <div>
-                                                <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
-                                                <p className="text-xs text-gray-500 capitalize">{(user.role || '').replace('_', ' ').toLowerCase()}</p>
+                                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{user.full_name}</p>
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 capitalize">{(user.role || '').replace('_', ' ').toLowerCase()}</p>
                                             </div>
                                         </label>
                                     ))
                             )}
                             {availableUsers.length > 0 && availableUsers.filter(user => user.full_name.toLowerCase().includes(searchAvailableUsers.toLowerCase())).length === 0 && (
-                                <p className="text-sm text-gray-500 text-center py-4">Nenhum usuário encontrado.</p>
+                                <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">Nenhum usuário encontrado.</p>
                             )}
                         </div>
-                        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                        <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowAddParticipants(false)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 active:scale-95 min-h-[44px]"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleAddParticipants}
                                 disabled={selectedUsers.size === 0 || isAdding}
-                                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg disabled:opacity-50 transition-colors"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xl disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
                             >
                                 {isAdding ? 'Adicionando...' : 'Adicionar Selecionados'}
                             </button>
