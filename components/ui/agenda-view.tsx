@@ -939,7 +939,7 @@ export default function AgendaPage() {
                     {/* Header Row */}
                     {/* Header Row com Glassmorphism Translúcido Premium */}
                     <div className="grid grid-cols-8 border-b sticky top-0 bg-white/90 backdrop-blur-md dark:bg-slate-900/90 z-10 shadow-sm border-slate-100/80 transition-all duration-300">
-                        <div className="py-1 px-3 text-[10px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
+                        <div className="py-1 px-3 text-[11px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
                             Horário
                         </div>
                         {(view === 'week' ? days : [currentDate]).map((day) => (
@@ -950,7 +950,7 @@ export default function AgendaPage() {
                                     isSameDay(day, new Date()) && 'bg-emerald-50/30 dark:bg-emerald-950/10'
                                 )}
                             >
-                                <div className="text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
+                                <div className="text-[11px] font-bold text-muted-foreground/75 uppercase tracking-wider">
                                     {format(day, 'EEE', { locale: ptBR })}
                                 </div>
                                 <div
