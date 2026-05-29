@@ -361,30 +361,23 @@ export default function DashboardPage() {
     return (
         <div className="space-y-6" >
             {/* Welcome */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/40 dark:bg-slate-900/10 p-4 rounded-xl border border-slate-200/60 shadow-sm">
-                <div className="flex items-center justify-between flex-1">
-                    <div>
-                        <h1 className="text-2xl font-bold">
-                            Olá, {profile?.full_name?.split(' ')[0]}!
-                        </h1>
-                        <p className="text-muted-foreground text-sm">
-                            {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
-                            {isDoctor && 'Acompanhe suas consultas e pacientes.'}
-                            {isSuperAdmin && !isImpersonating && 'Monitore a plataforma CliniGo.'}
-                            {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
-                        </p>
-                    </div>
-                    <Badge variant="secondary" className="px-3 py-1 ml-4 shrink-0">
-                        {role === 'SUPER_ADMIN' && <Shield className="w-4 h-4 mr-1" />}
-                        {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
-                        {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
-                        {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
-                    </Badge>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/40 dark:bg-slate-900/10 p-4 rounded-xl border border-slate-200/60 shadow-sm w-full">
+                {/* Lado Esquerdo: Mensagem de Boas-vindas */}
+                <div className="flex-1 min-w-[250px]">
+                    <h1 className="text-2xl font-bold">
+                        Olá, {profile?.full_name?.split(' ')[0]}!
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                        {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
+                        {isDoctor && 'Acompanhe suas consultas e pacientes.'}
+                        {isSuperAdmin && !isImpersonating && 'Monitore a plataforma CliniGo.'}
+                        {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
+                    </p>
                 </div>
 
-                {/* Cards Inline do Lado Direito para o Perfil de Recepção */}
+                {/* Centro (Área Vermelha): Cards Inline */}
                 {isReceptionist && (
-                    <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full lg:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 flex-1">
                         <Link href="/dashboard/agenda" className="w-full sm:w-44">
                             <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group w-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5 px-3">
@@ -422,6 +415,16 @@ export default function DashboardPage() {
                         </Link>
                     </div>
                 )}
+
+                {/* Lado Direito: Badge de Cargo */}
+                <div className="flex items-center justify-end shrink-0 min-w-[120px]">
+                    <Badge variant="secondary" className="px-3 py-1">
+                        {role === 'SUPER_ADMIN' && <Shield className="w-4 h-4 mr-1" />}
+                        {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
+                        {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
+                        {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
+                    </Badge>
+                </div>
             </div>
 
             {/* Initial Setup - Only for Clinic Admins */}
