@@ -937,8 +937,8 @@ export default function AgendaPage() {
                 {calendarStyle === 'standard' ? (
                 <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row */}
-                    {/* Header Row com Glassmorphism Translúcido Premium e Fundo Acetinado Discreto */}
-                    <div className="grid grid-cols-8 border-b sticky top-0 bg-slate-50/90 backdrop-blur-md dark:bg-slate-950/90 z-10 shadow-sm border-slate-200/50 transition-all duration-300">
+                    {/* Header Row com Glassmorphism Translúcido Premium e Fundo Acetinado Pro (Maior Contraste) */}
+                    <div className="grid grid-cols-8 border-b sticky top-0 bg-slate-100/90 backdrop-blur-md dark:bg-slate-900/95 z-10 shadow-sm border-slate-200/80 transition-all duration-300">
                         <div className="py-1 px-3 text-[11px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
                             Horário
                         </div>
@@ -977,8 +977,8 @@ export default function AgendaPage() {
 
                         {TIME_SLOTS.map((time) => (
                             <div key={time} id={`time-slot-${time}`} className="grid grid-cols-8 border-b min-h-[80px]">
-                                {/* Time Label */}
-                                <div className="p-2 text-xs text-muted-foreground text-center border-r font-medium -mt-2">
+                                {/* Time Label com Fundo Acetinado Premium */}
+                                <div className="p-2 text-xs text-muted-foreground/90 text-center border-r font-semibold -mt-2 bg-slate-50/50 dark:bg-slate-900/20">
                                     {time}
                                 </div>
 
