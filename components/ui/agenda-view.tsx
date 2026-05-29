@@ -937,8 +937,8 @@ export default function AgendaPage() {
                 {calendarStyle === 'standard' ? (
                 <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row */}
-                    {/* Header Row com Glassmorphism Translúcido Premium */}
-                    <div className="grid grid-cols-8 border-b sticky top-0 bg-white/90 backdrop-blur-md dark:bg-slate-900/90 z-10 shadow-sm border-slate-100/80 transition-all duration-300">
+                    {/* Header Row com Glassmorphism Translúcido Premium e Fundo Acetinado Discreto */}
+                    <div className="grid grid-cols-8 border-b sticky top-0 bg-slate-50/90 backdrop-blur-md dark:bg-slate-950/90 z-10 shadow-sm border-slate-200/50 transition-all duration-300">
                         <div className="py-1 px-3 text-[11px] font-bold text-muted-foreground/80 border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
                             Horário
                         </div>
