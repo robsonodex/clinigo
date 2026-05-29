@@ -661,30 +661,157 @@ export default function AgendaPage() {
         <div className="flex flex-col h-[calc(100vh-11rem)] md:h-[calc(100vh-6rem)]">
             {/* Toolbar */}
             <div className="flex flex-col gap-3 mb-3">
-                {/* Linha 1: Título e Ações Principais */}
-                <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                {/* Linha Única: Título e Todas as Ações Integradas */}
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 shadow-sm">
+                    {/* Título, Filtros e Controles de Navegação */}
+                    <div className="flex flex-wrap items-center gap-3">
                         <h1 className="text-xl md:text-2xl font-bold">Agenda</h1>
+                        
                         {/* Botão de Filtros/Ações unificado (Desktop e Celular) */}
                         <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             className={cn(
-                                "flex gap-1.5 h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200 transition-all duration-200",
-                                showMobileFilters && "bg-slate-200 border-slate-300 dark:bg-slate-800"
+                                "flex gap-1.5 h-8 text-xs bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm",
+                                showMobileFilters && "bg-slate-100 border-slate-300 dark:bg-slate-800"
                             )}
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
                         >
                             <SlidersHorizontal className="h-3.5 w-3.5" />
                             {showMobileFilters ? 'Ocultar Filtros' : 'Filtros e Ações'}
                         </Button>
+
+                        <div className="w-px h-6 bg-border hidden sm:block mx-1" />
+
+                        {/* Navegação de Data */}
+                        <div className="flex items-center border rounded-md bg-white shadow-sm h-8">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={prevPeriod}
+                                className="h-8 w-8 rounded-none"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="px-3 text-xs font-semibold min-w-[130px] text-center text-slate-700">
+                                {view === 'week' ? (
+                                    <>
+                                        {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
+                                        {format(weekEnd, 'd MMM', { locale: ptBR })}
+                                    </>
+                                ) : (
+                                    format(currentDate, "d 'de' MMMM", { locale: ptBR })
+                                )}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={nextPeriod}
+                                className="h-8 w-8 rounded-none"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+
+                        {/* Botão Hoje */}
+                        <Button variant="outline" size="sm" onClick={goToToday} className="bg-white border-slate-200 shadow-sm h-8 text-xs font-semibold px-3">
+                            Hoje
+                        </Button>
+                        
+                        {/* Seletor Dia / Semana */}
+                        <div className="flex border rounded-md overflow-hidden bg-white shadow-sm h-8">
+                            <Button
+                                variant={view === 'day' ? 'outline' : 'ghost'}
+                                onClick={() => setView('day')}
+                                size="sm"
+                                className={cn(
+                                    "h-8 rounded-none border-0 text-xs font-semibold px-3",
+                                    view === 'day' && "bg-slate-100 text-slate-800 font-semibold"
+                                )}
+                            >
+                                Dia
+                            </Button>
+                            <Button
+                                variant={view === 'week' ? 'default' : 'ghost'}
+                                onClick={() => setView('week')}
+                                size="sm"
+                                className={cn(
+                                    "h-8 rounded-none text-xs font-semibold px-3",
+                                    view === 'week' 
+                                        ? "bg-emerald-500 hover:bg-emerald-600 text-white border-0" 
+                                        : "bg-transparent text-foreground hover:bg-muted"
+                                )}
+                            >
+                                Semana
+                            </Button>
+                        </div>
+
+                        {/* Botão Mural de Recados */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleOpenMural}
+                            className="bg-white shadow-sm h-8 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-md font-semibold text-amber-800 dark:text-amber-300 text-xs"
+                            title="Ver recados e comunicados importantes"
+                        >
+                            <Megaphone className={cn("h-4 w-4 text-amber-500", unreadBulletinsCount > 0 && "animate-bounce")} />
+                            <span>Mural de Recados</span>
+                            {unreadBulletinsCount > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[10px] text-white font-extrabold items-center justify-center">
+                                        {unreadBulletinsCount}
+                                    </span>
+                                </span>
+                            )}
+                        </Button>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Botões do lado direito (Novo Agendamento e Seletores de Modo) */}
+                    <div className="flex items-center gap-3">
+                        {/* Seletor Padrão / Timeline */}
+                        <TooltipProvider>
+                            <div className="flex border rounded-md overflow-hidden bg-white shadow-sm h-8">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant={calendarStyle === 'standard' ? 'default' : 'ghost'}
+                                            onClick={() => setCalendarStyle('standard')}
+                                            size="icon"
+                                            className={cn(
+                                                "h-8 w-8 rounded-none border-0",
+                                                calendarStyle === 'standard' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "text-muted-foreground hover:bg-slate-50"
+                                            )}
+                                        >
+                                            <LayoutGrid className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Modo Padrão</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant={calendarStyle === 'timeline' ? 'ghost' : 'ghost'}
+                                            onClick={() => setCalendarStyle('timeline')}
+                                            size="icon"
+                                            className={cn(
+                                                "h-8 w-8 rounded-none border-0",
+                                                calendarStyle === 'timeline' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "text-muted-foreground hover:bg-slate-50"
+                                            )}
+                                        >
+                                            <List className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Modo Timeline</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </TooltipProvider>
+
+                        {/* Novo Agendamento */}
                         <Button
                             size="sm"
-                            className="gap-1.5 h-8 text-xs md:text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="gap-1.5 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md shadow-sm"
                             onClick={() => {
                                 setPreselectedSlot(null)
                                 setManualAppointmentOpen(true)
@@ -806,126 +933,6 @@ export default function AgendaPage() {
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         )}
-                    </div>
-                </div>
-
-                {/* Linha 2: Navegação de Data e Visualizações */}
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-muted/20 p-2 rounded-lg border">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center border rounded-md bg-white shadow-sm">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={prevPeriod}
-                                className="h-8 w-8"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <span className="px-3 text-sm font-medium min-w-[140px] text-center">
-                                {view === 'week' ? (
-                                    <>
-                                        {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
-                                        {format(weekEnd, 'd MMM', { locale: ptBR })}
-                                    </>
-                                ) : (
-                                    format(currentDate, "d 'de' MMMM", { locale: ptBR })
-                                )}
-                            </span>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={nextPeriod}
-                                className="h-8 w-8"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={goToToday} className="bg-white shadow-sm h-8">
-                            Hoje
-                        </Button>
-                        
-                        <div className="w-px h-6 bg-border mx-2 hidden sm:block" />
-
-                        <div className="flex border rounded-md overflow-hidden bg-white shadow-sm">
-                            <Button
-                                variant={view === 'day' ? 'outline' : 'ghost'}
-                                onClick={() => setView('day')}
-                                size="sm"
-                                className={cn(
-                                    "h-8 rounded-none border-0",
-                                    view === 'day' && "bg-muted font-medium px-3"
-                                )}
-                            >
-                                Dia
-                            </Button>
-                            <Button
-                                variant={view === 'week' ? 'default' : 'ghost'}
-                                onClick={() => setView('week')}
-                                size="sm"
-                                className={cn(
-                                    "h-8 rounded-none bg-emerald-500 text-white hover:bg-emerald-600 px-3",
-                                    view !== 'week' && "bg-transparent text-foreground hover:bg-muted"
-                                )}
-                            >
-                                Semana
-                            </Button>
-                        </div>
-
-                        {/* Botão Mural de Recados */}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleOpenMural}
-                            className="bg-white shadow-sm h-8 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-md font-semibold text-amber-800 dark:text-amber-300"
-                            title="Ver recados e comunicados importantes"
-                        >
-                            <Megaphone className={cn("h-4 w-4 text-amber-500", unreadBulletinsCount > 0 && "animate-bounce")} />
-                            <span>Mural de Recados</span>
-                            {unreadBulletinsCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[10px] text-white font-extrabold items-center justify-center">
-                                        {unreadBulletinsCount}
-                                    </span>
-                                </span>
-                            )}
-                        </Button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <TooltipProvider>
-                            <div className="flex border rounded-md overflow-hidden bg-white shadow-sm">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant={calendarStyle === 'standard' ? 'default' : 'ghost'}
-                                            onClick={() => setCalendarStyle('standard')}
-                                            size="icon"
-                                            className="h-8 w-8 rounded-none bg-emerald-500 text-white"
-                                        >
-                                            <LayoutGrid className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Modo Padrão</TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant={calendarStyle === 'timeline' ? 'ghost' : 'ghost'}
-                                            onClick={() => setCalendarStyle('timeline')}
-                                            size="icon"
-                                            className={cn(
-                                                "h-8 w-8 rounded-none",
-                                                calendarStyle === 'timeline' && "bg-emerald-500 text-white"
-                                            )}
-                                        >
-                                            <List className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Modo Timeline</TooltipContent>
-                                </Tooltip>
-                            </div>
-                        </TooltipProvider>
                     </div>
                 </div>
             </div>
