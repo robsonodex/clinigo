@@ -53,6 +53,11 @@ import {
     Plus,
     Calendar,
     Camera,
+    Upload,
+    ShieldCheck,
+    TrendingUp,
+    ChevronRight,
+    Sparkles,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -206,210 +211,259 @@ export default function PacientesPage() {
             const now = new Date()
             return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
         }).length || 0,
-    }
-
-    return (
-        <div className="space-y-6">
+      return (
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <UserPlus className="w-7 h-7" />
-                        Pacientes
-                    </h1>
-                    <p className="text-muted-foreground text-sm sm:text-base">
-                        Gerencie os pacientes da sua clínica
-                    </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100/80 dark:border-indigo-900/30">
+                        <UserPlus className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                            Pacientes
+                        </h1>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+                            Gerencie os pacientes de sua clínica
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center">
-                        <Download className="w-4 h-4 mr-2" />
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-9 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
+                        <Upload className="w-4 h-4 mr-2 text-slate-450" />
+                        Importar
+                    </Button>
+                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-9 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
+                        <Download className="w-4 h-4 mr-2 text-slate-450" />
                         Exportar
                     </Button>
-                    <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-initial justify-center">
+                    <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-initial justify-center h-9 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-md border-0">
                         <Plus className="w-4 h-4 mr-2" />
-                        <span className="hidden sm:inline">Novo Paciente</span>
-                        <span className="inline sm:hidden">Novo</span>
+                        <span>Novo Paciente</span>
                     </Button>
                 </div>
             </div>
 
-            {/* Stats - Real data */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                    <CardContent className="pt-6">
-                        {isLoading ? (
-                            <Skeleton className="h-8 w-16" />
-                        ) : (
-                            <div className="text-2xl font-bold">{stats.total}</div>
-                        )}
-                        <p className="text-sm text-muted-foreground">Total de pacientes</p>
+            {/* Stats Dashboard - Premium Design */}
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-900/40">
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">Total de Pacientes</p>
+                            {isLoading ? (
+                                <Skeleton className="h-8 w-16 mt-1" />
+                            ) : (
+                                <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 mt-1 tracking-tight">{stats.total}</div>
+                            )}
+                        </div>
+                        <div className="p-2.5 bg-blue-50 dark:bg-blue-955/20 text-blue-500 rounded-xl">
+                            <User className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        {isLoading ? (
-                            <Skeleton className="h-8 w-16" />
-                        ) : (
-                            <div className="text-2xl font-bold text-green-600">{stats.thisMonth}</div>
-                        )}
-                        <p className="text-sm text-muted-foreground">Novos este mês</p>
+
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-900/40">
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">Novos este mês</p>
+                            {isLoading ? (
+                                <Skeleton className="h-8 w-16 mt-1" />
+                            ) : (
+                                <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-550 mt-1 tracking-tight">{stats.thisMonth}</div>
+                            )}
+                        </div>
+                        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-xl">
+                            <UserPlus className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">-</div>
-                        <p className="text-sm text-muted-foreground">Consultas agendadas</p>
+
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-900/40">
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">Consultas Agendadas</p>
+                            <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 mt-1 tracking-tight">-</div>
+                        </div>
+                        <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500 rounded-xl">
+                            <Calendar className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">-</div>
-                        <p className="text-sm text-muted-foreground">Taxa de retorno</p>
+
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-slate-900/40">
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-550 font-bold uppercase tracking-wider">Taxa de retorno</p>
+                            <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 mt-1 tracking-tight">-</div>
+                        </div>
+                        <div className="p-2.5 bg-amber-50 dark:bg-amber-955/20 text-amber-500 rounded-xl">
+                            <TrendingUp className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Search */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por nome, CPF ou telefone..."
-                                className="pl-9"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            {/* Search Box - Premium Rounded Design */}
+            <div className="bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                    <Input
+                        placeholder="Buscar paciente por nome, CPF ou telefone..."
+                        className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+            </div>
 
-            {/* Table */}
-            <Card>
-                <CardContent className="pt-6">
+            {/* Patients Grid / Table */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+                <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="space-y-3">
+                        <div className="p-6 space-y-3">
                             {[...Array(5)].map((_, i) => (
-                                <Skeleton key={i} className="h-16 w-full" />
+                                <Skeleton key={i} className="h-16 w-full rounded-xl" />
                             ))}
                         </div>
                     ) : patients && patients.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Paciente</TableHead>
-                                    <TableHead>CPF</TableHead>
-                                    <TableHead>Contato</TableHead>
-                                    <TableHead>Cadastro</TableHead>
-                                    <TableHead className="text-right">Ações</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {patients.map((patient) => (
-                                    <TableRow key={patient.id}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                    <User className="w-5 h-5 text-primary" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium">{patient.full_name}</p>
-                                                    {patient.gender && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {patient.gender === 'M' ? 'Masculino' : patient.gender === 'F' ? 'Feminino' : 'Outro'}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <code className="text-sm">{patient.cpf ? formatCPF(patient.cpf) : '-'}</code>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-1 text-sm">
-                                                    <Phone className="w-3 h-3" />
-                                                    {formatPhone(patient.phone)}
-                                                </div>
-                                                {patient.email && (
-                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                        <Mail className="w-3 h-3" />
-                                                        {patient.email}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDate(patient.created_at)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm">
-                                                        <MoreHorizontal className="w-4 h-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)}>
-                                                        <Eye className="w-4 h-4 mr-2" />
-                                                        Ver detalhes
-                                                    </DropdownMenuItem>
-
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}>
-                                                        <FileText className="w-4 h-4 mr-2" />
-                                                        Prontuários
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <History className="w-4 h-4 mr-2" />
-                                                        Histórico
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => openWhatsApp(patient.phone, patient.full_name)}
-                                                    >
-                                                        <MessageCircle className="w-4 h-4 mr-2 text-green-600" />
-                                                        WhatsApp
-                                                    </DropdownMenuItem>
-                                                    {patient.email && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => window.open(`mailto:${patient.email}`)}
-                                                        >
-                                                            <Mail className="w-4 h-4 mr-2" />
-                                                            Enviar email
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        className="text-red-600"
-                                                        onClick={() => {
-                                                            setSelectedPatient(patient)
-                                                            setShowDeleteDialog(true)
-                                                        }}
-                                                    >
-                                                        <Trash2 className="w-4 h-4 mr-2" />
-                                                        Excluir (LGPD)
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                                    <TableRow className="hover:bg-transparent border-none">
+                                        <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Paciente</TableHead>
+                                        <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">CPF</TableHead>
+                                        <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Contato</TableHead>
+                                        <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cadastro</TableHead>
+                                        <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
+                                    {patients.map((patient) => {
+                                        // Generate initials
+                                        const initials = patient.full_name
+                                            ? patient.full_name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                                            : 'PA'
+                                        
+                                        // Dynamic pastel gradient base on name hash
+                                        const colors = [
+                                            'from-blue-400 to-indigo-500',
+                                            'from-teal-400 to-emerald-500',
+                                            'from-purple-400 to-violet-500',
+                                            'from-amber-400 to-orange-500',
+                                            'from-sky-400 to-blue-500'
+                                        ]
+                                        const colorIndex = patient.full_name ? patient.full_name.charCodeAt(0) % colors.length : 0
+                                        const gradColor = colors[colorIndex]
+
+                                        return (
+                                            <TableRow key={patient.id} className="group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200">
+                                                <TableCell className="py-3 px-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${gradColor} flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105`}>
+                                                            {initials}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">
+                                                                {patient.full_name}
+                                                            </p>
+                                                            {patient.gender && (
+                                                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-none mt-0.5">
+                                                                    {patient.gender === 'M' ? 'Masculino' : patient.gender === 'F' ? 'Feminino' : 'Outro'}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-3 px-6">
+                                                    <code className="text-xs bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md text-slate-600 dark:text-slate-400 font-mono tracking-tight">
+                                                        {patient.cpf ? formatCPF(patient.cpf) : '—'}
+                                                    </code>
+                                                </TableCell>
+                                                <TableCell className="py-3 px-6">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-350 font-medium">
+                                                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                            {formatPhone(patient.phone)}
+                                                        </div>
+                                                        {patient.email && (
+                                                            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+                                                                <Mail className="w-3 h-3 text-slate-400/80" />
+                                                                {patient.email}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-3 px-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                                    {formatDate(patient.created_at)}
+                                                </TableCell>
+                                                <TableCell className="py-3 px-6 text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                                <MoreHorizontal className="w-4 h-4 text-slate-450" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="rounded-xl p-1.5 shadow-md border-slate-100 dark:border-slate-855 min-w-[160px]">
+                                                            <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)} className="rounded-lg py-1.5">
+                                                                <Eye className="w-4 h-4 mr-2 text-slate-450" />
+                                                                Ver detalhes
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)} className="rounded-lg py-1.5">
+                                                                <FileText className="w-4 h-4 mr-2 text-slate-450" />
+                                                                Prontuários
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem className="rounded-lg py-1.5">
+                                                                <History className="w-4 h-4 mr-2 text-slate-450" />
+                                                                Histórico
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
+                                                            <DropdownMenuItem
+                                                                onClick={() => openWhatsApp(patient.phone, patient.full_name)}
+                                                                className="rounded-lg py-1.5 text-emerald-600 dark:text-emerald-450 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                                            >
+                                                                <MessageCircle className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-450" />
+                                                                WhatsApp
+                                                            </DropdownMenuItem>
+                                                            {patient.email && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => window.open(`mailto:${patient.email}`)}
+                                                                    className="rounded-lg py-1.5"
+                                                                >
+                                                                    <Mail className="w-4 h-4 mr-2 text-slate-455" />
+                                                                    Enviar email
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
+                                                            <DropdownMenuItem
+                                                                className="text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg py-1.5"
+                                                                onClick={() => {
+                                                                    setSelectedPatient(patient)
+                                                                    setShowDeleteDialog(true)
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-4 h-4 mr-2 text-rose-550" />
+                                                                Excluir (LGPD)
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
                     ) : (
                         /* Empty State */
-                        <div className="text-center py-16">
-                            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                                <User className="w-10 h-10 text-primary" />
+                        <div className="text-center py-16 px-4 bg-white dark:bg-slate-900/40">
+                            <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-850 flex items-center justify-center mx-auto mb-4">
+                                <User className="w-8 h-8 text-slate-400" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Nenhum paciente cadastrado</h3>
-                            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                                Cadastre pacientes para começar a gerenciar consultas e prontuários.
+                            <h3 className="text-base font-bold text-slate-700 dark:text-slate-200 mb-1">Nenhum paciente cadastrado</h3>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mb-5 max-w-sm mx-auto">
+                                Cadastre pacientes para começar a gerenciar consultas e prontuários médicos.
                             </p>
-                            <Button onClick={() => setShowCreateModal(true)}>
+                            <Button onClick={() => setShowCreateModal(true)} className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-sm">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Cadastrar Paciente
                             </Button>
@@ -418,22 +472,23 @@ export default function PacientesPage() {
                 </CardContent>
             </Card>
 
-            {/* LGPD Info */}
-            <Card className="bg-amber-50 border-amber-200">
-                <CardContent className="pt-6">
-                    <div className="flex gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="font-medium text-amber-900">Conformidade LGPD</h4>
-                            <p className="text-sm text-amber-800 mt-1">
-                                Os dados dos pacientes são protegidos conforme a Lei Geral de Proteção de Dados.
-                                A exclusão de pacientes realiza um <strong>soft delete</strong> que anonimiza os dados
-                                mas preserva o histórico de consultas para fins de auditoria médica.
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            {/* LGPD Security Banner - Extremely Sophisticated Shield Design */}
+            <div className="bg-slate-50/60 dark:bg-slate-900/30 border border-slate-150/40 dark:border-slate-850/60 rounded-2xl p-4.5 shadow-sm flex gap-3.5">
+                <div className="p-2 bg-indigo-50/60 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-xl h-fit border border-indigo-100/50 dark:border-indigo-900/20">
+                    <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-250 flex items-center gap-1.5 uppercase tracking-wide">
+                        Conformidade LGPD
+                        <span className="text-[9px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100/30 px-1.5 py-0.5 rounded-full font-bold">Ativa</span>
+                    </h4>
+                    <p className="text-xs text-slate-450 dark:text-slate-450 mt-1 leading-relaxed font-medium">
+                        Os dados pessoais dos pacientes são protegidos em conformidade com a Lei Geral de Proteção de Dados (LGPD). 
+                        A exclusão de pacientes realiza uma anonimização estrutural dos dados (soft delete), 
+                        preservando a integridade histórica de consultas e faturamento exclusivamente para fins de auditoria médica e legal.
+                    </p>
+                </div>
+            </div>
 
             {/* Create Patient Modal */}
             <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
