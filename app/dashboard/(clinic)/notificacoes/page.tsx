@@ -12,16 +12,17 @@ export default function NotificationsPage() {
     const { notifications, isLoading, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } = useNotifications()
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Bell className="w-6 h-6" />
-                        Notificações
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Histórico de alertas e mensagens do sistema
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #F59E0B, #EAB308)' }}>
+                        <Bell className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Notificações</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Histórico de alertas e mensagens do sistema</p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {notifications.length > 0 && (

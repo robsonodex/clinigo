@@ -215,96 +215,118 @@ export default function ProntuariosPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Prontuários</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Gerencie prontuários e históricos de pacientes.
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                        <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Prontuários</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie prontuários e históricos de pacientes</p>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button onClick={() => setShowNewRecordModal(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Novo Prontuário
-                    </Button>
-                </div>
+                <Button onClick={() => setShowNewRecordModal(true)} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Prontuário
+                </Button>
             </div>
 
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>Prontuários Recentes</CardTitle>
-                    <CardDescription>
-                        Lista de atendimentos e registros médicos.
-                    </CardDescription>
-                    <div className="mt-4">
-                        <div className="relative">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por paciente..."
-                                className="pl-8"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') fetchRecords()
-                                }}
-                            />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
+            {/* Barra de Busca Premium */}
+            <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input
+                    placeholder="Buscar por paciente..."
+                    className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') fetchRecords()
+                    }}
+                />
+            </div>
+
+            {/* Tabela Premium */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+                <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <div className="flex justify-center p-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                         </div>
                     ) : records.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            Nenhum prontuário encontrado.
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                                <FileText className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Nenhum prontuário encontrado</p>
+                            <p className="text-xs text-slate-400 mt-1">Inicie um atendimento para criar um prontuário</p>
                         </div>
                     ) : (
+                        <div className="overflow-x-auto">
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Paciente</TableHead>
-                                    <TableHead>Data</TableHead>
-                                    <TableHead>Médico</TableHead>
-                                    <TableHead>Queixa</TableHead>
-                                    <TableHead className="text-right">Ações</TableHead>
+                            <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                                <TableRow className="hover:bg-transparent border-none">
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Paciente</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Médico</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Queixa</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
-                            <TableBody>
-                                {records.map((record) => (
-                                    <TableRow key={record.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)}>
-                                        <TableCell className="font-medium">
-                                            <div className="flex flex-col">
-                                                <span>{record.patient_name}</span>
+                            <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
+                                {records.map((record) => {
+                                    const gradients = [
+                                        { from: '#4F46E5', to: '#06B6D4' },
+                                        { from: '#0EA5E9', to: '#2563EB' },
+                                        { from: '#10B981', to: '#059669' },
+                                        { from: '#8B5CF6', to: '#D946EF' },
+                                        { from: '#F59E0B', to: '#EF4444' }
+                                    ]
+                                    const pName = record.patient_name || ''
+                                    const charSum = pName.split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
+                                    const theme = gradients[charSum % gradients.length]
+                                    const initials = pName.split(' ').filter(Boolean).map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'PA'
+                                    return (
+                                    <TableRow key={record.id} className="group cursor-pointer hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200" onClick={() => router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)}>
+                                        <TableCell className="py-3 px-6 font-medium">
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
+                                                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                >
+                                                    {initials}
+                                                </div>
+                                                <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">{record.patient_name}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                        <TableCell className="py-3 px-6">
+                                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                                                 <Calendar className="h-3 w-3" />
                                                 <span>
                                                     {format(new Date(record.date || record.created_at), "dd/MM/yyyy", { locale: ptBR })}
                                                 </span>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{record.doctor_name}</TableCell>
-                                        <TableCell className="max-w-[200px] truncate">
+                                        <TableCell className="py-3 px-6 text-sm text-slate-600 dark:text-slate-300">{record.doctor_name}</TableCell>
+                                        <TableCell className="py-3 px-6 max-w-[200px] truncate text-sm text-slate-500">
                                             {record.chief_complaint || '-'}
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" onClick={(e) => {
+                                        <TableCell className="py-3 px-6 text-right">
+                                            <Button variant="ghost" size="sm" className="rounded-xl text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={(e) => {
                                                 e.stopPropagation()
                                                 router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)
                                             }}>
-                                                <FileText className="h-4 w-4 mr-2" />
+                                                <FileText className="h-4 w-4 mr-1.5" />
                                                 Abrir
                                             </Button>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                    )
+                                })}
                             </TableBody>
                         </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>

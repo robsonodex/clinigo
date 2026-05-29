@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
@@ -179,14 +179,20 @@ export default function SessionEvolutionsPage() {
     if (loading) return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Evolução por Sessão</h1>
-                    <p className="text-muted-foreground">Notas de evolução pós-atendimento (SOAP, CIF, DAP ou Livre)</p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #14B8A6)' }}>
+                        <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Evolução por Sessão</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Notas de evolução pós-atendimento (SOAP, CIF, DAP ou Livre)</p>
+                    </div>
                 </div>
                 <Dialog open={showDialog} onOpenChange={o => { setShowDialog(o); if (!o) { setForm(getResetForm()); setEditingId(null) } }}>
-                    <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" /> Nova Evolução</Button></DialogTrigger>
+                    <DialogTrigger asChild><Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold"><Plus className="h-4 w-4 mr-2" /> Nova Evolução</Button></DialogTrigger>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{editingId ? 'Editar' : 'Nova'} Evolução</DialogTitle></DialogHeader>
                         <div className="space-y-4">
@@ -359,31 +365,33 @@ export default function SessionEvolutionsPage() {
                 )}
             </div>
 
+            {/* Barra de Busca Premium */}
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar por paciente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Input placeholder="Buscar por paciente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80" />
             </div>
 
             {filtered.length === 0 ? (
-                <Card><CardContent className="py-12 text-center text-muted-foreground">
-                    <FileEdit className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40"><CardContent className="py-16 text-center">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                        <FileEdit className="h-8 w-8 text-slate-400" />
+                    </div>
                     {evolutions.length === 0 ? (
                         <>
-                            <p className="font-medium text-foreground mb-2">Nenhuma evolução registrada</p>
-                            <p className="text-sm mb-4">Clique no botão abaixo para registrar a primeira evolução.</p>
-                            <Button onClick={() => setShowDialog(true)}><Plus className="h-4 w-4 mr-2" /> Registrar Primeira Evolução</Button>
+                            <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">Nenhuma evolução registrada</p>
+                            <p className="text-sm text-slate-400 mb-4">Clique no botão acima para registrar a primeira evolução</p>
                         </>
                     ) : (
                         <>
-                            <p>Nenhuma evolução encontrada para &quot;{search}&quot;</p>
-                            <p className="text-sm mt-2">Tente buscar por outro nome.</p>
+                            <p className="font-semibold text-slate-700 dark:text-slate-300">Nenhuma evolução encontrada para &quot;{search}&quot;</p>
+                            <p className="text-sm text-slate-400 mt-2">Tente buscar por outro nome</p>
                         </>
                     )}
                 </CardContent></Card>
             ) : (
                 <div className="space-y-3">
                     {filtered.map((ev: any) => (
-                        <Card key={ev.id} className={`hover:shadow-md transition-shadow ${isFinalized(ev) ? 'border-green-200 bg-green-50/30 dark:border-green-900 dark:bg-green-950/20' : ''}`}>
+                        <Card key={ev.id} className={`rounded-2xl border shadow-sm bg-white dark:bg-slate-900/40 hover:shadow-md transition-all duration-200 group ${isFinalized(ev) ? 'border-green-200 dark:border-green-900/50' : 'border-slate-100 dark:border-slate-800/80'}`}>
                             <CardContent className="pt-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">

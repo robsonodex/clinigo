@@ -21,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Save, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { SavedSchedulesList } from '@/components/doctors/SavedSchedulesList'
@@ -193,12 +193,18 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">Configurar Horários</h1>
-                <p className="text-muted-foreground">
-                    Defina a disponibilidade semanal dos {profLabel.plural.toLowerCase()} — configure múltiplos turnos por dia
-                </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #F59E0B, #EF4444)' }}>
+                        <Clock className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Configurar Horários</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Defina a disponibilidade semanal dos {profLabel.plural.toLowerCase()}</p>
+                    </div>
+                </div>
             </div>
 
             <Card>

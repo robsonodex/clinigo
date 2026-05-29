@@ -154,15 +154,21 @@ export default function TherapeuticPlansPage() {
     if (loading) return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Planos Terapêuticos</h1>
-                    <p className="text-muted-foreground">Gerencie os planos terapêuticos individuais dos pacientes</p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
+                        <ClipboardList className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Planos Terapêuticos</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie os planos terapêuticos individuais dos pacientes</p>
+                    </div>
                 </div>
                 <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm() }}>
                     <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> Novo Plano</Button>
+                        <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold"><Plus className="h-4 w-4 mr-2" /> Novo Plano</Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
@@ -264,13 +270,14 @@ export default function TherapeuticPlansPage() {
                 </Dialog>
             </div>
 
-            <div className="flex gap-4">
+            {/* Barra de Busca Premium */}
+            <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Buscar por paciente ou título..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                    <Input placeholder="Buscar por paciente ou título..." value={search} onChange={e => setSearch(e.target.value)} className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80" />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30"><SelectValue /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
@@ -279,18 +286,19 @@ export default function TherapeuticPlansPage() {
             </div>
 
             {filtered.length === 0 ? (
-                <Card><CardContent className="py-12 text-center text-muted-foreground">
-                    <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40"><CardContent className="py-16 text-center">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                        <ClipboardList className="h-8 w-8 text-slate-400" />
+                    </div>
                     {plans.length === 0 ? (
                         <>
-                            <p className="font-medium text-foreground mb-2">Nenhum plano terapêutico cadastrado</p>
-                            <p className="text-sm mb-4">Clique no botão abaixo para criar o primeiro plano terapêutico.</p>
-                            <Button onClick={() => setShowDialog(true)}><Plus className="h-4 w-4 mr-2" /> Criar Primeiro Plano</Button>
+                            <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">Nenhum plano terapêutico cadastrado</p>
+                            <p className="text-sm text-slate-400 mb-4">Crie o primeiro plano usando o botão acima</p>
                         </>
                     ) : (
                         <>
-                            <p>Nenhum plano encontrado para &quot;{search}&quot;</p>
-                            <p className="text-sm mt-2">Tente buscar por outro nome ou título.</p>
+                            <p className="font-semibold text-slate-700 dark:text-slate-300">Nenhum plano encontrado para &quot;{search}&quot;</p>
+                            <p className="text-sm text-slate-400 mt-2">Tente buscar por outro nome ou título</p>
                         </>
                     )}
                 </CardContent></Card>
@@ -299,7 +307,7 @@ export default function TherapeuticPlansPage() {
                     {filtered.map((plan: any) => {
                         const progress = calcProgress(plan.therapeutic_plan_goals)
                         return (
-                            <Card key={plan.id} className="hover:shadow-md transition-shadow">
+                            <Card key={plan.id} className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 hover:shadow-md transition-all duration-200 group">
                                 <CardContent className="pt-6">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">

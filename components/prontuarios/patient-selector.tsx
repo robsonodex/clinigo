@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Check, ChevronsUpDown, Plus, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarGradient } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
     Command,
@@ -108,11 +108,17 @@ export default function PatientSelector({
                     >
                         {selectedPatient ? (
                             <div className="flex items-center gap-3 flex-1 text-left">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarFallback>
-                                        {selectedPatient.full_name.substring(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
+                                {(() => {
+                                    const avatar = getAvatarGradient(selectedPatient.full_name)
+                                    return (
+                                        <div 
+                                            style={avatar.style}
+                                            className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shadow-sm shrink-0"
+                                        >
+                                            {avatar.initials}
+                                        </div>
+                                    )
+                                })()}
                                 <div className="flex-1 min-w-0">
                                     <div className="font-medium truncate">
                                         {selectedPatient.full_name}
@@ -183,11 +189,17 @@ export default function PatientSelector({
                                             className="p-3"
                                         >
                                             <div className="flex items-center gap-3 flex-1">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarFallback>
-                                                        {patient.full_name.substring(0, 2).toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
+                                                {(() => {
+                                                    const avatar = getAvatarGradient(patient.full_name)
+                                                    return (
+                                                        <div 
+                                                            style={avatar.style}
+                                                            className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shadow-sm shrink-0"
+                                                        >
+                                                            {avatar.initials}
+                                                        </div>
+                                                    )
+                                                })()}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="font-medium truncate">
                                                         {patient.full_name}

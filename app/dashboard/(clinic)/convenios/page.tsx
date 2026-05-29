@@ -170,108 +170,110 @@ function OperadorasTab() {
 
     return (
         <div className="space-y-4">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            {/* Header / Barra de Busca Premium */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-450 dark:text-slate-500" />
                     <Input
                         placeholder="Buscar operadora..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10"
+                        className="pl-11 pr-4 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
                     />
                 </div>
-                <Button onClick={() => openDialog()} className="gap-2">
+                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2">
                     <Plus className="w-4 h-4" />
                     Nova Operadora
                 </Button>
             </div>
 
-            {/* Table */}
-            <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Código ANS</TableHead>
-                            <TableHead>Telefone</TableHead>
-                            <TableHead>Planos</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-[80px]">Ações</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            Array(3).fill(0).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : insurances.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                    Nenhuma operadora cadastrada
-                                </TableCell>
+            {/* Table Premium */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Nome</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Código ANS</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Telefone</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Planos</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Status</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider text-right w-[80px]">Ações</TableHead>
                             </TableRow>
-                        ) : (
-                            insurances.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                <Building2 className="w-4 h-4 text-blue-600" />
-                                            </div>
-                                            {item.name}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{item.code || '-'}</TableCell>
-                                    <TableCell>{item.phone || '-'}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">
-                                            {item.plans_count || 0} planos
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={item.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                                            {item.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openDialog(item)}>
-                                                    <Edit className="w-4 h-4 mr-2" />
-                                                    Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => {
-                                                        if (confirm('Tem certeza que deseja remover esta operadora?')) {
-                                                            deleteMutation.mutate(item.id)
-                                                        }
-                                                    }}
-                                                    className="text-destructive"
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Remover
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
+                            {isLoading ? (
+                                Array(3).fill(0).map((_, i) => (
+                                    <TableRow key={i} className="border-none">
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-32 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-24 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-12 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-16 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6 text-right"><Skeleton className="h-5 w-8 rounded ml-auto" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : insurances.length === 0 ? (
+                                <TableRow className="hover:bg-transparent border-none">
+                                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                                        Nenhuma operadora cadastrada
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : (
+                                insurances.map((item) => (
+                                    <TableRow key={item.id} className="group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200">
+                                        <TableCell className="py-3.5 px-6 font-medium text-slate-800 dark:text-slate-200">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-center shadow-sm">
+                                                    <Building2 className="w-4.5 h-4.5 text-slate-650 dark:text-slate-350" />
+                                                </div>
+                                                <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">{item.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6 text-sm text-slate-505 dark:text-slate-400">{item.code || '-'}</TableCell>
+                                        <TableCell className="py-3.5 px-6 text-sm text-slate-505 dark:text-slate-400">{item.phone || '-'}</TableCell>
+                                        <TableCell className="py-3.5 px-6">
+                                            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                                {item.plans_count || 0} planos
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6">
+                                            <Badge variant={item.status === 'ACTIVE' ? 'default' : 'secondary'} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 hover:bg-emerald-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                                                {item.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6 text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                        <MoreVertical className="w-4 h-4 text-slate-500" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800">
+                                                    <DropdownMenuItem onClick={() => openDialog(item)} className="rounded-lg text-xs font-medium py-2">
+                                                        <Edit className="w-4 h-4 mr-2 text-slate-500" />
+                                                        Editar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm('Tem certeza que deseja remover esta operadora?')) {
+                                                                deleteMutation.mutate(item.id)
+                                                            }
+                                                        }}
+                                                        className="text-destructive rounded-lg text-xs font-medium py-2"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        Remover
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </Card>
 
             {/* Dialog */}
@@ -492,130 +494,136 @@ function PlanosTab() {
 
     return (
         <div className="space-y-4">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                <div className="flex gap-2 flex-1">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            {/* Header / Barra de Busca / Filtros Premium */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-450 dark:text-slate-500" />
                         <Input
                             placeholder="Buscar plano..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-10"
+                            className="pl-11 pr-4 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
                         />
                     </div>
                     <Select value={insuranceFilter} onValueChange={setInsuranceFilter}>
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-full sm:w-[220px] h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-emerald-500/20 text-slate-700 dark:text-slate-350 text-sm font-medium">
                             <SelectValue placeholder="Filtrar por operadora" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas operadoras</SelectItem>
+                        <SelectContent className="rounded-xl border-slate-100 dark:border-slate-800">
+                            <SelectItem value="all" className="rounded-lg text-sm">Todas operadoras</SelectItem>
                             {insurances.map((ins) => (
-                                <SelectItem key={ins.id} value={ins.id}>
+                                <SelectItem key={ins.id} value={ins.id} className="rounded-lg text-sm">
                                     {ins.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => openDialog()} className="gap-2">
+                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2">
                     <Plus className="w-4 h-4" />
                     Novo Plano
                 </Button>
             </div>
 
-            {/* Table */}
-            <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Plano</TableHead>
-                            <TableHead>Operadora</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead>Cobertura</TableHead>
-                            <TableHead>Médicos</TableHead>
-                            <TableHead className="w-[80px]">Ações</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            Array(3).fill(0).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : plans.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                    Nenhum plano cadastrado
-                                </TableCell>
+            {/* Table Premium */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Plano</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Operadora</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Tipo</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Cobertura</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Médicos</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider text-right w-[80px]">Ações</TableHead>
                             </TableRow>
-                        ) : (
-                            plans.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                                                <CreditCard className="w-4 h-4 text-emerald-600" />
-                                            </div>
-                                            <div>
-                                                <p>{item.name}</p>
-                                                {item.code && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Cód: {item.code}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{(item.health_insurance as any)?.name || '-'}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline">{typeLabel[item.type]}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">{coverageLabel[item.coverage_type]}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">
-                                            {item.doctors_count || 0} médicos
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openDialog(item)}>
-                                                    <Edit className="w-4 h-4 mr-2" />
-                                                    Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => {
-                                                        if (confirm('Tem certeza que deseja remover este plano?')) {
-                                                            deleteMutation.mutate(item.id)
-                                                        }
-                                                    }}
-                                                    className="text-destructive"
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Remover
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
+                            {isLoading ? (
+                                Array(3).fill(0).map((_, i) => (
+                                    <TableRow key={i} className="border-none">
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-32 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-24 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-12 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6 text-right"><Skeleton className="h-5 w-8 rounded ml-auto" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : plans.length === 0 ? (
+                                <TableRow className="hover:bg-transparent border-none">
+                                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                                        Nenhum plano cadastrado
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : (
+                                plans.map((item) => (
+                                    <TableRow key={item.id} className="group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200">
+                                        <TableCell className="py-3.5 px-6 font-medium">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-center shadow-sm">
+                                                    <CreditCard className="w-4.5 h-4.5 text-slate-650 dark:text-slate-350" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-slate-750 dark:text-slate-200 text-sm">{item.name}</p>
+                                                    {item.code && (
+                                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+                                                            Cód: {item.code}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6 text-sm text-slate-600 dark:text-slate-400">{(item.health_insurance as any)?.name || '-'}</TableCell>
+                                        <TableCell className="py-3.5 px-6">
+                                            <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                                                {typeLabel[item.type]}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6">
+                                            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                                {coverageLabel[item.coverage_type]}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6">
+                                            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                                {item.doctors_count || 0} médicos
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6 text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                        <MoreVertical className="w-4 h-4 text-slate-500" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800">
+                                                    <DropdownMenuItem onClick={() => openDialog(item)} className="rounded-lg text-xs font-medium py-2">
+                                                        <Edit className="w-4 h-4 mr-2 text-slate-500" />
+                                                        Editar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm('Tem certeza que deseja remover este plano?')) {
+                                                                deleteMutation.mutate(item.id)
+                                                            }
+                                                        }}
+                                                        className="text-destructive rounded-lg text-xs font-medium py-2"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        Remover
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </Card>
 
             {/* Dialog */}
@@ -825,81 +833,101 @@ function MedicosTab() {
 
     return (
         <div className="space-y-4">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            {/* Header / Barra de Busca Premium */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-450 dark:text-slate-500" />
                     <Input
                         placeholder="Buscar médico..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10"
+                        className="pl-11 pr-4 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
                     />
                 </div>
             </div>
 
-            {/* Table */}
-            <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Médico</TableHead>
-                            <TableHead>Especialidade</TableHead>
-                            <TableHead>CRM</TableHead>
-                            <TableHead>Convênios</TableHead>
-                            <TableHead className="w-[120px]">Ações</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loadingDoctors ? (
-                            Array(3).fill(0).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : doctors.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                    Nenhum médico encontrado
-                                </TableCell>
+            {/* Table Premium */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Médico</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Especialidade</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">CRM</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Convênios</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider text-right w-[120px]">Ações</TableHead>
                             </TableRow>
-                        ) : (
-                            doctors.map((doctor: any) => (
-                                <TableRow key={doctor.id}>
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                                                {doctor.user?.full_name?.charAt(0) || 'M'}
-                                            </div>
-                                            {doctor.user?.full_name || 'N/A'}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{doctor.specialty}</TableCell>
-                                    <TableCell>{doctor.crm}/{doctor.crm_state}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className="gap-1">
-                                            <Heart className="w-3 h-3" />
-                                            {doctor.insurances_count || 0}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => openManageDialog(doctor)}
-                                        >
-                                            Gerenciar
-                                        </Button>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
+                            {loadingDoctors ? (
+                                Array(3).fill(0).map((_, i) => (
+                                    <TableRow key={i} className="border-none">
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-32 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-24 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-16 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6 text-right"><Skeleton className="h-5 w-24 rounded ml-auto" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : doctors.length === 0 ? (
+                                <TableRow className="hover:bg-transparent border-none">
+                                    <TableCell colSpan={5} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                                        Nenhum médico encontrado
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : (
+                                doctors.map((doctor: any) => {
+                                    const name = doctor.user?.full_name || 'Médico'
+                                    const initials = name.split(' ').filter(Boolean).map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'MD'
+                                    const gradients = [
+                                        { from: '#3B82F6', to: '#1D4ED8' },
+                                        { from: '#10B981', to: '#047857' },
+                                        { from: '#F59E0B', to: '#B45309' },
+                                        { from: '#EC4899', to: '#BE185D' },
+                                        { from: '#8B5CF6', to: '#6D28D9' }
+                                    ]
+                                    const charSum = name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
+                                    const theme = gradients[charSum % gradients.length]
+
+                                    return (
+                                        <TableRow key={doctor.id} className="group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200">
+                                            <TableCell className="py-3.5 px-6 font-medium">
+                                                <div className="flex items-center gap-3">
+                                                    <div
+                                                        style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
+                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                    >
+                                                        {initials}
+                                                    </div>
+                                                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">{name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-3.5 px-6 text-sm text-slate-650 dark:text-slate-400">{doctor.specialty || '-'}</TableCell>
+                                            <TableCell className="py-3.5 px-6 text-sm text-slate-650 dark:text-slate-400">{doctor.crm}/{doctor.crm_state}</TableCell>
+                                            <TableCell className="py-3.5 px-6">
+                                                <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold gap-1 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/60">
+                                                    <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                                                    {doctor.insurances_count || 0} vinculados
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="py-3.5 px-6 text-right">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openManageDialog(doctor)}
+                                                    className="rounded-xl h-8 text-xs font-semibold px-3 border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850"
+                                                >
+                                                    Gerenciar
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </Card>
 
             {/* Manage Dialog */}
@@ -1100,39 +1128,39 @@ function ElegibilidadeTab() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Form */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Dados do Beneficiário</CardTitle>
-                    <CardDescription>
+            {/* Form Premium */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                <CardHeader className="pb-4 border-b border-slate-50 dark:border-slate-800/50">
+                    <CardTitle className="text-lg font-bold text-slate-800 dark:text-white">Dados do Beneficiário</CardTitle>
+                    <CardDescription className="text-xs text-slate-400 dark:text-slate-500">
                         Preencha os dados conforme a carteirinha do convênio
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                     <div className="space-y-2">
-                        <Label>Operadora</Label>
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">Operadora</Label>
                         <Select
                             value={formData.insurance_company}
                             onValueChange={(v) => setFormData(prev => ({ ...prev, insurance_company: v }))}
                         >
-                            <SelectTrigger>
+                            <SelectTrigger className="h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-emerald-500/20 text-slate-700 dark:text-slate-350 text-sm font-medium">
                                 <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Unimed">Unimed</SelectItem>
-                                <SelectItem value="Bradesco Saúde">Bradesco Saúde</SelectItem>
-                                <SelectItem value="Amil">Amil</SelectItem>
-                                <SelectItem value="SulAmérica">SulAmérica</SelectItem>
+                            <SelectContent className="rounded-xl border-slate-100 dark:border-slate-800">
+                                <SelectItem value="Unimed" className="rounded-lg text-sm">Unimed</SelectItem>
+                                <SelectItem value="Bradesco Saúde" className="rounded-lg text-sm">Bradesco Saúde</SelectItem>
+                                <SelectItem value="Amil" className="rounded-lg text-sm">Amil</SelectItem>
+                                <SelectItem value="SulAmérica" className="rounded-lg text-sm">SulAmérica</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Número da Carteirinha</Label>
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">Número da Carteirinha</Label>
                         <div className="relative">
-                            <CreditCard className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                            <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <Input
-                                className="pl-9"
+                                className="pl-10 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
                                 value={formData.card_number}
                                 onChange={(e) => setFormData(prev => ({ ...prev, card_number: e.target.value }))}
                                 placeholder="0000 0000 0000 0000"
@@ -1141,21 +1169,22 @@ function ElegibilidadeTab() {
                     </div>
 
                     <div className="space-y-2">
-                        <Label>CPF do Paciente</Label>
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">CPF do Paciente</Label>
                         <Input
                             value={formData.patient_cpf}
                             onChange={(e) => setFormData(prev => ({ ...prev, patient_cpf: e.target.value }))}
                             placeholder="000.000.000-00"
                             maxLength={11}
+                            className="h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Nome Completo</Label>
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">Nome Completo</Label>
                         <div className="relative">
-                            <Users className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <Input
-                                className="pl-9"
+                                className="pl-10 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 text-sm"
                                 value={formData.patient_name}
                                 onChange={(e) => setFormData(prev => ({ ...prev, patient_name: e.target.value }))}
                             />
@@ -1163,7 +1192,7 @@ function ElegibilidadeTab() {
                     </div>
 
                     <Button
-                        className="w-full"
+                        className="w-full rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2 mt-2"
                         onClick={() => checkMutation.mutate(formData)}
                         disabled={
                             checkMutation.isPending ||
@@ -1181,16 +1210,16 @@ function ElegibilidadeTab() {
                 </CardContent>
             </Card>
 
-            {/* Result */}
+            {/* Result Premium */}
             <div className="space-y-6">
                 {checkMutation.isPending && (
-                    <Card>
+                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
                         <CardContent className="py-12 flex flex-col items-center justify-center text-center space-y-4">
                             <Skeleton className="w-12 h-12 rounded-full" />
                             <div>
-                                <h3 className="text-lg font-medium">Consultando Operadora...</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Aguardando resposta do webservice
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Consultando Operadora...</h3>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Aguardando resposta do webservice TISS
                                 </p>
                             </div>
                         </CardContent>
@@ -1198,45 +1227,45 @@ function ElegibilidadeTab() {
                 )}
 
                 {result && !checkMutation.isPending && (
-                    <Card className={result.is_active ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-                        <CardHeader>
+                    <Card className={`rounded-2xl border shadow-sm overflow-hidden ${result.is_active ? 'border-emerald-250 bg-emerald-50/50 dark:bg-emerald-950/10 dark:border-emerald-900/50' : 'border-red-200 bg-red-50/50 dark:bg-red-950/10 dark:border-red-900/50'}`}>
+                        <CardHeader className="pb-4 border-b border-slate-50 dark:border-slate-800/50">
                             <div className="flex items-center gap-3">
                                 {result.is_active ? (
-                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                    <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm">
                                         <Shield className="w-5 h-5" />
                                     </div>
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                                    <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400 shadow-sm">
                                         <Shield className="w-5 h-5" />
                                     </div>
                                 )}
                                 <div>
-                                    <CardTitle className={result.is_active ? 'text-green-700' : 'text-red-700'}>
+                                    <CardTitle className={`text-base font-bold ${result.is_active ? 'text-emerald-800 dark:text-emerald-450' : 'text-red-850 dark:text-red-400'}`}>
                                         {result.is_active ? 'Beneficiário Ativo' : 'Beneficiário Inativo/Não Encontrado'}
                                     </CardTitle>
-                                    <CardDescription className={result.is_active ? 'text-green-600' : 'text-red-600'}>
+                                    <CardDescription className={`text-xs ${result.is_active ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-650 dark:text-red-500'}`}>
                                         Verificação concluída com sucesso
                                     </CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
                         {result.is_active && (
-                            <CardContent className="space-y-4">
-                                <div className="bg-white/50 p-4 rounded-lg space-y-2">
-                                    <p className="text-sm font-medium text-green-800">Plano Identificado</p>
-                                    <p className="text-lg font-bold text-green-900">{result.plan_name}</p>
+                            <CardContent className="space-y-4 pt-6">
+                                <div className="bg-white/60 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100/55 dark:border-slate-800/50 space-y-1">
+                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-450">Plano Identificado</p>
+                                    <p className="text-base font-bold text-slate-800 dark:text-white">{result.plan_name}</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-white/50 p-3 rounded-lg">
-                                        <p className="text-xs text-green-800 mb-1">Carência</p>
-                                        <Badge variant="outline" className="text-green-700 border-green-200 bg-green-100">
+                                    <div className="bg-white/60 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100/55 dark:border-slate-800/50">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-450 mb-1.5">Carência</p>
+                                        <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold border-emerald-250 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                                             Cumprida
                                         </Badge>
                                     </div>
-                                    <div className="bg-white/50 p-3 rounded-lg">
-                                        <p className="text-xs text-green-800 mb-1">Coparticipação</p>
-                                        <p className="font-medium text-green-900">
+                                    <div className="bg-white/60 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100/55 dark:border-slate-800/50">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-450 mb-1">Coparticipação</p>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white">
                                             {result.coverage_details?.copay_value
                                                 ? `R$ ${result.coverage_details.copay_value}`
                                                 : 'Isento'}
@@ -1244,11 +1273,11 @@ function ElegibilidadeTab() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white/50 p-4 rounded-lg">
-                                    <p className="text-sm font-medium text-green-800 mb-2">Coberturas Principais</p>
-                                    <div className="flex flex-wrap gap-2">
+                                <div className="bg-white/60 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100/55 dark:border-slate-800/50">
+                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-450 mb-2">Coberturas Principais</p>
+                                    <div className="flex flex-wrap gap-1.5">
                                         {result.coverage_details?.procedures_covered?.map((proc: string) => (
-                                            <Badge key={proc} variant="secondary" className="bg-white">
+                                            <Badge key={proc} variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 dark:bg-slate-850 text-slate-650 dark:text-slate-350">
                                                 {proc}
                                             </Badge>
                                         ))}
@@ -1260,10 +1289,11 @@ function ElegibilidadeTab() {
                 )}
 
                 {!result && !checkMutation.isPending && (
-                    <Card className="bg-muted/50 border-dashed">
-                        <CardContent className="py-12 text-center text-muted-foreground">
-                            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                            <p>O resultado da verificação aparecerá aqui</p>
+                    <Card className="bg-slate-50/50 dark:bg-slate-900/20 border-dashed border-2 border-slate-200 dark:border-slate-850 rounded-2xl">
+                        <CardContent className="py-16 text-center text-slate-400 dark:text-slate-500">
+                            <Search className="w-12 h-12 mx-auto mb-4 opacity-50 text-slate-400" />
+                            <p className="text-sm font-semibold">Resultado da Verificação</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Preencha o formulário ao lado para consultar a elegibilidade do paciente</p>
                         </CardContent>
                     </Card>
                 )}
@@ -1278,44 +1308,52 @@ function ElegibilidadeTab() {
 
 export default function ConveniosPage() {
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">Convênios</h1>
-                <p className="text-muted-foreground">
-                    Gerencie operadoras, planos e regras de atendimento
-                </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                        <Heart className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Convênios</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie operadoras, planos e regras de atendimento</p>
+                    </div>
+                </div>
             </div>
 
             <Tabs defaultValue="operadoras" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-                    <TabsTrigger value="operadoras" className="gap-2">
-                        <Building2 className="w-4 h-4" />
-                        Operadoras
-                    </TabsTrigger>
-                    <TabsTrigger value="planos" className="gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        Planos
-                    </TabsTrigger>
-                    <TabsTrigger value="medicos" className="gap-2">
-                        <Users className="w-4 h-4" />
-                        Médicos
-                    </TabsTrigger>
-                    <TabsTrigger value="elegibilidade" className="gap-2">
-                        <Shield className="w-4 h-4" />
-                        Elegibilidade
-                    </TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto pb-1">
+                    <TabsList className="flex w-max bg-slate-100/80 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+                        <TabsTrigger value="operadoras" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm">
+                            <Building2 className="w-3.5 h-3.5 mr-1.5" />
+                            Operadoras
+                        </TabsTrigger>
+                        <TabsTrigger value="planos" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm">
+                            <CreditCard className="w-3.5 h-3.5 mr-1.5" />
+                            Planos
+                        </TabsTrigger>
+                        <TabsTrigger value="medicos" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm">
+                            <Users className="w-3.5 h-3.5 mr-1.5" />
+                            Médicos
+                        </TabsTrigger>
+                        <TabsTrigger value="elegibilidade" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm">
+                            <Shield className="w-3.5 h-3.5 mr-1.5" />
+                            Elegibilidade
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
-                <TabsContent value="operadoras">
+                <TabsContent value="operadoras" className="mt-4 outline-none">
                     <OperadorasTab />
                 </TabsContent>
-                <TabsContent value="planos">
+                <TabsContent value="planos" className="mt-4 outline-none">
                     <PlanosTab />
                 </TabsContent>
-                <TabsContent value="medicos">
+                <TabsContent value="medicos" className="mt-4 outline-none">
                     <MedicosTab />
                 </TabsContent>
-                <TabsContent value="elegibilidade">
+                <TabsContent value="elegibilidade" className="mt-4 outline-none">
                     <ElegibilidadeTab />
                 </TabsContent>
             </Tabs>

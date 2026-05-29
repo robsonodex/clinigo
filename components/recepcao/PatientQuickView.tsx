@@ -13,6 +13,7 @@ import {
     DrawerDescription,
 } from '@/components/ui/drawer'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { getAvatarGradient } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -80,10 +81,24 @@ export function PatientQuickView({ patientId, open, onClose }: PatientQuickViewP
             <DrawerContent className="max-h-[90vh]">
                 <DrawerHeader>
                     <div className="flex items-center gap-4">
-                        <Avatar className="w-16 h-16">
-                            <AvatarImage src={patient?.avatar_url} />
-                            <AvatarFallback className="text-lg">{patient?.initials}</AvatarFallback>
-                        </Avatar>
+                        {patient?.avatar_url ? (
+                            <Avatar className="w-16 h-16">
+                                <AvatarImage src={patient.avatar_url} />
+                                <AvatarFallback className="text-lg bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                                    {patient.initials}
+                                </AvatarFallback>
+                            </Avatar>
+                        ) : (() => {
+                            const avatar = getAvatarGradient(patient?.full_name || '')
+                            return (
+                                <div 
+                                    style={avatar.style}
+                                    className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shadow-md shrink-0"
+                                >
+                                    {avatar.initials}
+                                </div>
+                            )
+                        })()}
                         <div>
                             <DrawerTitle className="text-2xl">{patient?.full_name}</DrawerTitle>
                             <DrawerDescription>

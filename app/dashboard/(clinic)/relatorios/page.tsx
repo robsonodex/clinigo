@@ -198,19 +198,22 @@ export default function ReportsPage() {
     }
 
     return (
-        <div id="report-content" className="container mx-auto py-8 px-4 space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold">Relatórios e Analytics</h1>
-                    <p className="text-muted-foreground">
-                        Visão geral de performance da clínica
-                    </p>
+        <div id="report-content" className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)' }}>
+                        <BarChart3 className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Relatórios e Analytics</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Visão geral de performance da clínica</p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <Select value={dateRange} onValueChange={setDateRange}>
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-40 h-10 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/30">
                             <SelectValue placeholder="Período" />
                         </SelectTrigger>
                         <SelectContent>
@@ -221,84 +224,84 @@ export default function ReportsPage() {
                         </SelectContent>
                     </Select>
 
-                    <Button variant="outline" size="icon" onClick={fetchData}>
+                    <Button variant="outline" size="icon" onClick={fetchData} className="rounded-xl h-10 w-10 border-slate-200 dark:border-slate-800">
                         <RefreshCcw className="h-4 w-4" />
                     </Button>
 
-                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting}>
+                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 text-sm font-medium">
                         <Download className="h-4 w-4 mr-2" />
                         CSV
                     </Button>
 
-                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting}>
+                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 text-sm font-medium">
                         <Download className="h-4 w-4 mr-2" />
                         PDF
                     </Button>
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
+            {/* KPI Cards Premium */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-semibold text-slate-500 dark:text-slate-400">Receita Total</CardTitle>
+                        <DollarSign className="h-4 w-4 text-slate-400" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">
                             {formatCurrency(kpis?.total_revenue || 0)}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-slate-400 mt-1">
                             Ticket médio: {formatCurrency(kpis?.average_ticket || 0)}
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Agendamentos</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-semibold text-slate-500 dark:text-slate-400">Agendamentos</CardTitle>
+                        <Calendar className="h-4 w-4 text-slate-400" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{kpis?.total_appointments || 0}</div>
-                        <div className="flex gap-2 mt-1">
-                            <Badge variant="default" className="text-xs">
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{kpis?.total_appointments || 0}</div>
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-medium">
                                 {kpis?.completed_appointments || 0} concluídos
                             </Badge>
-                            <Badge variant="destructive" className="text-xs">
+                            <Badge variant="destructive" className="text-[10px] px-2 py-0.5 rounded-full font-medium">
                                 {kpis?.cancelled_appointments || 0} cancelados
                             </Badge>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">No-Show Rate</CardTitle>
+                        <CardTitle className="text-sm font-semibold text-slate-500 dark:text-slate-400">No-Show Rate</CardTitle>
                         {(kpis?.no_show_rate || 0) > 10 ? (
-                            <TrendingUp className="h-4 w-4 text-destructive" />
+                            <TrendingUp className="h-4 w-4 text-rose-500" />
                         ) : (
-                            <TrendingDown className="h-4 w-4 text-green-500" />
+                            <TrendingDown className="h-4 w-4 text-emerald-500" />
                         )}
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">
                             {formatPercent(kpis?.no_show_rate || 0)}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-slate-400 mt-1">
                             {kpis?.no_show_count || 0} não compareceram
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Novos Pacientes</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-semibold text-slate-500 dark:text-slate-400">Novos Pacientes</CardTitle>
+                        <Users className="h-4 w-4 text-slate-400" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{kpis?.new_patients || 0}</div>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{kpis?.new_patients || 0}</div>
+                        <p className="text-xs text-slate-400 mt-1">
                             {kpis?.active_doctors || 0}/{kpis?.total_doctors || 0} {profLabel.plural.toLowerCase()} ativos
                         </p>
                     </CardContent>

@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
     FileText, Upload, Search, Filter, Loader2, Eye, Download,
-    Trash2, FileImage, FileScan, Calendar, User, Tag
+    Trash2, FileImage, FileScan, Calendar, User, Tag, FileArchive
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -241,19 +241,22 @@ export default function DocumentsPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold">Gestão de Documentos</h1>
-                    <p className="text-muted-foreground">
-                        Upload e gestão de exames, laudos e documentos médicos
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #8B5CF6, #D946EF)' }}>
+                        <FileArchive className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Gestão de Documentos</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Upload e gestão de exames, laudos e documentos médicos</p>
+                    </div>
                 </div>
 
                 <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
                             <Upload className="h-4 w-4 mr-2" />
                             Novo Upload
                         </Button>
@@ -331,7 +334,7 @@ export default function DocumentsPage() {
 
                             {/* Campo de OCR Ocultado. Funcionalidade futura. */}
 
-                            <Button onClick={handleUpload} disabled={uploading} className="w-full">
+                            <Button onClick={handleUpload} disabled={uploading} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
                                 {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Enviar Documento
                             </Button>
@@ -340,69 +343,67 @@ export default function DocumentsPage() {
                 </Dialog>
             </div>
 
-            {/* Filters */}
-            <Card>
-                <CardContent className="py-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar documentos..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                        <Select value={filterType} onValueChange={setFilterType}>
-                            <SelectTrigger className="w-48">
-                                <Filter className="h-4 w-4 mr-2" />
-                                <SelectValue placeholder="Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os tipos</SelectItem>
-                                <SelectItem value="exam">Exames</SelectItem>
-                                <SelectItem value="prescription">Receitas</SelectItem>
-                                <SelectItem value="certificate">Atestados</SelectItem>
-                                <SelectItem value="report">Laudos</SelectItem>
-                                <SelectItem value="other">Outros</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
+            {/* Barra de Busca Premium */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                    <Input
+                        placeholder="Buscar documentos..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                    />
+                </div>
+                <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-full sm:w-[200px] h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+                        <Filter className="h-4 w-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos os tipos</SelectItem>
+                        <SelectItem value="exam">Exames</SelectItem>
+                        <SelectItem value="prescription">Receitas</SelectItem>
+                        <SelectItem value="certificate">Atestados</SelectItem>
+                        <SelectItem value="report">Laudos</SelectItem>
+                        <SelectItem value="other">Outros</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
 
-            {/* Documents List */}
+            {/* Lista de Documentos Premium */}
             <div className="grid gap-4">
                 {loading ? (
-                    <Card>
+                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40">
                         <CardContent className="flex items-center justify-center py-12">
-                            <Loader2 className="h-8 w-8 animate-spin" />
+                            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                         </CardContent>
                     </Card>
                 ) : documents.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                            <h3 className="font-medium text-lg">Nenhum documento encontrado</h3>
-                            <p className="text-muted-foreground">
-                                Faça o upload do primeiro documento
-                            </p>
+                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40">
+                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                                <FileText className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <h3 className="font-semibold text-slate-700 dark:text-slate-300 text-base">Nenhum documento encontrado</h3>
+                            <p className="text-sm text-slate-400 mt-1">Faça o upload do primeiro documento</p>
                         </CardContent>
                     </Card>
                 ) : (
                     documents.map((doc) => (
-                        <Card key={doc.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="py-4">
+                        <Card key={doc.id} className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 group">
+                            <CardContent className="py-4 px-5">
                                 <div className="flex items-start gap-4">
-                                    {getFileIcon(doc.file_type)}
+                                    <div className="w-11 h-11 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                                        {getFileIcon(doc.file_type)}
+                                    </div>
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="font-medium truncate">{doc.name}</h3>
-                                            <Badge variant="outline">{getDocTypeLabel(doc.document_type)}</Badge>
+                                            <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate group-hover:text-emerald-600 transition-colors">{doc.name}</h3>
+                                            <Badge variant="outline" className="rounded-full text-[10px] font-semibold border-slate-200 dark:border-slate-700">{getDocTypeLabel(doc.document_type)}</Badge>
                                         </div>
 
-                                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                                             <span className="flex items-center gap-1">
                                                 <User className="h-3 w-3" />
                                                 {doc.patients?.full_name}
@@ -414,14 +415,14 @@ export default function DocumentsPage() {
                                                     locale: ptBR
                                                 })}
                                             </span>
-                                            <span>{formatFileSize(doc.file_size)}</span>
+                                            <span className="text-slate-400">{formatFileSize(doc.file_size)}</span>
                                         </div>
 
                                         {doc.icd_codes && doc.icd_codes.length > 0 && (
                                             <div className="flex items-center gap-1 mt-2">
-                                                <Tag className="h-3 w-3" />
+                                                <Tag className="h-3 w-3 text-slate-400" />
                                                 {doc.icd_codes.map((code) => (
-                                                    <Badge key={code} variant="secondary" className="text-xs">
+                                                    <Badge key={code} variant="secondary" className="text-[10px] rounded-full">
                                                         {code}
                                                     </Badge>
                                                 ))}
@@ -429,16 +430,16 @@ export default function DocumentsPage() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDocument(doc)}>
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDocument(doc)} className="rounded-xl h-9 w-9 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
                                             <Eye className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" asChild>
+                                        <Button variant="ghost" size="icon" asChild className="rounded-xl h-9 w-9 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20">
                                             <a href={doc.storage_path || '#'} target="_blank" rel="noopener noreferrer">
                                                 <Download className="h-4 w-4" />
                                             </a>
                                         </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)} className="rounded-xl h-9 w-9 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>

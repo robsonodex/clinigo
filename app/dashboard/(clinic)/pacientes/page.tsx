@@ -231,15 +231,15 @@ export default function PacientesPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-9 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
-                        <Upload className="w-4 h-4 mr-2 text-slate-450" />
+                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-10 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm px-5 text-sm">
+                        <Upload className="w-4 h-4 mr-2 text-slate-400" />
                         Importar
                     </Button>
-                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-9 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
-                        <Download className="w-4 h-4 mr-2 text-slate-450" />
+                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-10 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm px-5 text-sm">
+                        <Download className="w-4 h-4 mr-2 text-slate-400" />
                         Exportar
                     </Button>
-                    <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-initial justify-center h-9 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-md border-0">
+                    <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-initial justify-center h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-sm border-0 px-5 text-sm">
                         <Plus className="w-4 h-4 mr-2" />
                         <span>Novo Paciente</span>
                     </Button>

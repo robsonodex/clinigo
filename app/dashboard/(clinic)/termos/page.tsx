@@ -105,19 +105,19 @@ export default function TermosPage() {
 
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Scale className="w-7 h-7" />
-                        Termos Legais
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Gerencie os termos e políticas da sua clínica
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #64748B, #475569)' }}>
+                        <Scale className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Termos Legais</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie os termos e políticas da sua clínica</p>
+                    </div>
                 </div>
-                <Button onClick={handleNew}>
+                <Button onClick={handleNew} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
                     <Plus className="w-4 h-4 mr-2" />
                     Novo Termo
                 </Button>

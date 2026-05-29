@@ -163,13 +163,17 @@ export default function PaymentsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">Pagamentos</h1>
-                    <p className="text-muted-foreground">
-                        Gestão financeira e histórico de transações
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #0EA5E9, #2563EB)' }}>
+                        <CreditCard className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Pagamentos</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gestão financeira e histórico de transações</p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Select value={dateRange} onValueChange={setDateRange}>

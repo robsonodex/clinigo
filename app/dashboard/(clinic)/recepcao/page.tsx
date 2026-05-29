@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle2, QrCode, User, UserX, Settings, FileText,
-    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle
+    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle, SlidersHorizontal
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import PatientSelector from '@/components/prontuarios/patient-selector'
 import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { QRCodeSVG } from 'qrcode.react'
@@ -404,307 +405,253 @@ export default function RecepcaoPage() {
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header */}
-            <div className="flex flex-row items-center justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100/80 dark:border-indigo-900/30">
                         <Users className="w-6 h-6" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
-                            Recepção
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                                Recepção
+                            </h1>
+                            
+                            {/* Filtros e Ações Dropdown Button */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                                    >
+                                        <SlidersHorizontal className="h-4 w-4" />
+                                        <span>Filtros e Ações</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
+                                    {currentUser?.clinic_id && (
+                                        <>
+                                            <DropdownMenuItem
+                                                className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                onSelect={() => {
+                                                    const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
+                                                    window.open(url, '_blank')
+                                                }}
+                                            >
+                                                <Tv className="w-4 h-4 text-blue-600" />
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Painel TV</p>
+                                                    <p className="text-[10px] text-muted-foreground">Exibir na recepção</p>
+                                                </div>
+                                            </DropdownMenuItem>
+
+                                            <DropdownMenuItem
+                                                className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                onSelect={() => {
+                                                    const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
+                                                    window.open(url, '_blank')
+                                                }}
+                                            >
+                                                <Monitor className="w-4 h-4 text-cyan-600" />
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Auto Atendimento</p>
+                                                    <p className="text-[10px] text-muted-foreground">Totem e cadastro</p>
+                                                </div>
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+
+                                    <DropdownMenuItem
+                                        asChild
+                                        className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    >
+                                        <Link href="/dashboard/recepcao/face-checkin">
+                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Check-in Fácil</p>
+                                                <p className="text-[10px] text-muted-foreground">Iniciar atendimento</p>
+                                            </div>
+                                        </Link>
+                                    </DropdownMenuItem>
+
+                                    <QRScannerDialog onCheckIn={loadData}>
+                                        <DropdownMenuItem
+                                            onSelect={(e) => e.preventDefault()}
+                                            className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        >
+                                            <QrCode className="w-4 h-4 text-sky-600" />
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Escanear QR Code</p>
+                                                <p className="text-[10px] text-muted-foreground">Buscar paciente</p>
+                                            </div>
+                                        </DropdownMenuItem>
+                                    </QRScannerDialog>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                         <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
                             Gestão de fila e check-in de pacientes
                         </p>
                     </div>
                 </div>
 
-                {/* Settings Configurations Button */}
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
-                            <Settings className="w-4 h-4 text-slate-400" />
-                            Configurações
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Configurações de Atualização</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Intervalo de Atualização Automática</Label>
-                                <Select
-                                    value={refreshInterval.toString()}
-                                    onValueChange={(value) => {
-                                        const interval = Number(value)
-                                        setRefreshInterval(interval)
-                                        localStorage.setItem('reception-refresh-interval', interval.toString())
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="30">30 segundos</SelectItem>
-                                        <SelectItem value="60">1 minuto (recomendado)</SelectItem>
-                                        <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
-                                        <SelectItem value="120">2 minutos</SelectItem>
-                                        <SelectItem value="180">3 minutos</SelectItem>
-                                        <SelectItem value="240">4 minutos</SelectItem>
-                                        <SelectItem value="300">5 minutos (máximo)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-xs text-muted-foreground">
-                                    A fila será atualizada automaticamente a cada {refreshInterval >= 60
-                                        ? `${Math.floor(refreshInterval / 60)} minuto${Math.floor(refreshInterval / 60) > 1 ? 's' : ''}${refreshInterval % 60 ? ` e ${refreshInterval % 60} segundos` : ''}`
-                                        : `${refreshInterval} segundos`}
-                                </p>
+                <div className="flex items-center gap-2">
+                    {/* Sem Agendamento (Atendimento avulso) */}
+                    <Dialog open={showWalkInDialog} onOpenChange={(open) => {
+                        setShowWalkInDialog(open)
+                        if (!open) setIsCreatingPatient(false)
+                    }}>
+                        <DialogTrigger asChild>
+                            <Button 
+                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold gap-1.5 border-0"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Sem Agendamento</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            {isCreatingPatient ? (
+                                <QuickPatientForm
+                                    onSubmit={handleCreatePatient}
+                                    onBack={() => setIsCreatingPatient(false)}
+                                    isSubmitting={isSubmittingPatient}
+                                />
+                            ) : (
+                                <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <Label>Paciente</Label>
+                                        <PatientSelector
+                                            value={selectedPatientId}
+                                            onChange={setSelectedPatientId}
+                                            onNewPatient={() => setIsCreatingPatient(true)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Urgência</Label>
+                                        <Select value={urgency} onValueChange={setUrgency}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="normal">Normal</SelectItem>
+                                                <SelectItem value="priority">Prioridade</SelectItem>
+                                                <SelectItem value="urgent">Urgente</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Motivo</Label>
+                                        <Input
+                                            placeholder="Motivo da consulta..."
+                                            value={reason}
+                                            onChange={(e) => setReason(e.target.value)}
+                                        />
+                                    </div>
+                                    <Button className="w-full hover:shadow-md transition-all duration-300 rounded-xl h-10" onClick={handleCreateWalkIn}>
+                                        Adicionar à Fila
+                                    </Button>
+                                </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Settings Configurations Button */}
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="h-10 gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
+                                <Settings className="w-4 h-4 text-slate-400" />
+                                Configurações
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Configurações de Atualização</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Intervalo de Atualização Automática</Label>
+                                    <Select
+                                        value={refreshInterval.toString()}
+                                        onValueChange={(value) => {
+                                            const interval = Number(value)
+                                            setRefreshInterval(interval)
+                                            localStorage.setItem('reception-refresh-interval', interval.toString())
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="30">30 segundos</SelectItem>
+                                            <SelectItem value="60">1 minuto (recomendado)</SelectItem>
+                                            <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
+                                            <SelectItem value="120">2 minutos</SelectItem>
+                                            <SelectItem value="180">3 minutos</SelectItem>
+                                            <SelectItem value="240">4 minutos</SelectItem>
+                                            <SelectItem value="300">5 minutos (máximo)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        A fila será atualizada automaticamente a cada {refreshInterval >= 60
+                                            ? `${Math.floor(refreshInterval / 60)} minuto${Math.floor(refreshInterval / 60) > 1 ? 's' : ''}${refreshInterval % 60 ? ` e ${refreshInterval % 60} segundos` : ''}`
+                                            : `${refreshInterval} segundos`}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
-            {/* Quick Action Grid (5 Buttons matching the layout exactly) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-                {currentUser === undefined || isPlanLoading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse shadow-sm" />
-                    ))
-                ) : (
-                    <>
-                        {/* Painel TV */}
-                        {currentUser?.clinic_id && (
-                            <button
-                                className="h-16 px-4 flex items-center justify-between text-left text-white bg-slate-950 dark:bg-slate-900 border border-slate-850 hover:bg-slate-900 dark:hover:bg-slate-800/80 rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
-                                onClick={() => {
-                                    const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
-                                    window.open(url, '_blank')
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/10 rounded-xl text-slate-100">
-                                        <Tv className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold tracking-wide">Painel TV</p>
-                                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">Exibir na recepção</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:translate-x-0.5 transition-transform" />
-                            </button>
-                        )}
-
-                        {/* Auto Atendimento */}
-                        {currentUser?.clinic_id && (
-                            <button
-                                className="h-16 px-4 flex items-center justify-between text-left text-white border border-[#002e48]/30 hover:bg-[#002f4a] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
-                                style={{ backgroundColor: '#003B5C' }}
-                                onClick={() => {
-                                    const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
-                                    window.open(url, '_blank')
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/10 rounded-xl text-cyan-200">
-                                        <Monitor className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold tracking-wide">Auto Atendimento</p>
-                                        <p className="text-[9px] text-cyan-200/60 font-semibold mt-0.5">Totem e cadastro</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-cyan-300/40 group-hover:translate-x-0.5 transition-transform" />
-                            </button>
-                        )}
-
-                        {/* Check-in Fácil */}
-                        <Link href="/dashboard/recepcao/face-checkin" className="w-full">
-                            <div 
-                                className="h-16 px-4 flex items-center justify-between text-left text-white border border-[#006835]/30 hover:bg-[#006835] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md cursor-pointer"
-                                style={{ backgroundColor: '#007D40' }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/10 rounded-xl text-emerald-100">
-                                        <CheckCircle className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold tracking-wide">Check-in Fácil</p>
-                                        <p className="text-[9px] text-emerald-100/60 font-semibold mt-0.5">Iniciar atendimento</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-emerald-300/40 group-hover:translate-x-0.5 transition-transform" />
-                            </div>
-                        </Link>
-
-                        {/* QR Scanner (Using customized premium card trigger) */}
-                        <QRScannerDialog onCheckIn={loadData}>
-                            <button 
-                                className="h-16 px-4 w-full flex items-center justify-between text-left text-white border border-[#00439b]/30 hover:bg-[#00439b] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md animate-none"
-                                style={{ backgroundColor: '#0051ba' }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/10 rounded-xl text-sky-100">
-                                        <QrCode className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold tracking-wide">Escanear QR Code</p>
-                                        <p className="text-[9px] text-sky-100/60 font-semibold mt-0.5">Buscar paciente</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-sky-300/40 group-hover:translate-x-0.5 transition-transform" />
-                            </button>
-                        </QRScannerDialog>
-
-                        {/* Sem Agendamento */}
-                        <Dialog open={showWalkInDialog} onOpenChange={(open) => {
-                            setShowWalkInDialog(open)
-                            if (!open) setIsCreatingPatient(false)
-                        }}>
-                            <DialogTrigger asChild>
-                                <button 
-                                    className="h-16 px-4 w-full flex items-center justify-between text-left text-white border border-[#005fa9]/30 hover:bg-[#005fa9] rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group shadow-md"
-                                    style={{ backgroundColor: '#0072CE' }}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-white/10 rounded-xl text-sky-100">
-                                            <Plus className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold tracking-wide">Sem Agendamento</p>
-                                            <p className="text-[9px] text-sky-100/60 font-semibold mt-0.5">Atendimento avulso</p>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="w-4 h-4 text-sky-300/40 group-hover:translate-x-0.5 transition-transform" />
-                                </button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>
-                                        {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
-                                    </DialogTitle>
-                                </DialogHeader>
-
-                                {isCreatingPatient ? (
-                                    <QuickPatientForm
-                                        onSubmit={handleCreatePatient}
-                                        onBack={() => setIsCreatingPatient(false)}
-                                        isSubmitting={isSubmittingPatient}
-                                    />
-                                ) : (
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label>Paciente</Label>
-                                            <PatientSelector
-                                                value={selectedPatientId}
-                                                onChange={setSelectedPatientId}
-                                                onNewPatient={() => setIsCreatingPatient(true)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Urgência</Label>
-                                            <Select value={urgency} onValueChange={setUrgency}>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="normal">Normal</SelectItem>
-                                                    <SelectItem value="priority">Prioridade</SelectItem>
-                                                    <SelectItem value="urgent">Urgente</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Motivo</Label>
-                                            <Input
-                                                placeholder="Motivo da consulta..."
-                                                value={reason}
-                                                onChange={(e) => setReason(e.target.value)}
-                                            />
-                                        </div>
-                                        <Button className="w-full hover:shadow-md transition-all duration-300" onClick={handleCreateWalkIn}>
-                                            Adicionar à Fila
-                                        </Button>
-                                    </div>
-                                )}
-                            </DialogContent>
-                        </Dialog>
-                    </>
-                )}
-            </div>
-
-            {/* Horizontal Stats Capsules (compact inline indicators) */}
+            {/* Horizontal Stats Capsules (compact inline indicators styled as premium buttons) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {/* 1. Aguardando */}
-                <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer">
+                <div className="flex items-center justify-between h-10 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-full flex items-center justify-center">
-                            <Clock className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-bold text-amber-600 dark:text-amber-500 flex items-baseline gap-1 whitespace-nowrap">
-                                <span className="text-sm font-extrabold">{stats.waiting_count}</span>
-                                <span>Aguardando</span>
-                            </p>
-                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Na fila de espera</p>
-                        </div>
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-extrabold">{stats.waiting_count}</span>
+                        <span className="text-sm font-semibold">Aguardando</span>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
+                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
                 </div>
 
                 {/* 2. Em Atendimento */}
-                <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer">
+                <div className="flex items-center justify-between h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-full flex items-center justify-center">
-                            <Users className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-bold text-blue-600 dark:text-blue-500 flex items-baseline gap-1 whitespace-nowrap">
-                                <span className="text-sm font-extrabold">{stats.in_service_count}</span>
-                                <span>Em Atendimento</span>
-                            </p>
-                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Sendo atendidos</p>
-                        </div>
+                        <Users className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-extrabold">{stats.in_service_count}</span>
+                        <span className="text-sm font-semibold">Em Atendimento</span>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
+                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
                 </div>
 
                 {/* 3. Atendidos Hoje */}
-                <div className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer">
+                <div className="flex items-center justify-between h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500 flex items-baseline gap-1 whitespace-nowrap">
-                                <span className="text-sm font-extrabold">{stats.completed_count}</span>
-                                <span>Atendidos</span>
-                            </p>
-                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Concluídos hoje</p>
-                        </div>
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-extrabold">{stats.completed_count}</span>
+                        <span className="text-sm font-semibold">Atendidos</span>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
+                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
                 </div>
 
                 {/* 4. Não Compareceram */}
                 <div 
-                    className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer"
                     onClick={() => setShowNoShowList(true)}
+                    className="flex items-center justify-between h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                 >
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-full flex items-center justify-center">
-                            <UserX className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-bold text-rose-600 dark:text-rose-500 flex items-baseline gap-1 whitespace-nowrap">
-                                <span className="text-sm font-extrabold">{stats.no_show_count}</span>
-                                <span>Ausentes</span>
-                            </p>
-                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium leading-none">Não compareceram</p>
-                        </div>
+                        <UserX className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-extrabold">{stats.no_show_count}</span>
+                        <span className="text-sm font-semibold">Ausentes</span>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-1" />
+                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
                 </div>
             </div>
 

@@ -19,7 +19,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { getInitials, formatDate, cn } from '@/lib/utils'
+import { getInitials, formatDate, cn, getAvatarGradient } from '@/lib/utils'
 import {
     Video,
     FileText,
@@ -157,11 +157,17 @@ export default function ConsultationRoomPage({ params }: PageProps) {
                     {/* Header */}
                     <div className="p-4 border-b">
                         <div className="flex items-center gap-3 mb-4">
-                            <Avatar className="h-12 w-12 border-2 border-primary/10">
-                                <AvatarFallback className="bg-primary/5 text-primary">
-                                    {getInitials(consultation.patient.full_name)}
-                                </AvatarFallback>
-                            </Avatar>
+                            {(() => {
+                                const avatar = getAvatarGradient(consultation.patient.full_name)
+                                return (
+                                    <div 
+                                        style={avatar.style}
+                                        className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shadow-md shrink-0 border-2 border-white/50"
+                                    >
+                                        {avatar.initials}
+                                    </div>
+                                )
+                            })()}
                             <div>
                                 <h2 className="font-bold text-lg leading-tight">
                                     {consultation.patient.full_name}

@@ -39,7 +39,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar } from 'lucide-react'
+import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar, Users, Stethoscope } from 'lucide-react'
 import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog'
 import { type Doctor, api } from '@/lib/api-client'
 import { formatCurrency, getInitials } from '@/lib/utils'
@@ -151,15 +151,19 @@ export default function DoctorsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">{profLabel.plural}</h1>
-                    <p className="text-muted-foreground">
-                        Gerencie o corpo clínico e suas informações
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #0EA5E9, #2563EB)' }}>
+                        <Stethoscope className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">{profLabel.plural}</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie o corpo clínico e suas informações</p>
+                    </div>
                 </div>
-                <Button onClick={handleCreate}>
+                <Button onClick={handleCreate} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
                     <Plus className="w-4 h-4 mr-2" />
                     {profLabel.novo}
                 </Button>
@@ -209,56 +213,54 @@ export default function DoctorsPage() {
                 </Card>
             )}
 
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <CardTitle>Listagem</CardTitle>
-                        <div className="flex w-full sm:w-auto items-center gap-4">
-                            <div className="relative flex-1 w-full">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar por nome, CRM ou especialidade..."
-                                    className="pl-8"
-                                    value={search}
-                                    onChange={handleSearch}
-                                />
-                            </div>
-                            <Select
-                                value={statusFilter}
-                                onValueChange={(value) => {
-                                    setStatusFilter(value)
-                                    setPage(1)
-                                }}
-                            >
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos os Status</SelectItem>
-                                    <SelectItem value="true">Disponíveis</SelectItem>
-                                    <SelectItem value="false">Indisponíveis</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
+            {/* Barra de Busca Premium */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                    <Input
+                        placeholder="Buscar por nome, CRM ou especialidade..."
+                        className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                        value={search}
+                        onChange={handleSearch}
+                    />
+                </div>
+                <Select
+                    value={statusFilter}
+                    onValueChange={(value) => {
+                        setStatusFilter(value)
+                        setPage(1)
+                    }}
+                >
+                    <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos os Status</SelectItem>
+                        <SelectItem value="true">Disponíveis</SelectItem>
+                        <SelectItem value="false">Indisponíveis</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Tabela Premium */}
+            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[40px]">
+                            <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                                <TableRow className="hover:bg-transparent border-none">
+                                    <TableHead className="w-[40px] py-3 px-4">
                                         <Checkbox
                                             checked={doctors.length > 0 && selectedIds.length === doctors.length}
                                             onCheckedChange={toggleSelectAll}
                                         />
                                     </TableHead>
-                                    <TableHead>Nome</TableHead>
-                                    <TableHead>Especialidade</TableHead>
-                                    <TableHead>CRM</TableHead>
-                                    <TableHead>Valor Consulta</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Ações</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nome</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Especialidade</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">CRM</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Valor Consulta</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Status</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -293,48 +295,68 @@ export default function DoctorsPage() {
                                     <TableRow>
                                         <TableCell
                                             colSpan={7}
-                                            className="h-24 text-center text-muted-foreground"
+                                            className="h-32 text-center"
                                         >
-                                            <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                            Nenhum {profLabel.singular.toLowerCase()} encontrado.
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                                    <Users className="h-7 w-7 text-slate-400" />
+                                                </div>
+                                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Nenhum {profLabel.singular.toLowerCase()} encontrado</p>
+                                                <p className="text-xs text-slate-400">Cadastre seu primeiro profissional para começar</p>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    doctors.map((doctor: Doctor) => (
-                                        <TableRow key={doctor.id} className={selectedIds.includes(doctor.id) ? 'bg-muted/50' : ''}>
-                                            <TableCell>
+                                    doctors.map((doctor: Doctor) => {
+                                        const gradients = [
+                                            { from: '#4F46E5', to: '#06B6D4' },
+                                            { from: '#0EA5E9', to: '#2563EB' },
+                                            { from: '#10B981', to: '#059669' },
+                                            { from: '#8B5CF6', to: '#D946EF' },
+                                            { from: '#F59E0B', to: '#EF4444' }
+                                        ]
+                                        const name = doctor.user?.full_name || ''
+                                        const charSum = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+                                        const theme = gradients[charSum % gradients.length]
+                                        return (
+                                        <TableRow key={doctor.id} className={`group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200 ${selectedIds.includes(doctor.id) ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}>
+                                            <TableCell className="py-3 px-4">
                                                 <Checkbox
                                                     checked={selectedIds.includes(doctor.id)}
                                                     onCheckedChange={() => toggleSelect(doctor.id)}
                                                 />
                                             </TableCell>
-                                            <TableCell className="font-medium">
+                                            <TableCell className="py-3 px-6 font-medium">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                                                        {getInitials(doctor.user?.full_name || '')}
+                                                    <div
+                                                        style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
+                                                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                    >
+                                                        {getInitials(name)}
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span>{doctor.user?.full_name}</span>
-                                                        <span className="text-xs text-muted-foreground">
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">{doctor.user?.full_name}</span>
+                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                                                             {doctor.user?.email}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{doctor.specialty}</TableCell>
-                                            <TableCell>
-                                                {doctor.crm}/{doctor.crm_state}
+                                            <TableCell className="py-3 px-6 text-sm text-slate-600 dark:text-slate-300">{doctor.specialty}</TableCell>
+                                            <TableCell className="py-3 px-6">
+                                                <code className="text-xs bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md text-slate-600 dark:text-slate-400 font-mono tracking-tight">{doctor.crm}/{doctor.crm_state}</code>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="py-3 px-6 text-sm font-semibold text-slate-700 dark:text-slate-200">
                                                 {formatCurrency(doctor.consultation_price)}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="py-3 px-6">
                                                 <Badge
                                                     variant={
                                                         doctor.is_accepting_appointments
                                                             ? 'success'
                                                             : 'secondary'
                                                     }
+                                                    className="rounded-full text-[10px] font-semibold"
                                                 >
                                                     {doctor.is_accepting_appointments
                                                         ? 'Ativo'
@@ -393,7 +415,7 @@ export default function DoctorsPage() {
                                                 </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                    )})
                                 )}
                             </TableBody>
                         </Table>

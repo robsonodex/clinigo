@@ -387,85 +387,111 @@ export default function IntegracoesPage() {
     const hasApiAccess = isPlanAtLeast(planType, 'ENTERPRISE') || isSuperAdmin
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Globe className="w-7 h-7" />
-                        Integrações
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Conecte serviços externos à sua clínica
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' }}>
+                        <Globe className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Integrações</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Conecte serviços externos à sua clínica</p>
+                    </div>
                 </div>
-                <Badge variant="secondary" className={PLANS[planType]?.badgeColor}>
-                    {PLANS[planType]?.name || 'Starter'}
-                </Badge>
+                {PLANS[planType] && (
+                    <Badge variant="secondary" className={`rounded-full px-3 py-1 text-xs font-semibold self-start sm:self-center ${PLANS[planType].badgeColor}`}>
+                        Plano {PLANS[planType].name}
+                    </Badge>
+                )}
             </div>
 
             {/* Stats - Real data from database */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                    <CardContent className="pt-6">
-                        {isLoading ? (
-                            <Skeleton className="h-8 w-12" />
-                        ) : (
-                            <div className="text-2xl font-bold text-green-600">
-                                {integrationStats.connected}
-                            </div>
-                        )}
-                        <p className="text-sm text-muted-foreground">Ativas</p>
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                    <CardContent className="p-5 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase tracking-wider">Ativas</p>
+                            {isLoading ? (
+                                <Skeleton className="h-7 w-12 rounded mt-1" />
+                            ) : (
+                                <h3 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-450 mt-1">{integrationStats.connected}</h3>
+                            )}
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        {isLoading ? (
-                            <Skeleton className="h-8 w-12" />
-                        ) : (
-                            <div className="text-2xl font-bold">{integrationStats.available}</div>
-                        )}
-                        <p className="text-sm text-muted-foreground">Disponíveis</p>
+
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                    <CardContent className="p-5 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase tracking-wider">Disponíveis</p>
+                            {isLoading ? (
+                                <Skeleton className="h-7 w-12 rounded mt-1" />
+                            ) : (
+                                <h3 className="text-2xl font-extrabold text-slate-800 dark:text-white mt-1">{integrationStats.available}</h3>
+                            )}
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <Globe className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        {isLoading ? (
-                            <Skeleton className="h-8 w-12" />
-                        ) : (
-                            <div className="text-2xl font-bold text-amber-600">
-                                {integrationStats.toActivate}
-                            </div>
-                        )}
-                        <p className="text-sm text-muted-foreground">Para configurar</p>
+
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                    <CardContent className="p-5 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase tracking-wider">Configurar</p>
+                            {isLoading ? (
+                                <Skeleton className="h-7 w-12 rounded mt-1" />
+                            ) : (
+                                <h3 className="text-2xl font-extrabold text-amber-600 dark:text-amber-450 mt-1">{integrationStats.toActivate}</h3>
+                            )}
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-600 dark:text-amber-450">
+                            <AlertCircle className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        {isLoading ? (
-                            <Skeleton className="h-8 w-12" />
-                        ) : (
-                            <div className="text-2xl font-bold text-muted-foreground">
-                                {integrationStats.locked}
-                            </div>
-                        )}
-                        <p className="text-sm text-muted-foreground">Requerem upgrade</p>
+
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                    <CardContent className="p-5 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-450 dark:text-slate-500 uppercase tracking-wider">Bloqueadas</p>
+                            {isLoading ? (
+                                <Skeleton className="h-7 w-12 rounded mt-1" />
+                            ) : (
+                                <h3 className="text-2xl font-extrabold text-slate-400 dark:text-slate-500 mt-1">{integrationStats.locked}</h3>
+                            )}
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-450">
+                            <Lock className="w-5 h-5" />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Category Tabs */}
-            <div className="flex gap-2 flex-wrap">
-                {categories.map((cat) => (
-                    <Button
-                        key={cat.id}
-                        variant={activeTab === cat.id ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setActiveTab(cat.id)}
-                    >
-                        {cat.name}
-                    </Button>
-                ))}
+            {/* Category Tabs Premium */}
+            <div className="overflow-x-auto pb-1">
+                <div className="flex w-max bg-slate-100/80 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+                    {categories.map((cat) => (
+                        <Button
+                            key={cat.id}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setActiveTab(cat.id)}
+                            className={`rounded-lg text-xs font-semibold px-4 py-2 h-8 text-slate-650 dark:text-slate-450 transition-all ${
+                                activeTab === cat.id
+                                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                                    : 'hover:text-slate-800 dark:hover:text-white'
+                            }`}
+                        >
+                            {cat.name}
+                        </Button>
+                    ))}
+                </div>
             </div>
 
             {/* Integrations Grid */}
@@ -473,45 +499,75 @@ export default function IntegracoesPage() {
                 {filteredIntegrations.map((integration) => {
                     const status = getIntegrationStatus(integration)
                     const isLocked = status === 'locked'
+                    const config = PLANS[integration.requiredPlan]
+
+                    // Dynamic colors based on integration type
+                    const colors: Record<string, { bg: string; text: string; gradient: string }> = {
+                        google_calendar: { bg: '#EBF5FF', text: '#2563EB', gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' },
+                        google_drive: { bg: '#ECFDF5', text: '#059669', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
+                        resend: { bg: '#F1F5F9', text: '#475569', gradient: 'linear-gradient(135deg, #64748B, #334155)' },
+                        rdstation: { bg: '#FEF3C7', text: '#D97706', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)' },
+                        hubspot: { bg: '#FFEDD5', text: '#EA580C', gradient: 'linear-gradient(135deg, #F97316, #C2410C)' },
+                        zapier: { bg: '#FFF7ED', text: '#EA580C', gradient: 'linear-gradient(135deg, #FF6F00, #E65100)' },
+                        posthog: { bg: '#F3E8FF', text: '#9333EA', gradient: 'linear-gradient(135deg, #A855F7, #7E22CE)' },
+                    }
+
+                    const theme = colors[integration.id] || { bg: '#F1F5F9', text: '#475569', gradient: 'linear-gradient(135deg, #64748B, #334155)' }
 
                     return (
                         <Card
                             key={integration.id}
-                            className={`transition-shadow ${isLocked ? 'opacity-60' : 'hover:shadow-md'}`}
+                            className={`rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-750 transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+                                isLocked ? 'opacity-70 dark:opacity-60 bg-slate-50/50 dark:bg-slate-950/10' : ''
+                            }`}
                         >
-                            <CardContent className="pt-6">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-3">
-                                        <div className={`p-2 rounded-lg ${isLocked ? 'bg-muted' : status === 'connected' ? 'bg-green-100' : 'bg-primary/10'}`}>
-                                            <integration.icon className={`w-6 h-6 ${isLocked ? 'text-muted-foreground' : status === 'connected' ? 'text-green-600' : 'text-primary'}`} />
+                            <CardContent className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                <div className="space-y-3">
+                                    <div className="flex items-start justify-between">
+                                        <div
+                                            style={{ background: isLocked ? '#E2E8F0' : theme.gradient }}
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+                                        >
+                                            <integration.icon className="w-5 h-5" />
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-semibold">{integration.name}</h3>
-                                                {getPlanBadge(integration.requiredPlan)}
-                                            </div>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                {integration.description}
-                                            </p>
+                                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                            {config && integration.requiredPlan !== 'BASICO' && (
+                                                <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[10px] font-bold border-none ${config.badgeColor}`}>
+                                                    {config.name}
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
+
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-base">{integration.name}</h3>
+                                        <p className="text-xs text-slate-450 dark:text-slate-500 font-medium leading-relaxed mt-1">
+                                            {integration.description}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between mt-4">
+
+                                <div className="flex items-center justify-between pt-2">
                                     {getStatusBadge(status)}
                                     {isLocked ? (
                                         <Link href="/dashboard/planos">
-                                            <Button variant="outline" size="sm">
-                                                <ArrowRight className="w-4 h-4 mr-1" />
+                                            <Button size="sm" className="rounded-xl h-8 px-3.5 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800">
+                                                <ArrowRight className="w-3.5 h-3.5 mr-1" />
                                                 Upgrade
                                             </Button>
                                         </Link>
                                     ) : (
                                         <Button
-                                            variant={status === 'connected' ? 'default' : 'outline'}
+                                            variant={status === 'connected' ? 'outline' : 'default'}
                                             size="sm"
                                             onClick={() => handleConfigure(integration)}
+                                            className={`rounded-xl h-8 px-3.5 text-xs font-semibold ${
+                                                status === 'connected'
+                                                    ? 'border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850'
+                                                    : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800'
+                                            }`}
                                         >
-                                            <Settings className="w-4 h-4 mr-1" />
+                                            <Settings className="w-3.5 h-3.5 mr-1" />
                                             {status === 'connected' ? 'Gerenciar' : 'Configurar'}
                                         </Button>
                                     )}
@@ -524,25 +580,27 @@ export default function IntegracoesPage() {
 
             {/* Configuration Modal */}
             <Dialog open={configModalOpen} onOpenChange={setConfigModalOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md rounded-2xl border-slate-100 dark:border-slate-800">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-850 dark:text-white">
                             {selectedIntegration && (
-                                <selectedIntegration.icon className="w-5 h-5" />
+                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-white">
+                                    <selectedIntegration.icon className="w-4.5 h-4.5" />
+                                </div>
                             )}
                             {selectedIntegration ? `Configurar ${selectedIntegration.name}` : 'Configurar'}
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-xs text-slate-400 dark:text-slate-500">
                             {selectedIntegration && isConfigured(selectedIntegration)
                                 ? 'Atualize as credenciais ou desconecte a integração.'
                                 : 'Configure as credenciais para ativar esta integração.'}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4 py-3">
                         {selectedIntegration?.fields.map((field) => (
                             <div key={field.key} className="space-y-2">
-                                <Label htmlFor={field.key}>{field.label}</Label>
+                                <Label htmlFor={field.key} className="text-xs font-semibold text-slate-500 dark:text-slate-450">{field.label}</Label>
                                 <div className="relative">
                                     <Input
                                         id={field.key}
@@ -550,11 +608,12 @@ export default function IntegracoesPage() {
                                         placeholder={field.placeholder}
                                         value={formData[field.key] || ''}
                                         onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                                        className="h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-705 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
                                     />
                                     {field.type === 'password' && (
                                         <button
                                             type="button"
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-300"
                                             onClick={() => setShowPasswords({ ...showPasswords, [field.key]: !showPasswords[field.key] })}
                                         >
                                             {showPasswords[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -569,27 +628,32 @@ export default function IntegracoesPage() {
                                 href={selectedIntegration.docsUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-primary hover:underline flex items-center gap-1"
+                                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 mt-1"
                             >
-                                <ExternalLink className="w-3 h-3" />
-                                Ver documentação
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Ver documentação da integração
                             </a>
                         )}
                     </div>
 
-                    <DialogFooter className="flex gap-2">
+                    <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-2">
                         {selectedIntegration && isConfigured(selectedIntegration) && (
                             <Button
                                 variant="destructive"
                                 onClick={handleDisconnect}
                                 disabled={saving}
+                                className="rounded-xl h-10 px-4 text-sm font-semibold flex items-center justify-center gap-1.5"
                             >
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                                 Desconectar
                             </Button>
                         )}
-                        <Button onClick={handleSave} disabled={saving}>
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="rounded-xl h-10 px-5 text-sm font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center justify-center gap-1.5"
+                        >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                             {selectedIntegration && isConfigured(selectedIntegration) ? 'Atualizar' : 'Ativar'}
                         </Button>
                     </DialogFooter>
@@ -598,76 +662,77 @@ export default function IntegracoesPage() {
 
             {/* API Section - Only for ENTERPRISE+ */}
             {hasApiAccess ? (
-                <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Key className="w-5 h-5" />
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                    <CardHeader className="pb-4 border-b border-slate-50 dark:border-slate-800/50">
+                        <CardTitle className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Key className="w-5 h-5 text-slate-650" />
                             API REST
-                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                            <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[10px] font-bold border-none bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                                 Ativo
                             </Badge>
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className="text-xs text-slate-400 dark:text-slate-500">
                             Integre com seus sistemas existentes via API
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <div className="p-4 bg-white/50 rounded-lg">
-                                <Label className="text-sm font-medium">Sua API Key</Label>
-                                <div className="flex gap-2 mt-2">
-                                    <Input
-                                        value={`sk_live_${(clinic as any)?.id ? (clinic as any).id.substring(0, 16) : '••••••••••••••••'}`}
-                                        readOnly
-                                        className="font-mono"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                            if ((clinic as any)?.id) {
-                                                navigator.clipboard.writeText(`sk_live_${(clinic as any).id}`)
-                                                toast({ title: 'Copiado!' })
-                                            }
-                                        }}
-                                    >
-                                        Copiar
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline">
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    Ver Documentação
+                    <CardContent className="space-y-4 pt-6">
+                        <div className="p-4 bg-slate-50/50 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">Sua API Key</Label>
+                            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                                <Input
+                                    value={`sk_live_${(clinic as any)?.id ? (clinic as any).id.substring(0, 16) : '••••••••••••••••'}`}
+                                    readOnly
+                                    className="font-mono h-10 bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-350 text-xs tracking-wider"
+                                />
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        if ((clinic as any)?.id) {
+                                            navigator.clipboard.writeText(`sk_live_${(clinic as any).id}`)
+                                            toast({ title: 'Copiado!' })
+                                        }
+                                    }}
+                                    className="rounded-xl h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850"
+                                >
+                                    Copiar Chave
                                 </Button>
                             </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" className="rounded-xl h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-355 hover:bg-slate-100 dark:hover:bg-slate-850 flex items-center gap-1.5">
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Ver Documentação da API
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 relative overflow-hidden min-h-[200px]">
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                        <div className="text-center p-6">
-                            <Lock className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-                            <p className="font-medium mb-1">API REST Dedicada</p>
-                            <p className="text-sm text-muted-foreground mb-3">
-                                Disponível no plano Enterprise+
+                <Card className="rounded-2xl border border-slate-150 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40 relative overflow-hidden min-h-[220px]">
+                    <div className="absolute inset-0 bg-white/70 dark:bg-slate-950/65 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <div className="text-center p-6 max-w-sm">
+                            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mx-auto mb-3 shadow-sm">
+                                <Lock className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-bold text-slate-805 dark:text-white text-base">API REST Dedicada</h3>
+                            <p className="text-xs text-slate-450 dark:text-slate-500 mt-1 mb-4 leading-relaxed">
+                                Faça integrações customizadas com outros sistemas. Disponível exclusivamente no plano Enterprise.
                             </p>
                             <Link href="/dashboard/planos">
-                                <Button size="sm">
-                                    Fazer Upgrade
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                <Button size="sm" className="rounded-xl h-9 px-4 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center gap-1.5">
+                                    Fazer Upgrade de Plano
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                 </Button>
                             </Link>
                         </div>
                     </div>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Key className="w-5 h-5" />
+                            <Key className="w-5 h-5 text-slate-400" />
                             API REST
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-slate-400 dark:text-slate-550">
                             Integre com seus sistemas via API dedicada.
                         </p>
                     </CardContent>
@@ -676,80 +741,88 @@ export default function IntegracoesPage() {
 
             {/* Webhooks - Only for PROFESSIONAL+ */}
             {isPlanAtLeast(planType, 'PROFESSIONAL') || isSuperAdmin ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Link2 className="w-5 h-5" />
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 overflow-hidden">
+                    <CardHeader className="pb-4 border-b border-slate-50 dark:border-slate-800/50">
+                        <CardTitle className="text-lg font-bold text-slate-805 dark:text-white flex items-center gap-2">
+                            <Link2 className="w-5 h-5 text-slate-650" />
                             Webhooks
                         </CardTitle>
-                        <CardDescription>
-                            Receba notificações em tempo real sobre eventos
+                        <CardDescription className="text-xs text-slate-450 dark:text-slate-500">
+                            Receba notificações em tempo real sobre eventos ocorridos no sistema
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="p-4 bg-muted rounded-lg">
-                            <Label className="text-sm font-medium">URL do Webhook</Label>
-                            <div className="flex gap-2 mt-2">
+                    <CardContent className="space-y-5 pt-6">
+                        <div className="p-4 bg-slate-50/50 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">URL de Destino do Webhook</Label>
+                            <div className="flex flex-col sm:flex-row gap-2 mt-2">
                                 <Input
                                     placeholder="https://seu-sistema.com/webhook"
                                     defaultValue={settings.webhook_url || ''}
+                                    className="h-10 bg-white dark:bg-slate-900 border-slate-205 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-350 text-sm font-medium"
                                 />
-                                <Button variant="outline">
-                                    Testar
+                                <Button variant="outline" className="rounded-xl h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                    Testar Envio
                                 </Button>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Eventos disponíveis:</Label>
-                            <div className="grid gap-2 md:grid-cols-2">
+                        <div className="space-y-3">
+                            <Label className="text-xs font-semibold text-slate-500 dark:text-slate-450">Eventos para inscrição:</Label>
+                            <div className="grid gap-2 sm:grid-cols-2">
                                 {[
-                                    'appointment.created',
-                                    'appointment.confirmed',
-                                    'appointment.cancelled',
-                                    'payment.received',
-                                    'payment.refunded',
-                                    'patient.created',
+                                    { key: 'appointment.created', label: 'Agendamento Criado' },
+                                    { key: 'appointment.confirmed', label: 'Agendamento Confirmado' },
+                                    { key: 'appointment.cancelled', label: 'Agendamento Cancelado' },
+                                    { key: 'payment.received', label: 'Pagamento Recebido' },
+                                    { key: 'payment.refunded', label: 'Pagamento Reembolsado' },
+                                    { key: 'patient.created', label: 'Paciente Cadastrado' },
                                 ].map((event) => (
                                     <div
-                                        key={event}
-                                        className="flex items-center justify-between p-2 bg-muted/50 rounded"
+                                        key={event.key}
+                                        className="flex items-center justify-between p-3 bg-slate-50/40 dark:bg-slate-950/20 border border-slate-100/60 dark:border-slate-850 rounded-xl"
                                     >
-                                        <code className="text-sm">{event}</code>
-                                        <Switch defaultChecked={settings.webhook_events?.includes(event)} />
+                                        <div className="space-y-0.5">
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{event.label}</p>
+                                            <code className="text-[10px] text-slate-450 font-semibold">{event.key}</code>
+                                        </div>
+                                        <Switch defaultChecked={settings.webhook_events?.includes(event.key)} className="data-[state=checked]:bg-emerald-500" />
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <Button>Salvar Configurações</Button>
+                        <Button className="rounded-xl h-10 px-5 text-sm font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-850 flex items-center justify-center gap-1.5 mt-2">
+                            Salvar Configurações
+                        </Button>
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="relative overflow-hidden">
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                        <div className="text-center p-6">
-                            <Lock className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-                            <p className="font-medium mb-1">Webhooks</p>
-                            <p className="text-sm text-muted-foreground mb-3">
-                                Disponível no plano Profissional+
+                <Card className="rounded-2xl border border-slate-150 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40 relative overflow-hidden min-h-[220px]">
+                    <div className="absolute inset-0 bg-white/70 dark:bg-slate-950/65 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <div className="text-center p-6 max-w-sm">
+                            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mx-auto mb-3 shadow-sm">
+                                <Lock className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-bold text-slate-805 dark:text-white text-base">Webhooks ativos</h3>
+                            <p className="text-xs text-slate-450 dark:text-slate-500 mt-1 mb-4 leading-relaxed">
+                                Envie notificações em tempo real para seu sistema externo. Disponível a partir do plano Profissional.
                             </p>
                             <Link href="/dashboard/planos">
-                                <Button size="sm">
-                                    Fazer Upgrade
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                <Button size="sm" className="rounded-xl h-9 px-4 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center gap-1.5">
+                                    Fazer Upgrade de Plano
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                 </Button>
                             </Link>
                         </div>
                     </div>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Link2 className="w-5 h-5" />
+                            <Link2 className="w-5 h-5 text-slate-400" />
                             Webhooks
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-slate-400 dark:text-slate-550">
                             Configure webhooks para integrar com sistemas externos.
                         </p>
                     </CardContent>

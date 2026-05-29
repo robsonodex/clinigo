@@ -103,52 +103,68 @@ export default function AbsenceControlPage() {
     if (loading) return <div className="flex items-center justify-center h-96"><Loader2 className="h-8 w-8 animate-spin" /></div>
 
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">Controle de Faltas e Pacotes</h1>
-                <p className="text-muted-foreground">Gerencie regras de ausência, monitore reposições pendentes e acompanhe pacotes de sessões.</p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #EF4444, #F97316)' }}>
+                        <AlertTriangle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Controle de Faltas e Pacotes</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie regras de ausência, reposições e pacotes de sessões</p>
+                    </div>
+                </div>
             </div>
 
-            {/* Dashboard Summary Cards */}
+            {/* Dashboard Summary Cards Premium */}
             <div className="grid gap-4 md:grid-cols-4 mb-6">
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Reposições Pendentes</CardTitle>
-                        <RefreshCcw className="h-4 w-4 text-orange-500" />
+                        <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Reposições Pendentes</CardTitle>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F59E0B, #F97316)' }}>
+                            <RefreshCcw className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{replacements.filter(r => r.status === 'pending').length}</div>
-                        <p className="text-xs text-muted-foreground">Sessões aguardando agendamento</p>
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{replacements.filter(r => r.status === 'pending').length}</div>
+                        <p className="text-[10px] text-slate-400 mt-1">Sessões aguardando agendamento</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pacotes Ativos</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-green-500" />
+                        <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pacotes Ativos</CardTitle>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                            <CheckCircle className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{packages.filter(p => p.status === 'active').length}</div>
-                        <p className="text-xs text-muted-foreground">Pacotes em andamento</p>
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{packages.filter(p => p.status === 'active').length}</div>
+                        <p className="text-[10px] text-slate-400 mt-1">Pacotes em andamento</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Regras Ativas</CardTitle>
-                        <Settings className="h-4 w-4 text-blue-500" />
+                        <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Regras Ativas</CardTitle>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0EA5E9, #2563EB)' }}>
+                            <Settings className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{rules.filter(r => r.is_active).length}</div>
-                        <p className="text-xs text-muted-foreground">Controlando a agenda automaticamente</p>
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{rules.filter(r => r.is_active).length}</div>
+                        <p className="text-[10px] text-slate-400 mt-1">Controlando a agenda automaticamente</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Sinal de Alerta</CardTitle>
-                        <XCircle className="h-4 w-4 text-red-500" />
+                        <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sinal de Alerta</CardTitle>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)' }}>
+                            <XCircle className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{replacements.length > 0 ? 'Monitorando' : 'Saudável'}</div>
-                        <p className="text-xs text-muted-foreground">Baseado nas faltas recentes registradas</p>
+                        <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{replacements.length > 0 ? 'Monitorando' : 'Saudável'}</div>
+                        <p className="text-[10px] text-slate-400 mt-1">Baseado nas faltas recentes registradas</p>
                     </CardContent>
                 </Card>
             </div>

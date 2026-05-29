@@ -332,17 +332,22 @@ export default function InventoryPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold">Estoque</h1>
-                    <p className="text-muted-foreground">Gestão de produtos e materiais</p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
+                        <Package className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Estoque</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gestão de produtos e materiais</p>
+                    </div>
                 </div>
-
+                <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
                     <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
+                        <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold"><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
@@ -446,15 +451,15 @@ export default function InventoryPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
-
-                {/* Botão importar */}
-                <Button variant="outline" onClick={() => setShowImport(true)}>
+                {/* Botão importar e Histórico Premium */}
+                <Button variant="outline" onClick={() => setShowImport(true)} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 px-4 text-sm font-medium">
                     <Upload className="h-4 w-4 mr-2" />Importar Planilha
                 </Button>
-                <Button variant="outline" onClick={() => { fetchImports() }}>
+                <Button variant="outline" onClick={() => { fetchImports() }} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 px-4 text-sm font-medium">
                     <History className="h-4 w-4 mr-2" />Importações
                 </Button>
             </div>
+        </div>
 
             {/* Dialog de importação CSV */}
             <Dialog open={showImport} onOpenChange={setShowImport}>
@@ -544,40 +549,40 @@ export default function InventoryPage() {
             {/* Summary Cards */}
             {summary && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card>
+                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Produtos</CardTitle>
-                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Produtos</CardTitle>
+                            <Package className="h-4 w-4 text-slate-400" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{summary.totalProducts}</div>
+                            <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{summary.totalProducts}</div>
                         </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-yellow-500">
+                    <Card className="rounded-2xl border border-l-4 border-l-yellow-500 border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
+                            <CardTitle className="text-sm font-medium text-yellow-600">Estoque Baixo</CardTitle>
                             <TrendingDown className="h-4 w-4 text-yellow-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-yellow-600">{summary.lowStock}</div>
+                            <div className="text-2xl font-extrabold text-yellow-600">{summary.lowStock}</div>
                         </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-red-500">
+                    <Card className="rounded-2xl border border-l-4 border-l-red-500 border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Sem Estoque</CardTitle>
+                            <CardTitle className="text-sm font-medium text-red-600">Sem Estoque</CardTitle>
                             <AlertTriangle className="h-4 w-4 text-red-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-red-600">{summary.outOfStock}</div>
+                            <div className="text-2xl font-extrabold text-red-600">{summary.outOfStock}</div>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-                            <Box className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Valor Total</CardTitle>
+                            <Box className="h-4 w-4 text-slate-400" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(summary.totalValue)}</div>
+                            <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{formatCurrency(summary.totalValue)}</div>
                         </CardContent>
                     </Card>
                 </div>
@@ -585,12 +590,12 @@ export default function InventoryPage() {
 
             {/* Search */}
             <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                 <Input
                     placeholder="Buscar produtos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
                 />
             </div>
 
@@ -600,11 +605,11 @@ export default function InventoryPage() {
                     <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
             ) : products.length === 0 ? (
-                <Card>
+                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40">
                     <CardContent className="flex flex-col items-center justify-center py-12">
-                        <Package className="h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="font-medium">Nenhum produto cadastrado</h3>
-                        <p className="text-muted-foreground text-sm">Adicione seu primeiro produto</p>
+                        <Package className="h-12 w-12 text-slate-400 mb-4" />
+                        <h3 className="font-semibold text-slate-700 dark:text-slate-300">Nenhum produto cadastrado</h3>
+                        <p className="text-slate-400 text-sm mt-1">Adicione seu primeiro produto</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -614,14 +619,14 @@ export default function InventoryPage() {
                         const qty = product.stock?.[0]?.quantity || 0
 
                         return (
-                            <Card key={product.id} className="hover:shadow-md transition-shadow">
+                            <Card key={product.id} className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 hover:shadow-md transition-all duration-200 group">
                                 <CardContent className="flex items-center justify-between py-4">
                                     <div className="flex items-center gap-4">
-                                        <div className="p-2 bg-muted rounded-lg">
-                                            <Package className="h-5 w-5" />
+                                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                                            <Package className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                                         </div>
                                         <div>
-                                            <h3 className="font-medium">{product.name}</h3>
+                                            <h3 className="font-semibold text-slate-800 dark:text-slate-200">{product.name}</h3>
                                             <p className="text-sm text-muted-foreground">
                                                 SKU: {product.sku} • {product.unit}
                                             </p>

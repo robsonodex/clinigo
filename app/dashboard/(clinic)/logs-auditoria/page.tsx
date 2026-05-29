@@ -149,19 +149,20 @@ export default function AuditoriaPage() {
         : logs
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Shield className="h-6 w-6 text-primary" />
-                        Auditoria
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Rastreie todas as ações dos usuários no sistema
-                    </p>
+        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #64748B, #334155)' }}>
+                        <Shield className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Auditoria</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Rastreie todas as ações dos usuários no sistema</p>
+                    </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={fetchLogs}>
+                    <Button variant="outline" onClick={fetchLogs} className="rounded-xl">
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Atualizar
                     </Button>

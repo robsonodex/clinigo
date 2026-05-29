@@ -898,10 +898,15 @@ function NavItemComponent({
                     ? 'bg-primary text-primary-foreground'
                     : isLocked
                         ? 'text-muted-foreground/50 hover:bg-muted/50'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                        : item.title === 'Checklist Inicial'
+                            ? 'text-emerald-600 hover:bg-emerald-50/50 dark:text-emerald-450 dark:hover:bg-emerald-950/20 active:bg-emerald-100/30 font-semibold'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
             )}
         >
-            <item.icon className="w-5 h-5" />
+            <item.icon className={cn(
+                "w-5 h-5",
+                !isActive && item.title === 'Checklist Inicial' && "text-emerald-500 dark:text-emerald-450"
+            )} />
             <span className="flex-1 flex items-center">
                 {item.title}
                 {!isLocked && (
@@ -1080,26 +1085,26 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                         className={cn(
                                             "flex items-center justify-between w-full px-3 py-2 rounded-lg group cursor-pointer transition-all duration-200",
                                             theme?.headerBg || 'hover:bg-muted/50',
-                                            isOpen && theme ? theme.text : ''
+                                            theme ? theme.text : ''
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
                                             {SectionIcon && (
                                                 <SectionIcon className={cn(
                                                     "w-4 h-4 transition-colors duration-200",
-                                                    isOpen && theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
+                                                    theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
                                                 )} />
                                             )}
                                             <span className={cn(
                                                 "text-xs font-semibold uppercase tracking-wider transition-colors duration-200",
-                                                isOpen && theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
+                                                theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
                                             )}>
                                                 {section.title}
                                             </span>
                                         </div>
                                         <ChevronDown className={cn(
                                             "w-3.5 h-3.5 transition-all duration-200",
-                                            isOpen && theme ? theme.text : "text-muted-foreground group-hover:text-foreground",
+                                            theme ? theme.text : "text-muted-foreground group-hover:text-foreground",
                                             !isOpen && "-rotate-90"
                                         )} />
                                     </button>

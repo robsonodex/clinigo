@@ -670,31 +670,30 @@ export default function AgendaPage() {
                         {/* Botão de Filtros/Ações unificado (Desktop e Celular) */}
                         <Button
                             type="button"
-                            size="sm"
                             variant="outline"
                             className={cn(
-                                "flex gap-1.5 h-8 text-xs bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm",
+                                "flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300",
                                 showMobileFilters && "bg-slate-100 border-slate-300 dark:bg-slate-800"
                             )}
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
                         >
-                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            <SlidersHorizontal className="h-4 w-4" />
                             {showMobileFilters ? 'Ocultar Filtros' : 'Filtros e Ações'}
                         </Button>
 
                         <div className="w-px h-6 bg-border hidden sm:block mx-1" />
 
                         {/* Navegação de Data */}
-                        <div className="flex items-center border rounded-md bg-white shadow-sm h-8">
+                        <div className="flex items-center border rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-10 overflow-hidden">
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={prevPeriod}
-                                className="h-8 w-8 rounded-none"
+                                className="h-10 w-10 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="px-3 text-xs font-semibold min-w-[130px] text-center text-slate-700">
+                            <span className="px-3 text-sm font-semibold min-w-[130px] text-center text-slate-700 dark:text-slate-300">
                                 {view === 'week' ? (
                                     <>
                                         {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
@@ -708,26 +707,25 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={nextPeriod}
-                                className="h-8 w-8 rounded-none"
+                                className="h-10 w-10 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
 
                         {/* Botão Hoje */}
-                        <Button variant="outline" size="sm" onClick={goToToday} className="bg-white border-slate-200 shadow-sm h-8 text-xs font-semibold px-3">
+                        <Button variant="outline" onClick={goToToday} className="bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-4 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60">
                             Hoje
                         </Button>
                         
                         {/* Seletor Dia / Semana */}
-                        <div className="flex border rounded-md overflow-hidden bg-white shadow-sm h-8">
+                        <div className="flex border rounded-xl overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-10">
                             <Button
                                 variant={view === 'day' ? 'outline' : 'ghost'}
                                 onClick={() => setView('day')}
-                                size="sm"
                                 className={cn(
-                                    "h-8 rounded-none border-0 text-xs font-semibold px-3",
-                                    view === 'day' && "bg-slate-100 text-slate-800 font-semibold"
+                                    "h-10 rounded-none border-0 text-sm font-semibold px-4 hover:bg-slate-50 dark:hover:bg-slate-800/60",
+                                    view === 'day' && "bg-slate-100 dark:bg-slate-800 text-slate-850 dark:text-slate-200 font-semibold"
                                 )}
                             >
                                 Dia
@@ -735,11 +733,10 @@ export default function AgendaPage() {
                             <Button
                                 variant={view === 'week' ? 'default' : 'ghost'}
                                 onClick={() => setView('week')}
-                                size="sm"
                                 className={cn(
-                                    "h-8 rounded-none text-xs font-semibold px-3",
+                                    "h-10 rounded-none border-0 text-sm font-semibold px-4 hover:bg-slate-50 dark:hover:bg-slate-800/60",
                                     view === 'week' 
-                                        ? "bg-emerald-500 hover:bg-emerald-600 text-white border-0" 
+                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-0 font-semibold" 
                                         : "bg-transparent text-foreground hover:bg-muted"
                                 )}
                             >
@@ -750,9 +747,8 @@ export default function AgendaPage() {
                         {/* Botão Mural de Recados */}
                         <Button
                             variant="outline"
-                            size="sm"
                             onClick={handleOpenMural}
-                            className="bg-white shadow-sm h-8 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-md font-semibold text-amber-800 dark:text-amber-300 text-xs"
+                            className="bg-white dark:bg-slate-900 shadow-sm h-10 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-xl font-semibold text-amber-800 dark:text-amber-300 text-sm px-4"
                             title="Ver recados e comunicados importantes"
                         >
                             <Megaphone className={cn("h-4 w-4 text-amber-500", unreadBulletinsCount > 0 && "animate-bounce")} />
@@ -766,13 +762,10 @@ export default function AgendaPage() {
                                 </span>
                             )}
                         </Button>
-                    </div>
 
-                    {/* Botões do lado direito (Novo Agendamento e Seletores de Modo) */}
-                    <div className="flex items-center gap-3">
                         {/* Seletor Padrão / Timeline */}
                         <TooltipProvider>
-                            <div className="flex border rounded-md overflow-hidden bg-white shadow-sm h-8">
+                            <div className="flex border rounded-xl overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-10">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -780,8 +773,8 @@ export default function AgendaPage() {
                                             onClick={() => setCalendarStyle('standard')}
                                             size="icon"
                                             className={cn(
-                                                "h-8 w-8 rounded-none border-0",
-                                                calendarStyle === 'standard' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "text-muted-foreground hover:bg-slate-50"
+                                                "h-10 w-10 rounded-none border-0 hover:bg-slate-50 dark:hover:bg-slate-800/60",
+                                                calendarStyle === 'standard' ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-muted-foreground hover:bg-slate-50"
                                             )}
                                         >
                                             <LayoutGrid className="h-4 w-4" />
@@ -796,8 +789,8 @@ export default function AgendaPage() {
                                             onClick={() => setCalendarStyle('timeline')}
                                             size="icon"
                                             className={cn(
-                                                "h-8 w-8 rounded-none border-0",
-                                                calendarStyle === 'timeline' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "text-muted-foreground hover:bg-slate-50"
+                                                "h-10 w-10 rounded-none border-0 hover:bg-slate-50 dark:hover:bg-slate-800/60",
+                                                calendarStyle === 'timeline' ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-muted-foreground hover:bg-slate-50"
                                             )}
                                         >
                                             <List className="h-4 w-4" />
@@ -810,8 +803,7 @@ export default function AgendaPage() {
 
                         {/* Novo Agendamento */}
                         <Button
-                            size="sm"
-                            className="gap-1.5 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md shadow-sm"
+                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold gap-1.5 border-0"
                             onClick={() => {
                                 setPreselectedSlot(null)
                                 setManualAppointmentOpen(true)
@@ -826,40 +818,36 @@ export default function AgendaPage() {
 
                 {/* Filtros e Ações Secundárias colapsáveis (Tanto Desktop quanto Mobile) */}
                 <div className={cn(
-                    "flex-wrap items-center gap-2 border-t pt-3 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-lg border border-slate-200/60 transition-all duration-300 shadow-sm",
+                    "flex-wrap items-center gap-2 border-t pt-3 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 transition-all duration-300 shadow-sm",
                     showMobileFilters ? "flex" : "hidden"
                 )}>
                     <Button
-                        size="sm"
                         variant="outline"
-                        className="gap-2 h-8 text-xs"
+                        className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold"
                         onClick={() => setRecurringAppointmentOpen(true)}
                     >
                         <Repeat className="h-4 w-4" />
                         Recorrente
                     </Button>
                     <Button
-                        size="sm"
                         variant="outline"
-                        className="gap-2 h-8 text-xs"
+                        className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold"
                         onClick={() => setAbsenceModalOpen(true)}
                     >
                         <UserX className="h-4 w-4" />
                         Ausência
                     </Button>
                     <Button
-                        size="sm"
                         variant="outline"
-                        className="gap-2 h-8 text-xs"
+                        className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold"
                         onClick={() => setSuggestionModalOpen(true)}
                     >
                         <Lightbulb className="h-4 w-4" />
                         Sugerir
                     </Button>
                     <Button
-                        size="sm"
                         variant="outline"
-                        className="gap-2 h-8 text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+                        className="gap-2 h-10 text-sm border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl px-4 font-semibold"
                         onClick={() => {
                             setPreselectedSlot(null)
                             setIsEncaixeMode(true)
@@ -870,10 +858,9 @@ export default function AgendaPage() {
                         Encaixe
                     </Button>
                     <Button
-                        size="sm"
                         variant={showFreeSlots ? 'default' : 'outline'}
                         className={cn(
-                            'gap-2 h-8 text-xs',
+                            'gap-2 h-10 text-sm rounded-xl px-4 font-semibold',
                             showFreeSlots && 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         )}
                         onClick={() => setShowFreeSlots(!showFreeSlots)}
@@ -885,7 +872,7 @@ export default function AgendaPage() {
                     <div className="hidden md:block w-px h-6 bg-border mx-1" />
                     
                     <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor && !isCoordinator}>
-                        <SelectTrigger className="w-full md:w-[220px] lg:w-[280px] h-8 text-xs">
+                        <SelectTrigger className="w-full md:w-[220px] lg:w-[280px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
                             <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
                             <div className="flex-1 truncate text-left">
                                 <SelectValue placeholder="Profissional" />
@@ -916,21 +903,21 @@ export default function AgendaPage() {
                     </Select>
                     
                     <div className="relative w-full md:w-auto">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                             type="text"
                             placeholder="Buscar paciente..."
                             value={patientSearch}
                             onChange={(e) => setPatientSearch(e.target.value)}
-                            className="h-8 w-full md:w-[180px] pl-8 pr-8 text-xs rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                            className="h-10 w-full md:w-[180px] pl-9 pr-8 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
                         />
                         {patientSearch && (
                             <button
                                 type="button"
                                 onClick={() => setPatientSearch('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-4 w-4" />
                             </button>
                         )}
                     </div>
