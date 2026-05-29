@@ -630,7 +630,11 @@ export default function RecepcaoPage() {
                                 )}
                             </DialogContent>
                         </Dialog>
-                             {/* Horizontal Stats List (4 capsule cards matching user's exact design) */}
+                    </>
+                )}
+            </div>
+
+            {/* Horizontal Stats List (4 capsule cards matching user's exact design) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. Aguardando */}
                 <div className="flex items-center justify-between px-6 py-3 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 rounded-full shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer">
