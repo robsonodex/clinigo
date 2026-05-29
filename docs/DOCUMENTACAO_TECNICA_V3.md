@@ -1733,3 +1733,13 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **Exibição Completa de Informações & Notas**: Adicionada a exibição destacada das observações clínicas e notas do agendamento (`notes`) em uma caixa estilizada translúcida com texto itálico no rodapé de cada card. Incorporados badges para identificar "Prioridade" (vermelho destrutivo) e "Encaixe" (azul celeste).
   - **Padronização de Botões (Checklist de Botões)**: Substituição do antigo badge passivo de status "Atendido" na coluna de Concluídos por um botão premium verde completo, contendo o ícone `CheckCircle` e o rótulo "Atendido", padronizando a altura (`h-8`), cantos arredondados (`rounded-xl`) e feedbacks visuais em conformidade com as diretrizes de botões.
 
+### 29/05/2026 - Atualização e Recarregamento Automático de Tela na Clínica via Hard Refresh no Master Hub
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Back-end → API Revalidação → app/api/super-admin/revalidate/route.ts → POST()
+  - **Propagação Realtime do Expurgo de Cache**: Adicionada a instrução para realizar um update no banco de dados na linha correspondente da clínica (tabela `clinics`, coluna `updated_at` com o timestamp atual). Isso garante que um sinal em tempo real (Supabase Postgres Changes) seja disparado para todos os navegadores ativos daquela clínica simultaneamente ao limpar o cache no servidor Next.js.
+- Módulo → Clientes → Layout Principal → app/dashboard/layout.tsx & components/system/system-refresh-listener.tsx → [NEW]
+  - **Componente SystemRefreshListener**: Criação de componente cliente invisível responsável por escutar em tempo real a alteração do campo `updated_at` na tabela `clinics` para o respectivo ID da clínica logada. Quando detectado o evento de atualização disparado pelo Master Hub, ele automaticamente aciona `window.location.reload()` no navegador cliente.
+  - **Integração no Layout**: Injetado o `<SystemRefreshListener clinicId={effectiveClinicId} />` no layout global do Dashboard da clínica (`app/dashboard/layout.tsx`), garantindo cobertura total em qualquer aba que o usuário da clínica esteja navegando.
+

@@ -7,6 +7,7 @@ import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
 import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
+import { SystemRefreshListener } from '@/components/system/system-refresh-listener'
 
 export default async function DashboardRootLayout({
     children,
@@ -52,6 +53,7 @@ export default async function DashboardRootLayout({
     return (
         <>
             <StaffSignatureGate>
+                <SystemRefreshListener clinicId={effectiveClinicId} />
                 <DashboardLayout>
                     <ImpersonationBanner />
                     <DemoBanner isDemo={isDemo} />

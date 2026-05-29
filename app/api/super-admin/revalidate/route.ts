@@ -44,9 +44,15 @@ export async function POST(request: NextRequest) {
         revalidatePath('/api/reports', 'page')
         revalidatePath('/api/financial', 'layout')
 
+        // Trigger real-time reload on all active client browsers for this clinic
+        await supabase
+            .from('clinics')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', clinicId)
+
         return NextResponse.json({
             success: true,
-            message: `Cache limpo para "${clinicName || clinicId}". Os dados serão recalculados no próximo acesso.`
+            message: `Cache limpo para "${clinicName || clinicId}". Os navegadores ativos da clínica foram notificados para recarregar.`
         })
     } catch (error) {
         console.error('Revalidate error:', error)
