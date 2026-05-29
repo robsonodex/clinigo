@@ -361,25 +361,68 @@ export default function DashboardPage() {
     return (
         <div className="space-y-6" >
             {/* Welcome */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">
-                        Olá, {profile?.full_name?.split(' ')[0]}!
-                    </h1>
-                    <p className="text-muted-foreground">
-                        {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
-                        {isDoctor && 'Acompanhe suas consultas e pacientes.'}
-                        {isSuperAdmin && !isImpersonating && 'Monitore a plataforma CliniGo.'}
-                        {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
-                    </p>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/40 dark:bg-slate-900/10 p-4 rounded-xl border border-slate-200/60 shadow-sm">
+                <div className="flex items-center justify-between flex-1">
+                    <div>
+                        <h1 className="text-2xl font-bold">
+                            Olá, {profile?.full_name?.split(' ')[0]}!
+                        </h1>
+                        <p className="text-muted-foreground text-sm">
+                            {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
+                            {isDoctor && 'Acompanhe suas consultas e pacientes.'}
+                            {isSuperAdmin && !isImpersonating && 'Monitore a plataforma CliniGo.'}
+                            {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
+                        </p>
+                    </div>
+                    <Badge variant="secondary" className="px-3 py-1 ml-4 shrink-0">
+                        {role === 'SUPER_ADMIN' && <Shield className="w-4 h-4 mr-1" />}
+                        {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
+                        {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
+                        {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
+                    </Badge>
                 </div>
-                <Badge variant="secondary" className="px-3 py-1">
-                    {role === 'SUPER_ADMIN' && <Shield className="w-4 h-4 mr-1" />}
-                    {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
-                    {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
-                    {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
-                </Badge>
-            </div >
+
+                {/* Cards Inline do Lado Direito para o Perfil de Recepção */}
+                {isReceptionist && (
+                    <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full lg:w-auto">
+                        <Link href="/dashboard/agenda" className="w-full sm:w-44">
+                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group w-full">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5 px-3">
+                                    <CardTitle className="text-[11px] font-bold text-blue-900">
+                                        Consultas Hoje
+                                    </CardTitle>
+                                    <Calendar className="h-3.5 w-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent className="pb-2.5 px-3">
+                                    {statsLoading ? (
+                                        <Skeleton className="h-6 w-12" />
+                                    ) : (
+                                        <div className="text-lg font-extrabold text-blue-900">{stats?.todayCount || 0}</div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Link>
+
+                        <Link href="/dashboard/agenda" className="w-full sm:w-44">
+                            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all cursor-pointer group w-full">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5 px-3">
+                                    <CardTitle className="text-[11px] font-bold text-green-900">Confirmadas</CardTitle>
+                                    <TrendingUp className="h-3.5 w-3.5 text-green-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent className="pb-2.5 px-3">
+                                    {statsLoading ? (
+                                        <Skeleton className="h-6 w-12" />
+                                    ) : (
+                                        <div className="text-lg font-extrabold text-green-900">
+                                            {stats?.confirmedCount || 0}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    </div>
+                )}
+            </div>
 
             {/* Initial Setup - Only for Clinic Admins */}
             {
@@ -390,8 +433,8 @@ export default function DashboardPage() {
 
              {/* Stats Cards - Clinic Admin & Doctor */}
             {
-                (isClinicAdmin || isDoctor || isReceptionist) && (
-                    <div className={`grid gap-4 md:grid-cols-2 ${isReceptionist ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
+                (isClinicAdmin || isDoctor) && (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <Link href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
                             <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -428,42 +471,38 @@ export default function DashboardPage() {
                             </Card>
                         </Link>
 
-                        {!isReceptionist && (
-                            <Link href="/dashboard/pagamentos?status=PENDING">
-                                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all cursor-pointer group">
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium text-amber-900">
-                                            Aguardando Pagamento
-                                        </CardTitle>
-                                        <Clock className="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        {statsLoading ? (
-                                            <Skeleton className="h-8 w-16" />
-                                        ) : (
-                                            <div className="text-2xl font-bold text-amber-900">
-                                                {stats?.pendingCount || 0}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        )}
+                        <Link href="/dashboard/pagamentos?status=PENDING">
+                            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all cursor-pointer group">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-amber-900">
+                                        Aguardando Pagamento
+                                    </CardTitle>
+                                    <Clock className="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent>
+                                    {statsLoading ? (
+                                        <Skeleton className="h-8 w-16" />
+                                    ) : (
+                                        <div className="text-2xl font-bold text-amber-900">
+                                            {stats?.pendingCount || 0}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Link>
 
-                        {!isReceptionist && (
-                            <Link href="/dashboard/pagamentos">
-                                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all cursor-pointer group">
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium text-purple-900">Faturamento</CardTitle>
-                                        <DollarSign className="h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-purple-900">R$ 0</div>
-                                        <p className="text-xs text-purple-700">Este mês</p>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        )}
+                        <Link href="/dashboard/pagamentos">
+                            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all cursor-pointer group">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-purple-900">Faturamento</CardTitle>
+                                    <DollarSign className="h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-purple-900">R$ 0</div>
+                                    <p className="text-xs text-purple-700">Este mês</p>
+                                </CardContent>
+                            </Card>
+                        </Link>
                     </div>
                 )
             }
