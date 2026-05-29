@@ -211,7 +211,9 @@ export default function PacientesPage() {
             const now = new Date()
             return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
         }).length || 0,
-      return (
+    }
+
+    return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
