@@ -938,7 +938,7 @@ export default function AgendaPage() {
                 <div className="min-w-[950px] md:min-w-[1000px]">
                     {/* Header Row com Layout Original e Fundo Acetinado Discreto */}
                     <div className="grid grid-cols-8 border-b sticky top-0 bg-slate-50/90 backdrop-blur-md dark:bg-slate-900/90 z-10 shadow-sm border-slate-200/50 transition-all duration-300">
-                        <div className="py-2 px-3 text-xs font-medium text-muted-foreground border-r text-center flex items-center justify-center h-full">
+                        <div className="py-2 px-3 text-xs font-medium text-muted-foreground border-r text-center flex items-center justify-center h-full uppercase tracking-wider">
                             Horário
                         </div>
                         {(view === 'week' ? days : [currentDate]).map((day) => (
