@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { isValidCPF } from '@/lib/utils/cpf'
 
 // Validation schema for clinic registration
 const registerSchema = z.object({
@@ -23,16 +24,25 @@ const registerSchema = z.object({
     plan_type: z.enum(['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE']).optional(),
 })
 
-const EMAIL_ALREADY_EXISTS_ERROR = 'Este e-mail já está vinculado a uma clínica cadastrada. Por favor, use outro e-mail ou recupere sua senha.'
-const CNPJ_ALREADY_EXISTS_ERROR = 'Este CNPJ já está cadastrado no sistema.'
+const TRIAL_ALREADY_EXISTS_ERROR = 'Já existe ou esse e-mail, CPF, ou telefone já fez um teste grátis. Para usar adquira um plano.'
 
 // Validate CNPJ format
 function validateCNPJ(cnpj: string): boolean {
     const cleaned = cnpj.replace(/\D/g, '')
     if (cleaned.length !== 14) return false
     if (/^(\d)\1+$/.test(cleaned)) return false
-    // Basic validation - could be enhanced with checksum validation
     return true
+}
+
+// Validate CPF or CNPJ format
+function validateCPForCNPJ(value: string): boolean {
+    const cleaned = value.replace(/\D/g, '')
+    if (cleaned.length === 11) {
+        return isValidCPF(cleaned)
+    } else if (cleaned.length === 14) {
+        return validateCNPJ(cleaned)
+    }
+    return false
 }
 
 export async function POST(request: NextRequest) {
@@ -43,7 +53,7 @@ export async function POST(request: NextRequest) {
         const supabaseAdmin = createServiceRoleClient()
 
         // ============================================
-        // EMAIL UNIQUENESS CHECK
+        // 1. EMAIL UNIQUENESS CHECK
         // ============================================
         const { data: existingUser } = await (supabaseAdmin as any)
             .from('users')
@@ -53,7 +63,7 @@ export async function POST(request: NextRequest) {
 
         if (existingUser) {
             return NextResponse.json(
-                { success: false, error: { message: EMAIL_ALREADY_EXISTS_ERROR } },
+                { success: false, error: { message: TRIAL_ALREADY_EXISTS_ERROR } },
                 { status: 400 }
             )
         }
@@ -66,35 +76,65 @@ export async function POST(request: NextRequest) {
 
         if (existingClinic) {
             return NextResponse.json(
-                { success: false, error: { message: EMAIL_ALREADY_EXISTS_ERROR } },
+                { success: false, error: { message: TRIAL_ALREADY_EXISTS_ERROR } },
                 { status: 400 }
             )
         }
 
         // ============================================
-        // CNPJ UNIQUENESS CHECK (if provided)
+        // 2. CPF/CNPJ MANDATORY & UNIQUENESS CHECK
         // ============================================
-        if (data.cnpj) {
-            const cleanCNPJ = data.cnpj.replace(/\D/g, '')
+        if (!data.cnpj) {
+            return NextResponse.json(
+                { success: false, error: { message: 'CPF ou CNPJ é obrigatório para iniciar o teste grátis.' } },
+                { status: 400 }
+            )
+        }
 
-            if (!validateCNPJ(data.cnpj)) {
-                return NextResponse.json(
-                    { success: false, error: { message: 'CNPJ inválido' } },
-                    { status: 400 }
-                )
-            }
+        const cleanCNPJ = data.cnpj.replace(/\D/g, '')
 
-            const { data: existingCNPJ } = await (supabaseAdmin as any)
-                .from('clinics')
-                .select('id')
-                .eq('cnpj', cleanCNPJ)
-                .maybeSingle()
+        if (!validateCPForCNPJ(data.cnpj)) {
+            return NextResponse.json(
+                { success: false, error: { message: 'CPF ou CNPJ inválido.' } },
+                { status: 400 }
+            )
+        }
 
-            if (existingCNPJ) {
-                return NextResponse.json(
-                    { success: false, error: { message: CNPJ_ALREADY_EXISTS_ERROR } },
-                    { status: 400 }
-                )
+        const { data: existingCNPJ } = await (supabaseAdmin as any)
+            .from('clinics')
+            .select('id')
+            .eq('cnpj', cleanCNPJ)
+            .maybeSingle()
+
+        if (existingCNPJ) {
+            return NextResponse.json(
+                { success: false, error: { message: TRIAL_ALREADY_EXISTS_ERROR } },
+                { status: 400 }
+            )
+        }
+
+        // ============================================
+        // 3. PHONE UNIQUENESS CHECK
+        // ============================================
+        if (data.phone) {
+            const cleanPhone = data.phone.replace(/\D/g, '')
+            if (cleanPhone.length >= 8) {
+                const formattedPhone1 = cleanPhone.length === 11 
+                    ? `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}` 
+                    : `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 6)}-${cleanPhone.slice(6)}`;
+                
+                const { data: existingPhoneClinic } = await (supabaseAdmin as any)
+                    .from('clinics')
+                    .select('id')
+                    .or(`phone.eq.${cleanPhone},phone.eq.${formattedPhone1}`)
+                    .maybeSingle()
+
+                if (existingPhoneClinic) {
+                    return NextResponse.json(
+                        { success: false, error: { message: TRIAL_ALREADY_EXISTS_ERROR } },
+                        { status: 400 }
+                    )
+                }
             }
         }
 
@@ -112,13 +152,12 @@ export async function POST(request: NextRequest) {
             console.error('[Register] Auth create error:', authError)
             if (authError.message?.includes('already') || authError.message?.includes('exists') || authError.message?.includes('User already registered')) {
                 return NextResponse.json(
-                    { success: false, error: { message: EMAIL_ALREADY_EXISTS_ERROR } },
+                    { success: false, error: { message: TRIAL_ALREADY_EXISTS_ERROR } },
                     { status: 400 }
                 )
             }
             return NextResponse.json({ success: false, error: { message: 'Database error creating new user' } }, { status: 400 })
         }
-
         if (!authUser.user) {
             return NextResponse.json({ success: false, error: { message: 'Failed to create user' } }, { status: 500 })
         }

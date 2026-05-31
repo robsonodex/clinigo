@@ -34,6 +34,7 @@ export default function TrialPage() {
         full_name: '',
         email: '',
         phone: '',
+        cnpj: '',
         clinic_name: '',
         password: '',
     })
@@ -45,7 +46,7 @@ export default function TrialPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!form.full_name || !form.email || !form.phone || !form.password) {
+        if (!form.full_name || !form.email || !form.phone || !form.cnpj || !form.password) {
             toast.error('Preencha todos os campos obrigatórios')
             return
         }
@@ -71,6 +72,7 @@ export default function TrialPage() {
                     full_name: form.full_name,
                     clinic_name: finalClinicName,
                     phone: form.phone.replace(/\D/g, '') || undefined,
+                    cnpj: form.cnpj.replace(/\D/g, '') || undefined,
                 }),
             })
 
@@ -236,6 +238,24 @@ export default function TrialPage() {
                                                     onChange={e => updateField('phone', e.target.value)}
                                                     className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
                                                     placeholder="(11) 99999-9999"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* CPF ou CNPJ */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                                CPF ou CNPJ *
+                                            </label>
+                                            <div className="relative">
+                                                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={form.cnpj}
+                                                    onChange={e => updateField('cnpj', e.target.value)}
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
+                                                    placeholder="Apenas números (CPF ou CNPJ)"
                                                 />
                                             </div>
                                         </div>
