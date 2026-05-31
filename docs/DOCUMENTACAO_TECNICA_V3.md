@@ -1743,3 +1743,13 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **Componente SystemRefreshListener**: Criação de componente cliente invisível responsável por escutar em tempo real a alteração do campo `updated_at` na tabela `clinics` para o respectivo ID da clínica logada. Quando detectado o evento de atualização disparado pelo Master Hub, ele automaticamente aciona `window.location.reload()` no navegador cliente.
   - **Integração no Layout**: Injetado o `<SystemRefreshListener clinicId={effectiveClinicId} />` no layout global do Dashboard da clínica (`app/dashboard/layout.tsx`), garantindo cobertura total em qualquer aba que o usuário da clínica esteja navegando.
 
+### 31/05/2026 - Edição de Mensagens Programadas Pendentes no WhatsApp do Master Hub
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Painel Master Admin → Gestão WhatsApp → e:\Backup Clinigo 11-03-2026\clinigo\clinigo-producao\app\system-master-hub\clin-whatsapp\page.tsx → handleStartEdit(), handleCancelEdit(), handleScheduleMessage(), Ações Tabela
+  - **Fluxo Dinâmico de Edição**: Criada a funcionalidade de alteração de dados de mensagens na fila que ainda estão com status `'pending'`. Ao selecionar "Editar", o sistema preenche todos os campos do formulário automaticamente (detectando se o número é de administrador cadastrado ou manual e formatando a data local adequadamente) e direciona o foco do usuário rolando a tela suavemente (`scrollIntoView`) até o topo do formulário.
+  - **Lógica Unificada de Persistência no Supabase**: A função `handleScheduleMessage` foi aprimorada para alternar dinamicamente entre requisições de criação (`.insert()`) e modificações de registros existentes (`.update()`) com base no estado `editingMessageId`, revertendo automaticamente falhas anteriores para `'pending'`.
+  - **Auditoria de Botões & Touch Mobile (PWA/Mobile)**: Implementada a barra de botões com controle de fechamento/descarte ("Cancelar Edição") e persistência ("Salvar Alterações") com micro-feedbacks táteis e visuais. Todos os novos botões do formulário e da tabela de listagem foram configurados com área de toque mínima de `44x44px` (`min-h-[48px]` no form e padding expandido na tabela) e espaçamento horizontal otimizado (`gap-2`), blindando 100% o layout responsivo de quebras ou toques acidentais em dispositivos móveis.
+
+
