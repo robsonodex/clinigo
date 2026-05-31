@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash } from 'lucide-react'
+import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -58,6 +58,7 @@ export default function ClinWhatsAppPage() {
   const [schedulingMsg, setSchedulingMsg] = useState(false)
   const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
 
   const checkStatus = useCallback(async () => {
     try {
@@ -193,6 +194,57 @@ export default function ClinWhatsAppPage() {
     }
   }
 
+  const handleStartEdit = (msg: ScheduledMessage) => {
+    setEditingMessageId(msg.id)
+    setSubject(msg.subject)
+    setMessage(msg.message)
+    
+    // Formata a data ISO para YYYY-MM-DDThh:mm exigido pelo input datetime-local
+    const date = new Date(msg.scheduled_for)
+    const tzOffset = date.getTimezoneOffset() * 60000
+    const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16)
+    setScheduledFor(localISOTime)
+    
+    // Detecta se era administrador ou manual
+    const admin = admins.find(a => {
+      const cleanA = a.phone.replace(/\D/g, '')
+      const cleanM = msg.recipient_phone.replace(/\D/g, '')
+      return cleanA === cleanM || (cleanA.startsWith('55') && cleanA.substring(2) === cleanM) || (cleanM.startsWith('55') && cleanM.substring(2) === cleanA)
+    })
+    
+    if (admin) {
+      setSendMethod('registered')
+      setSelectedAdminId(admin.id)
+      setCustomPhone('')
+    } else {
+      setSendMethod('manual')
+      setCustomPhone(msg.recipient_phone)
+      setSelectedAdminId('')
+    }
+
+    setScheduleError(null)
+    setScheduleSuccess(null)
+
+    // Scroll suave até o formulário de agendamento
+    const formElement = document.getElementById('agendamento-form')
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else {
+      window.scrollTo({ top: 500, behavior: 'smooth' })
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null)
+    setSubject('')
+    setMessage('')
+    setSelectedAdminId('')
+    setCustomPhone('')
+    setScheduledFor('')
+    setScheduleError(null)
+    setScheduleSuccess(null)
+  }
+
   const handleScheduleMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -253,28 +305,49 @@ export default function ClinWhatsAppPage() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase
-        .from('scheduled_whatsapp_messages')
-        .insert({
-          scheduled_for: scheduledDate.toISOString(),
-          recipient_phone: targetPhone,
-          recipient_name: destinationName,
-          subject: subject.trim(),
-          message: message.trim(),
-          status: 'pending'
-        })
+      
+      if (editingMessageId) {
+        // Modo Edição
+        const { error } = await supabase
+          .from('scheduled_whatsapp_messages')
+          .update({
+            scheduled_for: scheduledDate.toISOString(),
+            recipient_phone: targetPhone,
+            recipient_name: destinationName,
+            subject: subject.trim(),
+            message: message.trim(),
+            status: 'pending' // Reverte para pendente caso estivesse como falhado
+          })
+          .eq('id', editingMessageId)
 
-      if (error) throw error
+        if (error) throw error
+        setScheduleSuccess(`Agendamento para ${destinationName} atualizado com sucesso!`)
+        handleCancelEdit()
+      } else {
+        // Modo Criação
+        const { error } = await supabase
+          .from('scheduled_whatsapp_messages')
+          .insert({
+            scheduled_for: scheduledDate.toISOString(),
+            recipient_phone: targetPhone,
+            recipient_name: destinationName,
+            subject: subject.trim(),
+            message: message.trim(),
+            status: 'pending'
+          })
 
-      setScheduleSuccess(`Mensagem agendada com sucesso para ${destinationName}!`)
-      setSubject('')
-      setMessage('')
-      setCustomPhone('')
-      setSelectedAdminId('')
-      setScheduledFor('')
+        if (error) throw error
+        setScheduleSuccess(`Mensagem agendada com sucesso para ${destinationName}!`)
+        setSubject('')
+        setMessage('')
+        setCustomPhone('')
+        setSelectedAdminId('')
+        setScheduledFor('')
+      }
+      
       loadScheduledMessages()
     } catch (err: any) {
-      setScheduleError(err.message || 'Erro ao agendar mensagem.')
+      setScheduleError(err.message || 'Erro ao processar agendamento.')
     } finally {
       setSchedulingMsg(false)
     }
@@ -709,6 +782,7 @@ export default function ClinWhatsAppPage() {
           <div className="space-y-6">
             {/* Formulário de Agendamento */}
             <motion.div
+              id="agendamento-form"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8"
@@ -717,10 +791,12 @@ export default function ClinWhatsAppPage() {
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-emerald-400" />
-                    Programar Novo Envio
+                    {editingMessageId ? '📝 Editar Mensagem Programada' : 'Programar Novo Envio'}
                   </h2>
                   <p className="text-gray-400 text-sm mt-1">
-                    Crie e salve uma mensagem para ser enviada automaticamente em uma data futura.
+                    {editingMessageId 
+                      ? 'Modifique os dados abaixo para atualizar o agendamento na fila.' 
+                      : 'Crie e salve uma mensagem para ser enviada automaticamente em uma data futura.'}
                   </p>
                 </div>
               </div>
@@ -866,26 +942,52 @@ export default function ClinWhatsAppPage() {
 
                   {/* Ações */}
                   <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleClearForm}
-                      className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Limpar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={schedulingMsg}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {schedulingMsg ? 'Agendando...' : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          Agendar Envio
-                        </>
-                      )}
-                    </button>
+                    {editingMessageId ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
+                        >
+                          Cancelar Edição
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={schedulingMsg}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
+                        >
+                          {schedulingMsg ? 'Salvando...' : (
+                            <>
+                              <span>💾</span>
+                              Salvar Alterações
+                            </>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleClearForm}
+                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Limpar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={schedulingMsg}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
+                        >
+                          {schedulingMsg ? 'Agendando...' : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Agendar Envio
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </form>
               )}
@@ -969,17 +1071,28 @@ export default function ClinWhatsAppPage() {
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-6 py-4">
                             {msg.status === 'pending' ? (
-                              <button
-                                onClick={() => handleDeleteSchedule(msg.id, msg.recipient_name)}
-                                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors inline-flex items-center justify-center"
-                                title="Cancelar e Excluir Agendamento"
-                              >
-                                <Trash className="w-4 h-4" />
-                              </button>
+                              <div className="flex gap-2 justify-center items-center">
+                                <button
+                                  onClick={() => handleStartEdit(msg)}
+                                  className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                  title="Editar Agendamento"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSchedule(msg.id, msg.recipient_name)}
+                                  className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                  title="Cancelar e Excluir Agendamento"
+                                >
+                                  <Trash className="w-4 h-4" />
+                                </button>
+                              </div>
                             ) : (
-                              <span className="text-gray-600 text-xs">-</span>
+                              <div className="text-center">
+                                <span className="text-gray-600 text-xs">-</span>
+                              </div>
                             )}
                           </td>
                         </tr>
