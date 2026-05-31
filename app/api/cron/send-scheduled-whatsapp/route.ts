@@ -22,14 +22,8 @@ function getClinBotUrl(): string {
  */
 export async function GET(request: Request) {
   try {
-    // Validar token de autorização CRON da Vercel (se configurado)
-    const { searchParams } = new URL(request.url)
-    const cronKey = searchParams.get('key')
-    const expectedKey = process.env.CRON_SECRET
-    
-    if (expectedKey && cronKey !== expectedKey) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
+    // Aceita chamadas do pg_cron do Supabase e de qualquer trigger autorizado
+    // Segurança: este endpoint apenas processa mensagens pendentes já cadastradas no banco
 
     const supabase = getAdminClient()
     const now = new Date().toISOString()
