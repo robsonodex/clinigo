@@ -38,15 +38,20 @@ export async function POST(request: Request) {
     const url = `${getClinBotUrl()}/clin/send`
     
     const cleanTo = to.replace(/\D/g, '')
-    const targets = [cleanTo]
+    const targets = []
     
-    // Fallback inteligente de nono dígito para o Brasil (DDD > 28)
+    // Inversão inteligente: para DDD > 28, o correto no WhatsApp é SEM o 9
     if (cleanTo.startsWith('55') && cleanTo.length === 13) {
       const ddd = parseInt(cleanTo.substring(2, 4), 10)
       if (ddd > 28) {
         const semNove = cleanTo.substring(0, 4) + cleanTo.substring(5)
-        targets.push(semNove)
+        targets.push(semNove) // Tenta SEM o 9 primeiro
+        targets.push(cleanTo) // Fallback COM o 9
+      } else {
+        targets.push(cleanTo)
       }
+    } else {
+      targets.push(cleanTo)
     }
 
     let success = false
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
         const data = await res.json()
         if (res.ok) {
           success = true
+          break // Para o envio se obteve sucesso em um dos alvos
         } else {
           lastError = data.error || 'Erro reportado pelo serviço do WhatsApp'
         }

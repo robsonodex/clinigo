@@ -49,22 +49,27 @@ export async function GET(request: Request) {
       for (const msg of pendingMessages) {
         // Higienizar número de telefone
         const cleanTo = msg.recipient_phone.replace(/\D/g, '')
-        const targets = [cleanTo]
+        let primaryTarget = cleanTo
 
         // Adicionar DDI 55 se não tiver
         if (!cleanTo.startsWith('55') && (cleanTo.length === 10 || cleanTo.length === 11)) {
-          targets[0] = '55' + cleanTo
+          primaryTarget = '55' + cleanTo
         }
 
-        const primaryTarget = targets[0]
+        const targets = []
 
-        // Fallback inteligente de nono dígito (Brasil - DDD > 28)
+        // Inversão inteligente: para DDD > 28, o correto no WhatsApp é SEM o 9
         if (primaryTarget.startsWith('55') && primaryTarget.length === 13) {
           const ddd = parseInt(primaryTarget.substring(2, 4), 10)
           if (ddd > 28) {
             const semNove = primaryTarget.substring(0, 4) + primaryTarget.substring(5)
-            targets.push(semNove)
+            targets.push(semNove) // Tenta SEM o 9 primeiro
+            targets.push(primaryTarget) // Fallback COM o 9
+          } else {
+            targets.push(primaryTarget)
           }
+        } else {
+          targets.push(primaryTarget)
         }
 
         let success = false
