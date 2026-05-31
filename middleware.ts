@@ -72,6 +72,7 @@ const PUBLIC_ROUTES = [
     '/partners/register', // Partner registration page
     '/m/login', // PWA mobile login page
     '/api/chatbot', // Chatbot API - chamado pelo bot Railway sem auth cookies (tem rate limiting próprio)
+    '/api/cron/', // Cron jobs - chamados pelo pg_cron do Supabase sem auth cookies (processamento automático de fila)
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
