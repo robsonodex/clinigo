@@ -119,6 +119,77 @@ export default function ClinWhatsAppPage() {
     loadScheduledMessages()
   }, [checkStatus, loadAdmins, loadScheduledMessages])
 
+  // Auto-processador silencioso: envia mensagens pendentes vencidas a cada 30 segundos
+  const autoProcessQueue = useCallback(async () => {
+    try {
+      const supabase = createClient()
+      const now = new Date().toISOString()
+
+      // Busca direto do banco para ter dados frescos (não depende do state)
+      const { data: pendingMessages, error: fetchError } = await supabase
+        .from('scheduled_whatsapp_messages')
+        .select('*')
+        .eq('status', 'pending')
+        .lte('scheduled_for', now)
+
+      if (fetchError || !pendingMessages || pendingMessages.length === 0) return
+
+      console.log(`[AutoProcess] Encontradas ${pendingMessages.length} mensagens vencidas. Processando...`)
+
+      for (const msg of pendingMessages) {
+        const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+
+        try {
+          const res = await fetch('/api/clin-whatsapp/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: msg.recipient_phone, text: formattedText })
+          })
+
+          const data = await res.json()
+
+          if (res.ok) {
+            await supabase
+              .from('scheduled_whatsapp_messages')
+              .update({ status: 'sent', sent_at: new Date().toISOString(), error_message: null })
+              .eq('id', msg.id)
+            console.log(`[AutoProcess] Mensagem para ${msg.recipient_name} enviada com sucesso.`)
+          } else {
+            const errorMsg = data.error || 'Erro no envio automático'
+            await supabase
+              .from('scheduled_whatsapp_messages')
+              .update({ status: 'failed', error_message: errorMsg })
+              .eq('id', msg.id)
+            console.error(`[AutoProcess] Falha ao enviar para ${msg.recipient_name}: ${errorMsg}`)
+          }
+        } catch (err: any) {
+          await supabase
+            .from('scheduled_whatsapp_messages')
+            .update({ status: 'failed', error_message: err.message || 'Erro inesperado' })
+            .eq('id', msg.id)
+        }
+      }
+
+      // Atualiza a lista na tela após processar
+      loadScheduledMessages()
+    } catch (err) {
+      // Silencioso — não interrompe o usuário
+      console.error('[AutoProcess] Erro no auto-processamento:', err)
+    }
+  }, [loadScheduledMessages])
+
+  useEffect(() => {
+    // Executa imediatamente ao carregar a página
+    const initialRun = setTimeout(() => autoProcessQueue(), 3000)
+    // Depois repete a cada 30 segundos
+    const interval = setInterval(() => autoProcessQueue(), 30000)
+
+    return () => {
+      clearTimeout(initialRun)
+      clearInterval(interval)
+    }
+  }, [autoProcessQueue])
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
