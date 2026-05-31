@@ -387,7 +387,9 @@ export default function ClinWhatsAppPage() {
             recipient_name: destinationName,
             subject: subject.trim(),
             message: message.trim(),
-            status: 'pending' // Reverte para pendente caso estivesse como falhado
+            status: 'pending', // Reverte para pendente caso estivesse como falhado/enviado
+            sent_at: null,     // Limpa dados de envio anterior
+            error_message: null // Limpa erro anterior
           })
           .eq('id', editingMessageId)
 
@@ -1267,8 +1269,8 @@ export default function ClinWhatsAppPage() {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            {msg.status === 'pending' ? (
-                              <div className="flex gap-2 justify-center items-center">
+                            <div className="flex gap-2 justify-center items-center">
+                              {msg.status === 'pending' && (
                                 <button
                                   onClick={() => handleSendScheduledNow(msg)}
                                   className="p-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
@@ -1276,26 +1278,22 @@ export default function ClinWhatsAppPage() {
                                 >
                                   <Send className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => handleStartEdit(msg)}
-                                  className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
-                                  title="Editar Agendamento"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSchedule(msg.id, msg.recipient_name)}
-                                  className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
-                                  title="Cancelar e Excluir Agendamento"
-                                >
-                                  <Trash className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="text-center">
-                                <span className="text-gray-600 text-xs">-</span>
-                              </div>
-                            )}
+                              )}
+                              <button
+                                onClick={() => handleStartEdit(msg)}
+                                className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                title={msg.status === 'pending' ? 'Editar Agendamento' : 'Editar e Reagendar'}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSchedule(msg.id, msg.recipient_name)}
+                                className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                title={msg.status === 'pending' ? 'Cancelar e Excluir Agendamento' : 'Excluir Registro de Envio'}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
