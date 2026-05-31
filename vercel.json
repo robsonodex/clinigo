@@ -8,10 +8,6 @@
         {
             "path": "/api/cron/calculate-commissions",
             "schedule": "0 0 1 * *"
-        },
-        {
-            "path": "/api/cron/send-scheduled-whatsapp",
-            "schedule": "*/10 * * * *"
         }
     ]
 }
