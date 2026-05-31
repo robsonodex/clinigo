@@ -372,6 +372,120 @@ export default function ClinWhatsAppPage() {
     }
   }
 
+  const handleSendScheduledNow = async (msg: ScheduledMessage) => {
+    if (!confirm(`Deseja enviar a mensagem programada para ${msg.recipient_name} imediatamente pelo WhatsApp?`)) {
+      return
+    }
+
+    setLoadingScheduled(true)
+    const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+    
+    try {
+      const res = await fetch('/api/clin-whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: msg.recipient_phone,
+          text: formattedText
+        })
+      })
+
+      const data = await res.json()
+      const supabase = createClient()
+
+      if (!res.ok) {
+        const errorMsg = data.error || 'Erro ao enviar mensagem instantânea'
+        await supabase
+          .from('scheduled_whatsapp_messages')
+          .update({
+            status: 'failed',
+            error_message: errorMsg
+          })
+          .eq('id', msg.id)
+        
+        alert(`Falha no envio: ${errorMsg}`)
+      } else {
+        await supabase
+          .from('scheduled_whatsapp_messages')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            error_message: null
+          })
+          .eq('id', msg.id)
+        
+        alert(`Mensagem enviada com sucesso para ${msg.recipient_name}!`)
+      }
+
+      loadScheduledMessages()
+    } catch (err: any) {
+      alert(`Erro inesperado: ${err.message}`)
+    } finally {
+      setLoadingScheduled(false)
+    }
+  }
+
+  const handleTriggerQueue = async () => {
+    // Filtra mensagens pendentes que já passaram do horário de envio
+    const pendingExpired = scheduledMessages.filter(m => m.status === 'pending' && new Date(m.scheduled_for) <= new Date())
+    
+    if (pendingExpired.length === 0) {
+      alert('Nenhuma mensagem programada vencida está pendente de envio no momento.')
+      return
+    }
+
+    if (!confirm(`Deseja disparar imediatamente as ${pendingExpired.length} mensagens pendentes que já passaram do horário de envio?`)) {
+      return
+    }
+
+    setLoadingScheduled(true)
+    let sent = 0
+    let failed = 0
+
+    const supabase = createClient()
+
+    for (const msg of pendingExpired) {
+      const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+      
+      try {
+        const res = await fetch('/api/clin-whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: msg.recipient_phone,
+            text: formattedText
+          })
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          const errorMsg = data.error || 'Erro no envio'
+          await supabase
+            .from('scheduled_whatsapp_messages')
+            .update({ status: 'failed', error_message: errorMsg })
+            .eq('id', msg.id)
+          failed++
+        } else {
+          await supabase
+            .from('scheduled_whatsapp_messages')
+            .update({ status: 'sent', sent_at: new Date().toISOString(), error_message: null })
+            .eq('id', msg.id)
+          sent++
+        }
+      } catch (err) {
+        await supabase
+          .from('scheduled_whatsapp_messages')
+          .update({ status: 'failed', error_message: 'Erro inesperado de envio' })
+          .eq('id', msg.id)
+        failed++
+      }
+    }
+
+    alert(`Processamento concluído! Enviadas com sucesso: ${sent} | Falhas: ${failed}`)
+    loadScheduledMessages()
+  }
+
   const handleClearForm = () => {
     if (confirm('Deseja limpar todos os campos?')) {
       setSubject('')
@@ -1009,14 +1123,24 @@ export default function ClinWhatsAppPage() {
                     Visualize e gerencie a fila de mensagens agendadas do sistema.
                   </p>
                 </div>
-                <button
-                  onClick={loadScheduledMessages}
-                  disabled={loadingScheduled}
-                  className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-                  title="Recarregar agendamentos"
-                >
-                  <RefreshCw className={`w-5 h-5 ${loadingScheduled ? 'animate-spin' : ''}`} />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleTriggerQueue}
+                    disabled={loadingScheduled}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 min-h-[40px]"
+                    title="Forçar envio de todas as mensagens vencidas da fila"
+                  >
+                    <span>⚡</span> Disparar Fila Vencida
+                  </button>
+                  <button
+                    onClick={loadScheduledMessages}
+                    disabled={loadingScheduled}
+                    className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    title="Recarregar agendamentos"
+                  >
+                    <RefreshCw className={`w-5 h-5 ${loadingScheduled ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </div>
 
               {loadingScheduled ? (
@@ -1074,6 +1198,13 @@ export default function ClinWhatsAppPage() {
                           <td className="px-6 py-4">
                             {msg.status === 'pending' ? (
                               <div className="flex gap-2 justify-center items-center">
+                                <button
+                                  onClick={() => handleSendScheduledNow(msg)}
+                                  className="p-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                  title="Enviar Agora"
+                                >
+                                  <Send className="w-4 h-4" />
+                                </button>
                                 <button
                                   onClick={() => handleStartEdit(msg)}
                                   className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
