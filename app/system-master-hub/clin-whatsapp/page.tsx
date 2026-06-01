@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash, Pencil } from 'lucide-react'
+import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash, Pencil, Upload, Image as ImageIcon, X, FileText, Users } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -24,6 +24,7 @@ interface ScheduledMessage {
   recipient_name: string
   subject: string
   message: string
+  image_base64?: string | null
   status: 'pending' | 'sent' | 'failed'
   error_message: string | null
   sent_at: string | null
@@ -41,7 +42,7 @@ export default function ClinWhatsAppPage() {
 
   // Estados do Envio Manual de WhatsApp
   const [admins, setAdmins] = useState<AdminUser[]>([])
-  const [sendMethod, setSendMethod] = useState<'registered' | 'manual'>('registered')
+  const [sendMethod, setSendMethod] = useState<'registered' | 'manual' | 'bulk'>('registered')
   const [selectedAdminId, setSelectedAdminId] = useState('')
   const [customPhone, setCustomPhone] = useState('')
   const [subject, setSubject] = useState('')
@@ -50,6 +51,23 @@ export default function ClinWhatsAppPage() {
   const [sendingMsg, setSendingMsg] = useState(false)
   const [sendSuccess, setSendSuccess] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+
+  // Estados de Imagem (compartilhado entre abas)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [schedImageFile, setSchedImageFile] = useState<File | null>(null)
+  const [schedImagePreview, setSchedImagePreview] = useState<string | null>(null)
+  const schedImageInputRef = useRef<HTMLInputElement>(null)
+
+  // Estados de Envio em Massa
+  const [bulkFile, setBulkFile] = useState<File | null>(null)
+  const [bulkNumbers, setBulkNumbers] = useState<string[]>([])
+  const [bulkInvalidCount, setBulkInvalidCount] = useState(0)
+  const [bulkSending, setBulkSending] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState<{ total: number; sent: number; failed: number; status: string; errors: { phone: string; error: string }[] } | null>(null)
+  const [bulkId, setBulkId] = useState<string | null>(null)
+  const bulkFileInputRef = useRef<HTMLInputElement>(null)
 
   // Estados de Agendamento
   const [scheduledFor, setScheduledFor] = useState('')
@@ -193,6 +211,12 @@ export default function ClinWhatsAppPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Se modo massa, redirecionar para handleBulkSend
+    if (sendMethod === 'bulk') {
+      handleBulkSend()
+      return
+    }
+
     let targetPhone = ''
     let destinationName = ''
 
@@ -241,23 +265,38 @@ export default function ClinWhatsAppPage() {
     const formattedText = `*Assunto:* ${subject.trim()}\n\n${message.trim()}`
 
     try {
-      const res = await fetch('/api/clin-whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: targetPhone,
-          text: formattedText
+      let res: Response
+
+      if (imageFile) {
+        // Enviar com imagem via FormData
+        const formData = new FormData()
+        formData.append('to', targetPhone)
+        formData.append('text', formattedText)
+        formData.append('image', imageFile)
+
+        res = await fetch('/api/clin-whatsapp/send-image', {
+          method: 'POST',
+          body: formData,
         })
-      })
+      } else {
+        // Enviar apenas texto
+        res = await fetch('/api/clin-whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: targetPhone, text: formattedText }),
+        })
+      }
 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao enviar mensagem')
 
-      setSendSuccess(`Mensagem enviada com sucesso para ${destinationName}!`)
+      setSendSuccess(`Mensagem ${imageFile ? 'com imagem ' : ''}enviada com sucesso para ${destinationName}!`)
       setSubject('')
       setMessage('')
       setCustomPhone('')
       setSelectedAdminId('')
+      setImageFile(null)
+      setImagePreview(null)
     } catch (err: any) {
       setSendError(err.message || 'Erro inesperado ao enviar mensagem.')
     } finally {
@@ -271,10 +310,12 @@ export default function ClinWhatsAppPage() {
     setMessage(msg.message)
     
     // Formata a data ISO para YYYY-MM-DDThh:mm exigido pelo input datetime-local
-    const date = new Date(msg.scheduled_for)
-    const tzOffset = date.getTimezoneOffset() * 60000
-    const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16)
-    setScheduledFor(localISOTime)
+    if (msg.scheduled_for) {
+      const date = new Date(msg.scheduled_for)
+      const tzOffset = date.getTimezoneOffset() * 60000
+      const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16)
+      setScheduledFor(localISOTime)
+    }
     
     // Detecta se era administrador ou manual
     const admin = admins.find(a => {
@@ -296,6 +337,28 @@ export default function ClinWhatsAppPage() {
     setScheduleError(null)
     setScheduleSuccess(null)
 
+    // Se a mensagem possui imagem em base64, carregar para preview
+    if (msg.image_base64) {
+      setSchedImagePreview(msg.image_base64)
+      // Criar um File fictício se for base64 completo data:image/...
+      try {
+        const fetchFile = async () => {
+          const res = await fetch(msg.image_base64)
+          const blob = await res.blob()
+          const file = new File([blob], 'imagem_agendada.jpg', { type: blob.type })
+          setSchedImageFile(file)
+        }
+        if (msg.image_base64.startsWith('data:image')) {
+          fetchFile()
+        }
+      } catch (err) {
+        console.error('Erro ao ler base64 para File:', err)
+      }
+    } else {
+      setSchedImageFile(null)
+      setSchedImagePreview(null)
+    }
+
     // Scroll suave até o formulário de agendamento
     const formElement = document.getElementById('agendamento-form')
     if (formElement) {
@@ -314,6 +377,9 @@ export default function ClinWhatsAppPage() {
     setScheduledFor('')
     setScheduleError(null)
     setScheduleSuccess(null)
+    setSchedImageFile(null)
+    setSchedImagePreview(null)
+    if (schedImageInputRef.current) schedImageInputRef.current.value = ''
   }
 
   const handleScheduleMessage = async (e: React.FormEvent) => {
@@ -374,6 +440,13 @@ export default function ClinWhatsAppPage() {
     setScheduleError(null)
     setScheduleSuccess(null)
 
+    // Converter imagem para base64 se presente
+    let imageBase64: string | null = null
+    if (schedImageFile) {
+      const arrayBuffer = await schedImageFile.arrayBuffer()
+      imageBase64 = Buffer.from(arrayBuffer).toString('base64')
+    }
+
     try {
       const supabase = createClient()
       
@@ -387,9 +460,10 @@ export default function ClinWhatsAppPage() {
             recipient_name: destinationName,
             subject: subject.trim(),
             message: message.trim(),
-            status: 'pending', // Reverte para pendente caso estivesse como falhado/enviado
-            sent_at: null,     // Limpa dados de envio anterior
-            error_message: null // Limpa erro anterior
+            image_base64: imageBase64,
+            status: 'pending',
+            sent_at: null,
+            error_message: null
           })
           .eq('id', editingMessageId)
 
@@ -406,6 +480,7 @@ export default function ClinWhatsAppPage() {
             recipient_name: destinationName,
             subject: subject.trim(),
             message: message.trim(),
+            image_base64: imageBase64,
             status: 'pending'
           })
 
@@ -570,7 +645,161 @@ export default function ClinWhatsAppPage() {
       setSendError(null)
       setScheduleSuccess(null)
       setScheduleError(null)
+      setImageFile(null)
+      setImagePreview(null)
+      setSchedImageFile(null)
+      setSchedImagePreview(null)
+      setBulkFile(null)
+      setBulkNumbers([])
+      setBulkInvalidCount(0)
     }
+  }
+
+  // === HANDLERS DE IMAGEM ===
+  const handleImageSelect = (file: File, isScheduled = false) => {
+    const maxSize = 5 * 1024 * 1024
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
+    if (!allowedTypes.includes(file.type)) {
+      const setErr = isScheduled ? setScheduleError : setSendError
+      setErr(`Tipo de imagem não suportado: ${file.type}. Use JPG, PNG, WebP ou GIF.`)
+      return
+    }
+    if (file.size > maxSize) {
+      const setErr = isScheduled ? setScheduleError : setSendError
+      setErr(`Imagem muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: 5MB.`)
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (isScheduled) {
+        setSchedImageFile(file)
+        setSchedImagePreview(reader.result as string)
+      } else {
+        setImageFile(file)
+        setImagePreview(reader.result as string)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveImage = (isScheduled = false) => {
+    if (isScheduled) {
+      setSchedImageFile(null)
+      setSchedImagePreview(null)
+      if (schedImageInputRef.current) schedImageInputRef.current.value = ''
+    } else {
+      setImageFile(null)
+      setImagePreview(null)
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+  }
+
+  // === HANDLER DE ARQUIVO TXT (ENVIO EM MASSA) ===
+  const handleBulkFileSelect = (file: File) => {
+    if (!file.name.endsWith('.txt') && !file.name.endsWith('.csv')) {
+      setSendError('Por favor, selecione um arquivo .txt ou .csv com os números.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const content = reader.result as string
+      const lines = content.split(/[\n\r,;]+/).map(l => l.trim()).filter(Boolean)
+      const valid: string[] = []
+      let invalid = 0
+
+      for (const line of lines) {
+        const cleaned = line.replace(/\D/g, '')
+        if (cleaned.length >= 10) {
+          valid.push(line)
+        } else {
+          invalid++
+        }
+      }
+
+      setBulkFile(file)
+      setBulkNumbers(valid)
+      setBulkInvalidCount(invalid)
+      setSendError(null)
+    }
+    reader.readAsText(file)
+  }
+
+  // === ENVIO EM MASSA ===
+  const handleBulkSend = async () => {
+    if (bulkNumbers.length === 0) {
+      setSendError('Nenhum número válido carregado. Faça upload do arquivo .txt primeiro.')
+      return
+    }
+    if (!subject.trim()) {
+      setSendError('O campo Assunto é obrigatório.')
+      return
+    }
+    if (!message.trim()) {
+      setSendError('O campo Mensagem é obrigatório.')
+      return
+    }
+
+    const confirmMsg = `Deseja enviar mensagem para ${bulkNumbers.length} números?\n\nTempo estimado: ~${Math.ceil((bulkNumbers.length * 2) / 60)} minutos\n\nEsta ação não pode ser desfeita.`
+    if (!confirm(confirmMsg)) return
+
+    setBulkSending(true)
+    setSendError(null)
+    setSendSuccess(null)
+    setBulkProgress(null)
+
+    const formattedText = `*Assunto:* ${subject.trim()}\n\n${message.trim()}`
+
+    try {
+      const formData = new FormData()
+      formData.append('text', formattedText)
+      formData.append('numbers', bulkNumbers.join('\n'))
+      if (imageFile) {
+        formData.append('image', imageFile)
+      }
+
+      const res = await fetch('/api/clin-whatsapp/send-bulk', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao iniciar envio em massa')
+
+      setBulkId(data.bulkId)
+      setBulkProgress({ total: data.total, sent: 0, failed: 0, status: 'processing', errors: [] })
+
+      // Iniciar polling de progresso
+      startBulkPolling(data.bulkId)
+    } catch (err: any) {
+      setSendError(err.message || 'Erro ao iniciar envio em massa.')
+      setBulkSending(false)
+    }
+  }
+
+  const startBulkPolling = (id: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/clin-whatsapp/send-bulk?bulkId=${id}`)
+        if (!res.ok) return
+
+        const data = await res.json()
+        setBulkProgress(data)
+
+        if (data.status === 'done') {
+          clearInterval(interval)
+          setBulkSending(false)
+          setSendSuccess(`Envio em massa concluído! ✅ ${data.sent} enviadas | ❌ ${data.failed} falhas`)
+        }
+      } catch {
+        // Silencioso
+      }
+    }, 2000)
+
+    // Timeout de segurança: 2 horas máximo de polling
+    setTimeout(() => clearInterval(interval), 7200000)
   }
 
   const handleConnect = async () => {
@@ -825,20 +1054,20 @@ export default function ClinWhatsAppPage() {
                   <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
                     Método de Destino
                   </label>
-                  <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
+                  <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40 flex-wrap gap-1">
                     <button
                       type="button"
                       onClick={() => {
                         setSendMethod('registered')
                         setSendError(null)
                       }}
-                      className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
                         sendMethod === 'registered'
                           ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
                           : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
                       }`}
                     >
-                      <span>👥</span> Administrador Cadastrado
+                      <span>👥</span> Cadastrado
                     </button>
                     <button
                       type="button"
@@ -846,13 +1075,27 @@ export default function ClinWhatsAppPage() {
                         setSendMethod('manual')
                         setSendError(null)
                       }}
-                      className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
                         sendMethod === 'manual'
                           ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
                           : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
                       }`}
                     >
-                      <span>📱</span> Digitar Número Manual
+                      <span>📱</span> Manual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSendMethod('bulk')
+                        setSendError(null)
+                      }}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
+                        sendMethod === 'bulk'
+                          ? 'bg-blue-600/30 border border-blue-500/30 text-blue-300'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" /> Envio em Massa
                     </button>
                   </div>
                 </div>
@@ -861,7 +1104,7 @@ export default function ClinWhatsAppPage() {
                 {sendMethod === 'registered' ? (
                   <div>
                     <label className="text-gray-300 font-medium text-sm mb-2 block">
-                      Administrador & Clínica Destinatária
+                      Administrador &amp; Clínica Destinatária
                     </label>
                     <select
                       value={selectedAdminId}
@@ -877,7 +1120,7 @@ export default function ClinWhatsAppPage() {
                       ))}
                     </select>
                   </div>
-                ) : (
+                ) : sendMethod === 'manual' ? (
                   <div>
                     <label className="text-gray-300 font-medium text-sm mb-2 block">
                       Número de WhatsApp Destinatário
@@ -890,6 +1133,74 @@ export default function ClinWhatsAppPage() {
                       className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
                       required
                     />
+                  </div>
+                ) : (
+                  /* Modo Envio em Massa */
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-400" />
+                      Arquivo com Números (um por linha)
+                    </label>
+                    <input
+                      ref={bulkFileInputRef}
+                      type="file"
+                      accept=".txt,.csv"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) handleBulkFileSelect(f)
+                      }}
+                      className="hidden"
+                    />
+                    <div
+                      onClick={() => bulkFileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const f = e.dataTransfer.files[0]
+                        if (f) handleBulkFileSelect(f)
+                      }}
+                      className="border-2 border-dashed border-gray-700 hover:border-blue-500/50 rounded-xl p-6 text-center cursor-pointer transition-colors bg-gray-900/30"
+                    >
+                      {bulkFile ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center gap-2 text-blue-400">
+                            <FileText className="w-5 h-5" />
+                            <span className="text-sm font-medium">{bulkFile.name}</span>
+                          </div>
+                          <p className="text-emerald-400 text-sm font-semibold">
+                            ✅ {bulkNumbers.length} números válidos detectados
+                          </p>
+                          {bulkInvalidCount > 0 && (
+                            <p className="text-yellow-400 text-xs">
+                              ⚠️ {bulkInvalidCount} linhas inválidas ignoradas
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setBulkFile(null)
+                              setBulkNumbers([])
+                              setBulkInvalidCount(0)
+                              if (bulkFileInputRef.current) bulkFileInputRef.current.value = ''
+                            }}
+                            className="text-xs text-red-400 hover:text-red-300 underline mt-1"
+                          >
+                            Remover arquivo
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Upload className="w-8 h-8 text-gray-500 mx-auto" />
+                          <p className="text-gray-400 text-sm">
+                            Arraste um arquivo <strong>.txt</strong> ou <strong>.csv</strong> aqui
+                          </p>
+                          <p className="text-gray-500 text-xs">ou clique para selecionar</p>
+                          <p className="text-gray-600 text-[10px]">Formato: um número por linha (ex: 88988073740)</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -923,6 +1234,93 @@ export default function ClinWhatsAppPage() {
                   />
                 </div>
 
+                {/* Upload de Imagem (opcional) */}
+                <div>
+                  <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-emerald-400" />
+                    Anexar Imagem <span className="text-gray-500 text-xs font-normal">(opcional, max 5MB)</span>
+                  </label>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleImageSelect(f, false)
+                    }}
+                    className="hidden"
+                  />
+                  {imagePreview ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-h-32 rounded-xl border border-gray-700 object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(false)}
+                        className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 min-w-[28px] min-h-[28px] flex items-center justify-center transition-colors"
+                        title="Remover imagem"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <p className="text-gray-400 text-xs mt-1">
+                        {imageFile?.name} ({((imageFile?.size || 0) / 1024).toFixed(0)}KB)
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-full border-2 border-dashed border-gray-700 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition-colors bg-gray-900/30 flex items-center justify-center gap-3 min-h-[52px]"
+                    >
+                      <Upload className="w-5 h-5 text-gray-500" />
+                      <span className="text-gray-400 text-sm">Clique para anexar uma imagem</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Barra de Progresso — Envio em Massa */}
+                {bulkProgress && sendMethod === 'bulk' && (
+                  <div className="bg-gray-900/50 border border-gray-700/50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-300 font-medium">
+                        {bulkProgress.status === 'processing' ? '📤 Enviando...' : '✅ Concluído'}
+                      </span>
+                      <span className="text-gray-400">
+                        {bulkProgress.sent + bulkProgress.failed}/{bulkProgress.total}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-500 ${
+                          bulkProgress.status === 'done' ? 'bg-emerald-500' : 'bg-blue-500 animate-pulse'
+                        }`}
+                        style={{ width: `${((bulkProgress.sent + bulkProgress.failed) / bulkProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex gap-4 text-xs">
+                      <span className="text-emerald-400">✅ Enviados: {bulkProgress.sent}</span>
+                      <span className="text-red-400">❌ Falhas: {bulkProgress.failed}</span>
+                    </div>
+                    {bulkProgress.errors.length > 0 && bulkProgress.status === 'done' && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-300">
+                          Ver detalhes das falhas ({bulkProgress.errors.length})
+                        </summary>
+                        <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
+                          {bulkProgress.errors.map((err, i) => (
+                            <p key={i} className="text-xs text-red-400/80">
+                              {err.phone}: {err.error}
+                            </p>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+
                 {/* Mensagens de feedback */}
                 {sendError && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
@@ -941,20 +1339,20 @@ export default function ClinWhatsAppPage() {
                   <button
                     type="button"
                     onClick={handleClearForm}
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
                   >
                     <Trash2 className="w-4 h-4" />
                     Limpar
                   </button>
                   <button
                     type="submit"
-                    disabled={sendingMsg}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    disabled={sendingMsg || bulkSending}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
                   >
-                    {sendingMsg ? 'Enviando...' : (
+                    {(sendingMsg || bulkSending) ? 'Enviando...' : (
                       <>
                         <Send className="w-4 h-4" />
-                        Enviar Mensagem
+                        {sendMethod === 'bulk' ? `Enviar para ${bulkNumbers.length} números` : 'Enviar Mensagem'}
                       </>
                     )}
                   </button>
@@ -1112,6 +1510,53 @@ export default function ClinWhatsAppPage() {
                       className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none"
                       required
                     />
+                  </div>
+
+                  {/* Upload de Imagem (opcional) para Mensagem Programada */}
+                  <div>
+                    <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-emerald-400" />
+                      Anexar Imagem <span className="text-gray-500 text-xs font-normal">(opcional, max 5MB)</span>
+                    </label>
+                    <input
+                      ref={schedImageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) handleImageSelect(f, true)
+                      }}
+                      className="hidden"
+                    />
+                    {schedImagePreview ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={schedImagePreview}
+                          alt="Preview"
+                          className="max-h-32 rounded-xl border border-gray-700 object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(true)}
+                          className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 min-w-[28px] min-h-[28px] flex items-center justify-center transition-colors"
+                          title="Remover imagem"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        <p className="text-gray-400 text-xs mt-1">
+                          {schedImageFile?.name} ({((schedImageFile?.size || 0) / 1024).toFixed(0)}KB)
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => schedImageInputRef.current?.click()}
+                        className="w-full border-2 border-dashed border-gray-700 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition-colors bg-gray-900/30 flex items-center justify-center gap-3 min-h-[52px]"
+                      >
+                        <Upload className="w-5 h-5 text-gray-500" />
+                        <span className="text-gray-400 text-sm">Clique para anexar uma imagem</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Mensagens de feedback */}

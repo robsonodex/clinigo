@@ -75,19 +75,33 @@ export async function GET(request: Request) {
         let success = false
         let lastError = null
         const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+        const hasImage = !!msg.image_base64
 
         // Tentar enviar para os JIDs mapeados
         for (const target of targets) {
           const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
+          const timeout = setTimeout(() => controller.abort(), hasImage ? 30000 : 10000)
 
           try {
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to: target, text: formattedText }),
-              signal: controller.signal,
-            })
+            let res: Response
+
+            if (hasImage) {
+              // Enviar com imagem
+              res = await fetch(`${getClinBotUrl()}/clin/send-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to: target, imageBase64: msg.image_base64, caption: formattedText }),
+                signal: controller.signal,
+              })
+            } else {
+              // Enviar apenas texto
+              res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to: target, text: formattedText }),
+                signal: controller.signal,
+              })
+            }
 
             clearTimeout(timeout)
 
