@@ -158,11 +158,47 @@ export default function ClinWhatsAppPage() {
         const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
 
         try {
-          const res = await fetch('/api/clin-whatsapp/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: msg.recipient_phone, text: formattedText })
-          })
+          let res: Response
+          
+          if (msg.image_base64) {
+            // Converter base64 para File e enviar via FormData
+            try {
+              const base64Clean = msg.image_base64.replace(/^data:image\/[a-z]+;base64,/, '')
+              const binaryString = window.atob(base64Clean)
+              const len = binaryString.length
+              const bytes = new Uint8Array(len)
+              for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i)
+              }
+              const blob = new Blob([bytes.buffer], { type: 'image/jpeg' })
+              const file = new File([blob], 'imagem_agendada.jpg', { type: 'image/jpeg' })
+
+              const formData = new FormData()
+              formData.append('to', msg.recipient_phone)
+              formData.append('text', formattedText)
+              formData.append('image', file)
+
+              res = await fetch('/api/clin-whatsapp/send-image', {
+                method: 'POST',
+                body: formData
+              })
+            } catch (err: any) {
+              console.error('[AutoProcess] Erro na conversão do base64, caindo para fallback texto:', err)
+              // Fallback para texto comum se a conversão do base64 falhar
+              res = await fetch('/api/clin-whatsapp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to: msg.recipient_phone, text: formattedText })
+              })
+            }
+          } else {
+            // Mensagem normal sem imagem
+            res = await fetch('/api/clin-whatsapp/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: msg.recipient_phone, text: formattedText })
+            })
+          }
 
           const data = await res.json()
 
