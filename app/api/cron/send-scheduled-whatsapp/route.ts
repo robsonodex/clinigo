@@ -52,15 +52,15 @@ export async function GET(request: Request) {
 
       for (const msg of pendingMessages) {
         // Higienizar número de telefone
-        const cleanTo = msg.recipient_phone.replace(/\D/g, '')
-        let primaryTarget = cleanTo
+        var cleanTo = msg.recipient_phone.replace(/\D/g, '')
+        var primaryTarget = cleanTo
 
         // Adicionar DDI 55 se não tiver
         if (!cleanTo.startsWith('55') && (cleanTo.length === 10 || cleanTo.length === 11)) {
           primaryTarget = '55' + cleanTo
         }
 
-        const targets = []
+        var targets = []
 
         // Inversão inteligente: para DDD > 28, o correto no WhatsApp é SEM o 9
         if (primaryTarget.startsWith('55') && primaryTarget.length === 13) {
@@ -76,10 +76,10 @@ export async function GET(request: Request) {
           targets.push(primaryTarget)
         }
 
-        let success = false
-        let lastError = null
-        const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
-        const hasImage = !!msg.image_base64
+        var success = false
+        var lastError = null
+        var formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+        var hasImage = !!msg.image_base64
 
         // Tentar enviar para os JIDs mapeados
         for (const target of targets) {

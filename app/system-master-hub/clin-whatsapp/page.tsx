@@ -155,25 +155,25 @@ export default function ClinWhatsAppPage() {
       console.log(`[AutoProcess] Encontradas ${pendingMessages.length} mensagens vencidas. Processando...`)
 
       for (const msg of pendingMessages) {
-        const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+        var formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
 
         try {
-          let res: Response
+          var res: any = null
           
           if (msg.image_base64) {
             // Converter base64 para File e enviar via FormData
             try {
-              const base64Clean = msg.image_base64.replace(/^data:image\/[a-z]+;base64,/, '')
-              const binaryString = window.atob(base64Clean)
-              const len = binaryString.length
-              const bytes = new Uint8Array(len)
+              var base64Clean = msg.image_base64.replace(/^data:image\/[a-z]+;base64,/, '')
+              var binaryString = window.atob(base64Clean)
+              var len = binaryString.length
+              var bytes = new Uint8Array(len)
               for (let i = 0; i < len; i++) {
                 bytes[i] = binaryString.charCodeAt(i)
               }
-              const blob = new Blob([bytes.buffer], { type: 'image/jpeg' })
-              const file = new File([blob], 'imagem_agendada.jpg', { type: 'image/jpeg' })
+              var blob = new Blob([bytes.buffer], { type: 'image/jpeg' })
+              var file = new File([blob], 'imagem_agendada.jpg', { type: 'image/jpeg' })
 
-              const formData = new FormData()
+              var formData = new FormData()
               formData.append('to', msg.recipient_phone)
               formData.append('text', formattedText)
               formData.append('image', file)
@@ -629,17 +629,55 @@ export default function ClinWhatsAppPage() {
     const supabase = createClient()
 
     for (const msg of pendingExpired) {
-      const formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
+      var formattedText = `*Assunto:* ${msg.subject.trim()}\n\n${msg.message.trim()}`
       
       try {
-        const res = await fetch('/api/clin-whatsapp/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: msg.recipient_phone,
-            text: formattedText
+        var res: any = null
+
+        if (msg.image_base64) {
+          // Converter base64 para File e enviar via FormData
+          try {
+            var base64Clean = msg.image_base64.replace(/^data:image\/[a-z]+;base64,/, '')
+            var binaryString = window.atob(base64Clean)
+            var len = binaryString.length
+            var bytes = new Uint8Array(len)
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+            var blob = new Blob([bytes.buffer], { type: 'image/jpeg' })
+            var file = new File([blob], 'imagem_agendada.jpg', { type: 'image/jpeg' })
+
+            var formData = new FormData()
+            formData.append('to', msg.recipient_phone)
+            formData.append('text', formattedText)
+            formData.append('image', file)
+
+            res = await fetch('/api/clin-whatsapp/send-image', {
+              method: 'POST',
+              body: formData
+            })
+          } catch (err: any) {
+            console.error('Erro na conversão do base64 no disparo manual:', err)
+            res = await fetch('/api/clin-whatsapp/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: msg.recipient_phone,
+                text: formattedText
+              })
+            })
+          }
+        } else {
+          // Enviar apenas texto
+          res = await fetch('/api/clin-whatsapp/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: msg.recipient_phone,
+              text: formattedText
+            })
           })
-        })
+        }
 
         const data = await res.json()
 
@@ -657,10 +695,10 @@ export default function ClinWhatsAppPage() {
             .eq('id', msg.id)
           sent++
         }
-      } catch (err) {
+      } catch (err: any) {
         await supabase
           .from('scheduled_whatsapp_messages')
-          .update({ status: 'failed', error_message: 'Erro inesperado de envio' })
+          .update({ status: 'failed', error_message: err.message || 'Erro inesperado de envio' })
           .eq('id', msg.id)
         failed++
       }
