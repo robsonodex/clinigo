@@ -81,10 +81,11 @@ export async function POST(request: Request) {
 
     // 6. Enviar para o Clin Bot
     const url = `${getClinBotUrl()}/clin/send-image`
-    let success = false
-    let lastError = null
+    var success = false
+    var lastError = null
 
-    for (const target of targets) {
+    for (var i = 0; i < targets.length; i++) {
+      var target = targets[i]
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 30000) // 30s timeout (imagem é mais pesada)
 
@@ -102,10 +103,10 @@ export async function POST(request: Request) {
 
         clearTimeout(timeout)
 
-        const text = await res.text()
-        let data: any = {}
+        var resText = await res.text()
+        var data: any = {}
         try {
-          data = JSON.parse(text)
+          data = JSON.parse(resText)
         } catch {
           lastError = 'O serviço do WhatsApp retornou uma resposta inválida (HTML) em vez de JSON.'
           continue
