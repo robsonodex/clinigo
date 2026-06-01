@@ -31,10 +31,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
         {
             urlPattern: /\/_next\/static\/.*/i,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
                 cacheName: 'next-static',
-                expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
         },
     ],
