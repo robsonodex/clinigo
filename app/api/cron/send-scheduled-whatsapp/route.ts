@@ -9,7 +9,11 @@ function getAdminClient() {
 }
 
 function getClinBotUrl(): string {
-  return process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+  const url = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+  if (url.includes('clinigo.app') || url.includes('localhost') || !url.startsWith('http')) {
+    return 'https://clinigo-whatsapp-service-production.up.railway.app'
+  }
+  return url.replace(/\/$/, '')
 }
 
 /**
@@ -105,7 +109,15 @@ export async function GET(request: Request) {
 
             clearTimeout(timeout)
 
-            const data = await res.json()
+            const text = await res.text()
+            let data: any = {}
+            try {
+              data = JSON.parse(text)
+            } catch {
+              lastError = 'O serviço do WhatsApp (Clin Bot) retornou uma resposta inválida (HTML).'
+              continue
+            }
+
             if (res.ok) {
               success = true
               break; // Para o envio se obteve sucesso em um dos alvos
