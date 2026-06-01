@@ -187,11 +187,11 @@ async function processBulkSend(
   const progress = bulkProgress.get(bulkId)!
   const botUrl = getClinBotUrl()
 
-  for (let i = 0; i < phones.length; i++) {
-    const phone = phones[i]
+  for (var i = 0; i < phones.length; i++) {
+    var phone = phones[i]
 
     try {
-      let res: Response
+      var res: any = null
 
       if (imageBase64) {
         // Send with image
@@ -221,10 +221,10 @@ async function processBulkSend(
         clearTimeout(timeout)
       }
 
-      const text = await res.text()
-      let data: any = {}
+      var resText = await res.text()
+      var data: any = {}
       try {
-        data = JSON.parse(text)
+        data = JSON.parse(resText)
       } catch {
         data = { error: 'O serviço do WhatsApp retornou uma resposta inválida (HTML).' }
       }
@@ -239,7 +239,7 @@ async function processBulkSend(
       }
     } catch (err: any) {
       progress.failed++
-      const errorMsg = err.name === 'AbortError' ? 'Timeout' : (err.message || 'Erro inesperado')
+      var errorMsg = err.name === 'AbortError' ? 'Timeout' : (err.message || 'Erro inesperado')
       progress.errors.push({ phone, error: errorMsg })
       console.log(`[Bulk ${bulkId}] ❌ ${i + 1}/${phones.length} - Erro ${phone}: ${errorMsg}`)
     }
