@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { Check, ChevronRight, Play, Server, ShieldCheck, Globe, Users, Building2, Activity, ArrowRight, ScanFace, Sparkles, LayoutGrid, Zap, Lock, Calendar, Video, FileText, QrCode, Receipt, UserCircle, Fingerprint, Monitor, Tablet, Stethoscope, Smartphone, MessageCircle, PieChart } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import AudienceSelector from '@/components/sections/AudienceSelector'
 
 export default function LandingPremium() {
     const { scrollY } = useScroll();
@@ -329,6 +330,9 @@ export default function LandingPremium() {
                     </div>
                 </div>
             </main>
+
+            {/* SEÇÃO PARA QUEM É O CLINIGO */}
+            <AudienceSelector />
 
             {/* SHOWCASE DE RECURSOS - BENTO-TABS PREMIUM */}
             <section id="funcionalidades" className="py-24 container mx-auto px-4 border-t border-slate-800/30">
