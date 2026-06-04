@@ -72,16 +72,16 @@ export async function POST(request: NextRequest) {
         if (!currentUser?.clinic_id) return NextResponse.json({ error: 'Clinic not found' }, { status: 403 })
 
         const body = await request.json()
-        const { name, display_name, doctor_id, show_on_tv } = body
+        const { name, display_name, doctor_id, show_on_tv, room_number } = body
 
         // Check plan limit (max_doctors = max_consulting_rooms)
         const { data: clinic } = await (supabase as any)
-            .from('clinics').select('plan').eq('id', currentUser.clinic_id).single()
+            .from('clinics').select('plan_type').eq('id', currentUser.clinic_id).single()
 
         const planLimits: Record<string, number> = {
             'BASICO': 1, 'AVANCADO': 5, 'PROFESSIONAL': 30, 'ENTERPRISE': -1
         }
-        const maxRooms = planLimits[clinic?.plan || 'BASICO'] || 1
+        const maxRooms = planLimits[clinic?.plan_type || 'BASICO'] || 1
 
         const { count } = await (supabase as any)
             .from('consulting_rooms')
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
                 clinic_id: currentUser.clinic_id,
                 name: name || `Consultório ${String(nextNumber).padStart(2, '0')}`,
                 display_name: display_name || null,
-                room_number: nextNumber,
+                room_number: room_number || nextNumber,
                 doctor_id: doctor_id || null,
                 show_on_tv: show_on_tv ?? true,
             })

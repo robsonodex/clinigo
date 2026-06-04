@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de TV - CliniGo Mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(160deg, #0e1e38 0%, #071020 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 48px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+        .logo {
+            font-weight: 200;
+            font-size: 32px;
+            letter-spacing: -1px;
+        }
+        .logo strong {
+            font-weight: 700;
+            color: #fbbf24; /* Amber 400 */
+        }
+        .clock {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 36px;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Layout Grid */
+        .layout-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 24px;
+            padding: 32px 48px;
+            height: calc(100vh - 160px);
+        }
+
+        /* Left Side: Call Display */
+        .main-call-area {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            backdrop-filter: blur(20px);
+        }
+        .main-call-title {
+            text-transform: uppercase;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 24px;
+        }
+        .ticket-box {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 140px;
+            font-weight: 700;
+            color: #fbbf24; /* Amber */
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(251, 191, 36, 0.2);
+            line-height: 1;
+            margin-bottom: 24px;
+        }
+        .room-badge {
+            font-size: 40px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 16px 40px;
+            border-radius: 20px;
+            color: #ffffff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .doctor-subtext {
+            margin-top: 24px;
+            font-size: 22px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 200;
+        }
+
+        /* Right Side: Active Rooms & Doctors */
+        .rooms-panel {
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 24px;
+            padding: 24px;
+            overflow: hidden;
+        }
+        .rooms-panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding-bottom: 12px;
+        }
+        .rooms-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            flex-1: 1;
+        }
+        .room-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px 20px;
+            transition: all 0.3s;
+        }
+        .room-card.active {
+            border-color: rgba(251, 191, 36, 0.3);
+            background: rgba(251, 191, 36, 0.02);
+        }
+        .room-card-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .room-card-name {
+            font-weight: 600;
+            font-size: 18px;
+            color: #ffffff;
+        }
+        .room-card-doctor {
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
+            font-weight: 400;
+        }
+        .room-card-status {
+            font-size: 12px;
+            background: rgba(16, 185, 129, 0.1); /* Green */
+            color: #34d399;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 16px 48px;
+            background: rgba(5, 10, 20, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        /* Overlay Call Popup (Simulando uma nova chamada) */
+        .call-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: radial-gradient(circle at center, #0e2343 0%, #050d1a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: overlayFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .call-overlay-header {
+            margin-bottom: 40px;
+            animation: slideUp 0.5s 0.1s ease-out both;
+        }
+        .call-overlay-badge {
+            background: #fbbf24;
+            color: #071020;
+            font-size: 28px;
+            font-weight: 700;
+            padding: 12px 32px;
+            border-radius: 20px;
+            letter-spacing: 2px;
+            box-shadow: 0 20px 40px rgba(251, 191, 36, 0.2);
+        }
+        .call-overlay-ticket {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 180px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+            line-height: 1;
+            text-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.5s 0.2s ease-out both;
+        }
+        .call-overlay-room {
+            font-size: 54px;
+            font-weight: 700;
+            color: #fbbf24;
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            background: rgba(251, 191, 36, 0.05);
+            padding: 20px 60px;
+            border-radius: 24px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s 0.3s ease-out both;
+        }
+        
+        .toggle-btn {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.3s;
+            z-index: 101;
+        }
+        .toggle-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Animations */
+        @keyframes overlayFadeIn {
+            from { opacity: 0; transform: scale(1.05); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header da Clínica -->
+    <header>
+        <div class="logo">Clini<strong>Go</strong></div>
+        <div class="clock" id="clock-display">09:30</div>
+    </header>
+
+    <!-- Layout do Painel Principal da TV -->
+    <div class="layout-container">
+        
+        <!-- Lado Esquerdo: Última Chamada ativa na tela -->
+        <main class="main-call-area">
+            <div class="main-call-title">Último Chamado</div>
+            <div class="ticket-box">P-002</div>
+            <div class="room-badge">Consultório 1</div>
+            <div class="doctor-subtext">Dr. Robson de Souza</div>
+        </main>
+
+        <!-- Lado Direito: Grid de Salas e Médicos Cadastrados -->
+        <aside class="rooms-panel">
+            <h3 class="rooms-panel-title">Consultórios & Médicos</h3>
+            <div class="rooms-list">
+                <div class="room-card active">
+                    <div class="room-card-left">
+                        <div class="room-card-name">Consultório 1</div>
+                        <div class="room-card-doctor">Dr. Robson de Souza</div>
+                    </div>
+                    <span class="room-card-status">Ativo</span>
+                </div>
+                <div class="room-card">
+                    <div class="room-card-left">
+                        <div class="room-card-name">Sala 2 (Pediatria)</div>
+                        <div class="room-card-doctor">Dra. Amanda Costa</div>
+                    </div>
+                    <span class="room-card-status">Ativo</span>
+                </div>
+                <div class="room-card">
+                    <div class="room-card-left">
+                        <div class="room-card-name">Consultório 3</div>
+                        <div class="room-card-doctor">Dr. Carlos Alberto</div>
+                    </div>
+                    <span class="room-card-status">Ativo</span>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Rodapé Minimalista -->
+    <footer>
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span>Painel de TV Conectado</span>
+        </div>
+        <div style="font-size: 14px; color: rgba(255,255,255,0.3)">
+            Pressione F11 para tela cheia
+        </div>
+    </footer>
+
+    <!-- Overlay de Nova Chamada (Simulação com transição elegante) -->
+    <div class="call-overlay" id="overlay-call">
+        <div class="call-overlay-header">
+            <span class="call-overlay-badge">CHAMANDO</span>
+        </div>
+        <div class="call-overlay-ticket">P-003</div>
+        <div class="call-overlay-room">SALA / CONSULTÓRIO 1</div>
+    </div>
+
+    <!-- Botão de controle de demonstração para o usuário testar -->
+    <button class="toggle-btn" onclick="toggleOverlay()">Alternar Chamada (Ver Painel Atrás / Ver Chamada)</button>
+
+    <script>
+        // Relógio funcional
+        function updateClock() {
+            const now = new Date();
+            const hrs = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock-display').textContent = hrs + ':' + mins;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Alternador de chamada para teste visual
+        function toggleOverlay() {
+            const overlay = document.getElementById('overlay-call');
+            if (overlay.style.display === 'none') {
+                overlay.style.display = 'flex';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

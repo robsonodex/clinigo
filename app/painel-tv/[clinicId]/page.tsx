@@ -3,7 +3,7 @@
  * URL: /painel-tv/[clinicId]
  * 
  * Professional fullscreen display for clinic waiting rooms.
- * Uses Supabase Realtime to show patient call animations.
+ * Uses Supabase Realtime to show patient call animations and layout changes.
  * No authentication required — accessed via clinic ID in URL.
  */
 
@@ -57,9 +57,11 @@ export default function PainelTVPage() {
     const [currentTime, setCurrentTime] = useState(new Date())
     const [calledPatient, setCalledPatient] = useState<CalledPatient | null>(null)
     const [clinicName, setClinicName] = useState('')
+    const [tvLayout, setTvLayout] = useState<'classico' | 'informativo'>('classico')
     const [isConnected, setIsConnected] = useState(false)
     const [audioReady, setAudioReady] = useState(false)
     const [rooms, setRooms] = useState<ConsultingRoom[]>([])
+    
     const appointmentsRef = useRef<Appointment[]>([])
     const roomsRef = useRef<ConsultingRoom[]>([])
     const audioCtxRef = useRef<AudioContext | null>(null)
@@ -149,25 +151,25 @@ export default function PainelTVPage() {
         osc3.stop(now + 1.2)
     }, [])
 
-    // Speech synthesis vocalization of called patient
+    // Speech synthesis vocalization of called patient - ENXUTA
     const speakCall = useCallback((patientName: string, roomName: string, ticketNumber?: string | null) => {
         if (typeof window === 'undefined' || !window.speechSynthesis) return
 
         // Cancel any active speech to avoid overlapping
         window.speechSynthesis.cancel()
 
-        // Speak sequence: Ticket (spelled out), patient name, room name
+        // Speak sequence: "Senha [Número], [Sala/Consultório]"
         let text = ''
         if (ticketNumber) {
             const spelledTicket = ticketNumber.replace('-', ' ')
-            text = `Senha ${spelledTicket}, ${patientName}. Dirija-se ao ${roomName}.`
+            text = `Senha ${spelledTicket}, ${roomName}.`
         } else {
-            text = `${patientName}. Dirija-se ao ${roomName}.`
+            text = `${patientName}, ${roomName}.`
         }
 
         const utterance = new SpeechSynthesisUtterance(text)
         utterance.lang = 'pt-BR'
-        utterance.rate = 0.9 // Calm natural speaking rate
+        utterance.rate = 0.85 // Calm natural speaking rate
         utterance.pitch = 1.0
 
         // Find PT-BR voice
@@ -211,7 +213,7 @@ export default function PainelTVPage() {
                 appointmentsRef.current = mapped
             }
         } catch (e) {
-            console.error('[TV Panel] Error fetching appointments from queue endpoint:', e)
+            console.error('[TV Panel] Error fetching appointments:', e)
         }
     }, [clinicId])
 
@@ -229,24 +231,30 @@ export default function PainelTVPage() {
         }
     }, [clinicId])
 
-    // Fetch clinic name
-    useEffect(() => {
-        async function fetchClinic() {
+    // Fetch clinic name and layout theme config
+    const fetchClinic = useCallback(async () => {
+        try {
             const { data } = await (supabase as any)
                 .from('clinics')
-                .select('name')
+                .select('name, theme')
                 .eq('id', clinicId)
                 .single()
-            if (data) setClinicName(data.name)
+            if (data) {
+                setClinicName(data.name)
+                const savedLayout = data.theme?.tv_layout || 'classico'
+                setTvLayout(savedLayout)
+            }
+        } catch (e) {
+            console.error('[TV Panel] Error loading clinic info:', e)
         }
-        fetchClinic()
-    }, [clinicId])
+    }, [clinicId, supabase])
 
     useEffect(() => {
+        fetchClinic()
         fetchAppointments()
         fetchRooms()
 
-        // Realtime subscription
+        // Realtime subscription for appointments & clinic changes
         const channel = supabase
             .channel('tv_panel_realtime')
             .on(
@@ -301,6 +309,24 @@ export default function PainelTVPage() {
                     }
                 }
             )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'clinics',
+                    filter: `id=eq.${clinicId}`
+                },
+                (payload: any) => {
+                    if (payload.new && payload.new.theme) {
+                        const savedLayout = payload.new.theme.tv_layout || 'classico'
+                        setTvLayout(savedLayout)
+                        if (payload.new.name) {
+                            setClinicName(payload.new.name)
+                        }
+                    }
+                }
+            )
             .subscribe((status: string) => {
                 setIsConnected(status === 'SUBSCRIBED')
             })
@@ -309,14 +335,17 @@ export default function PainelTVPage() {
         const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000)
 
         // Fallback refresh every 60 seconds
-        const refreshInterval = setInterval(fetchAppointments, 60000)
+        const refreshInterval = setInterval(() => {
+            fetchAppointments()
+            fetchRooms()
+        }, 60000)
 
         return () => {
             channel.unsubscribe()
             clearInterval(clockInterval)
             clearInterval(refreshInterval)
         }
-    }, [clinicId, fetchAppointments, fetchRooms, playCallSound, speakCall])
+    }, [clinicId, fetchClinic, fetchAppointments, fetchRooms, playCallSound, speakCall, supabase])
 
     // Find the most recently called or in-progress patient to display on main screen
     const activePatient = appointments.find(a => a.status === 'WAITING' || a.status === 'IN_PROGRESS')
@@ -328,132 +357,201 @@ export default function PainelTVPage() {
 
     return (
         <div
-            className="h-screen text-white overflow-hidden flex flex-col font-sans select-none"
-            style={{ background: 'linear-gradient(160deg, #1a3a5c 0%, #15304d 50%, #0f2640 100%)' }}
+            className="h-screen w-screen text-white overflow-hidden flex flex-col font-sans select-none"
+            style={{ background: 'linear-gradient(160deg, #0b1a2d 0%, #0d1e33 50%, #081220 100%)' }}
         >
             {/* Audio Enable Prompt */}
             {!audioReady && (
                 <div
-                    className="px-10 py-3.5 bg-amber-500/10 border-b border-amber-400/20 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                    className="px-10 py-3.5 bg-amber-500/10 border-b border-amber-400/20 flex items-center justify-center gap-2 cursor-pointer shrink-0 animate-pulse"
                     onClick={initAudio}
-                    style={{ animation: 'pulseGlow 2s infinite' }}
                 >
-                    <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-5 h-5 text-amber-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M6 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2l3.5-4.5A.5.5 0 0110 5v14a.5.5 0 01-.5.5L6 15z" />
                     </svg>
-                    <span className="text-sm md:text-base font-medium text-amber-300">
-                        Toque ou clique na tela para ativar o som de chamada e voz
+                    <span className="text-sm md:text-base font-semibold text-amber-300">
+                        Clique em qualquer lugar da tela para ativar o som e voz do painel
                     </span>
                 </div>
             )}
 
-            {/* Main Content — Centered Display */}
-            <div className="flex-1 flex flex-col items-center justify-center px-8">
-                {activePatient ? (
-                    <div className="text-center" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-                        {/* Ticket Number Badge */}
-                        {activePatient.ticket_number && (
-                            <div className="mb-4">
-                                <span className="inline-block px-5 py-2 rounded-xl text-amber-400 font-mono text-2xl font-semibold border border-amber-400/20 bg-amber-400/5 tracking-wider">
-                                    SENHA {activePatient.ticket_number}
+            {/* Layout Wrapper */}
+            <div className="flex-1 flex overflow-hidden">
+                
+                {/* Main panel area */}
+                <div className={`flex-1 flex flex-col items-center justify-center px-12 transition-all duration-300 ${
+                    tvLayout === 'informativo' ? 'w-2/3 border-r border-white/5' : 'w-full'
+                }`}>
+                    {activePatient ? (
+                        <div className="text-center space-y-6" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+                            
+                            {/* Ticket number (Giant scale) */}
+                            {activePatient.ticket_number && (
+                                <div>
+                                    <span className="inline-block px-10 py-4 rounded-3xl bg-amber-400/10 text-amber-400 font-mono text-5xl md:text-6xl font-bold border border-amber-400/25 tracking-widest shadow-[0_0_50px_rgba(245,158,11,0.1)]">
+                                        {activePatient.ticket_number}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Patient Name */}
+                            <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white leading-tight tracking-tight uppercase drop-shadow-lg">
+                                {activePatient.patient?.full_name}
+                            </h1>
+
+                            {/* Doctor Name */}
+                            {activePatient.doctor?.user?.full_name && (
+                                <p className="text-2xl md:text-3xl text-white/60 font-medium">
+                                    Atendimento com: <strong className="text-white">Dr(a). {activePatient.doctor.user.full_name}</strong>
+                                </p>
+                            )}
+
+                            {/* Consultório Badge */}
+                            <div className="pt-4">
+                                <span
+                                    className="inline-block px-12 py-5 rounded-3xl text-3xl md:text-4xl font-extrabold tracking-wide shadow-2xl border border-white/10"
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                        backdropFilter: 'blur(20px)',
+                                        color: '#ffffff',
+                                    }}
+                                >
+                                    {activeRoom
+                                        ? activeRoom.display_name || activeRoom.name || `Consultório ${activeRoom.room_number}`
+                                        : 'Consultório'
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center space-y-4" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+                            <h1 className="text-4xl md:text-5xl font-light text-white/20 tracking-widest uppercase">
+                                {clinicName || 'Painel de Atendimento'}
+                            </h1>
+                            <p className="text-lg text-white/10 font-mono">
+                                Aguardando chamadas de pacientes...
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right side panel (Layout Informativo / Split screen) */}
+                {tvLayout === 'informativo' && (
+                    <div 
+                        className="w-1/3 bg-slate-950/40 p-8 flex flex-col overflow-y-auto space-y-6"
+                        style={{ animation: 'slideRightIn 0.3s ease-out' }}
+                    >
+                        <h2 className="text-xs font-bold text-white/40 uppercase tracking-widest border-b border-white/10 pb-4">
+                            Salas de Atendimento
+                        </h2>
+                        
+                        <div className="space-y-4 flex-1">
+                            {rooms.filter(r => r.doctor).map((room) => {
+                                const isRoomActive = activePatient?.consulting_room_id === room.id
+                                return (
+                                    <div 
+                                        key={room.id}
+                                        className={`p-4 rounded-2xl border transition-all duration-300 ${
+                                            isRoomActive 
+                                                ? 'bg-amber-400/10 border-amber-400/30 shadow-[0_0_20px_rgba(245,158,11,0.05)]' 
+                                                : 'bg-white/5 border-white/5 hover:border-white/10'
+                                        }`}
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="font-semibold text-sm text-white/90">
+                                                {room.display_name || room.name || `Sala ${room.room_number}`}
+                                            </span>
+                                            {isRoomActive ? (
+                                                <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                                                    Chamando
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-semibold px-2 py-0.5 rounded-full">
+                                                    Ativo
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-white/50 truncate">
+                                            {room.doctor?.user?.full_name}
+                                        </p>
+                                        <p className="text-[10px] text-white/30 italic">
+                                            {room.doctor?.specialty}
+                                        </p>
+                                    </div>
+                                )
+                            })}
+
+                            {rooms.filter(r => r.doctor).length === 0 && (
+                                <p className="text-sm text-white/20 italic text-center pt-8">
+                                    Nenhuma sala ativa no momento.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+            </div>
+
+            {/* Premium Footer */}
+            <footer className="flex items-center justify-between px-10 py-5 border-t border-white/5 bg-slate-950/30 shrink-0">
+                <div className="flex items-center gap-3">
+                    <span className="relative flex h-3 w-3">
+                        {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+                        <span className={`relative inline-flex rounded-full h-3 w-3 ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                    </span>
+                    <span className="text-xs font-semibold text-white/30 tracking-widest uppercase font-mono">
+                        {isConnected ? 'Canal em Tempo Real Ativo' : 'Conectando ao Servidor...'}
+                    </span>
+                </div>
+                <div className="text-3xl font-light tracking-widest text-white/40 font-mono tabular-nums">
+                    {format(currentTime, 'HH:mm')}
+                </div>
+            </footer>
+
+            {/* Giant Fullscreen Call Animation Overlay */}
+            {calledPatient && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-6"
+                    style={{
+                        background: 'linear-gradient(165deg, #091c33 0%, #050d18 100%)',
+                        animation: 'fadeIn 0.2s ease-out',
+                    }}
+                >
+                    {/* Decorative ambient glowing grids */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.08)_0%,transparent_60%)] pointer-events-none" />
+
+                    <div className="text-center max-w-6xl mx-auto space-y-8 relative z-10">
+                        {/* Ticket Badge */}
+                        {calledPatient.ticketNumber && (
+                            <div style={{ animation: 'slideUp 0.3s ease-out' }}>
+                                <span className="inline-block px-12 py-5 rounded-3xl bg-amber-400 text-slate-950 text-4xl md:text-5xl font-black font-mono tracking-widest uppercase shadow-[0_0_60px_rgba(245,158,11,0.25)]">
+                                    SENHA {calledPatient.ticketNumber}
                                 </span>
                             </div>
                         )}
 
                         {/* Patient Name */}
-                        <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-tight mb-4 tracking-tight uppercase">
-                            {activePatient.patient?.full_name}
-                        </h1>
-
-                        {/* Doctor Name */}
-                        {activePatient.doctor?.user?.full_name && (
-                            <p className="text-2xl md:text-3xl lg:text-4xl text-white/70 font-light mb-10">
-                                Dr. {activePatient.doctor.user.full_name}
-                            </p>
-                        )}
-
-                        {/* Consultório Badge */}
-                        <div className="inline-block">
-                            <span
-                                className="inline-block px-8 py-3 rounded-xl text-xl md:text-2xl font-semibold tracking-wide"
-                                style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                    backdropFilter: 'blur(10px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                                    color: '#ffffff',
-                                }}
-                            >
-                                {activeRoom
-                                    ? activeRoom.display_name || activeRoom.name || `Consultório ${activeRoom.room_number}`
-                                    : 'Consultório'
-                                }
-                            </span>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-                        <h1 className="text-4xl md:text-5xl font-light text-white/30 mb-4 tracking-wider uppercase">
-                            {clinicName || 'Painel de Atendimento'}
-                        </h1>
-                        <p className="text-xl text-white/15">
-                            Aguardando chamada de paciente...
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Minimal Footer */}
-            <footer className="flex items-center justify-between px-10 py-4 border-t border-white/5 bg-slate-950/20">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
-                    <span className="text-xs text-white/30 tracking-wider uppercase">
-                        {isConnected ? 'Sistema Conectado' : 'Reconectando...'}
-                    </span>
-                </div>
-                <div className="text-2xl font-light tracking-widest text-white/40 font-mono tabular-nums">
-                    {format(currentTime, 'HH:mm')}
-                </div>
-            </footer>
-
-            {/* Call Animation Overlay */}
-            {calledPatient && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center"
-                    style={{
-                        background: 'linear-gradient(160deg, #1e3a60 0%, #112844 100%)',
-                        animation: 'fadeIn 0.25s ease-out',
-                    }}
-                >
-                    <div className="text-center max-w-5xl mx-auto px-8">
-                        {/* Call Announcement Header */}
-                        <div className="mb-8" style={{ animation: 'slideUp 0.4s ease-out' }}>
-                            <span className="inline-block px-6 py-2.5 rounded-2xl bg-amber-400 text-slate-950 text-xl font-bold font-mono tracking-widest uppercase">
-                                {calledPatient.ticketNumber ? `SENHA ${calledPatient.ticketNumber}` : 'CHAMADA'}
-                            </span>
-                        </div>
-
-                        {/* Patient Name */}
                         <h2
-                            className="text-7xl md:text-8xl lg:text-9xl font-bold text-white mb-6 leading-tight tracking-tight uppercase"
-                            style={{ animation: 'slideUp 0.5s ease-out' }}
+                            className="text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none tracking-tight uppercase"
+                            style={{ animation: 'slideUp 0.4s ease-out' }}
                         >
                             {calledPatient.patientName}
                         </h2>
 
+                        {/* Doctor Name */}
                         {calledPatient.doctorName && (
-                            <p className="text-3xl md:text-4xl text-white/70 font-light mb-10" style={{ animation: 'slideUp 0.6s ease-out' }}>
-                                Dr. {calledPatient.doctorName}
+                            <p className="text-3xl md:text-4xl text-white/60 font-light" style={{ animation: 'slideUp 0.5s ease-out' }}>
+                                Dr(a). <strong className="text-white/90 font-medium">{calledPatient.doctorName}</strong>
                             </p>
                         )}
 
-                        {/* Consultório Badge */}
-                        <div className="inline-block" style={{ animation: 'slideUp 0.7s ease-out' }}>
+                        {/* Room Location */}
+                        <div style={{ animation: 'slideUp 0.6s ease-out' }}>
                             <span
-                                className="inline-block px-12 py-5 rounded-2xl text-3xl md:text-4xl font-bold tracking-wide"
+                                className="inline-block px-16 py-6 rounded-3xl text-4xl md:text-5xl font-extrabold tracking-wider border border-white/10 shadow-2xl"
                                 style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
                                     backdropFilter: 'blur(20px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
                                     color: '#ffffff',
                                 }}
                             >
@@ -464,20 +562,19 @@ export default function PainelTVPage() {
                 </div>
             )}
 
-            {/* Inline Styles for animations */}
+            {/* CSS Animation Tokens */}
             <style jsx>{`
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
                 @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(30px); }
+                    from { opacity: 0; transform: translateY(40px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
-                @keyframes pulseGlow {
-                    0% { background-color: rgba(245, 158, 11, 0.08); }
-                    50% { background-color: rgba(245, 158, 11, 0.16); }
-                    100% { background-color: rgba(245, 158, 11, 0.08); }
+                @keyframes slideRightIn {
+                    from { opacity: 0; transform: translateX(50px); }
+                    to { opacity: 1; transform: translateX(0); }
                 }
             `}</style>
         </div>

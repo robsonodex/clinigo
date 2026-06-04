@@ -18,6 +18,7 @@ import { uploadClinicLogo } from '@/app/actions/white-label'
 import { Sparkles } from 'lucide-react'
 import { PlanAndBilling } from './components/PlanAndBilling'
 import { SMTPSettings } from './components/SMTPSettings'
+import { ConsultingRoomsSettings } from './components/ConsultingRoomsSettings'
 import { createClient } from '@/lib/supabase/client'
 import { PROFESSIONAL_LABEL_OPTIONS } from '@/lib/hooks/use-professional-label'
 import { COUNCIL_LABEL_OPTIONS } from '@/lib/hooks/use-council-label'
@@ -307,14 +308,19 @@ export default function SettingsPage() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
+                <TabsList className="grid w-full grid-cols-4 lg:w-[650px]">
                     <TabsTrigger value="general">Informações Gerais</TabsTrigger>
+                    <TabsTrigger value="consultorios" className="flex items-center gap-1">
+                        <Building className="h-3 w-3" />
+                        Consultórios & TV
+                    </TabsTrigger>
                     <TabsTrigger value="plan">Plano e Assinatura</TabsTrigger>
                     <TabsTrigger value="smtp" className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
                         E-mail (SMTP)
                     </TabsTrigger>
                 </TabsList>
+
 
                 <TabsContent value="general" className="mt-6">
                     <form onSubmit={handleSubmit(onSubmit)}>
@@ -592,6 +598,10 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
                     </form>
+                </TabsContent>
+
+                <TabsContent value="consultorios" className="mt-6">
+                    <ConsultingRoomsSettings />
                 </TabsContent>
 
                 <TabsContent value="plan" className="mt-6">
