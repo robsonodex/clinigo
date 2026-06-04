@@ -35,6 +35,12 @@ export async function POST(request: NextRequest) {
         let patientId = null
         let finalPatientName = patient_name?.trim() || 'Paciente Avulso'
 
+        // Geradores de dados fictícios para satisfazer constraints NOT NULL da tabela patients
+        const ts = Date.now()
+        const fallbackCpf = String(ts).slice(-11)
+        const fallbackEmail = `totem.${ts}@clinigo.app`
+        const fallbackPhone = `119${String(ts).slice(-8)}`
+
         if (cpf) {
             const cleanCpf = cpf.replace(/\D/g, '')
             // Tenta buscar por CPF
@@ -58,9 +64,15 @@ export async function POST(request: NextRequest) {
                         clinic_id,
                         full_name: finalPatientName,
                         cpf: cleanCpf,
+                        email: fallbackEmail,
+                        phone: fallbackPhone,
                     })
                     .select('id')
                     .single()
+
+                if (createError) {
+                    console.error('[Generate-Ticket] Error creating identified patient:', createError)
+                }
 
                 if (!createError && newPatient) {
                     patientId = newPatient.id
@@ -68,13 +80,16 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Fallback: se não tiver patient_id, cria um registro avulso
+        // Fallback: se não tiver patient_id (fluxo anônimo / sem CPF)
         if (!patientId) {
             const { data: newPatient, error: createError } = await supabase
                 .from('patients')
                 .insert({
                     clinic_id,
                     full_name: finalPatientName,
+                    cpf: fallbackCpf,
+                    email: fallbackEmail,
+                    phone: fallbackPhone,
                 })
                 .select('id')
                 .single()
