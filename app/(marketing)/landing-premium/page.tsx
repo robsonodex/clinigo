@@ -11,44 +11,146 @@ export default function LandingPremium() {
     const y1 = useTransform(scrollY, [0, 500], [0, 200]);
     const y2 = useTransform(scrollY, [0, 500], [0, -150]);
 
+    const [isLoginDropdownOpen, setIsLoginDropdownOpen] = useState(false)
+
     return (
         <div className="min-h-screen bg-navy-deep font-sans text-slate-300 selection:bg-teal-vibrant selection:text-white overflow-x-hidden">
 
             {/* 1. NAVBAR PREMIUM - COM LOGO REAL */}
             <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-navy-deep/80 backdrop-blur-xl transition-all duration-300">
-                <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+                <div className="container mx-auto px-4 h-20 flex items-center justify-between relative">
                     <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                         <Image src="/logo-clinigo.png" alt="CliniGo" width={160} height={40} className="h-10 w-auto" />
                     </Link>
 
+                    {/* Links no Centro (Apenas Desktop) */}
+                    <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8">
+                        <a href="#funcionalidades" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Funcionalidades</a>
+                        <a href="#planos" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Planos</a>
+                    </div>
+
                     {/* Acesso Rápido Móvel (Exibido apenas em celulares) */}
                     <div className="flex md:hidden items-center gap-2">
-                        <Link href="/clinica" className="h-8 px-3.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                            Clínica
-                        </Link>
-                        <Link href="/medico" className="h-8 px-3.5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 font-semibold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                            Médico
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsLoginDropdownOpen(!isLoginDropdownOpen)}
+                                className="h-9 px-4 rounded-full border border-white/10 text-white bg-white/5 hover:bg-white/10 font-semibold text-xs transition-all flex items-center justify-center gap-1 active:scale-95"
+                            >
+                                Entrar
+                                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isLoginDropdownOpen ? 'rotate-90' : ''}`} />
+                            </button>
+
+                            {isLoginDropdownOpen && (
+                                <>
+                                    {/* Backdrop para fechar ao clicar fora no mobile */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsLoginDropdownOpen(false)} />
+                                    
+                                    {/* Dropdown móvel */}
+                                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-navy-deep/95 border border-white/10 p-1.5 shadow-[0_10px_25px_rgba(0,0,0,0.5)] backdrop-blur-xl z-50 flex flex-col gap-0.5">
+                                        <Link 
+                                            href="/clinica" 
+                                            onClick={() => setIsLoginDropdownOpen(false)}
+                                            className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 text-slate-200 hover:text-white transition-all text-xs font-semibold"
+                                        >
+                                            <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                                            Sou Clínica
+                                        </Link>
+                                        <Link 
+                                            href="/medico" 
+                                            onClick={() => setIsLoginDropdownOpen(false)}
+                                            className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 text-slate-200 hover:text-white transition-all text-xs font-semibold"
+                                        >
+                                            <Stethoscope className="w-3.5 h-3.5 text-cyan-400" />
+                                            Sou Médico
+                                        </Link>
+                                        <Link 
+                                            href="/paciente" 
+                                            onClick={() => setIsLoginDropdownOpen(false)}
+                                            className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 text-slate-200 hover:text-white transition-all text-xs font-semibold"
+                                        >
+                                            <UserCircle className="w-3.5 h-3.5 text-purple-400" />
+                                            Sou Paciente
+                                        </Link>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <Link 
+                            href="/trial" 
+                            className="h-9 px-4 rounded-full bg-teal-vibrant text-navy-deep font-bold text-xs hover:bg-teal-vibrant-dark hover:text-white transition-all flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.2)] active:scale-95"
+                        >
+                            Testar grátis
                         </Link>
                     </div>
 
-                    <div className="hidden md:flex items-center gap-6">
-                        <a href="#funcionalidades" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Funcionalidades</a>
-                        <a href="#planos" className="text-sm font-medium hover:text-teal-vibrant transition-colors">Planos</a>
+                    {/* Botões no Canto Direito (Desktop) */}
+                    <div className="hidden md:flex items-center gap-4">
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsLoginDropdownOpen(!isLoginDropdownOpen)}
+                                className="h-10 px-5 rounded-full border border-white/10 text-white hover:bg-white/5 font-semibold text-sm transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                            >
+                                Entrar
+                                <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${isLoginDropdownOpen ? 'rotate-90' : ''}`} />
+                            </button>
 
-                        {/* Botões de Acesso - Clínica e Médico */}
-                        <div className="flex items-center gap-3 ml-2">
-                            <Link href="/clinica" className="h-10 px-5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-semibold text-sm hover:bg-emerald-500/25 hover:border-emerald-400/50 hover:text-white transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-                                <Building2 className="w-4 h-4" />
-                                Sou Clínica
-                            </Link>
-                            <Link href="/medico" className="h-10 px-5 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 font-semibold text-sm hover:bg-cyan-500/25 hover:border-cyan-400/50 hover:text-white transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-                                <Stethoscope className="w-4 h-4" />
-                                Sou Médico
-                            </Link>
+                            {isLoginDropdownOpen && (
+                                <>
+                                    {/* Backdrop para fechar ao clicar fora */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsLoginDropdownOpen(false)} />
+                                    
+                                    {/* Dropdown com opções Clínica, Médico e Paciente */}
+                                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-navy-deep/95 border border-white/10 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl z-50 flex flex-col gap-1">
+                                        <Link 
+                                            href="/clinica" 
+                                            onClick={() => setIsLoginDropdownOpen(false)}
+                                            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-slate-200 hover:text-white transition-all group"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30 transition-all">
+                                                <Building2 className="w-4 h-4 text-emerald-400" />
+                                            </div>
+                                            <div className="flex flex-col text-left">
+                                                <span className="text-xs font-semibold">Área da Clínica</span>
+                                                <span className="text-[10px] text-slate-400 font-light">Sou Clínica / Gestor</span>
+                                            </div>
+                                        </Link>
+                                        <Link 
+                                            href="/medico" 
+                                            onClick={() => setIsLoginDropdownOpen(false)}
+                                            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-slate-200 hover:text-white transition-all group"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:bg-cyan-500/20 group-hover:border-cyan-500/30 transition-all">
+                                                <Stethoscope className="w-4 h-4 text-cyan-400" />
+                                            </div>
+                                            <div className="flex flex-col text-left">
+                                                <span className="text-xs font-semibold">Portal do Médico</span>
+                                                <span className="text-[10px] text-slate-400 font-light">Sou Médico / Profissional</span>
+                                            </div>
+                                        </Link>
+                                        <Link 
+                                            href="/paciente" 
+                                            onClick={() => setIsLoginDropdownOpen(false)}
+                                            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-slate-200 hover:text-white transition-all group"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-500/20 group-hover:border-purple-500/30 transition-all">
+                                                <UserCircle className="w-4 h-4 text-purple-400" />
+                                            </div>
+                                            <div className="flex flex-col text-left">
+                                                <span className="text-xs font-semibold">Portal do Paciente</span>
+                                                <span className="text-[10px] text-slate-400 font-light">Sou Paciente / Cliente</span>
+                                            </div>
+                                        </Link>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        <Link href="/cadastro" className="h-10 px-6 rounded-full bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-dark hover:text-white transition-all flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.2)] hover:shadow-[0_0_30px_rgba(20,184,166,0.3)]">
-                            Criar Conta
+                        <Link 
+                            href="/trial" 
+                            className="h-10 px-6 rounded-full bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-dark hover:text-white transition-all flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.2)] hover:shadow-[0_0_30px_rgba(20,184,166,0.3)]"
+                        >
+                            Testar grátis
                         </Link>
                     </div>
                 </div>
@@ -69,10 +171,6 @@ export default function LandingPremium() {
                             transition={{ duration: 0.8, ease: "easeOut" }}
                             className="flex-1 text-left"
                         >
-                            <div className="inline-flex items-center gap-2 py-1 px-4 rounded-full bg-teal-vibrant/5 border border-teal-vibrant/20 text-teal-vibrant text-xs font-bold tracking-wider uppercase mb-8 hover:bg-teal-vibrant/10 transition-colors cursor-default">
-                                <Sparkles className="w-3 h-3" />
-                                Otimizado para Psicologia, Terapias (T.O., Fono, Fisio) e Consultórios
-                            </div>
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
                                 A Plataforma{' '}
                                 <span className="relative inline-block">
@@ -85,7 +183,7 @@ export default function LandingPremium() {
                                 </span>
                             </h1>
                             <p className="text-lg md:text-xl text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
-                                Desenvolvido sob medida para clínicas multidisciplinares, psicologia, reabilitação e consultórios de saúde. O único com agenda integrada, prontuários adaptativos e WhatsApp nativo para falar a língua da sua especialidade.
+                                Do agendamento ao prontuário, do check-in ao faturamento. Tudo integrado, tudo automático — para você focar no que importa: <strong className="text-teal-vibrant font-semibold">cuidar de quem precisa.</strong>
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <Link href="/trial" className="h-14 px-8 rounded-full bg-teal-vibrant text-navy-deep font-bold text-lg hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
