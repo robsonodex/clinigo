@@ -5,28 +5,33 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // 🔒 SECURITY FIX: Get user's clinic_id to ensure data isolation
-        const { data: currentUser } = await (supabase as any)
-            .from('users')
-            .select('clinic_id')
-            .eq('id', user.id)
-            .single()
-
-        if (!currentUser?.clinic_id) {
-            return NextResponse.json({ error: 'Clinic not found for user' }, { status: 403 })
-        }
-
-        const clinicId = currentUser.clinic_id
-
         const { searchParams } = new URL(request.url)
+        const publicClinicId = searchParams.get('clinicId')
         const status = searchParams.get('status') || 'waiting' // waiting, in_service, completed
+
+        const supabase = await createClient()
+        let clinicId = publicClinicId
+
+        if (!clinicId) {
+            const { data: { user } } = await supabase.auth.getUser()
+
+            if (!user) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            }
+
+            // 🔒 SECURITY FIX: Get user's clinic_id to ensure data isolation
+            const { data: currentUser } = await (supabase as any)
+                .from('users')
+                .select('clinic_id')
+                .eq('id', user.id)
+                .single()
+
+            if (!currentUser?.clinic_id) {
+                return NextResponse.json({ error: 'Clinic not found for user' }, { status: 403 })
+            }
+
+            clinicId = currentUser.clinic_id
+        }
 
         // Fetch appointments for all active statuses (3-panel layout)
         let appointments = []
@@ -48,7 +53,7 @@ export async function GET(request: Request) {
       `)
                 .eq('clinic_id', clinicId)
                 .eq('appointment_date', new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }))
-                .in('status', ['SCHEDULED', 'CONFIRMED', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW'])
+                .in('status', ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW'])
                 .order('priority_level', { ascending: false })
                 .order('checked_in_at', { ascending: true, nullsFirst: false })
 
@@ -121,7 +126,7 @@ export async function GET(request: Request) {
             // Prefer keeping the one that is further along in the process if there's a conflict
             if (uniqueQueueValues.has(dupKey)) {
                 const existing = uniqueQueueValues.get(dupKey)
-                const statusOrder: Record<string, number> = { 'COMPLETED': 4, 'IN_PROGRESS': 3, 'WAITING': 2, 'CONFIRMED': 1, 'SCHEDULED': 0, 'NO_SHOW': -1 }
+                const statusOrder: Record<string, number> = { 'COMPLETED': 4, 'IN_PROGRESS': 3, 'WAITING': 2, 'CHECKED_IN': 1.5, 'CONFIRMED': 1, 'SCHEDULED': 0, 'NO_SHOW': -1 }
                 if ((statusOrder[item.status] ?? 0) > (statusOrder[existing.status] ?? 0)) {
                     uniqueQueueValues.set(dupKey, item)
                 }
@@ -143,7 +148,7 @@ export async function GET(request: Request) {
             }
 
             // Then by status: WAITING (called) before CONFIRMED (not yet called)
-            const statusOrder: Record<string, number> = { 'WAITING': 0, 'CONFIRMED': 1, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
+            const statusOrder: Record<string, number> = { 'WAITING': 0, 'CHECKED_IN': 0.5, 'CONFIRMED': 1, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
             const aOrder = statusOrder[a.status] ?? 5
             const bOrder = statusOrder[b.status] ?? 5
             if (aOrder !== bOrder) return aOrder - bOrder

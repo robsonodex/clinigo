@@ -39,7 +39,7 @@ interface FaceCheckInProps {
     onFallbackToQR?: () => void;
 }
 
-const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+const MODEL_URL = '/models/face-api';
 const MATCH_THRESHOLD = 0.6; // < 0.6 = mesma pessoa
 
 export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: FaceCheckInProps) {
@@ -49,25 +49,24 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
     const [isScanning, setIsScanning] = useState(false);
     const [checkInCompleted, setCheckInCompleted] = useState<{ name: string } | null>(null);
     const [scanAttempts, setScanAttempts] = useState(0);
-    const [biometricsLoaded, setBiometricsLoaded] = useState(false);
     const [patientsWithPhotos, setPatientsWithPhotos] = useState<Array<{ patientId: string; name: string; photoUrl: string; appointmentId?: string }>>([]);
-    const descriptorsRef = useRef<Array<{ patientId: string; name: string; descriptor: Float32Array; imageUrl?: string; appointmentId?: string; doctorId?: string }>>([])
-    const autoConfirmingRef = useRef(false);;
+    const [showVisualGrid, setShowVisualGrid] = useState(false);
+    const autoConfirmingRef = useRef(false);
     const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Carrega modelos e biometrias
+    // Carrega modelos e fotos de fallback
     useEffect(() => {
         const init = async () => {
             try {
-                // Carrega modelos face-api
+                // Carrega modelos face-api corretos
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
                 ]);
 
-                // Busca biometrias da clínica
-                await loadBiometrics();
+                // Busca fotos para o fallback visual
+                await loadPatientsWithPhotos();
 
                 setIsLoading(false);
             } catch (error) {
@@ -84,87 +83,6 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
             }
         };
     }, [clinicId]);
-
-    const loadBiometrics = async () => {
-        const supabase = createClient();
-        const today = new Date().toISOString().split('T')[0];
-
-        // Buscar agendamentos do dia com pacientes
-        const { data: appointmentsRaw, error: aptError } = await supabase
-            .from('appointments')
-            .select('id, patient_id, doctor_id, patients(full_name)')
-            .eq('clinic_id', clinicId)
-            .eq('appointment_date', today)
-            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING'])
-            .limit(50);
-
-        const appointments = (appointmentsRaw || []) as Array<{ id: string; patient_id: string; doctor_id: string; patients: { full_name: string } | null }>;
-
-        if (aptError || appointments.length === 0) {
-            setBiometricsLoaded(true);
-            return;
-        }
-
-        const patientIds = appointments.map(a => (a as any).patient_id).filter(Boolean);
-
-        // Buscar fotos do pré-checkin
-        const { data: biometricsData } = await supabase
-            .from('patient_face_biometrics')
-            .select('patient_id, reference_image_url')
-            .in('patient_id', patientIds);
-
-        const biometrics = (biometricsData || []) as Array<{ patient_id: string; reference_image_url: string | null }>;
-
-        // Gerar descriptors a partir das fotos usando face-api.js
-        const newDescriptors: typeof descriptorsRef.current = [];
-
-        for (const apt of appointments) {
-            const bio = biometrics.find(b => b.patient_id === apt.patient_id);
-            if (bio?.reference_image_url) {
-                try {
-                    const img = await faceapi.fetchImage(bio.reference_image_url);
-                    const detection = await faceapi
-                        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
-                        .withFaceLandmarks()
-                        .withFaceDescriptor();
-
-                    if (detection) {
-                        newDescriptors.push({
-                            patientId: apt.patient_id,
-                            name: (apt.patients as any)?.full_name || 'Paciente',
-                            descriptor: detection.descriptor,
-                            imageUrl: bio.reference_image_url,
-                            appointmentId: apt.id,
-                            doctorId: apt.doctor_id,
-                        });
-                    }
-                } catch (e) {
-                    console.warn('Could not process face from photo for patient:', apt.patient_id, e);
-                }
-            }
-        }
-
-        descriptorsRef.current = newDescriptors;
-
-        // Also load patients with photos for the visual fallback grid
-        if (newDescriptors.length === 0) {
-            const photoPatients: typeof patientsWithPhotos = [];
-            for (const apt of appointments) {
-                const bio = biometrics.find(b => b.patient_id === apt.patient_id);
-                if (bio?.reference_image_url) {
-                    photoPatients.push({
-                        patientId: apt.patient_id,
-                        name: (apt.patients as any)?.full_name || 'Paciente',
-                        photoUrl: bio.reference_image_url,
-                        appointmentId: apt.id
-                    });
-                }
-            }
-            setPatientsWithPhotos(photoPatients);
-        }
-
-        setBiometricsLoaded(true);
-    };
 
     // Fallback: carregar pacientes com agendamento hoje que fizeram pré-checkin com foto
     const loadPatientsWithPhotos = async () => {
@@ -218,13 +136,7 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
 
     // Loop de detecção contínua
     useEffect(() => {
-        if (isLoading || detectedPatient || !biometricsLoaded) return;
-
-        if (descriptorsRef.current.length === 0) {
-            // Nenhum descriptor biométrico - tenta carregar pacientes com foto
-            loadPatientsWithPhotos();
-            return;
-        }
+        if (isLoading || detectedPatient) return;
 
         scanIntervalRef.current = setInterval(async () => {
             if (!webcamRef.current || isScanning) return;
@@ -239,36 +151,41 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                     return;
                 }
 
-                const img = await faceapi.fetchImage(imageSrc);
+                // 1. Criar imagem em memória a partir do screenshot
+                const img = new Image();
+                img.src = imageSrc;
+                await new Promise((resolve) => { img.onload = resolve });
+
+                // 2. Detectar face e obter descriptor localmente
                 const detection = await faceapi
-                    .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+                    .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
                     .withFaceLandmarks()
                     .withFaceDescriptor();
 
-                if (!detection || detection.detection.score < 0.6) {
+                if (!detection) {
                     setIsScanning(false);
                     return;
                 }
 
-                // Compara com todas as biometrias
-                let bestMatch: { patient: typeof descriptorsRef.current[0]; distance: number } | null = null;
+                // 3. Enviar descriptor para a API do backend para reconhecimento
+                const response = await fetch('/api/checkin/face-recognize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        descriptor: Array.from(detection.descriptor),
+                        clinic_id: clinicId
+                    })
+                });
 
-                for (const bio of descriptorsRef.current) {
-                    const distance = faceapi.euclideanDistance(detection.descriptor, bio.descriptor);
+                const result = await response.json();
 
-                    if (distance < MATCH_THRESHOLD && (!bestMatch || distance < bestMatch.distance)) {
-                        bestMatch = { patient: bio, distance };
-                    }
-                }
-
-                if (bestMatch) {
-                    // Match encontrado!
+                if (result.success && result.patient) {
+                    // Match encontrado no backend!
                     const matchedPatient: PatientMatch = {
-                        patient_id: bestMatch.patient.patientId,
-                        full_name: bestMatch.patient.name,
-                        reference_image_url: bestMatch.patient.imageUrl,
-                        confidence: Math.round((1 - bestMatch.distance) * 100),
-                        appointment_id: bestMatch.patient.appointmentId,
+                        patient_id: result.patient.id,
+                        full_name: result.patient.name,
+                        confidence: Math.round(result.confidence * 100),
+                        appointment_id: result.appointment_id,
                     };
                     setDetectedPatient(matchedPatient);
 
@@ -290,18 +207,18 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    appointment_id: bestMatch.patient.appointmentId,
+                                    appointment_id: result.appointment_id,
                                     clinic_id: clinicId,
-                                    patient_id: bestMatch.patient.patientId,
+                                    patient_id: result.patient.id,
                                 })
                             });
-                            const result = await res.json();
-                            if (result.success || result.data?.already_in_queue) {
-                                toast.success(`Check-in confirmado: ${bestMatch.patient.name}`);
-                                setCheckInCompleted({ name: bestMatch.patient.name });
-                                onCheckInSuccess?.(bestMatch.patient.patientId, bestMatch.patient.name);
-                            } else if (result.error) {
-                                toast.error(result.error?.message || result.error);
+                            const confirmResult = await res.json();
+                            if (confirmResult.success || confirmResult.data?.already_in_queue) {
+                                toast.success(`Check-in confirmado: ${result.patient.name}`);
+                                setCheckInCompleted({ name: result.patient.name });
+                                onCheckInSuccess?.(result.patient.id, result.patient.name);
+                            } else {
+                                toast.error(confirmResult.error?.message || confirmResult.error || 'Erro ao confirmar');
                                 setDetectedPatient(null);
                             }
                         } catch (err) {
@@ -323,7 +240,7 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                 clearInterval(scanIntervalRef.current);
             }
         };
-    }, [isLoading, detectedPatient, biometricsLoaded, isScanning]);
+    }, [isLoading, detectedPatient, isScanning, clinicId, onCheckInSuccess]);
 
     const confirmCheckIn = async () => {
         if (!detectedPatient) return;
@@ -425,82 +342,8 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
             </div>
         );
     }
-
-    // Nenhuma biometria cadastrada - mostra pacientes com foto para seleção manual
-    if (biometricsLoaded && descriptorsRef.current.length === 0) {
-        // Se há pacientes com foto, mostrar grid para seleção
-        if (patientsWithPhotos.length > 0) {
-            return (
-                <div className="space-y-6 p-4">
-                    <div className="text-center">
-                        <h2 className="text-xl font-bold mb-2">Check-in Visual</h2>
-                        <p className="text-muted-foreground">Toque na foto do paciente para confirmar</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {patientsWithPhotos.map((patient) => (
-                            <Card
-                                key={patient.patientId}
-                                className="cursor-pointer hover:border-primary transition-colors"
-                                onClick={() => setDetectedPatient({
-                                    patient_id: patient.patientId,
-                                    full_name: patient.name,
-                                    reference_image_url: patient.photoUrl,
-                                    confidence: 100
-                                })}
-                            >
-                                <CardContent className="p-3 text-center">
-                                    <img
-                                        src={patient.photoUrl}
-                                        alt={patient.name}
-                                        className="w-24 h-24 rounded-full mx-auto object-cover mb-2"
-                                    />
-                                    <p className="font-medium text-sm truncate">{patient.name}</p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-
-                    <div className="flex gap-2 justify-center">
-                        <Button variant="outline" onClick={() => loadPatientsWithPhotos()}>
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Atualizar
-                        </Button>
-                        <Button variant="outline" onClick={onFallbackToQR}>
-                            <QrCode className="w-4 h-4 mr-2" />
-                            QR Code
-                        </Button>
-                    </div>
-
-                    {/* Modal de confirmação */}
-                    {detectedPatient && (
-                        <div className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50">
-                            <div className="bg-white rounded-2xl p-8 max-w-md text-center">
-                                <img
-                                    src={detectedPatient.reference_image_url || ''}
-                                    alt={detectedPatient.full_name}
-                                    className="w-32 h-32 rounded-full mx-auto object-cover mb-4 border-4 border-primary"
-                                />
-                                <h2 className="text-2xl font-bold mb-2">{detectedPatient.full_name}</h2>
-                                <p className="text-muted-foreground mb-6">Confirma o check-in?</p>
-                                <div className="flex gap-4 justify-center">
-                                    <Button onClick={confirmCheckIn} className="bg-green-600 hover:bg-green-700">
-                                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                                        Confirmar
-                                    </Button>
-                                    <Button variant="outline" onClick={resetDetection}>
-                                        <XCircle className="w-4 h-4 mr-2" />
-                                        Cancelar
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        // Nenhum paciente com foto - fallback original
+    // Nenhuma biometria cadastrada - fallback para QR Code direto
+    if (patientsWithPhotos.length === 0) {
         return (
             <Card className="max-w-md mx-auto">
                 <CardContent className="pt-6 text-center space-y-4">
@@ -515,6 +358,83 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                     </Button>
                 </CardContent>
             </Card>
+        );
+    }
+
+    // Se o atendente escolheu o check-in visual manual
+    if (showVisualGrid) {
+        return (
+            <div className="space-y-6 p-4">
+                <div className="text-center">
+                    <h2 className="text-xl font-bold mb-2">Check-in Visual</h2>
+                    <p className="text-muted-foreground">Toque na foto do paciente para confirmar</p>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {patientsWithPhotos.map((patient) => (
+                        <Card
+                            key={patient.patientId}
+                            className="cursor-pointer hover:border-primary transition-colors"
+                            onClick={() => setDetectedPatient({
+                                patient_id: patient.patientId,
+                                full_name: patient.name,
+                                photoUrl: patient.photoUrl,
+                                confidence: 100,
+                                appointment_id: patient.appointmentId
+                            } as any)}
+                        >
+                            <CardContent className="p-3 text-center">
+                                <img
+                                    src={patient.photoUrl}
+                                    alt={patient.name}
+                                    className="w-24 h-24 rounded-full mx-auto object-cover mb-2"
+                                />
+                                <p className="font-medium text-sm truncate">{patient.name}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                <div className="flex gap-2 justify-center">
+                    <Button variant="outline" onClick={() => loadPatientsWithPhotos()}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Atualizar
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowVisualGrid(false)}>
+                        <Camera className="w-4 h-4 mr-2" />
+                        Voltar para Câmera
+                    </Button>
+                    <Button variant="outline" onClick={onFallbackToQR}>
+                        <QrCode className="w-4 h-4 mr-2" />
+                        QR Code
+                    </Button>
+                </div>
+
+                {/* Modal de confirmação para check-in visual manual */}
+                {detectedPatient && (
+                    <div className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-8 max-w-md text-center">
+                            <img
+                                src={detectedPatient.reference_image_url || detectedPatient.photoUrl || ''}
+                                alt={detectedPatient.full_name}
+                                className="w-32 h-32 rounded-full mx-auto object-cover mb-4 border-4 border-primary"
+                            />
+                            <h2 className="text-2xl font-bold mb-2">{detectedPatient.full_name}</h2>
+                            <p className="text-muted-foreground mb-6">Confirma o check-in?</p>
+                            <div className="flex gap-4 justify-center">
+                                <Button onClick={confirmCheckIn} className="bg-green-600 hover:bg-green-700">
+                                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                                    Confirmar
+                                </Button>
+                                <Button variant="outline" onClick={resetDetection}>
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         );
     }
 
@@ -547,7 +467,7 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                 {/* Status badge */}
                 <div className="absolute top-4 right-4">
                     <Badge variant={isScanning ? 'default' : 'secondary'}>
-                        {isScanning ? 'Analisando...' : `${descriptorsRef.current.length} pacientes`}
+                        {isScanning ? 'Analisando...' : `${patientsWithPhotos.length} cadastrados`}
                     </Badge>
                 </div>
 
@@ -591,9 +511,13 @@ export function FaceCheckIn({ clinicId, onCheckInSuccess, onFallbackToQR }: Face
                 </p>
 
                 <div className="flex gap-2 justify-center">
-                    <Button variant="outline" onClick={() => loadBiometrics()}>
+                    <Button variant="outline" onClick={() => loadPatientsWithPhotos()}>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Atualizar Lista
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowVisualGrid(true)}>
+                        <User className="w-4 h-4 mr-2" />
+                        Check-in Manual
                     </Button>
                     <Button variant="outline" onClick={onFallbackToQR}>
                         <QrCode className="w-4 h-4 mr-2" />

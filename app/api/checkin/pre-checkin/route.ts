@@ -4,6 +4,7 @@ import { preCheckinSchema } from '@/lib/validations/pre-checkin'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import jwt from 'jsonwebtoken'
+import { encryptFaceDescriptor } from '@/lib/utils/face-encryption'
 
 export const runtime = 'nodejs'
 
@@ -79,7 +80,7 @@ export function verifyCheckinToken(token: string): {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { appointment_id, clinic_id, documents, face_photo_url, ...formData } = body
+        const { appointment_id, clinic_id, documents, face_photo_url, face_descriptor, ...formData } = body
 
         if (!appointment_id || !clinic_id) {
             throw new ValidationError('appointment_id e clinic_id são obrigatórios')
@@ -231,30 +232,39 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Also save to appointment_checkins if documents provided
-        if (documents && documents.length > 0) {
-            await supabase
-                .from('appointment_checkins')
-                .upsert({
-                    appointment_id,
-                    clinic_id,
-                    patient_id: (appointment as any).patient_id,
-                    health_data: healthData,
-                    documents: documents,
-                    checkin_method: 'online',
-                    status: 'completed',
-                } as any, { onConflict: 'appointment_id' })
-                .select()
-        }
+        // Always save to appointment_checkins on successful pre-checkin
+        await supabase
+            .from('appointment_checkins')
+            .upsert({
+                appointment_id,
+                clinic_id,
+                patient_id: (appointment as any).patient_id,
+                health_data: healthData,
+                documents: documents && documents.length > 0 ? documents : null,
+                checkin_method: 'online',
+                status: 'completed',
+            } as any, { onConflict: 'appointment_id' })
+            .select()
 
         // Save face photo to patient_face_biometrics for facial recognition check-in
         if (face_photo_url && (appointment as any).patient_id) {
+            let encryptedDescriptor = ''
+            if (face_descriptor && Array.isArray(face_descriptor) && face_descriptor.length === 128) {
+                try {
+                    const float32 = new Float32Array(face_descriptor)
+                    encryptedDescriptor = encryptFaceDescriptor(float32)
+                } catch (e) {
+                    console.error('[Pre-Checkin] Error encrypting face descriptor:', e)
+                }
+            }
+
             const { error: biometricsError } = await supabase
                 .from('patient_face_biometrics')
                 .upsert({
                     patient_id: (appointment as any).patient_id,
                     clinic_id,
                     reference_image_url: face_photo_url,  // Correct field name from schema
+                    face_descriptor_encrypted: encryptedDescriptor, // Store encrypted descriptor
                     consent_given: true,  // Set consent based on pre-checkin form acceptance
                     consent_date: new Date().toISOString(),
                     created_at: new Date().toISOString(),

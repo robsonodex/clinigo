@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner'
 import { QRCodeCanvas } from 'qrcode.react'
 import Webcam from 'react-webcam'
+import * as faceapi from 'face-api.js'
 import {
     Phone,
     MapPin,
@@ -84,6 +85,9 @@ export function PreCheckinWizard({
     const [isCameraReady, setIsCameraReady] = useState(false)
     const [isCapturingFace, setIsCapturingFace] = useState(false)
     const webcamRef = useRef<Webcam>(null)
+    const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null)
+    const [faceApiLoaded, setFaceApiLoaded] = useState(false)
+    const [hasFaceConsent, setHasFaceConsent] = useState(false)
 
     const supabase = createClient()
 
@@ -112,6 +116,26 @@ export function PreCheckinWizard({
             priority_reason: 'normal',
         },
     })
+
+    useEffect(() => {
+        if (currentStep === 4 && !faceApiLoaded) {
+            const loadModels = async () => {
+                try {
+                    const MODEL_URL = '/models/face-api'
+                    await Promise.all([
+                        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                    ])
+                    setFaceApiLoaded(true)
+                    console.log('[PreCheckinWizard] Face API models loaded successfully')
+                } catch (error) {
+                    console.error('[PreCheckinWizard] Error loading Face API models:', error)
+                }
+            }
+            loadModels()
+        }
+    }, [currentStep, faceApiLoaded])
 
     const consentTreatment = watch('consent_treatment')
     const consentDataUsage = watch('consent_data_usage')
@@ -256,6 +280,33 @@ export function PreCheckinWizard({
                 return
             }
 
+            // Extract face descriptor client-side in background
+            if (faceApiLoaded) {
+                try {
+                    const img = new Image()
+                    img.src = imageSrc
+                    img.onload = async () => {
+                        try {
+                            const detection = await faceapi
+                                .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+                                .withFaceLandmarks()
+                                .withFaceDescriptor()
+
+                            if (detection) {
+                                setFaceDescriptor(Array.from(detection.descriptor))
+                                console.log('[PreCheckinWizard] Face descriptor generated successfully')
+                            } else {
+                                console.warn('[PreCheckinWizard] No face detected in screenshot')
+                            }
+                        } catch (err) {
+                            console.error('[PreCheckinWizard] Error running detection on capture:', err)
+                        }
+                    }
+                } catch (err) {
+                    console.error('[PreCheckinWizard] Face-API processing error:', err)
+                }
+            }
+
             // Convert base64 to Blob (CSP-safe method - no fetch needed)
             const base64Data = imageSrc.split(',')[1]
             const byteCharacters = atob(base64Data)
@@ -293,10 +344,11 @@ export function PreCheckinWizard({
         } finally {
             setIsCapturingFace(false)
         }
-    }, [supabase, appointmentId])
+    }, [supabase, appointmentId, faceApiLoaded])
 
     const retakeFacePhoto = () => {
         setFacePhotoUrl(null)
+        setFaceDescriptor(null)
         setIsCameraReady(false)
     }
 
@@ -334,6 +386,7 @@ export function PreCheckinWizard({
                     appointment_id: appointmentId,
                     clinic_id: clinicId,
                     face_photo_url: facePhotoUrl,
+                    face_descriptor: faceDescriptor,
                     documents: uploadedFiles.map(f => ({
                         type: f.type,
                         url: f.url,
@@ -670,67 +723,102 @@ export function PreCheckinWizard({
                             </div>
 
                             {!facePhotoUrl ? (
-                                <div className="space-y-4">
-                                    <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden max-w-md mx-auto">
-                                        <Webcam
-                                            ref={webcamRef}
-                                            screenshotFormat="image/jpeg"
-                                            className="w-full h-full object-cover"
-                                            mirrored
-                                            onUserMedia={() => setIsCameraReady(true)}
-                                            onUserMediaError={() => {
-                                                toast.error('Não foi possível acessar a câmera')
-                                            }}
-                                            videoConstraints={{
-                                                facingMode: 'user',
-                                                width: 640,
-                                                height: 480
-                                            }}
-                                        />
+                                !hasFaceConsent ? (
+                                    <div className="bg-muted/40 border rounded-xl p-6 max-w-md mx-auto text-center space-y-5 animate-in fade-in duration-300">
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                                            <Shield className="w-6 h-6 text-primary" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h4 className="font-semibold text-base text-foreground">Consentimento de Biometria Facial</h4>
+                                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                                Para facilitar seu acesso no totem de autoatendimento, podemos cadastrar sua foto. 
+                                                Os seus dados biométricos são criptografados (AES-256-GCM) e protegidos conforme a LGPD.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col gap-2 pt-2">
+                                            <Button
+                                                type="button"
+                                                onClick={() => setHasFaceConsent(true)}
+                                                className="w-full h-11 text-sm font-medium"
+                                            >
+                                                Autorizar e Abrir Câmera
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={skipFaceCapture}
+                                                className="w-full h-11 text-sm font-medium text-muted-foreground hover:text-foreground"
+                                            >
+                                                Pular esta etapa
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground leading-normal">
+                                            Esta etapa é totalmente opcional e você poderá fazer o check-in por QR Code se preferir.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden max-w-md mx-auto">
+                                            <Webcam
+                                                ref={webcamRef}
+                                                screenshotFormat="image/jpeg"
+                                                className="w-full h-full object-cover"
+                                                mirrored
+                                                onUserMedia={() => setIsCameraReady(true)}
+                                                onUserMediaError={() => {
+                                                    toast.error('Não foi possível acessar a câmera')
+                                                    setHasFaceConsent(false)
+                                                }}
+                                                videoConstraints={{
+                                                    facingMode: 'user',
+                                                    width: 640,
+                                                    height: 480
+                                                }}
+                                            />
 
-                                        {/* Guia visual de posicionamento */}
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="w-40 h-52 border-2 border-dashed border-white/40 rounded-[50%]" />
+                                            {/* Guia visual de posicionamento */}
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="w-40 h-52 border-2 border-dashed border-white/40 rounded-[50%]" />
+                                            </div>
+
+                                            {!isCameraReady && (
+                                                <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+                                                    <Loader2 className="w-8 h-8 animate-spin text-white" />
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {!isCameraReady && (
-                                            <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
-                                                <Loader2 className="w-8 h-8 animate-spin text-white" />
-                                            </div>
-                                        )}
-                                    </div>
+                                        <div className="flex flex-col gap-2 max-w-md mx-auto">
+                                            <Button
+                                                type="button"
+                                                onClick={captureFacePhoto}
+                                                disabled={!isCameraReady || isCapturingFace}
+                                                className="w-full h-11"
+                                            >
+                                                {isCapturingFace ? (
+                                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Capturando...</>
+                                                ) : (
+                                                    <><Camera className="w-4 h-4 mr-2" />Tirar Foto</>
+                                                )}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={skipFaceCapture}
+                                                disabled={isCapturingFace}
+                                                className="w-full h-11"
+                                            >
+                                                <SkipForward className="w-4 h-4 mr-2" />
+                                                Pular esta etapa
+                                            </Button>
+                                        </div>
 
-                                    <div className="flex flex-col gap-2 max-w-md mx-auto">
-                                        <Button
-                                            type="button"
-                                            onClick={captureFacePhoto}
-                                            disabled={!isCameraReady || isCapturingFace}
-                                            className="w-full"
-                                            size="lg"
-                                        >
-                                            {isCapturingFace ? (
-                                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Capturando...</>
-                                            ) : (
-                                                <><Camera className="w-4 h-4 mr-2" />Tirar Foto</>
-                                            )}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={skipFaceCapture}
-                                            disabled={isCapturingFace}
-                                            className="w-full"
-                                        >
-                                            <SkipForward className="w-4 h-4 mr-2" />
-                                            Pular esta etapa
-                                        </Button>
+                                        <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                                            <Shield className="w-3 h-3" />
+                                            Sua foto será usada apenas para identificação na chegada
+                                        </p>
                                     </div>
-
-                                    <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                                        <Shield className="w-3 h-3" />
-                                        Sua foto será usada apenas para identificação na chegada
-                                    </p>
-                                </div>
+                                )
                             ) : (
                                 <div className="space-y-4 max-w-md mx-auto">
                                     <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">

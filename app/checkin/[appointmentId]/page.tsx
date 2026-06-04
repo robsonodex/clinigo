@@ -161,7 +161,7 @@ async function CheckinContent({ appointmentId }: { appointmentId: string }) {
                     <AlertCircle className="w-16 h-16 mx-auto mb-4 text-amber-500" />
                     <h2 className="text-xl font-semibold text-amber-700">Check-in não disponível</h2>
                     <p className="text-muted-foreground mt-2">
-                        {appointment.status === 'WAITING_ROOM'
+                        {appointment.status === 'WAITING_ROOM' || appointment.status === 'CHECKED_IN'
                             ? 'Você já realizou o check-in para este agendamento.'
                             : appointment.status === 'COMPLETED'
                                 ? 'Esta consulta já foi realizada.'

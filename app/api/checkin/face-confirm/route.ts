@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         // Get appointment details (including doctor_id)
         const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
-            .select('id, status, doctor_id, patient_id, appointment_date, appointment_time')
+            .select('id, status, doctor_id, patient_id, appointment_date, appointment_time, ticket_number, priority_level')
             .eq('id', appointment_id)
             .single()
 
@@ -109,13 +109,50 @@ export async function POST(request: NextRequest) {
             throw queueError
         }
 
-        // Update appointment status to CONFIRMED (with checked_in_at set)
+        // Generate ticket number if not present
+        let finalTicketNumber = (appointment as any).ticket_number
+
+        if (!finalTicketNumber) {
+            const prefix = priority_reason !== 'normal' ? 'P' : 'N'
+            const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+
+            // Fetch today's appointments with ticket
+            const { data: todayAppts } = await supabase
+                .from('appointments')
+                .select('ticket_number')
+                .eq('clinic_id', clinic_id)
+                .eq('appointment_date', todayStr)
+                .not('ticket_number', 'is', null)
+
+            let nextNum = 1
+            if (todayAppts && todayAppts.length > 0) {
+                const numbers = todayAppts
+                    .map(a => {
+                        const ticket = a.ticket_number || ''
+                        if (ticket.startsWith(`${prefix}-`)) {
+                            const numPart = ticket.split('-')[1]
+                            return parseInt(numPart, 10) || 0
+                        }
+                        return 0
+                    })
+                    .filter(num => num > 0)
+
+                if (numbers.length > 0) {
+                    nextNum = Math.max(...numbers) + 1
+                }
+            }
+
+            finalTicketNumber = `${prefix}-${String(nextNum).padStart(3, '0')}`
+        }
+
+        // Update appointment status to CHECKED_IN (unified check-in status)
         // This keeps the patient visible in the reception queue and enables the "Chamar" button.
-        // The queue API only fetches: CONFIRMED, WAITING, IN_PROGRESS, COMPLETED, NO_SHOW.
+        // The queue API fetches: SCHEDULED, CONFIRMED, CHECKED_IN, WAITING, IN_PROGRESS, COMPLETED, NO_SHOW.
         await (supabase
             .from('appointments') as any)
             .update({
-                status: 'CONFIRMED',
+                status: 'CHECKED_IN',
+                ticket_number: finalTicketNumber,
                 checked_in_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             })
@@ -127,6 +164,7 @@ export async function POST(request: NextRequest) {
             queue_position: queuePosition,
             priority: priority_reason,
             estimated_wait: queuePosition * 15,
+            ticket_number: finalTicketNumber,
         })
 
     } catch (error) {

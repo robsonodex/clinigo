@@ -114,10 +114,10 @@ export async function POST(request: NextRequest) {
             throw queueError
         }
 
-        // Update appointment status to WAITING_ROOM
+        // Update appointment status to CHECKED_IN (unified check-in status)
         await (supabase
             .from('appointments') as any)
-            .update({ status: 'WAITING_ROOM' })
+            .update({ status: 'CHECKED_IN' })
             .eq('id', appointment_id)
 
         return successResponse({

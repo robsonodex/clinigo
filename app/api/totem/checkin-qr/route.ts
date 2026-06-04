@@ -13,6 +13,96 @@ import { handleApiError } from '@/lib/utils/errors'
 
 export const dynamic = 'force-dynamic'
 
+async function processQueueAndTicket(supabase: any, appointment: any, clinicId: string) {
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    const now = new Date().toISOString()
+
+    // 1. Verificar se já existe na fila
+    const { data: existingQueue } = await supabase
+        .from('appointment_queue')
+        .select('id')
+        .eq('appointment_id', appointment.id)
+        .maybeSingle()
+
+    let queuePosition = 1
+    if (!existingQueue) {
+        // Obter contagem da fila
+        const { count } = await supabase
+            .from('appointment_queue')
+            .select('*', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+            .eq('status', 'waiting')
+
+        queuePosition = (count || 0) + 1
+
+        const isPriority = (appointment.priority_level || 0) > 0
+        const priorityScore = isPriority ? 30 : 100
+        const priorityReason = isPriority ? 'preferencial' : 'normal'
+
+        await supabase
+            .from('appointment_queue')
+            .insert({
+                appointment_id: appointment.id,
+                clinic_id: clinicId,
+                patient_id: appointment.patient_id || appointment.patients?.id,
+                doctor_id: appointment.doctor_id || appointment.doctors?.id,
+                status: 'waiting',
+                priority_score: priorityScore,
+                priority_reason: priorityReason,
+                queue_position: queuePosition,
+                entered_queue_at: now,
+            } as any)
+    }
+
+    // 2. Gerar número do ticket
+    let finalTicketNumber = appointment.ticket_number
+    if (!finalTicketNumber) {
+        const isPriority = (appointment.priority_level || 0) > 0
+        const prefix = isPriority ? 'P' : 'N'
+
+        // Busca os tickets gerados hoje
+        const { data: todayAppts } = await supabase
+            .from('appointments')
+            .select('ticket_number')
+            .eq('clinic_id', clinicId)
+            .eq('appointment_date', todayStr)
+            .not('ticket_number', 'is', null)
+
+        let nextNum = 1
+        if (todayAppts && todayAppts.length > 0) {
+            const numbers = todayAppts
+                .map((a: any) => {
+                    const ticket = a.ticket_number || ''
+                    if (ticket.startsWith(`${prefix}-`)) {
+                        const numPart = ticket.split('-')[1]
+                        return parseInt(numPart, 10) || 0
+                    }
+                    return 0
+                })
+                .filter((num: number) => num > 0)
+
+            if (numbers.length > 0) {
+                nextNum = Math.max(...numbers) + 1
+            }
+        }
+
+        finalTicketNumber = `${prefix}-${String(nextNum).padStart(3, '0')}`
+    }
+
+    // 3. Atualizar appointments
+    await supabase
+        .from('appointments')
+        .update({
+            status: 'CHECKED_IN',
+            ticket_number: finalTicketNumber,
+            checked_in_at: now,
+            updated_at: now
+        })
+        .eq('id', appointment.id)
+
+    return finalTicketNumber
+}
+
 export async function POST(request: NextRequest) {
     try {
         // Rate limit by IP
@@ -40,7 +130,7 @@ export async function POST(request: NextRequest) {
             return errorResponse('Clínica não encontrada', { status: 404 })
         }
 
-        const allowedPlans = ['PRO', 'ENTERPRISE']
+        const allowedPlans = ['PRO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK']
         if (!allowedPlans.includes(clinic.plan_type || '')) {
             return errorResponse('Totem não disponível para este plano', { status: 403 })
         }
@@ -62,13 +152,17 @@ export async function POST(request: NextRequest) {
                     appointment_time,
                     status,
                     checked_in_at,
+                    patient_id,
+                    doctor_id,
+                    ticket_number,
+                    priority_level,
                     patients:patient_id (id, full_name),
                     doctors:doctor_id (id, users (full_name))
                 )
             `)
             .or(`qr_token.eq.${qr_token},appointment_id.eq.${appointmentId}`)
             .eq('clinic_id', clinic_id)
-            .single()
+            .maybeSingle()
 
         if (qrData?.appointments) {
             const appointment = qrData.appointments
@@ -88,24 +182,21 @@ export async function POST(request: NextRequest) {
                 return errorResponse(`Check-in disponível apenas no dia da consulta`, { status: 400 })
             }
 
-            // Perform check-in
-            const now = new Date().toISOString()
+            // Perform check-in using helper
+            const ticketNumber = await processQueueAndTicket(supabase, appointment, clinic_id)
 
+            const now = new Date().toISOString()
             await (supabase as any)
                 .from('appointment_qr_codes')
                 .update({ checked_in: true, checked_in_at: now })
                 .eq('id', qrData.id)
-
-            await (supabase as any)
-                .from('appointments')
-                .update({ status: 'CONFIRMED', checked_in_at: now })
-                .eq('id', appointment.id)
 
             return successResponse({
                 success: true,
                 patient_name: appointment.patients?.full_name || 'Paciente',
                 doctor_name: appointment.doctors?.users?.full_name || 'Médico',
                 appointment_time: appointment.appointment_time,
+                ticket_number: ticketNumber,
             })
         }
 
@@ -118,12 +209,16 @@ export async function POST(request: NextRequest) {
                 appointment_time,
                 status,
                 checked_in_at,
+                patient_id,
+                doctor_id,
+                ticket_number,
+                priority_level,
                 patients:patient_id (id, full_name),
                 doctors:doctor_id (id, users (full_name))
             `)
             .eq('id', appointmentId)
             .eq('clinic_id', clinic_id)
-            .single()
+            .maybeSingle()
 
         if (!directAppt) {
             return errorResponse('QR Code inválido ou não pertence a esta clínica', { status: 404 })
@@ -144,18 +239,15 @@ export async function POST(request: NextRequest) {
             return errorResponse('Check-in disponível apenas no dia da consulta', { status: 400 })
         }
 
-        // Perform check-in
-        const now = new Date().toISOString()
-        await (supabase as any)
-            .from('appointments')
-            .update({ status: 'CONFIRMED', checked_in_at: now })
-            .eq('id', appointmentId)
+        // Perform check-in using helper
+        const ticketNumber = await processQueueAndTicket(supabase, directAppt, clinic_id)
 
         return successResponse({
             success: true,
             patient_name: directAppt.patients?.full_name || 'Paciente',
             doctor_name: directAppt.doctors?.users?.full_name || 'Médico',
             appointment_time: directAppt.appointment_time,
+            ticket_number: ticketNumber,
         })
     } catch (error) {
         return handleApiError(error)

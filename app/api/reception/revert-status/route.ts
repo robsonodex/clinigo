@@ -53,14 +53,23 @@ export async function POST(request: NextRequest) {
 
         switch (appointment.status) {
             case 'WAITING':
-                // Chamado → volta para Confirmado (com check-in)
+                // Chamado → volta para CHECKED_IN (paciente ainda na clínica)
+                updateData.status = 'CHECKED_IN'
+                revertedTo = 'CHECKED_IN'
+                break
+
+            case 'CHECKED_IN':
+                // Fez check-in → desfaz check-in, volta para CONFIRMED
                 updateData.status = 'CONFIRMED'
-                revertedTo = 'CONFIRMED (com check-in)'
+                updateData.checked_in_at = null
+                updateData.checked_in_by = null
+                updateData.waiting_room_notes = null
+                revertedTo = 'CONFIRMED (sem check-in)'
                 break
 
             case 'CONFIRMED':
                 if (appointment.checked_in_at) {
-                    // Já fez check-in → desfaz check-in
+                    // Legacy: já fez check-in com status CONFIRMED → desfaz check-in
                     updateData.status = 'CONFIRMED'
                     updateData.checked_in_at = null
                     updateData.checked_in_by = null

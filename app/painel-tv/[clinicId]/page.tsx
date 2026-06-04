@@ -22,6 +22,7 @@ interface Appointment {
     started_at?: string
     called_at?: string
     consulting_room_id?: string
+    ticket_number?: string | null
     patient: {
         full_name: string
     }
@@ -43,6 +44,8 @@ interface ConsultingRoom {
 interface CalledPatient {
     patientName: string
     doctorName: string
+    ticketNumber?: string | null
+    roomName: string
     timestamp: number
 }
 
@@ -58,16 +61,23 @@ export default function PainelTVPage() {
     const [audioReady, setAudioReady] = useState(false)
     const [rooms, setRooms] = useState<ConsultingRoom[]>([])
     const appointmentsRef = useRef<Appointment[]>([])
+    const roomsRef = useRef<ConsultingRoom[]>([])
     const audioCtxRef = useRef<AudioContext | null>(null)
 
     const supabase = createClient()
 
-    // Initialize AudioContext on first user interaction (browser autoplay policy)
+    // Initialize AudioContext & SpeechSynthesis on first user interaction
     const initAudio = useCallback(() => {
         if (!audioCtxRef.current) {
             audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
             setAudioReady(true)
             localStorage.setItem('tv_audio_ready', 'true')
+
+            // Unlock SpeechSynthesis
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                const utterance = new SpeechSynthesisUtterance('')
+                window.speechSynthesis.speak(utterance)
+            }
         }
     }, [])
 
@@ -82,7 +92,6 @@ export default function PainelTVPage() {
 
     // Professional chime sound using Web Audio API
     const playCallSound = useCallback(async () => {
-        // Try to create AudioContext on-demand if not initialized (fallback for TV screens)
         if (!audioCtxRef.current) {
             try {
                 audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -94,7 +103,6 @@ export default function PainelTVPage() {
         }
         const ctx = audioCtxRef.current
 
-        // Resume AudioContext if browser suspended it after inactivity
         if (ctx.state === 'suspended') {
             await ctx.resume()
         }
@@ -141,31 +149,69 @@ export default function PainelTVPage() {
         osc3.stop(now + 1.2)
     }, [])
 
+    // Speech synthesis vocalization of called patient
+    const speakCall = useCallback((patientName: string, roomName: string, ticketNumber?: string | null) => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return
+
+        // Cancel any active speech to avoid overlapping
+        window.speechSynthesis.cancel()
+
+        // Speak sequence: Ticket (spelled out), patient name, room name
+        let text = ''
+        if (ticketNumber) {
+            const spelledTicket = ticketNumber.replace('-', ' ')
+            text = `Senha ${spelledTicket}, ${patientName}. Dirija-se ao ${roomName}.`
+        } else {
+            text = `${patientName}. Dirija-se ao ${roomName}.`
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = 'pt-BR'
+        utterance.rate = 0.9 // Calm natural speaking rate
+        utterance.pitch = 1.0
+
+        // Find PT-BR voice
+        const voices = window.speechSynthesis.getVoices()
+        const ptVoice = voices.find(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR'))
+        if (ptVoice) {
+            utterance.voice = ptVoice
+        }
+
+        window.speechSynthesis.speak(utterance)
+    }, [])
+
     const fetchAppointments = useCallback(async () => {
-        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-
-        const { data } = await (supabase as any)
-            .from('appointments')
-            .select(`
-                id,
-                status,
-                appointment_time,
-                checked_in_at,
-                started_at,
-                called_at,
-                consulting_room_id,
-                patient:patients(full_name),
-                doctor:doctors(user:users(full_name))
-            `)
-            .eq('clinic_id', clinicId)
-            .eq('appointment_date', today)
-            .in('status', ['WAITING', 'IN_PROGRESS', 'COMPLETED'])
-            .order('appointment_time', { ascending: true })
-
-        if (data) {
-            const typed = data as Appointment[]
-            setAppointments(typed)
-            appointmentsRef.current = typed
+        try {
+            const res = await fetch(`/api/reception/queue?clinicId=${clinicId}`)
+            if (res.ok) {
+                const data = await res.json()
+                const mapped: Appointment[] = (data.queue || []).map((q: any) => ({
+                    id: q.id,
+                    status: q.status,
+                    appointment_time: q.scheduledTime ? q.scheduledTime.split('T')[1]?.substring(0, 5) || '' : '',
+                    checked_in_at: q.checkedInAt || q.arrivalTime,
+                    started_at: q.status === 'IN_PROGRESS' ? q.arrivalTime : undefined,
+                    called_at: q.status === 'WAITING' ? q.arrivalTime : undefined,
+                    consulting_room_id: q.consulting_room_id,
+                    ticket_number: q.ticket_number,
+                    patient: {
+                        full_name: q.patient?.full_name || 'Paciente'
+                    },
+                    doctor: q.doctor ? {
+                        user: {
+                            full_name: q.doctor.user?.full_name || q.doctor.user?.name || ''
+                        }
+                    } : {
+                        user: {
+                            full_name: ''
+                        }
+                    }
+                }))
+                setAppointments(mapped)
+                appointmentsRef.current = mapped
+            }
+        } catch (e) {
+            console.error('[TV Panel] Error fetching appointments from queue endpoint:', e)
         }
     }, [clinicId])
 
@@ -174,7 +220,9 @@ export default function PainelTVPage() {
             const res = await fetch(`/api/consulting-rooms?clinicId=${clinicId}`)
             if (res.ok) {
                 const data = await res.json()
-                setRooms(data.rooms || [])
+                const roomList = data.rooms || []
+                setRooms(roomList)
+                roomsRef.current = roomList
             }
         } catch (e) {
             console.error('[TV Panel] Error fetching rooms:', e)
@@ -210,30 +258,42 @@ export default function PainelTVPage() {
                 },
                 async (payload: any) => {
                     if (payload.eventType === 'UPDATE') {
-                        // Detect patient call: CONFIRMED→WAITING (first call) or WAITING→WAITING with new called_at (re-call)
+                        // Detect patient call
                         const isFirstCall = payload.new.status === 'WAITING' && payload.old?.status !== 'WAITING'
                         const isRecall = payload.new.status === 'WAITING' && payload.old?.status === 'WAITING' && payload.new.called_at !== payload.old?.called_at
 
                         if (isFirstCall || isRecall) {
-                            // Fetch full data with patient/doctor names
                             await fetchAppointments()
-                            // Small delay to ensure state is updated
+                            // Small delay to ensure state lists are synced
                             setTimeout(() => {
                                 const apt = appointmentsRef.current.find(a => a.id === payload.new.id)
                                 if (apt) {
+                                    // Resolve room name
+                                    const roomId = payload.new.consulting_room_id
+                                    const room = roomsRef.current.find(r => r.id === roomId)
+                                    const roomText = room ? room.display_name || room.name || `Consultório ${room.room_number}` : 'Consultório'
+
                                     setCalledPatient({
                                         patientName: apt.patient?.full_name || 'Paciente',
                                         doctorName: apt.doctor?.user?.full_name || '',
+                                        ticketNumber: apt.ticket_number,
+                                        roomName: roomText,
                                         timestamp: Date.now(),
                                     })
-                                    // 🔊 Play notification sound
+
+                                    // Play sound
                                     playCallSound()
-                                    // Auto-dismiss after 8 seconds
-                                    setTimeout(() => setCalledPatient(null), 8000)
+
+                                    // Speak name and room 1 second after chime starts
+                                    setTimeout(() => {
+                                        speakCall(apt.patient?.full_name || 'Paciente', roomText, apt.ticket_number)
+                                    }, 1000)
+
+                                    // Dismiss call overlay after 12 seconds
+                                    setTimeout(() => setCalledPatient(null), 12000)
                                 }
-                            }, 600)
+                            }, 500)
                         } else {
-                            // Other status change — just refresh
                             fetchAppointments()
                         }
                     } else if (payload.eventType === 'INSERT') {
@@ -256,9 +316,9 @@ export default function PainelTVPage() {
             clearInterval(clockInterval)
             clearInterval(refreshInterval)
         }
-    }, [clinicId, fetchAppointments, fetchRooms, playCallSound])
+    }, [clinicId, fetchAppointments, fetchRooms, playCallSound, speakCall])
 
-    // Find the most recently called or in-progress patient to display
+    // Find the most recently called or in-progress patient to display on main screen
     const activePatient = appointments.find(a => a.status === 'WAITING' || a.status === 'IN_PROGRESS')
 
     // Find the consulting room for the active patient
@@ -268,19 +328,22 @@ export default function PainelTVPage() {
 
     return (
         <div
-            className="h-screen text-white overflow-hidden flex flex-col font-sans"
+            className="h-screen text-white overflow-hidden flex flex-col font-sans select-none"
             style={{ background: 'linear-gradient(160deg, #1a3a5c 0%, #15304d 50%, #0f2640 100%)' }}
         >
-            {/* Audio Enable Prompt — disappears after first click */}
+            {/* Audio Enable Prompt */}
             {!audioReady && (
                 <div
-                    className="px-10 py-2 bg-amber-500/10 border-b border-amber-400/20 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                    className="px-10 py-3.5 bg-amber-500/10 border-b border-amber-400/20 flex items-center justify-center gap-2 cursor-pointer shrink-0"
                     onClick={initAudio}
+                    style={{ animation: 'pulseGlow 2s infinite' }}
                 >
-                    <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M6 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2l3.5-4.5A.5.5 0 0110 5v14a.5.5 0 01-.5.5L6 15z" />
                     </svg>
-                    <span className="text-sm text-amber-300/80">Clique na tela para ativar o som de chamada</span>
+                    <span className="text-sm md:text-base font-medium text-amber-300">
+                        Toque ou clique na tela para ativar o som de chamada e voz
+                    </span>
                 </div>
             )}
 
@@ -288,8 +351,17 @@ export default function PainelTVPage() {
             <div className="flex-1 flex flex-col items-center justify-center px-8">
                 {activePatient ? (
                     <div className="text-center" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+                        {/* Ticket Number Badge */}
+                        {activePatient.ticket_number && (
+                            <div className="mb-4">
+                                <span className="inline-block px-5 py-2 rounded-xl text-amber-400 font-mono text-2xl font-semibold border border-amber-400/20 bg-amber-400/5 tracking-wider">
+                                    SENHA {activePatient.ticket_number}
+                                </span>
+                            </div>
+                        )}
+
                         {/* Patient Name */}
-                        <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-tight mb-4 tracking-tight">
+                        <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-tight mb-4 tracking-tight uppercase">
                             {activePatient.patient?.full_name}
                         </h1>
 
@@ -312,7 +384,7 @@ export default function PainelTVPage() {
                                 }}
                             >
                                 {activeRoom
-                                    ? `Consultório ${activeRoom.room_number}`
+                                    ? activeRoom.display_name || activeRoom.name || `Consultório ${activeRoom.room_number}`
                                     : 'Consultório'
                                 }
                             </span>
@@ -320,7 +392,7 @@ export default function PainelTVPage() {
                     </div>
                 ) : (
                     <div className="text-center" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-                        <h1 className="text-4xl md:text-5xl font-light text-white/30 mb-4">
+                        <h1 className="text-4xl md:text-5xl font-light text-white/30 mb-4 tracking-wider uppercase">
                             {clinicName || 'Painel de Atendimento'}
                         </h1>
                         <p className="text-xl text-white/15">
@@ -331,10 +403,12 @@ export default function PainelTVPage() {
             </div>
 
             {/* Minimal Footer */}
-            <footer className="flex items-center justify-between px-10 py-4 border-t border-white/5">
+            <footer className="flex items-center justify-between px-10 py-4 border-t border-white/5 bg-slate-950/20">
                 <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                    <span className="text-xs text-white/30">{isConnected ? 'Ao vivo' : 'Reconectando...'}</span>
+                    <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
+                    <span className="text-xs text-white/30 tracking-wider uppercase">
+                        {isConnected ? 'Sistema Conectado' : 'Reconectando...'}
+                    </span>
                 </div>
                 <div className="text-2xl font-light tracking-widest text-white/40 font-mono tabular-nums">
                     {format(currentTime, 'HH:mm')}
@@ -346,41 +420,44 @@ export default function PainelTVPage() {
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center"
                     style={{
-                        background: 'linear-gradient(160deg, #1a3a5c 0%, #15304d 50%, #0f2640 100%)',
-                        animation: 'fadeIn 0.3s ease-out',
+                        background: 'linear-gradient(160deg, #1e3a60 0%, #112844 100%)',
+                        animation: 'fadeIn 0.25s ease-out',
                     }}
                 >
                     <div className="text-center max-w-5xl mx-auto px-8">
+                        {/* Call Announcement Header */}
+                        <div className="mb-8" style={{ animation: 'slideUp 0.4s ease-out' }}>
+                            <span className="inline-block px-6 py-2.5 rounded-2xl bg-amber-400 text-slate-950 text-xl font-bold font-mono tracking-widest uppercase">
+                                {calledPatient.ticketNumber ? `SENHA ${calledPatient.ticketNumber}` : 'CHAMADA'}
+                            </span>
+                        </div>
+
                         {/* Patient Name */}
                         <h2
-                            className="text-7xl md:text-8xl lg:text-9xl font-bold text-white mb-6 leading-tight tracking-tight"
+                            className="text-7xl md:text-8xl lg:text-9xl font-bold text-white mb-6 leading-tight tracking-tight uppercase"
                             style={{ animation: 'slideUp 0.5s ease-out' }}
                         >
                             {calledPatient.patientName}
                         </h2>
 
                         {calledPatient.doctorName && (
-                            <p className="text-3xl md:text-4xl text-white/70 font-light mb-10">
+                            <p className="text-3xl md:text-4xl text-white/70 font-light mb-10" style={{ animation: 'slideUp 0.6s ease-out' }}>
                                 Dr. {calledPatient.doctorName}
                             </p>
                         )}
 
                         {/* Consultório Badge */}
-                        <div className="inline-block">
+                        <div className="inline-block" style={{ animation: 'slideUp 0.7s ease-out' }}>
                             <span
-                                className="inline-block px-10 py-4 rounded-xl text-2xl md:text-3xl font-semibold tracking-wide"
+                                className="inline-block px-12 py-5 rounded-2xl text-3xl md:text-4xl font-bold tracking-wide"
                                 style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                    backdropFilter: 'blur(10px)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                    backdropFilter: 'blur(20px)',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     color: '#ffffff',
-                                    animation: 'slideUp 0.7s ease-out',
                                 }}
                             >
-                                {activeRoom
-                                    ? `Consultório ${activeRoom.room_number}`
-                                    : 'Consultório'
-                                }
+                                {calledPatient.roomName}
                             </span>
                         </div>
                     </div>
@@ -394,8 +471,13 @@ export default function PainelTVPage() {
                     to { opacity: 1; }
                 }
                 @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(20px); }
+                    from { opacity: 0; transform: translateY(30px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes pulseGlow {
+                    0% { background-color: rgba(245, 158, 11, 0.08); }
+                    50% { background-color: rgba(245, 158, 11, 0.16); }
+                    100% { background-color: rgba(245, 158, 11, 0.08); }
                 }
             `}</style>
         </div>

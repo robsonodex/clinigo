@@ -30,7 +30,7 @@ interface FaceEnrollmentProps {
 
 type CaptureStep = 'consent' | 'frontal' | 'left' | 'right' | 'processing' | 'complete';
 
-const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+const MODEL_URL = '/models/face-api';
 
 const STEP_LABELS: Record<CaptureStep, string> = {
     consent: 'Consentimento LGPD',

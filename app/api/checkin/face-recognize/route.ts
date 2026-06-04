@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'
+import { decryptFaceDescriptor, calculateFaceDistance } from '@/lib/utils/face-encryption'
 
 export const runtime = 'nodejs'
 
@@ -12,10 +13,10 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { photo, clinic_id, date } = body
+        const { descriptor, clinic_id, date } = body
 
-        if (!photo || !clinic_id) {
-            throw new ValidationError('photo e clinic_id são obrigatórios')
+        if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+            throw new ValidationError('descriptor (array de 128 floats) e clinic_id são obrigatórios')
         }
 
         const today = date || new Date().toISOString().split('T')[0]
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
             `)
             .eq('clinic_id', clinic_id)
             .eq('appointment_date', today)
-            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT'])
+            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT', 'PENDING'])
 
         if (aptError) {
             console.error('[Face-Recognize] Error fetching appointments:', aptError)
@@ -59,10 +60,10 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // Check biometrics
+        // Check biometrics and fetch encrypted descriptors
         const { data: biometrics, error: bioError } = await supabase
             .from('patient_face_biometrics')
-            .select('patient_id, reference_image_url')
+            .select('patient_id, face_descriptor_encrypted, reference_image_url')
             .eq('clinic_id', clinic_id)
             .in('patient_id', patientIds)
 
@@ -70,71 +71,73 @@ export async function POST(request: NextRequest) {
             console.error('[Face-Recognize] Error fetching biometrics:', bioError)
         }
 
-        // Check completed pre-check-in submissions
-        const appointmentIds = appointments.map((a: any) => a.id)
-        const { data: submissions } = await supabase
-            .from('pre_checkin_submissions')
-            .select('appointment_id, patient_id, status')
-            .in('appointment_id', appointmentIds)
-            .eq('status', 'completed')
-
-        // Combine: patients with biometrics OR completed pre-check-in
-        const recognizablePatientIds = new Set<string>()
-
-        if (biometrics && biometrics.length > 0) {
-            biometrics.forEach((b: any) => recognizablePatientIds.add(b.patient_id))
-        }
-
-        if (submissions && submissions.length > 0) {
-            submissions.forEach((s: any) => {
-                if (s.patient_id) recognizablePatientIds.add(s.patient_id)
-            })
-        }
-
-        // If no biometrics/submissions, try to match any patient with appointment today
-        // This allows the feature to work even without pre-check-in
-        if (recognizablePatientIds.size === 0) {
+        if (!biometrics || biometrics.length === 0) {
             return NextResponse.json({
                 success: false,
-                error: 'Nenhum paciente com pré-check-in ou biometria cadastrada encontrado para hoje.'
+                error: 'Nenhuma biometria facial cadastrada para hoje.'
             })
         }
 
-        // Fetch patient names
-        const { data: patients } = await supabase
+        const inputDescriptor = new Float32Array(descriptor)
+        let bestMatch: { patientId: string; distance: number } | null = null
+
+        for (const bio of biometrics) {
+            if (bio.face_descriptor_encrypted) {
+                try {
+                    const storedDescriptor = decryptFaceDescriptor(bio.face_descriptor_encrypted)
+                    const distance = calculateFaceDistance(inputDescriptor, storedDescriptor)
+                    
+                    if (distance < 0.6) { // Standard threshold (distance < 0.6)
+                        if (!bestMatch || distance < bestMatch.distance) {
+                            bestMatch = { patientId: bio.patient_id, distance }
+                        }
+                    }
+                } catch (e) {
+                    console.error(`[Face-Recognize] Error decrypting descriptor for patient ${bio.patient_id}:`, e)
+                }
+            }
+        }
+
+        if (!bestMatch) {
+            return NextResponse.json({
+                success: false,
+                error: 'Biometria facial não reconhecida.'
+            })
+        }
+
+        // Fetch patient name
+        const { data: patient, error: patientError } = await supabase
             .from('patients')
             .select('id, full_name')
-            .in('id', Array.from(recognizablePatientIds))
+            .eq('id', bestMatch.patientId)
+            .single()
 
-        if (!patients || patients.length === 0) {
+        if (patientError || !patient) {
             return NextResponse.json({
                 success: false,
-                error: 'Nenhum paciente reconhecível encontrado.'
+                error: 'Paciente reconhecido não encontrado.'
             })
         }
 
-        // Return first recognizable patient
-        // Real facial recognition can be integrated later
-        const matchedPatient = patients[0] as any
         const matchedAppointment = appointments.find(
-            (a: any) => a.patient_id === matchedPatient.id
+            (a: any) => a.patient_id === patient.id
         )
 
         if (!matchedAppointment) {
             return NextResponse.json({
                 success: false,
-                error: 'Paciente não reconhecido.'
+                error: 'Nenhum agendamento ativo hoje para o paciente reconhecido.'
             })
         }
 
         return NextResponse.json({
             success: true,
             patient: {
-                id: matchedPatient.id,
-                name: matchedPatient.full_name,
+                id: patient.id,
+                name: patient.full_name,
             },
-            appointment_id: (matchedAppointment as any).id,
-            confidence: 0.95,
+            appointment_id: matchedAppointment.id,
+            confidence: Number((1 - bestMatch.distance).toFixed(2)),
         })
 
     } catch (error) {

@@ -73,6 +73,7 @@ const PUBLIC_ROUTES = [
     '/m/login', // PWA mobile login page
     '/api/chatbot', // Chatbot API - chamado pelo bot Railway sem auth cookies (tem rate limiting próprio)
     '/api/cron/', // Cron jobs - chamados pelo pg_cron do Supabase sem auth cookies (processamento automático de fila)
+    '/api/totem/', // Totem public APIs - gate de plano feito internamente na rota
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
@@ -501,6 +502,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/registro') ||
         pathname.startsWith('/video/') || // Patient video room via token link
         pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
+        pathname.startsWith('/totem/') || // Public totem for clinics (gate de plano feito nas APIs)
         pathname.match(/^\/[^/]+\/agendar/)
 
     // Public routes/pages without user = allow

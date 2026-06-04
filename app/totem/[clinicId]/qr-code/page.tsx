@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { InactivityTimer } from '@/components/totem/InactivityTimer'
 
+import jsQR from 'jsqr'
+
 export default function TotemQRCodePage() {
     const router = useRouter()
     const params = useParams()
@@ -77,6 +79,24 @@ export default function TotemQRCodePage() {
                 const barcodes = await detector.detect(videoRef.current)
                 if (barcodes.length > 0 && barcodes[0].rawValue) {
                     await processQRCode(barcodes[0].rawValue)
+                    return
+                }
+            }
+
+            // Fallback utilizing jsQR
+            const video = videoRef.current
+            const canvas = document.createElement('canvas')
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'dontInvert',
+                })
+                if (code && code.data) {
+                    await processQRCode(code.data)
                 }
             }
         } catch { /* retry on next interval */ }

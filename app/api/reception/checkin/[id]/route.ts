@@ -30,7 +30,7 @@ export async function POST(
         const updateData: any = {
             checked_in_at: new Date().toISOString(),
             checked_in_by: user.id,
-            status: 'CONFIRMED'
+            status: 'CHECKED_IN'
         }
         
         if (notes) {

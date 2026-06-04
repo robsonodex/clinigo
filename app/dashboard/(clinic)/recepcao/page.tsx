@@ -144,8 +144,29 @@ export default function RecepcaoPage() {
             )
             .subscribe()
 
+        // Listen for new pre-checkins (patients completing online check-in)
+        const checkinChannel = supabase
+            .channel('reception_checkin_alerts')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'appointment_checkins',
+                },
+                () => {
+                    loadData()
+                    toast({
+                        title: '📋 Pré-check-in recebido',
+                        description: 'Um paciente completou o pré-check-in online.',
+                    })
+                }
+            )
+            .subscribe()
+
         return () => {
             channel.unsubscribe()
+            checkinChannel.unsubscribe()
         }
     }, [])
 
@@ -159,7 +180,7 @@ export default function RecepcaoPage() {
                 setQueue(q)
 
                 setStats({
-                    waiting_count: q.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length,
+                    waiting_count: q.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING'].includes(i.status)).length,
                     in_service_count: q.filter(i => i.status === 'IN_PROGRESS').length,
                     completed_count: q.filter(i => i.status === 'COMPLETED').length,
                     no_show_count: q.filter(i => i.status === 'NO_SHOW').length
@@ -745,7 +766,7 @@ export default function RecepcaoPage() {
                                 Aguardando
                             </h3>
                             <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                                {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length}
+                                {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING'].includes(i.status)).length}
                             </span>
                         </div>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
@@ -758,7 +779,7 @@ export default function RecepcaoPage() {
                             <Loader2 className="w-6 h-6 animate-spin text-slate-400 mb-2" />
                             Carregando...
                         </div>
-                    ) : queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).length === 0 ? (
+                    ) : queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING'].includes(i.status)).length === 0 ? (
                         <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-400/80 dark:text-slate-500 text-center">
                             <div className="p-3 bg-amber-50/50 dark:bg-amber-950/10 rounded-full text-amber-500 mb-3">
                                 <Clock className="w-6 h-6" />
@@ -768,7 +789,7 @@ export default function RecepcaoPage() {
                         </div>
                     ) : (
                         <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
-                            {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'WAITING'].includes(i.status)).map((item, index) => (
+                            {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING'].includes(i.status)).map((item, index) => (
                                 <div 
                                     key={item.id} 
                                     className={`p-4 rounded-2xl border ${

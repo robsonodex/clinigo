@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
             await supabase
                 .from('appointments')
                 .update({
-                    status: 'WAITING_ROOM',
+                    status: 'CHECKED_IN',
                     checked_in_at: now
                 } as any)
                 .eq('id', appointmentId)
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
         await (supabase
             .from('appointments') as any)
             .update({
-                status: 'CONFIRMED',
+                status: 'CHECKED_IN',
                 checked_in_at: now
             })
             .eq('id', qrData.appointment_id)
