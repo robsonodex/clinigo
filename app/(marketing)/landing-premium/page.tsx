@@ -12,6 +12,7 @@ export default function LandingPremium() {
     const y2 = useTransform(scrollY, [0, 500], [0, -150]);
 
     const [isLoginDropdownOpen, setIsLoginDropdownOpen] = useState(false)
+    const [activeFeatureTab, setActiveFeatureTab] = useState<'recepcao' | 'atendimento' | 'tiss' | 'financas'>('recepcao')
 
     return (
         <div className="min-h-screen bg-navy-deep font-sans text-slate-300 selection:bg-teal-vibrant selection:text-white overflow-x-hidden">
@@ -321,7 +322,7 @@ export default function LandingPremium() {
                                     width={800}
                                     height={500}
                                     className="w-full h-auto"
-                                    priority
+                                            priority
                                 />
                             </div>
                         </motion.div>
@@ -329,242 +330,379 @@ export default function LandingPremium() {
                 </div>
             </main>
 
-
-
-            {/* 4. GRID DE FEATURES - COMPLETO (6 CARDS) */}
-            <section id="funcionalidades" className="py-24 container mx-auto px-4">
-                <div className="text-center mb-12">
-                    <span className="text-teal-vibrant font-semibold tracking-wider uppercase text-sm mb-3 block">Recursos Poderosos</span>
+            {/* SHOWCASE DE RECURSOS - BENTO-TABS PREMIUM */}
+            <section id="funcionalidades" className="py-24 container mx-auto px-4 border-t border-slate-800/30">
+                <div className="text-center mb-16">
+                    <span className="text-teal-vibrant font-semibold tracking-wider uppercase text-sm mb-3 block">Recursos Integrados</span>
                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-                        Tudo que sua clínica precisa.{' '}
-                        <span className="text-teal-vibrant">Em um único sistema.</span>
+                        Tudo que sua clínica precisa. <br /><span className="text-teal-vibrant">Em um único sistema.</span>
                     </h2>
                 </div>
 
-                {/* CHECK-IN FACIAL + ASSINATURA TISS - DESTAQUE */}
-                <div className="flex flex-col md:flex-row items-stretch gap-6 max-w-6xl mx-auto mb-12">
-                    {/* CHECK-IN FACIAL */}
-                    <div className="flex-1 bg-navy-deep-light border border-slate-800 rounded-3xl p-8 relative overflow-hidden group hover:border-teal-vibrant/30 transition-all">
-                        <span className="text-teal-vibrant font-semibold tracking-wider uppercase text-xs mb-3 block">Exclusivo CliniGo</span>
-                        <div className="flex items-start gap-6">
-                            <div className="flex-1">
-                                <h2 className="text-2xl font-bold text-white mb-3 leading-tight">
-                                    Check-in Facial.{' '}
-                                    <span className="text-teal-vibrant">O único do Brasil.</span>
-                                </h2>
-                                <p className="text-slate-400 text-sm mb-4 leading-relaxed">
-                                    Identificação biométrica para validação segura do paciente na recepção.
-                                </p>
-                                <ul className="space-y-2">
-                                    <li className="flex items-center gap-2 text-slate-300 text-sm">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Zero filas na recepção
-                                    </li>
-                                    <li className="flex items-center gap-2 text-slate-300 text-sm">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Validação biométrica de identidade
-                                    </li>
-                                    <li className="flex items-center gap-2 text-slate-300 text-sm">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Atendimento ágil e automatizado
-                                    </li>
-                                </ul>
+                <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+                    {/* MENU DE ABAS (ESQUERDA) */}
+                    <div className="lg:col-span-4 flex flex-col gap-3">
+                        <button
+                            onClick={() => setActiveFeatureTab('recepcao')}
+                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                                activeFeatureTab === 'recepcao'
+                                    ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
+                                    : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
+                            }`}
+                        >
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                                activeFeatureTab === 'recepcao'
+                                    ? 'bg-teal-vibrant/20 border-teal-vibrant/30 text-teal-vibrant'
+                                    : 'bg-[#060a13] border-slate-800 text-slate-400'
+                            }`}>
+                                <ScanFace className="w-5 h-5" />
                             </div>
-                            {/* FACE SCAN ANIMATION */}
-                            <div className="relative w-32 h-32 flex-shrink-0 hidden md:block">
-                                <div className="absolute inset-0 rounded-2xl border border-slate-700 bg-[#0a0f1a] overflow-hidden">
-                                    <motion.div
-                                        className="absolute inset-0 bg-teal-vibrant/5 z-0"
-                                        animate={{ opacity: [0.3, 0.6, 0.3] }}
-                                        transition={{ duration: 3, repeat: Infinity }}
-                                    />
-                                    <ScanFace className="absolute inset-0 m-auto w-16 h-16 text-slate-700 z-10 opacity-50 group-hover:opacity-100 group-hover:text-teal-vibrant/60 transition-all duration-700" />
-                                    <motion.div
-                                        className="absolute w-full h-0.5 bg-teal-vibrant/50 shadow-[0_0_10px_#14b8a6] z-20 top-0"
-                                        animate={{ top: ["0%", "100%", "0%"] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                    />
-                                    <div className="absolute inset-2 border border-teal-vibrant/30 rounded-xl z-10 flex flex-col justify-between p-1">
-                                        <div className="flex justify-between">
-                                            <div className="w-2 h-2 border-t border-l border-teal-vibrant" />
-                                            <div className="w-2 h-2 border-t border-r border-teal-vibrant" />
+                            <div>
+                                <h3 className="text-sm font-bold text-white mb-1">Recepção do Futuro</h3>
+                                <p className="text-slate-400 text-xs leading-relaxed">Check-in facial por biometria e totem automatizado.</p>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveFeatureTab('atendimento')}
+                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                                activeFeatureTab === 'atendimento'
+                                    ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
+                                    : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
+                            }`}
+                        >
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                                activeFeatureTab === 'atendimento'
+                                    ? 'bg-teal-vibrant/20 border-teal-vibrant/30 text-teal-vibrant'
+                                    : 'bg-[#060a13] border-slate-800 text-slate-400'
+                            }`}>
+                                <Fingerprint className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white mb-1">Atendimento Clínico</h3>
+                                <p className="text-slate-400 text-xs leading-relaxed">Prontuário eletrônico de alta performance e telemedicina.</p>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveFeatureTab('tiss')}
+                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                                activeFeatureTab === 'tiss'
+                                    ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
+                                    : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
+                            }`}
+                        >
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                                activeFeatureTab === 'tiss'
+                                    ? 'bg-teal-vibrant/20 border-teal-vibrant/30 text-teal-vibrant'
+                                    : 'bg-[#060a13] border-slate-800 text-slate-400'
+                            }`}>
+                                <Receipt className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white mb-1">Faturamento TISS</h3>
+                                <p className="text-slate-400 text-xs leading-relaxed">Emissão de guias e exportação de lotes XML para convênios.</p>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveFeatureTab('financas')}
+                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                                activeFeatureTab === 'financas'
+                                    ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
+                                    : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
+                            }`}
+                        >
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                                activeFeatureTab === 'financas'
+                                    ? 'bg-teal-vibrant/20 border-teal-vibrant/30 text-teal-vibrant'
+                                    : 'bg-[#060a13] border-slate-800 text-slate-400'
+                            }`}>
+                                <PieChart className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white mb-1">Financeiro & WhatsApp</h3>
+                                <p className="text-slate-400 text-xs leading-relaxed">Split de honorários automatizado e lembretes integrados.</p>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* PAINEL DE CONTEÚDO (DIREITA) */}
+                    <div className="lg:col-span-8 bg-navy-deep-light border border-slate-850 rounded-3xl p-8 lg:p-12 flex flex-col justify-center min-h-[380px]">
+                        {/* 1. RECEPÇÃO DO FUTURO */}
+                        {activeFeatureTab === 'recepcao' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center h-full"
+                            >
+                                <div className="flex flex-col justify-center">
+                                    <span className="text-teal-vibrant font-semibold text-xs tracking-wider uppercase mb-2 block">Exclusividade CliniGo</span>
+                                    <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4 leading-tight">Check-in por Biometria Facial</h3>
+                                    <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                        Identificação imediata e segura do paciente no momento da chegada, reduzindo o tempo de espera a zero.
+                                    </p>
+                                    <ul className="space-y-3.5">
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Reconhecimento Biométrico Facial</strong>
+                                                O único sistema do Brasil com validação automática de presença.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Totem de Autoatendimento</strong>
+                                                Triagem autônoma de senhas (Geral e Preferencial).
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Painel de TV com Voz Sintética</strong>
+                                                Chamada inteligente em tempo real e de fácil vocalização.
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="flex items-center justify-center p-4 bg-navy-deep/40 rounded-2xl border border-slate-900/60 h-80 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-teal-vibrant/5 z-0" />
+                                    <div className="relative w-40 h-40 rounded-2xl border border-slate-800 bg-[#060a13] overflow-hidden flex flex-col items-center justify-center">
+                                        <motion.div
+                                            className="absolute inset-0 bg-teal-vibrant/5 z-0"
+                                            animate={{ opacity: [0.2, 0.5, 0.2] }}
+                                            transition={{ duration: 3, repeat: Infinity }}
+                                        />
+                                        <ScanFace className="w-20 h-20 text-teal-vibrant/50 group-hover:text-teal-vibrant/80 transition-all duration-500 z-10" />
+                                        <motion.div
+                                            className="absolute w-full h-0.5 bg-teal-vibrant shadow-[0_0_10px_#14b8a6] z-20 top-0"
+                                            animate={{ top: ["0%", "100%", "0%"] }}
+                                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                                        />
+                                        <div className="absolute inset-3 border border-teal-vibrant/20 rounded-xl z-10 flex flex-col justify-between p-1">
+                                            <div className="flex justify-between">
+                                                <div className="w-1.5 h-1.5 border-t border-l border-teal-vibrant" />
+                                                <div className="w-1.5 h-1.5 border-t border-r border-teal-vibrant" />
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <div className="w-1.5 h-1.5 border-b border-l border-teal-vibrant" />
+                                                <div className="w-1.5 h-1.5 border-b border-r border-teal-vibrant" />
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <div className="w-2 h-2 border-b border-l border-teal-vibrant" />
-                                            <div className="w-2 h-2 border-b border-r border-teal-vibrant" />
+                                    </div>
+                                    <div className="absolute bottom-6 left-0 right-0 text-center z-30">
+                                        <div className="inline-block bg-teal-vibrant/20 backdrop-blur-md border border-teal-vibrant/30 rounded-full px-3 py-1 text-teal-vibrant text-[9px] font-bold tracking-widest uppercase">
+                                            Reconhecimento Ativo
                                         </div>
                                     </div>
                                 </div>
-                                <div className="absolute -bottom-2 left-0 right-0 text-center z-30">
-                                    <div className="inline-block bg-teal-vibrant/20 backdrop-blur-md border border-teal-vibrant/30 rounded-full px-2 py-0.5 text-teal-vibrant text-[8px] font-bold tracking-widest uppercase">
-                                        Verificado
+                            </motion.div>
+                        )}
+
+                        {/* 2. ATENDIMENTO CLÍNICO */}
+                        {activeFeatureTab === 'atendimento' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center h-full"
+                            >
+                                <div className="flex flex-col justify-center">
+                                    <span className="text-teal-vibrant font-semibold text-xs tracking-wider uppercase mb-2 block">Alta Performance</span>
+                                    <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4 leading-tight">Prontuário Inteligente e Telemedicina</h3>
+                                    <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                        Evoluções em menos de 1 minuto com assinatura digital qualificada e consultas em vídeo HD.
+                                    </p>
+                                    <ul className="space-y-3.5">
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Modelos SOAP, CIF e DAP</strong>
+                                                Evoluções focadas na sua especialidade para ganhar tempo.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Assinatura Digital ICP-Brasil</strong>
+                                                Máxima segurança jurídica com certificados tipo A1.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Teleconsulta WebRTC Integrada</strong>
+                                                Sala virtual estável direto no prontuário, sem softwares externos.
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="flex flex-col justify-between p-6 bg-[#060a13] rounded-2xl border border-slate-900/60 h-80 relative overflow-hidden">
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-800/60">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span className="text-[10px] text-slate-400 font-medium">Teleconsulta Ativa</span>
+                                        </div>
+                                        <div className="bg-teal-vibrant/10 text-teal-vibrant px-2 py-0.5 rounded text-[8px] font-bold uppercase border border-teal-vibrant/20">
+                                            ICP-Brasil
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 py-4 text-left">
+                                        <p className="text-[10px] text-teal-200/80 uppercase font-bold tracking-wider mb-1">Evolução do Paciente</p>
+                                        <div className="bg-navy-deep/60 p-3 rounded-lg border border-slate-800 text-[11px] text-slate-300 leading-relaxed font-mono">
+                                            [Subjetivo] Paciente relata melhora nas dores após exercícios...
+                                            <span className="inline-block w-1.5 h-3 bg-teal-vibrant ml-1 animate-pulse" />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-800/60">
+                                        <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
+                                            <Fingerprint className="w-4 h-4 text-teal-vibrant" /> Assinatura digital autorizada
+                                        </div>
+                                        <span className="text-[9px] text-slate-500">Documento Imutável</span>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div className="absolute -top-12 -right-12 w-40 h-40 bg-teal-vibrant/10 rounded-full blur-[60px] -z-0" />
+                            </motion.div>
+                        )}
+
+                        {/* 3. FATURAMENTO TISS */}
+                        {activeFeatureTab === 'tiss' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center h-full"
+                            >
+                                <div className="flex flex-col justify-center">
+                                    <span className="text-teal-vibrant font-semibold text-xs tracking-wider uppercase mb-2 block">Gestão de Convênios</span>
+                                    <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4 leading-tight">Faturamento TISS Simplificado</h3>
+                                    <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                        Reduza glosas médicas e burocracias na emissão e validação de guias conforme padrão da ANS.
+                                    </p>
+                                    <ul className="space-y-3.5">
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Lotes XML Automáticos</strong>
+                                                Exportação em conformidade imediata com a versão v4.01.00.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Auditor Inteligente de Glosas</strong>
+                                                Alertas rápidos de erros cadastrais antes do envio da fatura.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Elegibilidade Online</strong>
+                                                Consulte a situação do beneficiário na operadora com 1 clique.
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="flex flex-col justify-between p-6 bg-[#060a13] rounded-2xl border border-slate-900/60 h-80 relative overflow-hidden text-left">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-[11px] font-bold text-white uppercase tracking-wider">Validador de Lote TISS</span>
+                                            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">100% Validado</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[11px] bg-navy-deep/60 p-2.5 rounded border border-slate-800">
+                                                <span className="text-slate-400">Verificação XSD ANS</span>
+                                                <span className="text-emerald-400 font-mono font-semibold">Sucesso [v4.01.00]</span>
+                                            </div>
+                                            <div className="flex justify-between text-[11px] bg-navy-deep/60 p-2.5 rounded border border-slate-800">
+                                                <span className="text-slate-400">Campos Obrigatórios</span>
+                                                <span className="text-emerald-400 font-mono font-semibold">OK (15/15)</span>
+                                            </div>
+                                            <div className="flex justify-between text-[11px] bg-navy-deep/60 p-2.5 rounded border border-slate-800">
+                                                <span className="text-slate-400">Elegibilidade Geral</span>
+                                                <span className="text-emerald-400 font-mono font-semibold">Confirmada</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-teal-vibrant/5 border border-teal-vibrant/20 p-2.5 rounded-xl text-center">
+                                        <span className="text-[10px] text-teal-200">XML pronto para download e envio à Operadora</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* 4. FINANCEIRO & WHATSAPP */}
+                        {activeFeatureTab === 'financas' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center h-full"
+                            >
+                                <div className="flex flex-col justify-center">
+                                    <span className="text-teal-vibrant font-semibold text-xs tracking-wider uppercase mb-2 block">Gestão Integrada</span>
+                                    <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4 leading-tight">Split Financeiro e WhatsApp Nativo</h3>
+                                    <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                        Automatize a divisão das receitas da clínica com profissionais de saúde e lembretes automáticos para pacientes.
+                                    </p>
+                                    <ul className="space-y-3.5">
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">Repasse (Split) de Honorários</strong>
+                                                Cálculo e pagamento automático baseado na agenda e convênios.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">WhatsApp via QR Code</strong>
+                                                Lembretes, confirmações de consulta e receitas automáticos.
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-2.5 text-slate-300 text-sm">
+                                            <Check className="w-4 h-4 text-teal-vibrant mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <strong className="text-white block font-medium">DRE e Fluxo de Caixa Dinâmico</strong>
+                                                Visão exata do lucro líquido da sua clínica em tempo real.
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="flex flex-col justify-between p-6 bg-[#060a13] rounded-2xl border border-slate-900/60 h-80 relative overflow-hidden text-left">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-[11px] font-bold text-white uppercase tracking-wider">Painel Financeiro & Split</span>
+                                            <span className="text-[10px] text-teal-vibrant font-semibold">Repasse Automático</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <div className="bg-navy-deep/60 p-2.5 rounded border border-slate-800">
+                                                <span className="text-[9px] text-slate-400 block mb-0.5">Receita Total</span>
+                                                <span className="text-[13px] text-white font-bold font-mono">R$ 48.520,00</span>
+                                            </div>
+                                            <div className="bg-navy-deep/60 p-2.5 rounded border border-slate-800">
+                                                <span className="text-[9px] text-slate-400 block mb-0.5">Total Repassado</span>
+                                                <span className="text-[13px] text-teal-vibrant font-bold font-mono">R$ 29.112,00</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between text-[10px] bg-slate-900/30 p-2 rounded">
+                                                <span className="text-slate-300">Dra. Amanda Silva (60%)</span>
+                                                <span className="text-white font-mono">R$ 2.400,00</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[10px] bg-slate-900/30 p-2 rounded">
+                                                <span className="text-slate-300">Dr. Rodrigo Souza (55%)</span>
+                                                <span className="text-white font-mono">R$ 1.925,00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-[9px] text-slate-400">
+                                        <span>Último Lembrete WhatsApp enviado há 4m</span>
+                                        <span className="text-emerald-400 flex items-center gap-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Conectado
+                                        </span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
-
-                    {/* ASSINATURA DIGITAL ICP-BRASIL */}
-                    <div className="w-full md:w-80 bg-navy-deep-light border border-slate-800 rounded-3xl p-6 relative overflow-hidden group hover:border-teal-vibrant/30 transition-all flex flex-col">
-                        <div className="absolute top-4 right-4">
-                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                                Novo
-                            </span>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-teal-vibrant/10 flex items-center justify-center mb-4 border border-teal-vibrant/20">
-                            <Fingerprint className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Assinatura Digital ICP-Brasil</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed flex-1">
-                            Assinatura de Prontuários Eletrônicos (PEP) e Lotes TISS com certificado digital A1. Máxima segurança com bloqueio imutável e validade jurídica (Lei 14.063/2020).
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                    {/* Feature 1 - Agenda Anti-Overbooking */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <Calendar className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Agenda Anti-Overbooking</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Sistema inteligente que previne conflitos de horários automaticamente, mostrando slots em tempo real.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 2 - Teleconsulta WebRTC */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <Video className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Teleconsulta WebRTC</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Vídeo-chamada HD integrada ao prontuário.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 3 - Prontuário Eletrônico */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <FileText className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Prontuário Eletrônico</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Interface completa com histórico do paciente e modelos personalizáveis.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 4 - Check-in QR Code */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <QrCode className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Check-in QR Code</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Redução de 40% na fila com pré-cadastro e chegada autônoma.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 5 - Faturamento TISS */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <Receipt className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Módulo TISS Completo</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Elegibilidade, Emissão de Guias, Lotes XML (v4.01.00), conciliação com arquivos de retorno e dashboard focado para resolver Glosas com 1 clique.
-                        </p>
-                    </motion.div>
-
-                    {/* Gestão Financeira Completa */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="absolute top-4 right-4">
-                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                                Novo
-                            </span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <PieChart className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Gestão Financeira Completa</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Acompanhe seu DRE, Fluxo de Caixa e automatize o Repasse (Split) médico em tempo real. Dashboard focado para atingir metas de faturamento.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 6 - CRM de Pacientes */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <UserCircle className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">CRM de Pacientes</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Gestão completa do relacionamento com pacientes, histórico de interações e acompanhamento.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 7 - Painel de TV Dinâmico */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="absolute top-4 right-4">
-                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                                Novo
-                            </span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <Monitor className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Painel de TV Dinâmico</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Exiba a fila de atendimento em tempo real na TV da recepção. Chamada automática por consultório com atualização instantânea.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 8 - Totem de Auto Atendimento */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="absolute top-4 right-4">
-                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                                Novo
-                            </span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <Tablet className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Totem de Auto Atendimento</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Seus pacientes fazem check-in sozinhos via QR Code ou reconhecimento facial. Sem filas, sem burocracia na recepção.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 9 - WhatsApp Multi-Atendente */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="absolute top-4 right-4">
-                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                                Novo
-                            </span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <Smartphone className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">WhatsApp Integrado (QR Code)</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Conecte o número da sua clínica via QR Code. Automação de lembretes, envio de receitas e confirmações direto no painel, sem precisar do celular em mãos.
-                        </p>
-                    </motion.div>
-
-                    {/* Feature 10 - Chat Interno */}
-                    <motion.div whileHover={{ y: -5 }} className="bg-navy-deep-light border border-slate-800 p-8 rounded-[2rem] relative group hover:border-teal-vibrant/30 transition-all">
-                        <div className="absolute top-4 right-4">
-                            <span className="bg-teal-vibrant text-navy-deep text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                                Novo
-                            </span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-teal-vibrant/10 flex items-center justify-center mb-5 group-hover:bg-teal-vibrant/20 transition-colors border border-teal-vibrant/10">
-                            <MessageCircle className="w-6 h-6 text-teal-vibrant" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Chat Interno (CliniGo Messenger)</h3>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Comunicação ágil e segura entre a recepção e os consultórios. Envie alertas silenciosos, tire dúvidas rapidamente e acabe com os grupos desorganizados.
-                        </p>
-                    </motion.div>
                 </div>
             </section>
 
