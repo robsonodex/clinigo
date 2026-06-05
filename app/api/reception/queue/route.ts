@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       `)
                 .eq('clinic_id', clinicId)
                 .eq('appointment_date', new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }))
-                .in('status', ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'IN_PROGRESS', 'COMPLETED', 'NO_SHOW'])
+                .neq('status', 'CANCELLED')
                 .order('priority_level', { ascending: false })
                 .order('checked_in_at', { ascending: true, nullsFirst: false })
 
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
             // Prefer keeping the one that is further along in the process if there's a conflict
             if (uniqueQueueValues.has(dupKey)) {
                 const existing = uniqueQueueValues.get(dupKey)
-                const statusOrder: Record<string, number> = { 'COMPLETED': 4, 'IN_PROGRESS': 3, 'WAITING': 2, 'CHECKED_IN': 1.5, 'CONFIRMED': 1, 'SCHEDULED': 0, 'NO_SHOW': -1 }
+                const statusOrder: Record<string, number> = { 'COMPLETED': 4, 'IN_PROGRESS': 3, 'WAITING': 2, 'CHECKED_IN': 1.5, 'CONFIRMED': 1, 'PENDING_PAYMENT': 0.5, 'SCHEDULED': 0, 'NO_SHOW': -1 }
                 if ((statusOrder[item.status] ?? 0) > (statusOrder[existing.status] ?? 0)) {
                     uniqueQueueValues.set(dupKey, item)
                 }
@@ -148,7 +148,7 @@ export async function GET(request: Request) {
             }
 
             // Then by status: WAITING (called) before CONFIRMED (not yet called)
-            const statusOrder: Record<string, number> = { 'WAITING': 0, 'CHECKED_IN': 0.5, 'CONFIRMED': 1, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
+            const statusOrder: Record<string, number> = { 'WAITING': 0, 'CHECKED_IN': 0.5, 'CONFIRMED': 1, 'PENDING_PAYMENT': 1.5, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
             const aOrder = statusOrder[a.status] ?? 5
             const bOrder = statusOrder[b.status] ?? 5
             if (aOrder !== bOrder) return aOrder - bOrder
