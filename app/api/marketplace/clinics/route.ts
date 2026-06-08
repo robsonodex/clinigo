@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 /**
  * GET /api/marketplace/clinics
  * Public endpoint to list active clinics in the marketplace
+ * Returns clinics with specialties (from doctors) and average rating
  */
 export async function GET(request: NextRequest) {
     try {
@@ -19,6 +20,24 @@ export async function GET(request: NextRequest) {
         if (error) {
             console.error('Erro ao buscar clínicas para o marketplace:', error)
             return NextResponse.json({ error: 'Erro ao carregar clínicas' }, { status: 500 })
+        }
+
+        // Fetch doctors grouped by clinic for specialties and ratings
+        const clinicIds = (clinics || []).map(c => c.id)
+        const { data: doctors } = await supabase
+            .from('doctors')
+            .select('clinic_id, specialty, rating')
+            .in('clinic_id', clinicIds)
+
+        // Build specialty and rating maps per clinic
+        const clinicDoctorMap = new Map<string, { specialties: Set<string>; ratings: number[] }>()
+        for (const doc of doctors || []) {
+            if (!clinicDoctorMap.has(doc.clinic_id)) {
+                clinicDoctorMap.set(doc.clinic_id, { specialties: new Set(), ratings: [] })
+            }
+            const entry = clinicDoctorMap.get(doc.clinic_id)!
+            if (doc.specialty) entry.specialties.add(doc.specialty)
+            if (doc.rating != null) entry.ratings.push(doc.rating)
         }
 
         // Format clinics to match what the frontend expects
@@ -39,6 +58,13 @@ export async function GET(request: NextRequest) {
                 formattedAddress = parts.join(', ')
             }
 
+            const doctorData = clinicDoctorMap.get(clinic.id)
+            const specialties = doctorData ? Array.from(doctorData.specialties) : []
+            const ratings = doctorData?.ratings || []
+            const averageRating = ratings.length > 0
+                ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
+                : null
+
             return {
                 id: clinic.id,
                 name: clinic.name,
@@ -46,6 +72,9 @@ export async function GET(request: NextRequest) {
                 logo_url: clinic.logo_url || null,
                 address: formattedAddress || undefined,
                 city: city || undefined,
+                specialties,
+                average_rating: averageRating,
+                total_doctors: specialties.length > 0 ? (doctorData?.ratings.length || 0) : 0,
             }
         })
 

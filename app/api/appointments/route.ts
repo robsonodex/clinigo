@@ -295,7 +295,39 @@ export async function POST(request: NextRequest) {
             throw appointmentError
         }
 
-        // 6.1 Auto-create video_room for TELEMEDICINA appointments
+        // 6.1 Auto-insert into CRM funnel (non-blocking)
+        try {
+            const { data: existingCrmStage } = await supabase
+                .from('crm_stages')
+                .select('id, stage')
+                .eq('patient_id', patientId)
+                .eq('clinic_id', clinic.id)
+                .single()
+
+            if (!existingCrmStage) {
+                // New patient in CRM — enter as 'lead'
+                await supabase.from('crm_stages').insert({
+                    patient_id: patientId,
+                    clinic_id: clinic.id,
+                    stage: 'lead',
+                    created_at: new Date().toISOString(),
+                })
+                console.log('[CRM] New lead created for patient:', patientId)
+            } else if (existingCrmStage.stage === 'lead') {
+                // Already a lead — advance to 'agendou'
+                await supabase
+                    .from('crm_stages')
+                    .update({ stage: 'agendou' })
+                    .eq('id', existingCrmStage.id)
+                console.log('[CRM] Lead advanced to agendou for patient:', patientId)
+            }
+            // If stage is 'compareceu', 'retornou', or 'recorrente' — don't regress
+        } catch (crmError) {
+            console.error('[CRM] Non-blocking CRM insert error:', crmError)
+            // Never block appointment creation due to CRM failure
+        }
+
+        // 6.2 Auto-create video_room for TELEMEDICINA appointments
         let videoRoom = null
         // Check for both 'TELEMEDICINA' and 'online' as both are valid teleconsulta types
         const appointmentType = validatedData.type || 'IN_PERSON'

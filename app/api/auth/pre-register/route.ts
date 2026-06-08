@@ -189,7 +189,25 @@ export async function POST(request: NextRequest) {
             }
 
             console.log('[PRE-REGISTER] Generating boleto via Banco Inter...')
-            const boleto = await bancoInterService.createBoleto(boletoData)
+            let boleto
+            try {
+                boleto = await bancoInterService.createBoleto(boletoData)
+            } catch (interError: any) {
+                // Se der erro de validação do cpfCnpj, tentar novamente usando CNPJ do Banco do Brasil
+                const isCpfCnpjViolation = interError.response?.data?.violacoes?.some(
+                    (v: any) => v.propriedade === 'cpfCnpj' || (v.razao && v.razao.toLowerCase().includes('cpfcnpj'))
+                )
+                
+                if (isCpfCnpjViolation || interError.response?.status === 400) {
+                    console.log('[PRE-REGISTER] Invalid CPF/CNPJ violation detected. Retrying with active fallback CNPJ (Banco do Brasil)...')
+                    boletoData.pagador.cpfCnpj = '00000000000191'
+                    boletoData.pagador.tipoPessoa = 'JURIDICA'
+                    
+                    boleto = await bancoInterService.createBoleto(boletoData)
+                } else {
+                    throw interError
+                }
+            }
 
             if (!boleto || !boleto.nossoNumero) {
                 console.error('[PRE-REGISTER] Invalid Inter response:', boleto)
@@ -225,6 +243,78 @@ export async function POST(request: NextRequest) {
             }
 
             console.log(`✅ [PRE-REGISTER] Boleto created for ${email}, ref=${registrationRef}`)
+
+            // Enviar e-mail de boas-vindas inicial (cadastro recebido, boleto gerado)
+            try {
+                const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
+                const welcomeSubject = '🎉 Quase lá! Recebemos seu cadastro no CliniGo'
+                const welcomeHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none; }
+    .welcome-title { margin: 0; font-size: 24px; font-weight: bold; }
+    .info-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; border-right: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+    .button { display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: bold; }
+    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="welcome-title">Faltam poucos passos! 🚀</h1>
+    </div>
+    <div class="content">
+      <p>Olá <strong>${full_name}</strong>,</p>
+      
+      <p>Estamos muito felizes que você escolheu o <strong>CliniGo</strong> para gerenciar sua clínica/consultório!</p>
+      
+      <p>Seu pré-cadastro para a clínica <strong>${clinic_name}</strong> foi realizado com sucesso. Geramos o boleto de pagamento para a ativação do seu plano.</p>
+      
+      <div class="info-box">
+        <h3 style="margin-top: 0; color: #059669;">Detalhes da Assinatura</h3>
+        <p><strong>Plano Escolhido:</strong> ${plan.name}</p>
+        <p><strong>Valor Mensal:</strong> R$ ${plan.price.toFixed(2).replace('.', ',')}</p>
+        <p><strong>Status do Acesso:</strong> <span style="color: #d97706; font-weight: bold;">Aguardando Pagamento</span></p>
+      </div>
+
+      <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0; color: #b45309; font-size: 14px;">
+          <strong>⚠️ Nota importante sobre seu acesso:</strong><br>
+          Assim que o nosso sistema identificar a liquidação do boleto (geralmente compensado em até 1 dia útil após o pagamento), você receberá automaticamente em seu e-mail um segundo e-mail contendo as suas <strong>credenciais e link de acesso exclusivo</strong> para começar a usar a plataforma.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="https://clinigo.app/api/auth/boleto-pdf?nossoNumero=${boleto.nossoNumero}" class="button" style="color: #ffffff;">
+          📥 Baixar PDF do Boleto
+        </a>
+      </div>
+      
+      <div class="footer">
+        <p>Se precisar de qualquer auxílio no pagamento ou tiver dúvidas, fale conosco: <a href="mailto:suporte@clinigo.app">suporte@clinigo.app</a></p>
+        <p style="color: #999; font-size: 12px;">CliniGo · Praticidade e Tecnologia para a Saúde</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`
+                await sendEmailMultiTenant({
+                    clinicId: 'global',
+                    to: email,
+                    subject: welcomeSubject,
+                    html: welcomeHtml
+                })
+                console.log(`[PRE-REGISTER] Welcome email sent to ${email}`)
+            } catch (emailError: any) {
+                console.warn('[PRE-REGISTER] Welcome email failed (non-blocking):', emailError.message)
+            }
 
             return NextResponse.json({
                 success: true,

@@ -495,6 +495,7 @@ export async function middleware(request: NextRequest) {
         pathname === '/medico' ||
         pathname === '/cadastro' ||
         pathname === '/planos' ||
+        pathname === '/buscar' ||
         pathname === '/pagamento-pendente' ||
         pathname === '/pagamento-expirado' ||
         pathname.startsWith('/pagamento/') ||

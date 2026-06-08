@@ -44,33 +44,47 @@ export async function GET(request: NextRequest) {
         // Priority 1: Direct clinic_id from query
         if (query.clinic_id) {
             clinicId = query.clinic_id
+            console.log('[GET /api/doctors] Resolved clinicId via Priority 1 (query.clinic_id):', clinicId)
         }
-        // Priority 2: Clinic ID from verified Middleware Header (Fastest & Safest)
-        else if (request.headers.get('x-clinic-id')) {
-            clinicId = request.headers.get('x-clinic-id')
-        }
-        // Priority 3: Public access via clinic_slug
+        // Priority 2: Public access via clinic_slug (explicit query parameter takes precedence over session headers)
         else if (query.clinic_slug) {
-            const { data: clinic } = await supabase
+            console.log('[GET /api/doctors] Resolving clinicId via Priority 2 (query.clinic_slug):', query.clinic_slug)
+            const { data: clinic, error: clinicError } = await supabase
                 .from('clinics')
                 .select('id')
                 .eq('slug', query.clinic_slug)
                 .single()
 
+            if (clinicError) {
+                console.error('[GET /api/doctors] Error resolving clinic_slug:', clinicError)
+            }
+
             if (clinic) {
                 clinicId = (clinic as any).id
+                console.log('[GET /api/doctors] Successfully resolved clinic_slug to clinicId:', clinicId)
+            } else {
+                console.log('[GET /api/doctors] No clinic found with slug:', query.clinic_slug)
             }
         }
-        // Priority 3: Private access via authenticated user
+        // Priority 3: Clinic ID from verified Middleware Header (Session fallback for dashboard requests)
+        else if (request.headers.get('x-clinic-id')) {
+            clinicId = request.headers.get('x-clinic-id')
+            console.log('[GET /api/doctors] Resolved clinicId via Priority 3 (x-clinic-id header):', clinicId)
+        }
+        // Priority 4: Private access via authenticated user
         // ⚠️ FIX: Use Service Role to bypass RLS when fetching user's clinic_id
         else if (userRole !== 'SUPER_ADMIN' && userId) {
             const adminClient = createServiceRoleClient() as any
-            const { data: user } = await adminClient
+            const { data: user, error: userError } = await adminClient
                 .from('users')
                 .select('clinic_id')
                 .eq('id', userId as any)
                 .single()
+            if (userError) {
+                console.error('[GET /api/doctors] Error fetching user clinic_id:', userError)
+            }
             clinicId = (user as any)?.clinic_id || null
+            console.log('[GET /api/doctors] Resolved clinicId via Priority 4 (auth user profile):', clinicId)
         }
 
         // If no clinic identified and not super admin, return empty or forbidden

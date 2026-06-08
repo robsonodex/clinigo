@@ -19,7 +19,9 @@ export const patientSchema = z.object({
         .max(100, 'Nome muito longo'),
     email: z
         .string()
-        .email('Email inválido'),
+        .email('Email inválido')
+        .optional()
+        .or(z.literal('')),
     phone: z
         .string()
         .regex(/^\d{10,11}$/, 'Telefone deve ter 10 ou 11 dígitos'),

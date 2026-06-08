@@ -77,6 +77,19 @@ export function encryptPassword(password: string): string {
  * Falls back to global SMTP if clinic doesn't have custom config
  */
 async function getSMTPConfig(clinicId: string): Promise<SMTPConfig> {
+    if (!clinicId || clinicId === 'global' || clinicId === 'system') {
+        // Fall back to global SMTP configuration directly
+        return {
+            host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            user: process.env.SMTP_USER || 'apikey',
+            password: process.env.SMTP_PASSWORD || '',
+            fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@clinigo.com.br',
+            fromName: process.env.SMTP_FROM_NAME || 'CliniGo Telemedicina',
+            secure: process.env.SMTP_PORT === '465',
+        }
+    }
+
     const supabase = createServiceRoleClient()
 
     const { data: clinic, error } = await supabase
@@ -150,8 +163,9 @@ export async function sendEmailMultiTenant({
 
         // Log notification
         const supabase = createServiceRoleClient()
+        const logClinicId = (clinicId && clinicId !== 'global' && clinicId !== 'system') ? clinicId : null
         await supabase.from('notifications').insert({
-            clinic_id: clinicId,
+            clinic_id: logClinicId,
             type: 'EMAIL',
             status: 'SENT',
             recipient_email: to,
@@ -167,8 +181,9 @@ export async function sendEmailMultiTenant({
 
         // Log failed notification
         const supabase = createServiceRoleClient()
+        const logClinicId = (clinicId && clinicId !== 'global' && clinicId !== 'system') ? clinicId : null
         await supabase.from('notifications').insert({
-            clinic_id: clinicId,
+            clinic_id: logClinicId,
             type: 'EMAIL',
             status: 'FAILED',
             recipient_email: to,
