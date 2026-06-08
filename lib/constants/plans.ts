@@ -39,7 +39,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     BASICO: {
         id: 'BASICO',
         name: 'CliniGo Básico',
-        tagline: 'Para profissional solo iniciante',
+        tagline: 'Ideal para profissionais independentes e consultórios individuais',
         price: 99,
         priceLabel: 'R$ 99',
         billing: 'por mês',
@@ -67,7 +67,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     AVANCADO: {
         id: 'AVANCADO',
         name: 'CliniGo Avançado',
-        tagline: 'Para clínicas com até 5 profissionais',
+        tagline: 'Completo para consultórios e clínicas multiprofissionais',
         price: 249,
         priceLabel: 'R$ 249',
         billing: 'por mês',
@@ -98,7 +98,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     PROFESSIONAL: {
         id: 'PROFESSIONAL',
         name: 'CliniGo Professional',
-        tagline: 'Para centros com até 30 profissionais',
+        tagline: 'Excelente para clínicas e centros consolidados',
         price: 449,
         priceLabel: 'R$ 449',
         billing: 'por mês',
@@ -129,7 +129,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     ENTERPRISE: {
         id: 'ENTERPRISE',
         name: 'CliniGo Enterprise',
-        tagline: 'Para redes com profissionais ilimitados',
+        tagline: 'Solução sob demanda para grandes operações de saúde',
         price: 699,
         priceLabel: 'A partir de R$ 699',
         priceExtra: 'Profissionais sob contrato',
