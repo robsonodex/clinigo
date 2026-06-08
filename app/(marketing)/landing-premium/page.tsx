@@ -732,12 +732,12 @@ export default function LandingPremium() {
                             <span className="text-4xl font-bold text-white">99</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
-                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para médico solo iniciante</p>
+                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Ideal para profissionais independentes e consultórios individuais</p>
 
                         <div className="flex-1 mb-5">
                             <ul className="space-y-2">
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> 1 médico
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> 1 profissional
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Consultas ilimitadas
@@ -784,12 +784,12 @@ export default function LandingPremium() {
                             <span className="text-4xl font-bold text-white">249</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
-                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para clínicas com até 5 médicos</p>
+                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Excelente para clínicas e centros consolidados</p>
 
                         <div className="flex-1 mb-5">
                             <ul className="space-y-2">
                                 <li className="flex items-center gap-2 text-xs text-white font-medium">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Até 5 médicos
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Até 5 profissionais
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-white font-medium">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Tudo do Básico +
@@ -811,7 +811,7 @@ export default function LandingPremium() {
                                     <span className="hidden group-open:block">- Ver menos</span>
                                 </summary>
                                 <ul className="space-y-2 mt-2 pt-2 border-t border-slate-800/50">
-                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> DRE + Repasse Médico</li>
+                                    <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> DRE + Repasse de Honorários</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Fluxo de Caixa</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Templates customizados</li>
                                     <li className="flex items-center gap-2 text-xs text-slate-300"><Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Relatórios avançados</li>
@@ -834,12 +834,12 @@ export default function LandingPremium() {
                             <span className="text-4xl font-bold text-white">449</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
-                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Para centros com até 30 médicos</p>
+                        <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Completo para consultórios e clínicas multiprofissionais</p>
 
                         <div className="flex-1 mb-5">
                             <ul className="space-y-2">
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
-                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Até 30 médicos
+                                    <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Até 30 profissionais
                                 </li>
                                 <li className="flex items-center gap-2 text-xs text-slate-300">
                                     <Check className="w-3 h-3 text-teal-vibrant flex-shrink-0" /> Consultas ilimitadas
@@ -892,7 +892,7 @@ export default function LandingPremium() {
                                         <span className="text-sm text-slate-500">/mês</span>
                                     </div>
                                 </div>
-                                <p className="text-sm text-slate-400 mb-6">Para redes com médicos ilimitados</p>
+                                <p className="text-sm text-slate-400 mb-6">Solução sob demanda para grandes operações de saúde</p>
                                 <Link href="/cadastro" className="w-full h-12 rounded-lg bg-white/5 border border-white/10 text-white text-base font-semibold hover:bg-white/10 hover:border-teal-vibrant/30 transition-all flex items-center justify-center">
                                     Começar Agora
                                 </Link>
@@ -902,7 +902,7 @@ export default function LandingPremium() {
                             <div className="md:w-2/3 md:border-l md:border-slate-800 md:pl-8">
                                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
-                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Médicos ilimitados
+                                        <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Profissionais ilimitados
                                     </li>
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
                                         <Check className="w-4 h-4 text-teal-vibrant flex-shrink-0" /> Tudo do Professional +
