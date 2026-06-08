@@ -49,7 +49,7 @@ export interface EngineResult {
 // ========== RECOMENDAÇÃO DE PLANO ==========
 
 export function recomendarPlano(numProfissionais: number): string {
-  if (numProfissionais === 1) return 'Básico (R$ 99/mês)'
+  if (numProfissionais === 1) return 'Básico (R$ 149/mês)'
   if (numProfissionais <= 5) return 'Avançado (R$ 249/mês)'
   if (numProfissionais <= 30) return 'Professional (R$ 449/mês)'
   return 'Enterprise (R$ 699+/mês)'

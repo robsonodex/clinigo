@@ -47,7 +47,7 @@ C — Tenho uma clínica maior ou rede (mais de 10 profissionais)`
 export const MSG_FLUXO_1A_SOLO = [
   `Perfeito! Pra quem atende sozinho, o CliniGo já vai fazer uma diferença enorme. 🎯
 
-Com o plano *Básico* (de apenas *R$ 99/mês*), você terá:
+Com o plano *Básico* (de apenas *R$ 149/mês*), você terá:
 
 📅 *Agenda inteligente* — Sem mais papelada ou planilha. Agendamentos online, bloqueio de horários, lembretes automáticos para o paciente via WhatsApp.
 
@@ -116,7 +116,7 @@ export const MSG_FLUXO_2_PLANOS = [
   `💰 Vou te mostrar os planos de forma bem direta. O CliniGo tem *4 opções* — e tem uma pra cada momento da sua clínica:
 
 ━━━━━━━━━━━━━━━━━━
-🟢 *BÁSICO — R$ 99/mês*
+🟢 *BÁSICO — R$ 149/mês*
 ━━━━━━━━━━━━━━━━━━
 👤 1 profissional | 👥 até 200 pacientes
 ✔️ Agenda completa

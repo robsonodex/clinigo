@@ -729,7 +729,7 @@ export default function LandingPremium() {
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">CliniGo Básico</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-sm text-slate-500">R$</span>
-                            <span className="text-4xl font-bold text-white">99</span>
+                            <span className="text-4xl font-bold text-white">149</span>
                             <span className="text-sm text-slate-500">/mês</span>
                         </div>
                         <p className="text-sm text-slate-400 mb-6 pb-6 border-b border-slate-800">Ideal para profissionais independentes e consultórios individuais</p>

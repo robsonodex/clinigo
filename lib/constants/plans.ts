@@ -40,8 +40,8 @@ export const PLANS: Record<PlanType, PlanConfig> = {
         id: 'BASICO',
         name: 'CliniGo Básico',
         tagline: 'Ideal para profissionais independentes e consultórios individuais',
-        price: 99,
-        priceLabel: 'R$ 99',
+        price: 149,
+        priceLabel: 'R$ 149',
         billing: 'por mês',
         features: [
             { name: '1 profissional', included: true },
