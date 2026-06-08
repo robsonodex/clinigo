@@ -32,7 +32,7 @@ const PLAN_FEATURES = {
             'Tudo do Avançado +',
             'Faturamento TISS',
 
-            '30 Médicos',
+            '30 Profissionais',
             'Suporte Prioritário',
         ],
     },
@@ -41,7 +41,7 @@ const PLAN_FEATURES = {
         price: 'R$ 799/mês',
         features: [
             'Tudo do Professional +',
-            'Médicos Ilimitados',
+            'Profissionais Ilimitados',
 
             'Gerente Dedicado',
             'SLA 99.5%',

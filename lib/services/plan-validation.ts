@@ -73,8 +73,8 @@ export class PlanValidationService {
 
         if ((doctorsCount || 0) > newPlanLimits.max_doctors) {
             errors.push(
-                `Você tem ${doctorsCount} médicos ativos, mas o plano ${newPlan} permite apenas ${newPlanLimits.max_doctors}. ` +
-                `Desative ${(doctorsCount || 0) - newPlanLimits.max_doctors} médico(s) antes de fazer downgrade.`
+                `Você tem ${doctorsCount} profissionais ativos, mas o plano ${newPlan} permite apenas ${newPlanLimits.max_doctors}. ` +
+                `Desative ${(doctorsCount || 0) - newPlanLimits.max_doctors} profissional(is) antes de fazer downgrade.`
             )
         }
 

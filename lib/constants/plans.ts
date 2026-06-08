@@ -39,12 +39,12 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     BASICO: {
         id: 'BASICO',
         name: 'CliniGo Básico',
-        tagline: 'Para médico solo iniciante',
+        tagline: 'Para profissional solo iniciante',
         price: 99,
         priceLabel: 'R$ 99',
         billing: 'por mês',
         features: [
-            { name: '1 médico', included: true },
+            { name: '1 profissional', included: true },
             { name: 'Consultas ilimitadas', included: true },
             { name: 'Agenda anti-overbooking', included: true },
             { name: 'Prontuário eletrônico', included: true },
@@ -67,13 +67,13 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     AVANCADO: {
         id: 'AVANCADO',
         name: 'CliniGo Avançado',
-        tagline: 'Para clínicas com até 5 médicos',
+        tagline: 'Para clínicas com até 5 profissionais',
         price: 249,
         priceLabel: 'R$ 249',
         billing: 'por mês',
         recommended: true,
         features: [
-            { name: 'Até 5 médicos', included: true },
+            { name: 'Até 5 profissionais', included: true },
             { name: 'Tudo do Básico +', included: true },
             { name: 'Teleconsulta WebRTC', included: true, tooltip: 'Vídeo HD, chat, compartilhar tela, gravação' },
             { name: 'Check-in QR Code', included: true },
@@ -98,12 +98,12 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     PROFESSIONAL: {
         id: 'PROFESSIONAL',
         name: 'CliniGo Professional',
-        tagline: 'Para centros com até 30 médicos',
+        tagline: 'Para centros com até 30 profissionais',
         price: 449,
         priceLabel: 'R$ 449',
         billing: 'por mês',
         features: [
-            { name: 'Até 30 médicos', included: true },
+            { name: 'Até 30 profissionais', included: true },
             { name: 'Consultas ilimitadas', included: true },
             { name: 'Tudo do Avançado +', included: true },
 
@@ -129,13 +129,13 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     ENTERPRISE: {
         id: 'ENTERPRISE',
         name: 'CliniGo Enterprise',
-        tagline: 'Para redes com médicos ilimitados',
+        tagline: 'Para redes com profissionais ilimitados',
         price: 699,
         priceLabel: 'A partir de R$ 699',
-        priceExtra: 'Médicos sob contrato',
+        priceExtra: 'Profissionais sob contrato',
         billing: 'por mês',
         features: [
-            { name: 'Médicos ilimitados', included: true, tooltip: 'Quantidade conforme contrato' },
+            { name: 'Profissionais ilimitados', included: true, tooltip: 'Quantidade conforme contrato' },
             { name: 'Tudo do Professional +', included: true },
 
             { name: 'Portal Super Admin', included: true },

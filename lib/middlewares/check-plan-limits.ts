@@ -51,7 +51,7 @@ export async function checkPlanLimits(
         // Check if count is not null before comparing
         if (count !== null && plan.limits.max_doctors !== -1 && count >= plan.limits.max_doctors) {
             throw new PlanLimitError(
-                `Limite de médicos atingido no plano ${plan.name}. Upgrade para ${nextPlanName} para aumentar.`,
+                `Limite de profissionais atingido no plano ${plan.name}. Upgrade para ${nextPlanName} para aumentar.`,
                 403,
                 'PLAN_LIMIT_EXCEEDED'
             )

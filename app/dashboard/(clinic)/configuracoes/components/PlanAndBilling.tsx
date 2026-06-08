@@ -38,7 +38,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         name: 'CliniGo Básico',
         price: 99,
         features: [
-            '1 médico',
+            '1 profissional',
             'Consultas ilimitadas',
             '200 pacientes',
 
@@ -54,7 +54,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         name: 'CliniGo Avançado',
         price: 249,
         features: [
-            'Até 5 médicos',
+            'Até 5 profissionais',
             'Consultas ilimitadas',
             'Pacientes ilimitados',
 
@@ -73,7 +73,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         name: 'CliniGo Professional',
         price: 449,
         features: [
-            'Até 30 médicos',
+            'Até 30 profissionais',
             'Consultas ilimitadas',
 
             'Tudo do Avançado +',
@@ -90,7 +90,7 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         name: 'CliniGo Enterprise',
         price: 699,
         features: [
-            'Médicos ilimitados',
+            'Profissionais ilimitados',
             'Consultas ilimitadas',
 
             'Tudo do Professional +',
