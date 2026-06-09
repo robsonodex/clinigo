@@ -12,7 +12,10 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
     title: 'CliniGO | O Melhor Sistema de Gestão de Clínicas e Consultórios',
-    description: 'CliniGO é o melhor software de gestão para clínicas e consultórios médicos e terapêuticos. Prontuário eletrônico adaptativo, agenda anti-overbooking, faturamento TISS, check-in facial e WhatsApp integrado. Teste grátis por 7 dias!',
+    description: 'CliniGO: gestão completa para clínicas com TISS nativo, WhatsApp integrado e prontuário eletrônico. Menos burocracia, mais pacientes. Teste 7 dias grátis!',
+    alternates: {
+        canonical: 'https://clinigo.app',
+    },
     keywords: [
         'sistema de clinica',
         'software para clinica',
