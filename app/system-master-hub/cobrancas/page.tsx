@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import {
     Receipt, ArrowLeft, RefreshCw, AlertTriangle, DollarSign,
     Send, Mail, MessageCircle, Lock, CheckCircle2, Loader2,
-    ChevronDown, ChevronUp, Clock, Search,
+    ChevronDown, ChevronUp, Clock, Search, Link2, Copy, ExternalLink,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,6 +61,12 @@ export default function CobrancasPage() {
         open: boolean; type: 'mark_paid' | 'block'; clinicId: string; clinicName: string
     }>({ open: false, type: 'mark_paid', clinicId: '', clinicName: '' })
     const [processing, setProcessing] = useState(false)
+
+    // Payment link states
+    const [generatingLink, setGeneratingLink] = useState<string | null>(null)
+    const [paymentLinkResult, setPaymentLinkResult] = useState<{
+        open: boolean; link: string; linhaDigitavel: string; clinicName: string; amount: number
+    }>({ open: false, link: '', linhaDigitavel: '', clinicName: '', amount: 0 })
 
     const loadData = useCallback(async () => {
         setIsLoading(true); setError(null)
@@ -134,6 +140,49 @@ export default function CobrancasPage() {
             loadData()
         } catch { alert('Erro ao processar ação') }
         finally { setProcessing(false) }
+    }
+
+    const handleGeneratePaymentLink = async (clinicId: string, clinicName: string) => {
+        setGeneratingLink(clinicId)
+        try {
+            const res = await fetch('/api/billing/generate-payment-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinic_id: clinicId }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || 'Erro ao gerar link')
+
+            setPaymentLinkResult({
+                open: true,
+                link: result.link,
+                linhaDigitavel: result.linha_digitavel || '',
+                clinicName: result.clinic_name || clinicName,
+                amount: result.amount || 0,
+            })
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Erro ao gerar link de pagamento')
+        } finally {
+            setGeneratingLink(null)
+        }
+    }
+
+    const handleCopyLink = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text)
+            alert('✅ Copiado!')
+        } catch {
+            // Fallback
+            const ta = document.createElement('textarea')
+            ta.value = text
+            ta.style.position = 'fixed'
+            ta.style.opacity = '0'
+            document.body.appendChild(ta)
+            ta.select()
+            document.execCommand('copy')
+            document.body.removeChild(ta)
+            alert('✅ Copiado!')
+        }
     }
 
     const getDaysOverdueBadge = (days: number) => {
@@ -243,6 +292,9 @@ export default function CobrancasPage() {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center gap-1">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleGeneratePaymentLink(clinic.id, clinic.name)} disabled={generatingLink === clinic.id} className="text-violet-600 hover:bg-violet-50" title="Gerar Link de Pagamento">
+                                                                {generatingLink === clinic.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                                                            </Button>
                                                             <Button variant="ghost" size="sm" onClick={() => openContactSheet(clinic.id, clinic.name, 'whatsapp')} className="text-green-600 hover:bg-green-50" title="WhatsApp">
                                                                 <MessageCircle className="h-4 w-4" />
                                                             </Button>
@@ -349,6 +401,73 @@ export default function CobrancasPage() {
                             {confirmAction.type === 'mark_paid' ? 'Confirmar Pagamento' : 'Bloquear'}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Payment Link Result Dialog */}
+            <Dialog open={paymentLinkResult.open} onOpenChange={open => { if (!open) setPaymentLinkResult(prev => ({ ...prev, open: false })) }}>
+                <DialogContent className="sm:max-w-[520px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Link2 className="h-5 w-5 text-violet-600" />
+                            Link de Pagamento Gerado
+                        </DialogTitle>
+                        <DialogDescription>
+                            Link para <strong>{paymentLinkResult.clinicName}</strong> — R$ {paymentLinkResult.amount.toFixed(2)}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        {/* Link público */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-gray-500 uppercase">Link público (enviar para o cliente)</Label>
+                            <div className="flex gap-2">
+                                <Input readOnly value={paymentLinkResult.link} className="text-sm font-mono" />
+                                <Button variant="outline" size="sm" onClick={() => handleCopyLink(paymentLinkResult.link)} className="shrink-0">
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Linha digitável */}
+                        {paymentLinkResult.linhaDigitavel && (
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-gray-500 uppercase">Linha Digitável</Label>
+                                <div className="flex gap-2">
+                                    <Input readOnly value={paymentLinkResult.linhaDigitavel} className="text-xs font-mono" />
+                                    <Button variant="outline" size="sm" onClick={() => handleCopyLink(paymentLinkResult.linhaDigitavel)} className="shrink-0">
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Msg pronta para WhatsApp */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-gray-500 uppercase">Mensagem pronta para WhatsApp</Label>
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <p className="text-sm text-green-900 whitespace-pre-line">
+                                    {`Olá! 👋\n\nSegue o boleto da sua assinatura CliniGo no valor de R$ ${paymentLinkResult.amount.toFixed(2)}:\n\n🔗 ${paymentLinkResult.link}\n\nClique no link para visualizar e baixar o boleto.\n\nQualquer dúvida, estamos à disposição!`}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2 w-full text-green-700 border-green-300 hover:bg-green-100"
+                                    onClick={() => handleCopyLink(`Olá! 👋\n\nSegue o boleto da sua assinatura CliniGo no valor de R$ ${paymentLinkResult.amount.toFixed(2)}:\n\n🔗 ${paymentLinkResult.link}\n\nClique no link para visualizar e baixar o boleto.\n\nQualquer dúvida, estamos à disposição!`)}
+                                >
+                                    <Copy className="h-3.5 w-3.5 mr-2" /> Copiar Mensagem
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Abrir preview */}
+                        <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => window.open(paymentLinkResult.link, '_blank')}
+                        >
+                            <ExternalLink className="h-4 w-4 mr-2" /> Visualizar página do cliente
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
