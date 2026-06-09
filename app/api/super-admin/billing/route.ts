@@ -118,6 +118,10 @@ export async function GET(request: NextRequest) {
             },
             overdueClinics: enrichedOverdue,
             atRiskClinics: atRiskList,
+            allPaidClinics: allClinics.filter(c => c.amount > 0).map(c => ({
+                ...c,
+                lastContact: lastContacts[c.id] || null,
+            })),
         })
     } catch (error) {
         return handleApiError(error)

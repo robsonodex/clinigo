@@ -44,6 +44,7 @@ export default function CobrancasPage() {
     const [error, setError] = useState<string | null>(null)
     const [metrics, setMetrics] = useState({ totalOverdue: 0, overdueCount: 0, atRiskCount: 0 })
     const [overdueClinics, setOverdueClinics] = useState<OverdueClinic[]>([])
+    const [allPaidClinics, setAllPaidClinics] = useState<OverdueClinic[]>([])
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedClinic, setExpandedClinic] = useState<string | null>(null)
     const [contactHistory, setContactHistory] = useState<Record<string, ContactLog[]>>({})
@@ -76,6 +77,7 @@ export default function CobrancasPage() {
             const result = await res.json()
             setMetrics(result.data?.metrics || { totalOverdue: 0, overdueCount: 0, atRiskCount: 0 })
             setOverdueClinics(result.data?.overdueClinics || [])
+            setAllPaidClinics(result.data?.allPaidClinics || [])
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Erro desconhecido')
         } finally { setIsLoading(false) }
@@ -195,6 +197,10 @@ export default function CobrancasPage() {
         !searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
+    const filteredAll = allPaidClinics.filter(c =>
+        !searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
     if (isLoading) return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto space-y-6">
@@ -253,8 +259,8 @@ export default function CobrancasPage() {
                         </div></CardContent></Card>
                 </div>
 
-                <Tabs defaultValue="inadimplentes">
-                    <TabsList className="bg-white border"><TabsTrigger value="inadimplentes">Inadimplentes</TabsTrigger><TabsTrigger value="regua">Régua Automática</TabsTrigger></TabsList>
+                <Tabs defaultValue="todas">
+                    <TabsList className="bg-white border"><TabsTrigger value="todas">Todas as Clínicas</TabsTrigger><TabsTrigger value="inadimplentes">Inadimplentes ({overdueClinics.length})</TabsTrigger><TabsTrigger value="regua">Régua Automática</TabsTrigger></TabsList>
 
                     <TabsContent value="inadimplentes" className="space-y-4">
                         <div className="relative max-w-md">
@@ -336,6 +342,61 @@ export default function CobrancasPage() {
                                                     </TableRow>
                                                 )}
                                             </>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent></Card>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="todas" className="space-y-4">
+                        <div className="relative max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input placeholder="Buscar clínica..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+                        </div>
+
+                        {filteredAll.length === 0 ? (
+                            <Card><CardContent className="py-12 text-center">
+                                <p className="text-gray-500 font-medium">Nenhuma clínica encontrada</p>
+                            </CardContent></Card>
+                        ) : (
+                            <Card><CardContent className="p-0">
+                                <Table>
+                                    <TableHeader><TableRow>
+                                        <TableHead>Clínica</TableHead>
+                                        <TableHead>Plano</TableHead>
+                                        <TableHead>Valor</TableHead>
+                                        <TableHead>Vencimento</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Ações</TableHead>
+                                    </TableRow></TableHeader>
+                                    <TableBody>
+                                        {filteredAll.map(clinic => (
+                                            <TableRow key={clinic.id} className="hover:bg-gray-50">
+                                                <TableCell className="font-medium">{clinic.name}</TableCell>
+                                                <TableCell><Badge variant="outline">{clinic.planType}</Badge></TableCell>
+                                                <TableCell className="font-semibold">R$ {clinic.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-sm text-gray-500">
+                                                    {clinic.dueDate ? format(new Date(clinic.dueDate + 'T00:00:00'), 'dd/MM/yyyy') : '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {clinic.isOverdue ? (
+                                                        <Badge className="bg-red-100 text-red-700 border-red-300">Vencida</Badge>
+                                                    ) : (
+                                                        <Badge className="bg-green-100 text-green-700 border-green-300">Em dia</Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleGeneratePaymentLink(clinic.id, clinic.name)} disabled={generatingLink === clinic.id} className="text-violet-600 hover:bg-violet-50" title="Gerar Link de Pagamento">
+                                                            {generatingLink === clinic.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => openContactSheet(clinic.id, clinic.name, 'whatsapp')} className="text-green-600 hover:bg-green-50" title="WhatsApp">
+                                                            <MessageCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
