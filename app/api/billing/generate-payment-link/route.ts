@@ -63,8 +63,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'clinic_id é obrigatório' }, { status: 400 })
         }
 
-        // 3. Buscar dados da clínica
-        const { data: clinicData } = await supabase
+        const adminSupabase = createServiceRoleClient()
+
+        // 3. Buscar dados da clínica usando adminSupabase para evitar RLS
+        const { data: clinicData } = await adminSupabase
             .from('clinics')
             .select('id, name, plan_type, subscription_due_date, cnpj, address, responsible_name, phone, email')
             .eq('id', clinic_id)
@@ -87,8 +89,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Plano gratuito não requer pagamento' }, { status: 400 })
         }
 
-        // 4. Verificar se já existe um payment_request PENDING para essa clínica
-        const { data: existingPR } = await supabase
+        // 4. Verificar se já existe um payment_request PENDING para essa clínica usando adminSupabase
+        const { data: existingPR } = await adminSupabase
             .from('payment_requests')
             .select('id, mercadopago_preference_id, mercadopago_init_point, amount, created_at')
             .eq('clinic_id', clinic_id)
@@ -164,8 +166,8 @@ export async function POST(req: NextRequest) {
             throw new Error('Falha ao gerar boleto: Resposta inválida do banco')
         }
 
-        // 6. Salvar payment_request
-        const { data: newPR, error: insertError } = await supabase.from('payment_requests').insert({
+        // 6. Salvar payment_request usando adminSupabase para evitar RLS
+        const { data: newPR, error: insertError } = await adminSupabase.from('payment_requests').insert({
             clinic_id: clinic.id,
             amount: price,
             plan_type: planType,
@@ -177,12 +179,11 @@ export async function POST(req: NextRequest) {
 
         if (insertError) {
             console.error('Erro ao salvar payment_request:', insertError)
-            return NextResponse.json({ error: 'Erro ao salvar registro de pagamento' }, { status: 500 })
+            return NextResponse.json({ error: `Erro ao salvar registro de pagamento: ${insertError.message}` }, { status: 500 })
         }
 
         // 7. Criar notificação in-app para a clínica
         try {
-            const adminSupabase = createServiceRoleClient()
             await adminSupabase.from('billing_notifications').insert({
                 clinic_id: clinic.id,
                 type: 'PAYMENT_REQUEST',
