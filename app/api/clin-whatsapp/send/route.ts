@@ -75,10 +75,10 @@ export async function POST(request: Request) {
 
         clearTimeout(timeout)
         
-        const text = await res.text()
+        const responseText = await res.text()
         let data: any = {}
         try {
-          data = JSON.parse(text)
+          data = JSON.parse(responseText)
         } catch {
           lastError = 'O serviço do WhatsApp (Clin Bot) retornou uma resposta inválida (HTML).'
           continue
