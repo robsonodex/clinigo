@@ -223,8 +223,22 @@ export async function POST(request: NextRequest) {
                     if (paymentRequest) {
                         logger.info({ clinicId: paymentRequest.clinic_id, plan: paymentRequest.plan_type }, 'Found payment_request for boleto')
 
-                        const newDueDate = new Date()
-                        newDueDate.setDate(newDueDate.getDate() + 30)
+                        // Buscar a data de vencimento atual para preservar o dia fixo
+                        const { data: currentClinic } = await supabase
+                            .from('clinics')
+                            .select('subscription_due_date')
+                            .eq('id', paymentRequest.clinic_id)
+                            .single() as any
+
+                        // Calcular nova data: avançar +1 mês mantendo o mesmo dia de vencimento
+                        const now = new Date()
+                        const currentDue = currentClinic?.subscription_due_date
+                            ? new Date(currentClinic.subscription_due_date)
+                            : now
+                        // Se o vencimento atual já passou, usar ele como base; senão usar a data atual
+                        const baseDate = currentDue > now ? new Date(currentDue) : new Date(now)
+                        const newDueDate = new Date(baseDate)
+                        newDueDate.setMonth(newDueDate.getMonth() + 1)
 
                         // 1. Update clinic: set payment_confirmed = true + activate
                         const { data: clinic } = await supabase
@@ -328,9 +342,22 @@ export async function POST(request: NextRequest) {
                     if (subscription) {
                         logger.info({ subscriptionId: subscription.id }, 'Found subscription (legacy path)')
 
+                        // Buscar a data de vencimento atual para preservar o dia fixo
+                        const { data: currentClinicLegacy } = await supabase
+                            .from('clinics')
+                            .select('subscription_due_date')
+                            .eq('id', subscription.clinic_id)
+                            .single() as any
+
+                        const nowLegacy = new Date()
+                        const currentDueLegacy = currentClinicLegacy?.subscription_due_date
+                            ? new Date(currentClinicLegacy.subscription_due_date)
+                            : nowLegacy
+                        const baseDateLegacy = currentDueLegacy > nowLegacy ? new Date(currentDueLegacy) : new Date(nowLegacy)
+
                         const periodEnd = subscription.billing_cycle === 'MONTHLY'
-                            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                            ? (() => { const d = new Date(baseDateLegacy); d.setMonth(d.getMonth() + 1); return d })()
+                            : (() => { const d = new Date(baseDateLegacy); d.setFullYear(d.getFullYear() + 1); return d })()
 
                         // Update subscription
                         await supabase
