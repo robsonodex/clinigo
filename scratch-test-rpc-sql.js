@@ -1,4 +1,3 @@
-// Script de Automação Temporário: Tentar executar DDL SQL via RPC no Supabase
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = 'https://dlxakeejmyzhzdxzjgne.supabase.co';
@@ -7,11 +6,39 @@ const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function runMigration() {
-    const query = `ALTER TABLE scheduled_whatsapp_messages ADD COLUMN IF NOT EXISTS image_base64 TEXT DEFAULT NULL;`;
+    const query = `
+CREATE TABLE IF NOT EXISTS public.payment_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clinic_id UUID REFERENCES public.clinics(id) ON DELETE SET NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    plan_type VARCHAR NOT NULL,
+    description VARCHAR,
+    mercadopago_preference_id VARCHAR,
+    mercadopago_init_point VARCHAR,
+    status VARCHAR DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.payment_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Super admins can manage all payment_requests" ON public.payment_requests;
+CREATE POLICY "Super admins can manage all payment_requests" ON public.payment_requests
+    FOR ALL TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users 
+            WHERE users.id = auth.uid() 
+            AND users.role = 'SUPER_ADMIN'
+        )
+    );
+
+DROP POLICY IF EXISTS "Service role can do everything on payment_requests" ON public.payment_requests;
+CREATE POLICY "Service role can do everything on payment_requests" ON public.payment_requests
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+`;
     
     console.log('Tentando executar DDL via RPC genérico...');
     
-    // Tenta diferentes nomes comuns de RPC administrativa
     const rpcNames = ['exec_sql', 'execute_sql', 'run_sql', 'sql'];
     let applied = false;
     
@@ -39,4 +66,4 @@ async function runMigration() {
     }
 }
 
-runMigration();
+runMigration().catch(console.error);

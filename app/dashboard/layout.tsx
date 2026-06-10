@@ -8,6 +8,7 @@ import { TrialBanner } from '@/components/plans/TrialBanner'
 import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { SystemRefreshListener } from '@/components/system/system-refresh-listener'
+import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
 
 export default async function DashboardRootLayout({
     children,
@@ -53,6 +54,7 @@ export default async function DashboardRootLayout({
     return (
         <>
             <StaffSignatureGate>
+                <SessionGuardProvider />
                 <SystemRefreshListener clinicId={effectiveClinicId} />
                 <DashboardLayout>
                     <ImpersonationBanner />

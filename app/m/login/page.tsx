@@ -27,6 +27,13 @@ export default function PWALoginPage() {
         return
       }
 
+      // Register single session (invalidate other devices)
+      try {
+        await fetch('/api/auth/session/register', { method: 'POST', credentials: 'include' })
+      } catch {
+        // Non-blocking — session guard will handle it
+      }
+
       router.push('/m/agenda')
     } catch {
       setError('Erro de conexão. Verifique sua internet.')

@@ -5,6 +5,7 @@ import BottomNav from '@/components/pwa/BottomNav'
 import OfflineBanner from '@/components/pwa/OfflineBanner'
 import { ToastProvider } from '@/components/pwa/Toast'
 import { useFila } from '@/hooks/pwa/useFila'
+import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   const { count } = useFila()
@@ -17,6 +18,7 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
   return (
     <ToastProvider>
       <div className="min-h-screen bg-zinc-950 text-zinc-100 antialiased" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <SessionGuardProvider />
         <OfflineBanner />
         <main className="pb-20">
           {children}

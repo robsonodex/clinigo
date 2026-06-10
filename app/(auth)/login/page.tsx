@@ -52,6 +52,13 @@ export default function LoginPage() {
                 throw new Error('Acesso restrito: Apenas Super Administradores.')
             }
 
+            // Register single session (invalidate other devices)
+            try {
+                await fetch('/api/auth/session/register', { method: 'POST', credentials: 'include' })
+            } catch {
+                // Non-blocking
+            }
+
             // Force reload to update auth state
             toast.success('Login realizado com sucesso!')
             router.push('/dashboard')

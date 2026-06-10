@@ -2,12 +2,14 @@
  * POST /api/auth/login
  * Login with email and password
  * Clears old session cookies before new login to prevent stale token errors
+ * Single Session: Invalida sessões anteriores ao fazer novo login
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { handleApiError } from '@/lib/utils/errors'
 import { z } from 'zod'
+import { registerSingleSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/services/single-session'
 
 // Super Admin email whitelist (same as middleware.ts)
 const SUPER_ADMIN_EMAILS = (
@@ -97,6 +99,26 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('[LOGIN] Success for:', data.user.email)
+
+        // STEP 4: Register single session (invalidate all previous sessions)
+        const deviceInfo = request.headers.get('user-agent') || undefined
+        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+
+        try {
+            const { sessionToken } = await registerSingleSession(
+                supabase,
+                data.user.id,
+                deviceInfo,
+                ipAddress
+            )
+
+            // Set session cookie
+            cookieStore.set(SESSION_COOKIE_NAME, sessionToken, SESSION_COOKIE_OPTIONS)
+            console.log('[LOGIN] Single session registered for:', data.user.email)
+        } catch (sessionError) {
+            // Log but don't block login if session registration fails
+            console.error('[LOGIN] Session registration error (non-blocking):', sessionError)
+        }
 
         // Return success - cookies are automatically set by Supabase SSR
         return NextResponse.json({

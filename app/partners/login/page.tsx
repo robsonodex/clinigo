@@ -79,6 +79,13 @@ export default function PartnerLoginPage() {
                 throw new Error('Parceiro não encontrado. Entre em contato com o suporte.')
             }
 
+            // Register single session (invalidate other devices)
+            try {
+                await fetch('/api/auth/session/register', { method: 'POST', credentials: 'include' })
+            } catch {
+                // Non-blocking
+            }
+
             toast.success('Login realizado com sucesso!')
             router.push('/partners/me/dashboard')
         } catch (error: any) {

@@ -100,6 +100,13 @@ export function useAuth() {
             throw new Error(error.message)
         }
 
+        // Register single session (invalidate other devices)
+        try {
+            await fetch('/api/auth/session/register', { method: 'POST', credentials: 'include' })
+        } catch {
+            // Non-blocking
+        }
+
         await loadUser()
         router.push('/dashboard')
     }, [supabase.auth, loadUser, router])

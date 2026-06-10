@@ -30,6 +30,12 @@ export default function DemoLoginPage() {
             }
 
             if (data.session) {
+                // Register single session (invalidate other devices)
+                try {
+                    await fetch('/api/auth/session/register', { method: 'POST', credentials: 'include' })
+                } catch {
+                    // Non-blocking
+                }
                 router.push('/dashboard')
                 router.refresh()
             }
