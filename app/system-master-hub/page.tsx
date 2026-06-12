@@ -131,6 +131,12 @@ export default function SuperAdminDashboard() {
     }>({ open: false, clinicId: '', clinicName: '', dueDate: null })
     const [billingMessage, setBillingMessage] = useState('')
     const [billingTitle, setBillingTitle] = useState('Aviso de Faturamento: CliniGo')
+    const [isScheduling, setIsScheduling] = useState(false)
+    const [scheduleDate, setScheduleDate] = useState('')
+    const [scheduleTime, setScheduleTime] = useState('')
+    const [scheduleTimes, setScheduleTimes] = useState<string[]>([])
+    const [scheduledBillings, setScheduledBillings] = useState<any[]>([])
+    const [loadingScheduled, setLoadingScheduled] = useState(false)
 
     // Feature Announcement State
     const [featureModal, setFeatureModal] = useState(false)
@@ -161,9 +167,25 @@ export default function SuperAdminDashboard() {
     }> | null>(null)
     const [resettingClinicPwd, setResettingClinicPwd] = useState(false)
 
+    const loadScheduledBillings = async () => {
+        setLoadingScheduled(true)
+        try {
+            const res = await fetch('/api/super-admin/clinics/scheduled-billings')
+            if (res.ok) {
+                const result = await res.json()
+                setScheduledBillings(result.data || [])
+            }
+        } catch (error) {
+            console.error('Error loading scheduled billings:', error)
+        } finally {
+            setLoadingScheduled(false)
+        }
+    }
+
     useEffect(() => {
         loadDashboard()
         loadUsers()
+        loadScheduledBillings()
     }, [])
 
     const loadDashboard = async () => {
@@ -493,12 +515,22 @@ export default function SuperAdminDashboard() {
         setBillingModal({ open: true, clinicId, clinicName, dueDate })
         setBillingMessage('')
         setBillingTitle('Aviso de Faturamento: CliniGo')
+        setIsScheduling(false)
+        const today = new Date()
+        const localDate = today.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) // Returns YYYY-MM-DD
+        setScheduleDate(localDate)
+        setScheduleTime('09:00')
+        setScheduleTimes([])
     }
 
     const closeBillingModal = () => {
         setBillingModal({ open: false, clinicId: '', clinicName: '', dueDate: null })
         setBillingMessage('')
         setBillingTitle('Aviso de Faturamento: CliniGo')
+        setIsScheduling(false)
+        setScheduleDate('')
+        setScheduleTime('')
+        setScheduleTimes([])
     }
 
     const confirmSendBilling = async () => {
@@ -529,6 +561,102 @@ export default function SuperAdminDashboard() {
             alert(`Erro ao enviar cobrança: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
         } finally {
             setSendingBilling(null)
+        }
+    }
+
+    const handleSendBillingSubmit = async () => {
+        if (isScheduling) {
+            if (!billingMessage.trim()) {
+                alert('Por favor, escreva uma mensagem antes de agendar.')
+                return
+            }
+            if (!scheduleDate) {
+                alert('Por favor, selecione a data do agendamento.')
+                return
+            }
+            if (scheduleTimes.length === 0) {
+                alert('Por favor, adicione pelo menos um horário de envio.')
+                return
+            }
+            
+            const { clinicId, clinicName } = billingModal
+            setSendingBilling(clinicId)
+            try {
+                const res = await fetch('/api/super-admin/clinics/scheduled-billings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        clinicId,
+                        clinicName,
+                        title: billingTitle.trim(),
+                        message: billingMessage.trim(),
+                        dates: [scheduleDate],
+                        times: scheduleTimes
+                    }),
+                })
+
+                if (!res.ok) {
+                    const error = await res.json()
+                    throw new Error(error.error || 'Falha ao salvar agendamento')
+                }
+
+                alert('✅ Cobrança agendada com sucesso!')
+                closeBillingModal()
+                loadScheduledBillings()
+            } catch (error) {
+                console.error('Scheduling billing error:', error)
+                alert(`Erro ao agendar cobrança: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+            } finally {
+                setSendingBilling(null)
+            }
+        } else {
+            await confirmSendBilling()
+        }
+    }
+
+    const handleUpdateScheduledStatus = async (id: string, status: string, actionLabel: string) => {
+        const confirmed = confirm(`Deseja realmente ${actionLabel} este agendamento?`)
+        if (!confirmed) return
+
+        try {
+            const res = await fetch('/api/super-admin/clinics/scheduled-billings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status }),
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao atualizar agendamento')
+            }
+
+            alert(`Agendamento atualizado com sucesso!`)
+            loadScheduledBillings()
+        } catch (error) {
+            console.error('Error updating scheduled status:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        }
+    }
+
+    const handleDeleteScheduled = async (id: string) => {
+        const confirmed = confirm('⚠️ ATENÇÃO: Tem certeza que deseja excluir permanentemente este agendamento? Esta ação não pode ser desfeita.')
+        if (!confirmed) return
+
+        try {
+            const res = await fetch(`/api/super-admin/clinics/scheduled-billings?id=${id}`, {
+                method: 'DELETE',
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao excluir agendamento')
+            }
+
+            alert('Agendamento concluído com sucesso!')
+            loadScheduledBillings()
+        } catch (error) {
+            console.error('Error deleting scheduled:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
         }
     }
 
@@ -911,6 +1039,7 @@ export default function SuperAdminDashboard() {
                     <TabsList className="bg-white border border-gray-200">
                         <TabsTrigger value="clinics">Gestão de Clínicas</TabsTrigger>
                         <TabsTrigger value="users">Usuários</TabsTrigger>
+                        <TabsTrigger value="scheduled-billings">Cobranças Agendadas</TabsTrigger>
                         <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
                     </TabsList>
 
@@ -1208,6 +1337,138 @@ export default function SuperAdminDashboard() {
                         </Card>
                     </TabsContent>
 
+                    {/* Scheduled Billings Tab */}
+                    <TabsContent value="scheduled-billings">
+                        <Card className="bg-white border-gray-200">
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
+                                <div>
+                                    <CardTitle className="text-gray-900">Cobranças Agendadas</CardTitle>
+                                    <CardDescription className="text-gray-600">
+                                        Monitore e gerencie os disparos programados de cobrança.
+                                    </CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={loadScheduledBillings}
+                                        disabled={loadingScheduled}
+                                        className="h-10 px-4 border-gray-300 hover:bg-gray-50 flex items-center gap-2 font-semibold"
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${loadingScheduled ? 'animate-spin' : ''}`} />
+                                        <span>Atualizar Lista</span>
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingScheduled ? (
+                                    <div className="py-8 flex justify-center items-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                                    </div>
+                                ) : scheduledBillings.length === 0 ? (
+                                    <div className="py-12 text-center text-gray-500 font-medium">
+                                        Nenhuma cobrança agendada encontrada.
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto w-full border border-gray-200 rounded-lg">
+                                        <Table className="min-w-full">
+                                            <TableHeader>
+                                                <TableRow className="border-gray-200 bg-gray-50">
+                                                    <TableHead className="text-gray-600 font-semibold">Clínica</TableHead>
+                                                    <TableHead className="text-gray-600 font-semibold">Assunto</TableHead>
+                                                    <TableHead className="text-gray-600 font-semibold">Mensagem</TableHead>
+                                                    <TableHead className="text-gray-600 font-semibold">Data/Hora de Disparo</TableHead>
+                                                    <TableHead className="text-gray-600 font-semibold">Status</TableHead>
+                                                    <TableHead className="text-gray-600 font-semibold text-right">Ações</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {scheduledBillings.map((item) => (
+                                                    <TableRow key={item.id} className="border-gray-200 hover:bg-gray-50">
+                                                        <TableCell className="font-semibold text-gray-800">{item.clinic_name}</TableCell>
+                                                        <TableCell className="text-gray-700">{item.title}</TableCell>
+                                                        <TableCell className="text-gray-600 max-w-[200px] truncate">{item.message}</TableCell>
+                                                        <TableCell className="text-gray-600">
+                                                            {format(new Date(item.scheduled_for), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {item.status === 'pending' && (
+                                                                <Badge className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 font-medium">
+                                                                    Pendente
+                                                                </Badge>
+                                                            )}
+                                                            {item.status === 'sent' && (
+                                                                <Badge className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 font-medium">
+                                                                    Enviado
+                                                                </Badge>
+                                                            )}
+                                                            {item.status === 'paused' && (
+                                                                <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 font-medium">
+                                                                    Pausado
+                                                                </Badge>
+                                                            )}
+                                                            {item.status === 'cancelled' && (
+                                                                <Badge className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 font-medium">
+                                                                    Cancelado
+                                                                </Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex justify-end gap-1.5">
+                                                                {item.status === 'pending' && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleUpdateScheduledStatus(item.id, 'paused', 'pausar')}
+                                                                        className="h-10 px-3 border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400 font-semibold"
+                                                                        title="Pausar agendamento"
+                                                                    >
+                                                                        Pausar
+                                                                    </Button>
+                                                                )}
+                                                                {item.status === 'paused' && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleUpdateScheduledStatus(item.id, 'pending', 'retomar')}
+                                                                        className="h-10 px-3 border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400 font-semibold"
+                                                                        title="Retomar agendamento"
+                                                                    >
+                                                                        Retomar
+                                                                    </Button>
+                                                                )}
+                                                                {item.status !== 'sent' && item.status !== 'cancelled' && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleUpdateScheduledStatus(item.id, 'cancelled', 'cancelar')}
+                                                                        className="h-10 px-3 border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400 font-semibold"
+                                                                        title="Cancelar disparo"
+                                                                    >
+                                                                        Cancelar
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteScheduled(item.id)}
+                                                                    className="h-10 px-3 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-semibold"
+                                                                    title="Excluir permanentemente"
+                                                                >
+                                                                    Excluir
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
                     {/* Logs Tab */}
                     <TabsContent value="logs">
                         <Card className="bg-white border-gray-200">
@@ -1281,12 +1542,95 @@ export default function SuperAdminDashboard() {
                                 placeholder="Digite aqui a mensagem que será enviada para os usuários da clínica..."
                                 value={billingMessage}
                                 onChange={(e) => setBillingMessage(e.target.value)}
-                                rows={6}
+                                rows={4}
                                 className="resize-y"
                             />
                             <p className="text-xs text-gray-500">
                                 Esta mensagem aparecerá na notificação que os usuários da clínica receberão.
                             </p>
+                        </div>
+
+                        {/* Opção de Agendar Envio */}
+                        <div className="flex flex-col space-y-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <span className="text-sm font-semibold text-gray-800">Agendar envio para depois?</span>
+                                    <p className="text-xs text-gray-500">Programe data e múltiplos horários de disparo</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={isScheduling}
+                                    onChange={(e) => setIsScheduling(e.target.checked)}
+                                    className="h-5 w-5 text-amber-600 focus:ring-amber-500 border-gray-300 rounded cursor-pointer transition-all"
+                                />
+                            </div>
+
+                            {isScheduling && (
+                                <div className="space-y-3 mt-2 pt-2 border-t border-gray-200">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="schedule-date" className="text-xs font-semibold text-gray-700">Data de Envio</Label>
+                                        <input
+                                            id="schedule-date"
+                                            type="date"
+                                            value={scheduleDate}
+                                            onChange={(e) => setScheduleDate(e.target.value)}
+                                            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-semibold text-gray-700">Adicionar Horário</Label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="time"
+                                                value={scheduleTime}
+                                                onChange={(e) => setScheduleTime(e.target.value)}
+                                                className="flex h-9 flex-1 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    if (!scheduleTime) return
+                                                    if (scheduleTimes.includes(scheduleTime)) {
+                                                        alert('Este horário já foi adicionado.')
+                                                        return
+                                                    }
+                                                    setScheduleTimes(prev => [...prev, scheduleTime].sort())
+                                                }}
+                                                className="h-9 border-amber-600 text-amber-700 hover:bg-amber-50 flex items-center justify-center font-semibold"
+                                            >
+                                                Adicionar
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {scheduleTimes.length > 0 && (
+                                        <div className="space-y-1">
+                                            <span className="text-xs text-gray-500 font-semibold">Horários agendados para este dia:</span>
+                                            <div className="flex flex-wrap gap-1.5 mt-1">
+                                                {scheduleTimes.map((time, idx) => (
+                                                    <Badge 
+                                                        key={idx} 
+                                                        variant="secondary"
+                                                        className="px-2 py-0.5 text-xs bg-amber-50 text-amber-800 border-amber-200 flex items-center gap-1"
+                                                    >
+                                                        {time}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setScheduleTimes(prev => prev.filter(t => t !== time))}
+                                                            className="text-amber-600 hover:text-amber-900 font-bold ml-1 focus:outline-none h-4 w-4 flex items-center justify-center rounded-full hover:bg-amber-100"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <DialogFooter className="gap-2 sm:gap-0">
@@ -1294,14 +1638,14 @@ export default function SuperAdminDashboard() {
                             Cancelar
                         </Button>
                         <Button
-                            onClick={confirmSendBilling}
+                            onClick={handleSendBillingSubmit}
                             disabled={sendingBilling === billingModal.clinicId || !billingMessage.trim()}
                             className="bg-amber-600 hover:bg-amber-700 text-white"
                         >
                             {sendingBilling === billingModal.clinicId ? (
-                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {isScheduling ? 'Agendando...' : 'Enviando...'}</>
                             ) : (
-                                <><Send className="h-4 w-4 mr-2" /> Enviar Cobrança</>
+                                <><Send className="h-4 w-4 mr-2" /> {isScheduling ? 'Agendar Cobrança' : 'Enviar Cobrança'}</>
                             )}
                         </Button>
                     </DialogFooter>
