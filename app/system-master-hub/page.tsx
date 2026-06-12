@@ -37,6 +37,8 @@ import {
     Bot,
     Settings,
     Smartphone,
+    CalendarClock,
+    FileText,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -1036,11 +1038,23 @@ export default function SuperAdminDashboard() {
 
                 {/* Tabs */}
                 <Tabs defaultValue="clinics" className="space-y-4">
-                    <TabsList className="bg-white border border-gray-200">
-                        <TabsTrigger value="clinics">Gestão de Clínicas</TabsTrigger>
-                        <TabsTrigger value="users">Usuários</TabsTrigger>
-                        <TabsTrigger value="scheduled-billings">Cobranças Agendadas</TabsTrigger>
-                        <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
+                    <TabsList className="bg-white border border-gray-200 h-auto flex-wrap gap-1 p-1.5 rounded-xl shadow-sm">
+                        <TabsTrigger value="clinics" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2.5 font-semibold text-gray-600 transition-all duration-200 hover:bg-blue-50 flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            <span>Gestão de Clínicas</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="users" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2.5 font-semibold text-gray-600 transition-all duration-200 hover:bg-emerald-50 flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>Usuários</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="scheduled-billings" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2.5 font-semibold text-gray-600 transition-all duration-200 hover:bg-amber-50 flex items-center gap-2">
+                            <CalendarClock className="h-4 w-4" />
+                            <span>Cobranças Agendadas</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="logs" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2.5 font-semibold text-gray-600 transition-all duration-200 hover:bg-gray-100 flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Logs do Sistema</span>
+                        </TabsTrigger>
                     </TabsList>
 
                     {/* Clinics Tab */}
