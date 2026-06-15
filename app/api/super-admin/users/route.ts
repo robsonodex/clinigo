@@ -36,7 +36,7 @@ export async function GET() {
                 role,
                 clinic_id,
                 created_at,
-                clinics (
+                clinics!users_clinic_id_fkey (
                     name
                 )
             `)
