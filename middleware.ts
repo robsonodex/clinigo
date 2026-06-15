@@ -752,6 +752,24 @@ export async function middleware(request: NextRequest) {
                 if (impersonationClinicName) {
                     requestHeaders.set('x-impersonation-clinic-name', impersonationClinicName)
                 }
+
+                // Buscar o administrador principal da clínica
+                const { data: clinicAdmin } = await supabase
+                    .from('users')
+                    .select('id, email')
+                    .eq('clinic_id', impersonationClinicId)
+                    .eq('role', 'CLINIC_ADMIN')
+                    .limit(1)
+                    .maybeSingle()
+
+                if (clinicAdmin) {
+                    requestHeaders.set('x-user-id', clinicAdmin.id)
+                    requestHeaders.set('x-user-role', 'CLINIC_ADMIN')
+                    requestHeaders.set('x-user-email', clinicAdmin.email)
+                } else {
+                    requestHeaders.set('x-user-role', 'CLINIC_ADMIN')
+                }
+
                 // Sobrescrever plan type da clínica impersonada
                 const { data: impClinic } = await supabase
                     .from('clinics')

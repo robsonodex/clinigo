@@ -55,23 +55,11 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<AuthResult>
             }
         }
 
-        const userRole = profile.role as UserRole
-
-        // Check if user's role is in the allowed roles
-        if (!allowedRoles.includes(userRole)) {
-            log.audit(user.id, 'unauthorized_access_attempt', {
-                userRole,
-                allowedRoles,
-                email: user.email
-            })
-            return {
-                authorized: false,
-                error: `Access denied - Role '${userRole}' not authorized`
-            }
-        }
-
-        // Obter o clinic_id efetivo do header (o middleware seta x-clinic-id já resolvendo impersonation)
         let effectiveClinicId = profile.clinic_id
+        let effectiveUserId = user.id
+        let effectiveUserEmail = user.email || ''
+        let effectiveUserRole = profile.role as UserRole
+
         try {
             const { headers } = await import('next/headers')
             const headersList = await headers()
@@ -79,16 +67,40 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<AuthResult>
             if (headerClinicId) {
                 effectiveClinicId = headerClinicId
             }
+
+            const isImpersonationActive = headersList.get('x-impersonation-active') === 'true'
+            const headerUserId = headersList.get('x-user-id')
+            const headerUserRole = headersList.get('x-user-role')
+            const headerUserEmail = headersList.get('x-user-email')
+
+            if (isImpersonationActive) {
+                if (headerUserId) effectiveUserId = headerUserId
+                if (headerUserEmail) effectiveUserEmail = headerUserEmail
+                if (headerUserRole) effectiveUserRole = headerUserRole as UserRole
+            }
         } catch (e) {
             // Ignorar erro se não estiver no contexto Next.js (ex: cron jobs ou testes soltos)
+        }
+
+        // Check if user's role is in the allowed roles
+        if (!allowedRoles.includes(effectiveUserRole)) {
+            log.audit(effectiveUserId, 'unauthorized_access_attempt', {
+                userRole: effectiveUserRole,
+                allowedRoles,
+                email: effectiveUserEmail
+            })
+            return {
+                authorized: false,
+                error: `Access denied - Role '${effectiveUserRole}' not authorized`
+            }
         }
 
         return {
             authorized: true,
             user: {
-                id: user.id,
-                email: user.email || '',
-                role: userRole,
+                id: effectiveUserId,
+                email: effectiveUserEmail,
+                role: effectiveUserRole,
                 clinic_id: effectiveClinicId
             }
         }
