@@ -1296,6 +1296,7 @@ export default function SuperAdminDashboard() {
                                                 <TableHead className="text-gray-600">Display name</TableHead>
                                                 <TableHead className="text-gray-600">Email</TableHead>
                                                 <TableHead className="text-gray-600">Role</TableHead>
+                                                <TableHead className="text-gray-600">Conexão</TableHead>
                                                 <TableHead className="text-gray-600">Clínica</TableHead>
                                                 <TableHead className="text-gray-600">Ações</TableHead>
                                             </TableRow>
@@ -1304,20 +1305,26 @@ export default function SuperAdminDashboard() {
                                             {users.map((user) => (
                                                 <TableRow key={user.id} className="border-gray-200 hover:bg-gray-50">
                                                     <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                                                    <TableCell className="font-medium">
-                                                        <div className="flex items-center gap-2">
-                                                            {user.displayName}
-                                                            {user.isOnline && (
-                                                                <span className="relative flex h-2 w-2" title="Online agora">
-                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
+                                                    <TableCell className="font-medium">{user.displayName}</TableCell>
                                                     <TableCell>{user.email}</TableCell>
                                                     <TableCell>
                                                         <Badge variant="outline">{user.role}</Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {user.isOnline ? (
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50">
+                                                                <span className="relative flex h-2 w-2">
+                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                </span>
+                                                                <span>Online</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
+                                                                <span className="inline-flex rounded-full h-2 w-2 bg-slate-300 dark:bg-slate-700"></span>
+                                                                <span>Offline</span>
+                                                            </span>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>{user.clinicName}</TableCell>
                                                     <TableCell>
