@@ -143,8 +143,25 @@ export async function GET(request: NextRequest) {
 
         if (error) throw error
 
+        // Map online status
+        let doctorsWithOnlineStatus = doctors || []
+        if (doctors && doctors.length > 0) {
+            const userIds = doctors.map((d: any) => d.user_id).filter(Boolean)
+            const { data: activeSessions } = await supabase
+                .from('active_sessions')
+                .select('user_id')
+                .eq('is_active', true)
+                .in('user_id', userIds)
+
+            const activeUserIds = new Set(activeSessions?.map((s: any) => s.user_id) || [])
+            doctorsWithOnlineStatus = doctors.map((d: any) => ({
+                ...d,
+                is_online: activeUserIds.has(d.user_id)
+            }))
+        }
+
         return paginatedResponse(
-            buildPaginatedData(doctors || [], count || 0, page, pageSize)
+            buildPaginatedData(doctorsWithOnlineStatus, count || 0, page, pageSize)
         )
     } catch (error) {
         return handleApiError(error)

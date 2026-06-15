@@ -127,6 +127,7 @@ export interface Doctor {
     consultation_duration?: number
     bio?: string
     is_accepting_appointments: boolean
+    is_online?: boolean
     display_settings?: DoctorDisplaySettings
     // Professional profile fields
     rating?: number

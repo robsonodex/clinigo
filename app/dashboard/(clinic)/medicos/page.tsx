@@ -328,11 +328,16 @@ export default function DoctorsPage() {
                                             </TableCell>
                                             <TableCell className="py-3 px-6 font-medium">
                                                 <div className="flex items-center gap-3">
-                                                    <div
-                                                        style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
-                                                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
-                                                    >
-                                                        {getInitials(name)}
+                                                    <div className="relative">
+                                                        <div
+                                                            style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
+                                                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                        >
+                                                            {getInitials(name)}
+                                                        </div>
+                                                        {doctor.is_online && (
+                                                            <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" title="Online agora" />
+                                                        )}
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">{doctor.user?.full_name}</span>

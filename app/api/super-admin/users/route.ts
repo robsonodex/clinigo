@@ -47,6 +47,14 @@ export async function GET() {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
+        // Fetch active sessions to map who is online
+        const { data: activeSessions } = await supabaseAdmin
+            .from('active_sessions')
+            .select('user_id')
+            .eq('is_active', true)
+
+        const activeUserIds = new Set(activeSessions?.map((s: any) => s.user_id) || [])
+
         // Format the response
         const formattedUsers = (users as any[])?.map((user: any) => ({
             id: user.id,
@@ -56,6 +64,7 @@ export async function GET() {
             clinicName: user.clinics?.name || '-',
             clinicId: user.clinic_id,
             createdAt: user.created_at,
+            isOnline: activeUserIds.has(user.id),
         })) || []
 
         return NextResponse.json({
