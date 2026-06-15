@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
+import { BillingOverdueBanner } from '@/components/plans/BillingOverdueBanner'
 import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { SystemRefreshListener } from '@/components/system/system-refresh-listener'
@@ -40,15 +41,19 @@ export default async function DashboardRootLayout({
     let isDemo = false
     let approvalStatus: string | null = null
     let trialEndsAt: string | null = null
+    let paymentConfirmed = true
+    let subscriptionDueDate: string | null = null
     if (effectiveClinicId) {
         const { data: clinic } = await supabase
             .from('clinics')
-            .select('slug, approval_status, trial_ends_at')
+            .select('slug, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
             .eq('id', effectiveClinicId)
             .single()
         isDemo = clinic?.slug === 'demo'
         approvalStatus = clinic?.approval_status ?? null
         trialEndsAt = clinic?.trial_ends_at ?? null
+        paymentConfirmed = clinic?.payment_confirmed !== false
+        subscriptionDueDate = clinic?.subscription_due_date ?? null
     }
 
     return (
@@ -59,6 +64,9 @@ export default async function DashboardRootLayout({
                 <DashboardLayout>
                     <ImpersonationBanner />
                     <DemoBanner isDemo={isDemo} />
+                    {paymentConfirmed === false && !isDemo && (
+                        <BillingOverdueBanner dueDate={subscriptionDueDate} />
+                    )}
                     <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
                     {children}
                 </DashboardLayout>
