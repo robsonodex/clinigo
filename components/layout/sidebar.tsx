@@ -260,6 +260,11 @@ const navigationSections: NavSection[] = [
                         icon: Activity,
                     },
                     {
+                        title: 'Conformidade Evoluções',
+                        href: '/dashboard/terapia/conformidade-evolucao',
+                        icon: FileText,
+                    },
+                    {
                         title: 'Desfechos',
                         href: '/dashboard/terapia/desfechos',
                         icon: Target,
