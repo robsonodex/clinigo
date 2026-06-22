@@ -1,6 +1,6 @@
 /**
  * Document Upload Component
- * Simple file upload without OCR
+ * With Health vs Admin document group segregation
  */
 
 'use client'
@@ -16,8 +16,10 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
+    SelectGroup,
+    SelectLabel,
 } from '@/components/ui/select'
-import { Upload, Loader2, FileText } from 'lucide-react'
+import { Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -26,6 +28,23 @@ interface DocumentUploadProps {
     clinicId: string
     onUploadComplete?: () => void
     userRole?: string
+}
+
+// Mapeamento de tipo → grupo (health ou admin)
+const DOC_TYPE_GROUP: Record<string, string> = {
+    EXAM: 'health',
+    exam: 'health',
+    PRESCRIPTION: 'health',
+    prescription: 'health',
+    report: 'health',
+    referral: 'health',
+    certificate: 'health',
+    CONVENIO_CARD: 'admin',
+    CONSENT_TERM: 'admin',
+    consent: 'admin',
+    personal: 'admin',
+    OTHER: 'admin',
+    other: 'admin',
 }
 
 export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole }: DocumentUploadProps) {
@@ -57,7 +76,10 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
                     .from('patient-documents')
                     .getPublicUrl(uploadData.path)
 
-                // 3. Save to database
+                // 3. Determinar grupo do documento
+                const docGroup = DOC_TYPE_GROUP[documentType] || 'admin'
+
+                // 4. Save to database
                 const { error: dbError } = await supabase.from('patient_documents').insert({
                     patient_id: patientId,
                     clinic_id: clinicId,
@@ -66,7 +88,8 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
                     file_type: file.type,
                     file_size_bytes: file.size,
                     document_type: documentType,
-                })
+                    doc_group: docGroup,
+                } as any)
 
                 if (dbError) {
                     toast.error(`Erro ao salvar ${file.name} no banco: ${dbError.message}`)
@@ -91,7 +114,7 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
             <CardHeader>
                 <CardTitle>Upload de Documentos</CardTitle>
                 <CardDescription>
-                    Envie guias de convênio, exames, termo de consentimento ou outros documentos
+                    Envie documentos de saúde ou administrativos do paciente
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -102,14 +125,23 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
                             <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="CONVENIO_CARD">Carteirinha de Convênio</SelectItem>
-                            <SelectItem value="EXAM">Exame</SelectItem>
-                            <SelectItem value="CONSENT_TERM">Termo de Consentimento</SelectItem>
-                            <SelectItem value="PRESCRIPTION">Receita</SelectItem>
-                            <SelectItem value="OTHER">Outro</SelectItem>
-                            {(userRole === 'CLINIC_ADMIN' || userRole === 'SUPER_ADMIN') && (
-                                <SelectItem value="personal">Documento Pessoal (Apenas ADM)</SelectItem>
-                            )}
+                            <SelectGroup>
+                                <SelectLabel className="text-emerald-600 font-bold text-xs">🏥 Saúde</SelectLabel>
+                                <SelectItem value="EXAM">Exame</SelectItem>
+                                <SelectItem value="PRESCRIPTION">Receita</SelectItem>
+                                <SelectItem value="report">Laudo</SelectItem>
+                                <SelectItem value="referral">Encaminhamento</SelectItem>
+                                <SelectItem value="certificate">Atestado</SelectItem>
+                            </SelectGroup>
+                            <SelectGroup>
+                                <SelectLabel className="text-blue-600 font-bold text-xs">📋 Administrativo</SelectLabel>
+                                <SelectItem value="CONVENIO_CARD">Carteirinha de Convênio</SelectItem>
+                                <SelectItem value="CONSENT_TERM">Termo de Consentimento</SelectItem>
+                                <SelectItem value="OTHER">Outro</SelectItem>
+                                {(userRole === 'CLINIC_ADMIN' || userRole === 'SUPER_ADMIN') && (
+                                    <SelectItem value="personal">Documento Pessoal (Apenas ADM)</SelectItem>
+                                )}
+                            </SelectGroup>
                         </SelectContent>
                     </Select>
                 </div>

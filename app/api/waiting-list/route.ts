@@ -112,6 +112,12 @@ export async function POST(request: NextRequest) {
                 preferred_days: body.preferred_days,
                 urgency: body.urgency || 'normal',
                 notes: body.notes,
+                responsible_name: body.responsible_name || null,
+                therapies: body.therapies || [],
+                commercial_notes: body.commercial_notes || null,
+                financial_contact_date: body.financial_contact_date || null,
+                financial_result: body.financial_result || null,
+                financial_notes: body.financial_notes || null,
             })
             .select()
             .single()
@@ -143,6 +149,12 @@ export async function PUT(request: NextRequest) {
         if (body.notes !== undefined) updateData.notes = body.notes
         if (body.urgency) updateData.urgency = body.urgency
         if (body.preferred_doctor_id) updateData.preferred_doctor_id = body.preferred_doctor_id
+        if (body.responsible_name !== undefined) updateData.responsible_name = body.responsible_name
+        if (body.therapies !== undefined) updateData.therapies = body.therapies
+        if (body.commercial_notes !== undefined) updateData.commercial_notes = body.commercial_notes
+        if (body.financial_contact_date !== undefined) updateData.financial_contact_date = body.financial_contact_date
+        if (body.financial_result !== undefined) updateData.financial_result = body.financial_result
+        if (body.financial_notes !== undefined) updateData.financial_notes = body.financial_notes
 
         const { data, error } = await supabase
             .from('waiting_list')

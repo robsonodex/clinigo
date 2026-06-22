@@ -1,16 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { disconnectInstance } from '@/lib/whatsapp/service'
 
 /**
  * POST /api/whatsapp/disconnect
- * 
- * Desconecta o WhatsApp da clínica.
- * RECEPTIONIST e NURSE NÃO podem desconectar.
- * 
+ * Desconecta sessão WhatsApp. Suporta sector via body.
  * Roles: CLINIC_ADMIN, SUPER_ADMIN
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -30,12 +27,18 @@ export async function POST() {
     }
 
     if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Apenas administradores podem desconectar o WhatsApp' }, { status: 403 })
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
-    await disconnectInstance(profile.clinic_id)
+    let sector = 'default'
+    try {
+      const body = await req.json()
+      if (body?.sector) sector = body.sector
+    } catch { /* default */ }
 
-    return NextResponse.json({ success: true, message: 'WhatsApp desconectado' })
+    await disconnectInstance(profile.clinic_id, sector)
+
+    return NextResponse.json({ success: true, sector })
   } catch (error: any) {
     console.error('[WhatsApp Disconnect]', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -44,15 +44,32 @@ export async function GET(request: NextRequest) {
 
         if (aptError) throw aptError
 
-        // 2. Buscar evoluções do período
+        // 2. Buscar evoluções do período (inclui patient_id para detecção de duplicatas)
         const { data: evolutions, error: evoError } = await supabase
             .from('session_evolutions')
-            .select('id, doctor_id, appointment_id, evolution_date')
+            .select('id, doctor_id, patient_id, appointment_id, evolution_date, created_at, patients(full_name)')
             .eq('clinic_id', profile.clinic_id)
             .gte('evolution_date', startDate)
             .lte('evolution_date', endDate)
 
         if (evoError) throw evoError
+
+        // 2.1 Detectar possíveis duplicatas (mesmo doctor + patient + date)
+        const dupMap: Record<string, any[]> = {}
+        evolutions?.forEach((evo: any) => {
+            if (!evo.doctor_id || !evo.patient_id) return
+            const key = `${evo.doctor_id}__${evo.patient_id}__${evo.evolution_date}`
+            if (!dupMap[key]) dupMap[key] = []
+            dupMap[key].push(evo)
+        })
+        const duplicates = Object.entries(dupMap)
+            .filter(([, items]) => items.length > 1)
+            .map(([key, items]) => {
+                const [doctor_id, patient_id, date] = key.split('__')
+                const patientObj = items[0]?.patients
+                const patientName = patientObj ? (Array.isArray(patientObj) ? patientObj[0]?.full_name : patientObj?.full_name) : 'N/A'
+                return { doctor_id, patient_id, date, count: items.length, patient_name: patientName, evolution_ids: items.map((i: any) => i.id) }
+            })
 
         // 3. Mapear evoluções por appointment_id para verificação de vínculo
         const evolutionByAppointment = new Set<string>()
@@ -184,8 +201,10 @@ export async function GET(request: NextRequest) {
                 with_evolution: totalWithEvolution,
                 without_evolution: totalWithoutEvolution,
                 compliance_rate: totalAttended > 0 ? Math.round((totalEvolutions / totalAttended) * 100) : 0,
+                total_duplicates: duplicates.length,
             },
             by_doctor: byDoctor,
+            duplicates,
             period: { start_date: startDate, end_date: endDate },
         })
     } catch (error: any) {

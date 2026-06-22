@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { phone, message, trigger_source } = body
+    const { phone, message, trigger_source, sector } = body
 
     if (!phone || !message) {
       return NextResponse.json({ error: 'phone e message são obrigatórios' }, { status: 400 })
@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
       profile.clinic_id,
       phone,
       message,
-      trigger_source || 'manual'
+      trigger_source || 'manual',
+      sector || 'default'
     )
 
     return NextResponse.json({ success: true })

@@ -1,14 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkInstanceStatus } from '@/lib/whatsapp/service'
+import { checkInstanceStatus, getAllClinicSessions } from '@/lib/whatsapp/service'
 
 /**
- * GET /api/whatsapp/status
- * 
- * Consulta o status da conexão WhatsApp da clínica.
- * O frontend faz polling neste endpoint a cada 3s enquanto aguarda QR.
+ * GET /api/whatsapp/status?sector=default
+ * Retorna status da conexão WhatsApp.
+ * Se sector=all, retorna todas as sessões da clínica.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -27,41 +26,32 @@ export async function GET() {
       return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
     }
 
-    // Buscar sessão local (QR code pode estar salvo)
-    const { data: session } = await supabase
+    const sector = req.nextUrl.searchParams.get('sector') || 'default'
+
+    // Se sector=all, retornar todas as sessões
+    if (sector === 'all') {
+      const sessions = await getAllClinicSessions(profile.clinic_id)
+      return NextResponse.json({ sessions })
+    }
+
+    // Buscar status em tempo real via Baileys
+    const liveStatus = await checkInstanceStatus(profile.clinic_id, sector)
+
+    // Buscar dados persistidos do banco
+    const { data: dbSession } = await supabase
       .from('whatsapp_sessions')
       .select('*')
       .eq('clinic_id', profile.clinic_id)
+      .eq('sector', sector)
       .single()
-
-    // Se não existe sessão nenhuma
-    if (!session) {
-      return NextResponse.json({
-        connected: false,
-        status: 'disconnected',
-        phone_number: null,
-        qr_code: null,
-      })
-    }
-
-    // Consultar status real na Evolution API
-    const liveStatus = await checkInstanceStatus(profile.clinic_id)
-
-    // Se está conectando, verificar se QR ainda é válido
-    let qrCode: string | null = null
-    if (!liveStatus.connected && session.qr_code) {
-      const expiresAt = session.qr_code_expires_at ? new Date(session.qr_code_expires_at) : null
-      if (!expiresAt || expiresAt > new Date()) {
-        qrCode = session.qr_code
-      }
-    }
 
     return NextResponse.json({
       connected: liveStatus.connected,
       status: liveStatus.status,
-      phone_number: liveStatus.phone_number,
-      connected_at: session.connected_at,
-      qr_code: qrCode,
+      phone_number: liveStatus.phone_number || (dbSession as any)?.phone_number,
+      connected_at: (dbSession as any)?.connected_at,
+      qr_code: (dbSession as any)?.qr_code,
+      sector,
     })
   } catch (error: any) {
     console.error('[WhatsApp Status]', error)

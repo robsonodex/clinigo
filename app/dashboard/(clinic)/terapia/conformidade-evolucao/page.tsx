@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     FileText, AlertTriangle, CheckCircle, XCircle, Download, FileSpreadsheet,
-    ChevronDown, ChevronUp, TrendingDown, TrendingUp, Activity
+    ChevronDown, ChevronUp, TrendingDown, TrendingUp, Activity, Copy
 } from 'lucide-react'
 
 interface DailyData {
@@ -29,6 +29,15 @@ interface DoctorData {
     daily: DailyData[]
 }
 
+interface DuplicateData {
+    doctor_id: string
+    patient_id: string
+    patient_name: string
+    date: string
+    count: number
+    evolution_ids: string[]
+}
+
 interface ReportData {
     summary: {
         total_attended: number
@@ -36,8 +45,10 @@ interface ReportData {
         with_evolution: number
         without_evolution: number
         compliance_rate: number
+        total_duplicates: number
     }
     by_doctor: DoctorData[]
+    duplicates: DuplicateData[]
     period: { start_date: string; end_date: string }
 }
 
@@ -254,6 +265,53 @@ export default function ConformidadeEvolucaoPage() {
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* Alerta de Duplicatas */}
+                    {data?.duplicates && data.duplicates.length > 0 && (
+                        <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 shadow-sm">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                                    <Copy className="w-5 h-5" />
+                                    Possíveis Evoluções Duplicadas ({data.duplicates.length})
+                                </CardTitle>
+                                <CardDescription className="text-xs text-amber-700 dark:text-amber-400">
+                                    Mesma terapeuta + mesmo paciente + mesma data com mais de uma evolução registrada
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs sm:text-sm">
+                                        <thead>
+                                            <tr className="text-muted-foreground font-bold text-[10px] sm:text-xs border-b border-amber-200 dark:border-amber-800">
+                                                <th className="text-left pb-2 pr-3">Paciente</th>
+                                                <th className="text-left pb-2 px-2">Data</th>
+                                                <th className="text-center pb-2 px-2">Evoluções</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {data.duplicates.map((dup: DuplicateData, idx: number) => {
+                                                const docData = data.by_doctor.find((d: DoctorData) => d.doctor_id === dup.doctor_id)
+                                                return (
+                                                    <tr key={idx} className="border-t border-amber-100 dark:border-amber-900/50">
+                                                        <td className="py-2 pr-3">
+                                                            <div className="font-semibold text-slate-800 dark:text-slate-200">{dup.patient_name}</div>
+                                                            <div className="text-[10px] text-amber-600 dark:text-amber-400">Terapeuta: {docData?.doctor_name || 'N/A'}</div>
+                                                        </td>
+                                                        <td className="py-2 px-2 font-semibold">{dup.date.split('-').reverse().join('/')}</td>
+                                                        <td className="py-2 px-2 text-center">
+                                                            <span className="bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100 px-2 py-0.5 rounded-full text-xs font-bold">
+                                                                {dup.count}x
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Doctors Table */}
                     <Card className="border-slate-100 dark:border-slate-800 shadow-sm">

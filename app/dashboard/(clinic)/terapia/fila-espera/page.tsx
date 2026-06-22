@@ -6,16 +6,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, Download, FileSpreadsheet } from 'lucide-react'
+import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
+
+interface TherapyItem { name: string; qty: number }
+
+const emptyForm = {
+    patient_name: '', responsible_name: '', patient_phone: '', patient_email: '',
+    therapies: [{ name: '', qty: 1 }] as TherapyItem[],
+    preferred_shift: 'any', commercial_notes: '',
+    financial_contact_date: '', financial_result: '', financial_notes: ''
+}
 
 export default function FilaEsperaPage() {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<any>(null)
-    const [form, setForm] = useState({ patient_name: '', patient_phone: '', patient_email: '', therapy_type: '', modality: 'individual', preferred_shift: 'any', urgency: 'normal', notes: '', lead_source: '', responsible_name: '' })
+    const [form, setForm] = useState(emptyForm)
     const [statusFilter, setStatusFilter] = useState('')
+    const [activeTab, setActiveTab] = useState<'comercial' | 'financeiro'>('comercial')
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -30,30 +40,62 @@ export default function FilaEsperaPage() {
 
     useEffect(() => { fetchData() }, [fetchData])
 
+    const openNew = () => {
+        setEditingItem(null)
+        setForm(emptyForm)
+        setActiveTab('comercial')
+        setDialogOpen(true)
+    }
+
+    const openEdit = (item: any) => {
+        setEditingItem(item)
+        const therapies = item.therapies && Array.isArray(item.therapies) && item.therapies.length > 0
+            ? item.therapies
+            : item.therapy_type ? [{ name: item.therapy_type, qty: 1 }] : [{ name: '', qty: 1 }]
+        setForm({
+            patient_name: item.patient_name || '',
+            responsible_name: item.responsible_name || '',
+            patient_phone: item.patient_phone || '',
+            patient_email: item.patient_email || '',
+            therapies,
+            preferred_shift: item.preferred_shift || 'any',
+            commercial_notes: item.commercial_notes || item.notes || '',
+            financial_contact_date: item.financial_contact_date || '',
+            financial_result: item.financial_result || '',
+            financial_notes: item.financial_notes || '',
+        })
+        setActiveTab('comercial')
+        setDialogOpen(true)
+    }
+
     const handleSave = async () => {
+        if (!form.patient_name.trim()) { toast.error('Nome é obrigatório'); return }
         try {
-            // Estruturar campos de lead_source e responsible_name dentro do notes
-            let finalNotes = form.notes;
-            if (form.lead_source || form.responsible_name) {
-                finalNotes = `[Origem: ${form.lead_source || 'Não informado'}] [Responsável: ${form.responsible_name || 'N/A'}]\n${form.notes}`;
+            const therapyType = form.therapies.filter(t => t.name).map(t => t.name).join(', ')
+            const payload: any = {
+                patient_name: form.patient_name,
+                responsible_name: form.responsible_name,
+                patient_phone: form.patient_phone,
+                patient_email: form.patient_email,
+                therapy_type: therapyType,
+                therapies: form.therapies.filter(t => t.name),
+                preferred_shift: form.preferred_shift,
+                commercial_notes: form.commercial_notes,
+                financial_contact_date: form.financial_contact_date || null,
+                financial_result: form.financial_result || null,
+                financial_notes: form.financial_notes,
             }
 
-            const res = await fetch('/api/waiting-list', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({
-                    patient_name: form.patient_name,
-                    patient_phone: form.patient_phone,
-                    patient_email: form.patient_email,
-                    therapy_type: form.therapy_type,
-                    modality: form.modality,
-                    preferred_shift: form.preferred_shift,
-                    urgency: form.urgency,
-                    notes: finalNotes
-                }) 
-            })
-            if (res.ok) { toast.success('Adicionado à fila!'); setDialogOpen(false); fetchData() }
-            else { const err = await res.json(); toast.error(err.error || 'Erro') }
+            if (editingItem) {
+                payload.id = editingItem.id
+                const res = await fetch('/api/waiting-list', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                if (res.ok) { toast.success('Atualizado!'); setDialogOpen(false); fetchData() }
+                else { const err = await res.json(); toast.error(err.error || 'Erro') }
+            } else {
+                const res = await fetch('/api/waiting-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                if (res.ok) { toast.success('Adicionado à fila!'); setDialogOpen(false); fetchData() }
+                else { const err = await res.json(); toast.error(err.error || 'Erro') }
+            }
         } catch (e) { toast.error('Erro ao salvar') }
     }
 
@@ -65,27 +107,48 @@ export default function FilaEsperaPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Remover da fila?')) return
+        if (!confirm('Tem certeza que deseja remover este item da fila? Esta ação não pode ser desfeita.')) return
         try {
             const res = await fetch('/api/waiting-list', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
             if (res.ok) { toast.success('Removido!'); fetchData() }
         } catch (e) { toast.error('Erro') }
     }
 
+    const addTherapy = () => setForm(prev => ({ ...prev, therapies: [...prev.therapies, { name: '', qty: 1 }] }))
+    const removeTherapy = (idx: number) => setForm(prev => ({ ...prev, therapies: prev.therapies.filter((_, i) => i !== idx) }))
+    const updateTherapy = (idx: number, field: 'name' | 'qty', value: string | number) => {
+        setForm(prev => ({ ...prev, therapies: prev.therapies.map((t, i) => i === idx ? { ...t, [field]: value } : t) }))
+    }
+
     const exportExcel = async () => {
         if (!data) return
         const ExcelJS = (await import('exceljs')).default
         const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Fila de Espera')
-        ws.columns = [{ header: 'Nome', key: 'patient_name', width: 25 }, { header: 'Telefone', key: 'patient_phone', width: 18 }, { header: 'Tipo', key: 'therapy_type', width: 15 }, { header: 'Status', key: 'status', width: 12 }, { header: 'Dias', key: 'wait_days', width: 8 }, { header: 'Urgência', key: 'urgency', width: 10 }]
-        data.items?.forEach((r: any) => ws.addRow(r))
+        ws.columns = [
+            { header: 'Nome', key: 'patient_name', width: 25 },
+            { header: 'Responsável', key: 'responsible_name', width: 25 },
+            { header: 'Telefone', key: 'patient_phone', width: 18 },
+            { header: 'Terapias', key: 'therapies_text', width: 30 },
+            { header: 'Turno', key: 'preferred_shift', width: 12 },
+            { header: 'Status', key: 'status', width: 12 },
+            { header: 'Dias', key: 'wait_days', width: 8 },
+            { header: 'Resultado Financeiro', key: 'financial_result', width: 20 },
+            { header: 'Data Contato', key: 'financial_contact_date', width: 15 },
+        ]
+        data.items?.forEach((r: any) => {
+            const therapies = r.therapies && Array.isArray(r.therapies) ? r.therapies.map((t: any) => `${t.name} (${t.qty}x)`).join(', ') : r.therapy_type || ''
+            ws.addRow({ ...r, therapies_text: therapies })
+        })
         const buffer = await wb.xlsx.writeBuffer()
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'fila_espera.xlsx'; a.click()
     }
 
-    const urgencyColors: Record<string, string> = { urgent: 'bg-red-100 text-red-800', normal: 'bg-gray-100 text-gray-800', low: 'bg-green-100 text-green-800' }
+    const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã', afternoon: 'Tarde', evening: 'Noite' }
     const statusColors: Record<string, string> = { waiting: 'bg-yellow-100 text-yellow-800', contacted: 'bg-blue-100 text-blue-800', scheduled: 'bg-green-100 text-green-800', cancelled: 'bg-red-100 text-red-800' }
     const statusLabels: Record<string, string> = { waiting: 'Aguardando', contacted: 'Contatado', scheduled: 'Agendado', cancelled: 'Cancelado' }
+    const financialLabels: Record<string, string> = { converted: 'Convertido', waiting_info: 'Aguardando Informação', not_converted: 'Não Convertido' }
+    const financialColors: Record<string, string> = { converted: 'bg-emerald-100 text-emerald-800', waiting_info: 'bg-amber-100 text-amber-800', not_converted: 'bg-red-100 text-red-800' }
     const s = data?.summary
 
     return (
@@ -95,38 +158,25 @@ export default function FilaEsperaPage() {
                     <h1 className="text-2xl font-bold">Fila de Espera</h1>
                     <p className="text-muted-foreground">Gestão de pacientes aguardando vaga</p>
                 </div>
-                <div className="flex gap-2 items-center">
-                    <select
-                        value={statusFilter}
-                        onChange={e => setStatusFilter(e.target.value)}
-                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer transition-all duration-200"
-                    >
+                <div className="flex gap-2 items-center flex-wrap">
+                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer" style={{ fontSize: '16px' }}>
                         <option value="">Todos</option>
                         <option value="waiting">Aguardando</option>
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
-                    <Button
-                        variant="outline"
-                        onClick={exportExcel}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
-                    >
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                        <span>Excel</span>
+                    <Button variant="outline" onClick={exportExcel}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" /><span>Excel</span>
                     </Button>
-                    <Button
-                        onClick={() => {
-                            setEditingItem(null);
-                            setForm({ patient_name: '', patient_phone: '', patient_email: '', therapy_type: '', modality: 'individual', preferred_shift: 'any', urgency: 'normal', notes: '', lead_source: '', responsible_name: '' });
-                            setDialogOpen(true);
-                        }}
-                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Adicionar</span>
+                    <Button onClick={openNew}
+                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0">
+                        <Plus className="w-4 h-4" /><span>Adicionar</span>
                     </Button>
                 </div>
             </div>
+
             {loading ? <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div> : (
                 <>
                     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -136,50 +186,64 @@ export default function FilaEsperaPage() {
                         <Card><CardHeader className="pb-2"><CardDescription>Espera Média</CardDescription><CardTitle className="text-2xl">{s?.avg_wait_days || 0} dias</CardTitle></CardHeader><CardContent><Clock className="h-4 w-4 text-muted-foreground" /></CardContent></Card>
                         <Card><CardHeader className="pb-2"><CardDescription>Conversão</CardDescription><CardTitle className="text-2xl text-primary">{s?.conversion_rate || 0}%</CardTitle></CardHeader></Card>
                     </div>
+
                     <Card>
                         <CardHeader><CardTitle>Pacientes na Fila</CardTitle></CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
-                                    <thead><tr className="border-b"><th className="text-left p-2">Nome</th><th className="text-left p-2">Telefone</th><th className="text-left p-2">Tipo</th><th className="text-left p-2">Dias</th><th className="text-left p-2">Urgência</th><th className="text-left p-2">Status</th><th className="text-left p-2">Ações</th></tr></thead>
+                                    <thead><tr className="border-b">
+                                        <th className="text-left p-2">Nome</th>
+                                        <th className="text-left p-2 hidden sm:table-cell">Telefone</th>
+                                        <th className="text-left p-2 hidden md:table-cell">Terapias</th>
+                                        <th className="text-left p-2">Dias</th>
+                                        <th className="text-left p-2 hidden sm:table-cell">Financeiro</th>
+                                        <th className="text-left p-2">Status</th>
+                                        <th className="text-left p-2">Ações</th>
+                                    </tr></thead>
                                     <tbody>
                                         {data?.items?.length === 0 && <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">Fila vazia 🎉</td></tr>}
                                         {data?.items?.map((item: any) => {
-                                            const notesText = item.notes || ''
-                                            const sourceMatch = notesText.match(/\[Origem: (.*?)\]/)
-                                            const respMatch = notesText.match(/\[Responsável: (.*?)\]/)
-                                            const leadSource = sourceMatch ? sourceMatch[1] : null
-                                            const responsibleName = respMatch ? respMatch[1] : null
-                                            const cleanNotes = notesText.replace(/\[Origem:.*?\]\s*|\[Responsável:.*?\]\s*/g, '')
-
+                                            const therapies = item.therapies && Array.isArray(item.therapies) && item.therapies.length > 0
+                                                ? item.therapies : (item.therapy_type ? [{ name: item.therapy_type, qty: 1 }] : [])
                                             return (
                                                 <tr key={item.id} className="border-b hover:bg-muted/50">
                                                     <td className="p-2">
-                                                        <div className="font-semibold text-gray-800">{item.patient_name}</div>
-                                                        <div className="flex flex-wrap gap-1 mt-1">
-                                                            {responsibleName && responsibleName !== 'N/A' && (
-                                                                <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-semibold border border-purple-200">
-                                                                    👤 Resp: {responsibleName}
-                                                                </span>
-                                                            )}
-                                                            {leadSource && (
-                                                                <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-semibold border border-indigo-200">
-                                                                    🎯 Lead: {leadSource}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {cleanNotes && (
-                                                            <div className="text-[11px] text-gray-400 mt-1 italic max-w-xs truncate" title={cleanNotes}>
-                                                                {cleanNotes}
-                                                            </div>
+                                                        <div className="font-semibold text-gray-800 dark:text-gray-200">{item.patient_name}</div>
+                                                        {item.responsible_name && (
+                                                            <span className="text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-1.5 py-0.5 rounded font-semibold border border-indigo-200 dark:border-indigo-800 mt-0.5 inline-block">
+                                                                👤 Resp: {item.responsible_name}
+                                                            </span>
+                                                        )}
+                                                        {(item.commercial_notes) && (
+                                                            <div className="text-[11px] text-gray-400 mt-1 italic max-w-xs truncate" title={item.commercial_notes}>{item.commercial_notes}</div>
                                                         )}
                                                     </td>
-                                                    <td className="p-2">{item.patient_phone ? <a href={`https://wa.me/55${item.patient_phone.replace(/\D/g,'')}`} target="_blank" rel="noopener" className="text-green-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{item.patient_phone}</a> : '-'}</td>
-                                                    <td className="p-2">{item.therapy_type || '-'}</td>
+                                                    <td className="p-2 hidden sm:table-cell">
+                                                        {item.patient_phone ? <a href={`https://wa.me/55${item.patient_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="text-green-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{item.patient_phone}</a> : '-'}
+                                                    </td>
+                                                    <td className="p-2 hidden md:table-cell">
+                                                        {therapies.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {therapies.map((t: any, i: number) => (
+                                                                    <span key={i} className="text-[10px] bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300 px-1.5 py-0.5 rounded font-semibold border border-teal-200 dark:border-teal-800">
+                                                                        {t.name} {t.qty > 1 ? `(${t.qty}x)` : ''}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : '-'}
+                                                    </td>
                                                     <td className="p-2 font-bold">{item.wait_days}d</td>
-                                                    <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${urgencyColors[item.urgency] || urgencyColors.normal}`}>{item.urgency}</span></td>
+                                                    <td className="p-2 hidden sm:table-cell">
+                                                        {item.financial_result ? (
+                                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${financialColors[item.financial_result] || 'bg-gray-100 text-gray-700'}`}>
+                                                                {financialLabels[item.financial_result] || item.financial_result}
+                                                            </span>
+                                                        ) : <span className="text-gray-400 text-xs">—</span>}
+                                                    </td>
                                                     <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${statusColors[item.status] || ''}`}>{statusLabels[item.status] || item.status}</span></td>
                                                     <td className="p-2 flex gap-1">
+                                                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)}><Edit className="h-4 w-4 text-blue-500" /></Button>
                                                         {item.status === 'waiting' && <Button variant="ghost" size="icon" title="Marcar Contatado" onClick={() => updateStatus(item.id, 'contacted')}><Phone className="h-4 w-4 text-blue-500" /></Button>}
                                                         {(item.status === 'waiting' || item.status === 'contacted') && <Button variant="ghost" size="icon" title="Marcar Agendado" onClick={() => updateStatus(item.id, 'scheduled')}><CheckCircle className="h-4 w-4 text-green-500" /></Button>}
                                                         <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
@@ -194,55 +258,84 @@ export default function FilaEsperaPage() {
                     </Card>
                 </>
             )}
+
+            {/* Modal Adicionar/Editar */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Adicionar à Fila de Espera</DialogTitle></DialogHeader>
-                    <div className="space-y-4">
-                        <div><Label>Nome</Label><Input value={form.patient_name} onChange={e => setForm({ ...form, patient_name: e.target.value })} /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><Label>Telefone</Label><Input value={form.patient_phone} onChange={e => setForm({ ...form, patient_phone: e.target.value })} /></div>
-                            <div><Label>Email</Label><Input type="email" value={form.patient_email} onChange={e => setForm({ ...form, patient_email: e.target.value })} /></div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div><Label>Tipo Terapia</Label><Input value={form.therapy_type} onChange={e => setForm({ ...form, therapy_type: e.target.value })} placeholder="Ex: Psicologia" /></div>
-                            <div><Label>Modalidade</Label><select value={form.modality} onChange={e => setForm({ ...form, modality: e.target.value })} className="w-full border rounded px-3 py-2 text-sm"><option value="individual">Individual</option><option value="casal">Casal</option><option value="familia">Família</option><option value="grupo">Grupo</option></select></div>
-                            <div><Label>Urgência</Label><select value={form.urgency} onChange={e => setForm({ ...form, urgency: e.target.value })} className="w-full border rounded px-3 py-2 text-sm"><option value="low">Baixa</option><option value="normal">Normal</option><option value="urgent">Urgente</option></select></div>
-                        </div>
-                        <div><Label>Turno Preferido</Label><select value={form.preferred_shift} onChange={e => setForm({ ...form, preferred_shift: e.target.value })} className="w-full border rounded px-3 py-2 text-sm"><option value="any">Qualquer</option><option value="morning">Manhã</option><option value="afternoon">Tarde</option><option value="evening">Noite</option></select></div>
-                        <div className="grid grid-cols-2 gap-4">
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{editingItem ? 'Editar' : 'Adicionar à'} Fila de Espera</DialogTitle>
+                    </DialogHeader>
+
+                    {/* Abas Comercial / Financeiro */}
+                    <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
+                        <button type="button" onClick={() => setActiveTab('comercial')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'comercial' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                            <Briefcase className="w-3.5 h-3.5" /> Comercial
+                        </button>
+                        <button type="button" onClick={() => setActiveTab('financeiro')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'financeiro' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                            <DollarSign className="w-3.5 h-3.5" /> Financeiro
+                        </button>
+                    </div>
+
+                    {activeTab === 'comercial' && (
+                        <div className="space-y-4">
+                            <div><Label>Nome do Paciente *</Label><Input value={form.patient_name} onChange={e => setForm({ ...form, patient_name: e.target.value })} placeholder="Nome completo" style={{ fontSize: '16px' }} /></div>
+                            <div><Label>Nome do Responsável</Label><Input value={form.responsible_name} onChange={e => setForm({ ...form, responsible_name: e.target.value })} placeholder="Caso seja menor de idade" style={{ fontSize: '16px' }} /></div>
+                            <div><Label>Telefone</Label><Input value={form.patient_phone} onChange={e => setForm({ ...form, patient_phone: e.target.value })} placeholder="(00) 00000-0000" style={{ fontSize: '16px' }} /></div>
+
+                            {/* Terapias Dinâmicas */}
+                            <div className="space-y-2">
+                                <Label>Terapias e Quantidade</Label>
+                                {form.therapies.map((t, idx) => (
+                                    <div key={idx} className="flex gap-2 items-center">
+                                        <Input className="flex-1" placeholder="Ex: Fonoaudiologia" value={t.name} onChange={e => updateTherapy(idx, 'name', e.target.value)} style={{ fontSize: '16px' }} />
+                                        <Input className="w-20" type="number" min={1} value={t.qty} onChange={e => updateTherapy(idx, 'qty', parseInt(e.target.value) || 1)} style={{ fontSize: '16px' }} />
+                                        <span className="text-xs text-muted-foreground whitespace-nowrap">qtd.</span>
+                                        {form.therapies.length > 1 && (
+                                            <Button type="button" variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => removeTherapy(idx)}>
+                                                <X className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                ))}
+                                <Button type="button" variant="outline" size="sm" onClick={addTherapy} className="text-xs gap-1 h-8 rounded-lg">
+                                    <Plus className="h-3 w-3" /> Adicionar Terapia
+                                </Button>
+                            </div>
+
                             <div>
-                                <Label>Como conheceu? (Origem do Lead)</Label>
-                                <select 
-                                    value={form.lead_source} 
-                                    onChange={e => setForm({ ...form, lead_source: e.target.value })} 
-                                    className="w-full border rounded px-3 py-2 text-sm bg-white"
-                                >
-                                    <option value="">Não informado</option>
-                                    <option value="Instagram">Instagram</option>
-                                    <option value="Google">Google</option>
-                                    <option value="Facebook">Facebook</option>
-                                    <option value="Indicação Médica">Indicação Médica</option>
-                                    <option value="Indicação Paciente">Indicação Paciente</option>
-                                    <option value="Outro">Outro</option>
+                                <Label>Turno Preferido</Label>
+                                <select value={form.preferred_shift} onChange={e => setForm({ ...form, preferred_shift: e.target.value })}
+                                    className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }}>
+                                    <option value="any">Qualquer</option><option value="morning">Manhã</option><option value="afternoon">Tarde</option><option value="evening">Noite</option>
                                 </select>
                             </div>
-                            <div>
-                                <Label>Responsável pelo Paciente</Label>
-                                <Input 
-                                    value={form.responsible_name} 
-                                    onChange={e => setForm({ ...form, responsible_name: e.target.value })} 
-                                    placeholder="Caso seja menor de idade"
-                                />
-                            </div>
+                            <div><Label>Observação Comercial</Label><textarea value={form.commercial_notes} onChange={e => setForm({ ...form, commercial_notes: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm h-20 dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }} placeholder="Observações do comercial..." /></div>
                         </div>
-                        <div><Label>Observações</Label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" /></div>
-                        <Button
-                            onClick={handleSave}
-                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
-                        >
-                            <span>Adicionar à Fila</span>
-                        </Button>
-                    </div>
+                    )}
+
+                    {activeTab === 'financeiro' && (
+                        <div className="space-y-4">
+                            <div><Label>Data do Contato</Label><Input type="date" value={form.financial_contact_date} onChange={e => setForm({ ...form, financial_contact_date: e.target.value })} style={{ fontSize: '16px' }} /></div>
+                            <div>
+                                <Label>Resultado</Label>
+                                <select value={form.financial_result} onChange={e => setForm({ ...form, financial_result: e.target.value })}
+                                    className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }}>
+                                    <option value="">Sem resultado</option>
+                                    <option value="converted">✅ Convertido</option>
+                                    <option value="waiting_info">⏳ Aguardando Informação</option>
+                                    <option value="not_converted">❌ Não Convertido</option>
+                                </select>
+                            </div>
+                            <div><Label>Observação Financeira</Label><textarea value={form.financial_notes} onChange={e => setForm({ ...form, financial_notes: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm h-20 dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }} placeholder="Observações do financeiro..." /></div>
+                        </div>
+                    )}
+
+                    <Button onClick={handleSave}
+                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
+                        <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
+                    </Button>
                 </DialogContent>
             </Dialog>
         </div>

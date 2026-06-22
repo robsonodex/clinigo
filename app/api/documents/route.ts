@@ -104,6 +104,12 @@ export async function GET(request: Request) {
             query = query.neq('category', 'personal')
         }
 
+        // SECURITY: DOCTOR não-coordenador só vê documentos de SAÚDE (doc_group = 'health')
+        if (user.role === 'DOCTOR' && allowedPatientIds) {
+            // Se a coluna doc_group existe, filtra. Se não, filtra por categorias de saúde conhecidas
+            query = query.or('doc_group.eq.health,category.in.(EXAM,exam,PRESCRIPTION,prescription,report,referral,certificate)')
+        }
+
         // SECURITY: Filtrar por pacientes permitidos (DOCTOR não-coordenador)
         if (allowedPatientIds) {
             query = query.in('patient_id', allowedPatientIds)

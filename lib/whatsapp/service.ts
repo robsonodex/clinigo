@@ -64,9 +64,15 @@ interface ClinicSession {
 
 const sessions = new Map<string, ClinicSession>()
 
-function getSession(clinicId: string): ClinicSession {
-  if (!sessions.has(clinicId)) {
-    sessions.set(clinicId, {
+/** Gera chave composta: clinicId__sector */
+function sessionKey(clinicId: string, sector: string = 'default'): string {
+  return `${clinicId}__${sector}`
+}
+
+function getSession(clinicId: string, sector: string = 'default'): ClinicSession {
+  const key = sessionKey(clinicId, sector)
+  if (!sessions.has(key)) {
+    sessions.set(key, {
       socket: null,
       qrCode: null,
       status: 'close',
@@ -76,7 +82,7 @@ function getSession(clinicId: string): ClinicSession {
       reconnectAttempts: 0,
     })
   }
-  return sessions.get(clinicId)!
+  return sessions.get(key)!
 }
 
 // ========== SUPABASE STORAGE AUTH STATE ==========
@@ -85,9 +91,9 @@ function getSession(clinicId: string): ClinicSession {
  * Carrega o auth state do Supabase Storage.
  * Retorna null se não existir.
  */
-async function loadAuthStateFromStorage(clinicId: string): Promise<any | null> {
+async function loadAuthStateFromStorage(clinicId: string, sector: string = 'default'): Promise<any | null> {
   const supabase = getSupabaseAdmin()
-  const filePath = `${clinicId}/auth_info.json`
+  const filePath = `${clinicId}/${sector}_auth_info.json`
 
   try {
     const { data, error } = await supabase.storage
@@ -106,9 +112,9 @@ async function loadAuthStateFromStorage(clinicId: string): Promise<any | null> {
 /**
  * Salva o auth state no Supabase Storage.
  */
-async function saveAuthStateToStorage(clinicId: string, state: any): Promise<void> {
+async function saveAuthStateToStorage(clinicId: string, state: any, sector: string = 'default'): Promise<void> {
   const supabase = getSupabaseAdmin()
-  const filePath = `${clinicId}/auth_info.json`
+  const filePath = `${clinicId}/${sector}_auth_info.json`
 
   try {
     const jsonStr = JSON.stringify(state, BufferJSON.replacer, 2)
@@ -128,9 +134,9 @@ async function saveAuthStateToStorage(clinicId: string, state: any): Promise<voi
 /**
  * Remove o auth state do Supabase Storage.
  */
-async function removeAuthStateFromStorage(clinicId: string): Promise<void> {
+async function removeAuthStateFromStorage(clinicId: string, sector: string = 'default'): Promise<void> {
   const supabase = getSupabaseAdmin()
-  const filePath = `${clinicId}/auth_info.json`
+  const filePath = `${clinicId}/${sector}_auth_info.json`
 
   try {
     await supabase.storage.from(STORAGE_BUCKET).remove([filePath])
@@ -183,8 +189,8 @@ function createInMemoryAuthState(existingState?: any): {
 
 // ========== CORE: INICIAR SESSÃO ==========
 
-async function startBaileysSession(clinicId: string): Promise<void> {
-  const session = getSession(clinicId)
+async function startBaileysSession(clinicId: string, sector: string = 'default'): Promise<void> {
+  const session = getSession(clinicId, sector)
 
   // Se já existe um socket ativo, não recria
   if (session.socket && session.status === 'open') return
@@ -193,7 +199,7 @@ async function startBaileysSession(clinicId: string): Promise<void> {
   session.status = 'connecting'
 
   // Tentar carregar auth state existente do Storage
-  const existingAuth = await loadAuthStateFromStorage(clinicId)
+  const existingAuth = await loadAuthStateFromStorage(clinicId, sector)
   const { state, saveCreds } = createInMemoryAuthState(existingAuth || undefined)
 
   session.authState = state
@@ -233,12 +239,13 @@ async function startBaileysSession(clinicId: string): Promise<void> {
           const supabase = getSupabaseAdmin()
           await supabase.from('whatsapp_sessions').upsert({
             clinic_id: clinicId,
-            instance_name: `baileys_${clinicId.substring(0, 16)}`,
+            sector: sector,
+            instance_name: `baileys_${clinicId.substring(0, 16)}_${sector}`,
             status: 'connecting',
             qr_code: qrDataUri,
             qr_code_expires_at: new Date(Date.now() + 45 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
-          }, { onConflict: 'clinic_id' })
+          } as any, { onConflict: 'clinic_id,sector' })
         } catch (err) {
           console.error('[WhatsApp] Erro ao gerar QR:', err)
         }
@@ -256,13 +263,14 @@ async function startBaileysSession(clinicId: string): Promise<void> {
 
         // Salvar auth state no Storage
         const authData = await saveCreds()
-        await saveAuthStateToStorage(clinicId, authData)
+        await saveAuthStateToStorage(clinicId, authData, sector)
 
         // Atualizar banco
         const supabase = getSupabaseAdmin()
         await supabase.from('whatsapp_sessions').upsert({
           clinic_id: clinicId,
-          instance_name: `baileys_${clinicId.substring(0, 16)}`,
+          sector: sector,
+          instance_name: `baileys_${clinicId.substring(0, 16)}_${sector}`,
           status: 'connected',
           phone_number: phoneNumber,
           connected_at: new Date().toISOString(),
@@ -270,7 +278,7 @@ async function startBaileysSession(clinicId: string): Promise<void> {
           error_message: null,
           last_health_check: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'clinic_id' })
+        } as any, { onConflict: 'clinic_id,sector' })
 
         console.log(`[WhatsApp] ✅ Clínica ${clinicId} conectada (${phoneNumber})`)
       }
@@ -299,15 +307,15 @@ async function startBaileysSession(clinicId: string): Promise<void> {
               ? Math.min(3000 * Math.pow(2, session.reconnectAttempts - 1), 30000)
               : 3000
 
-            console.log(`[WhatsApp] 🔄 Reconexão ${session.reconnectAttempts}${isClinBot ? '/∞' : `/${MAX_RECONNECT_ATTEMPTS}`} em ${delay/1000}s (${clinicId})`)
-            setTimeout(() => startBaileysSession(clinicId), delay)
+            console.log(`[WhatsApp] 🔄 Reconexão ${session.reconnectAttempts}${isClinBot ? '/∞' : `/${MAX_RECONNECT_ATTEMPTS}`} em ${delay/1000}s (${clinicId}/${sector})`)
+            setTimeout(() => startBaileysSession(clinicId, sector), delay)
           } else {
             console.log(`[WhatsApp] Máximo de reconexões atingido (${clinicId})`)
             session.status = 'close'
             session.phoneNumber = null
             session.connectedAt = null
             session.reconnectAttempts = 0
-            await removeAuthStateFromStorage(clinicId)
+            await removeAuthStateFromStorage(clinicId, sector)
 
             const supabase = getSupabaseAdmin()
             await supabase.from('whatsapp_sessions').update({
@@ -316,7 +324,7 @@ async function startBaileysSession(clinicId: string): Promise<void> {
               qr_code: null,
               phone_number: null,
               updated_at: new Date().toISOString(),
-            }).eq('clinic_id', clinicId)
+            }).eq('clinic_id', clinicId).eq('sector', sector)
           }
         } else {
           // Logout explícito (desconectou do celular) — limpar tudo
@@ -324,7 +332,7 @@ async function startBaileysSession(clinicId: string): Promise<void> {
           session.phoneNumber = null
           session.connectedAt = null
           session.reconnectAttempts = 0
-          await removeAuthStateFromStorage(clinicId)
+          await removeAuthStateFromStorage(clinicId, sector)
 
           const supabase = getSupabaseAdmin()
           await supabase.from('whatsapp_sessions').update({
@@ -333,7 +341,7 @@ async function startBaileysSession(clinicId: string): Promise<void> {
             qr_code: null,
             phone_number: null,
             updated_at: new Date().toISOString(),
-          }).eq('clinic_id', clinicId)
+          }).eq('clinic_id', clinicId).eq('sector', sector)
         }
       }
     })
@@ -341,7 +349,7 @@ async function startBaileysSession(clinicId: string): Promise<void> {
     // Salvar credenciais quando atualizarem
     socket.ev.on('creds.update', async () => {
       const authData = await saveCreds()
-      await saveAuthStateToStorage(clinicId, authData)
+      await saveAuthStateToStorage(clinicId, authData, sector)
     })
 
     // ===== CHATBOT CLIN: Listener de mensagens recebidas =====
@@ -388,13 +396,13 @@ async function startBaileysSession(clinicId: string): Promise<void> {
  * Inicia sessão Baileys e retorna QR Code.
  * Se já estiver conectado, retorna status connected.
  */
-export async function createInstanceAndGetQR(clinicId: string): Promise<{
+export async function createInstanceAndGetQR(clinicId: string, sector: string = 'default'): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
   instance_name: string
 }> {
-  const instanceName = `baileys_${clinicId.substring(0, 16)}`
-  const session = getSession(clinicId)
+  const instanceName = `baileys_${clinicId.substring(0, 16)}_${sector}`
+  const session = getSession(clinicId, sector)
 
   // Se já está conectado
   if (session.status === 'open' && session.socket) {
@@ -402,12 +410,12 @@ export async function createInstanceAndGetQR(clinicId: string): Promise<{
   }
 
   // Iniciar sessão (não bloqueia — QR chega via evento)
-  await startBaileysSession(clinicId)
+  await startBaileysSession(clinicId, sector)
 
   // Aguardar até 8 segundos pelo QR code
   for (let i = 0; i < 16; i++) {
     await new Promise(r => setTimeout(r, 500))
-    const s = getSession(clinicId)
+    const s = getSession(clinicId, sector)
     if (s.qrCode) {
       return { qr_code: s.qrCode, status: 'connecting', instance_name: instanceName }
     }
@@ -425,21 +433,21 @@ export async function createInstanceAndGetQR(clinicId: string): Promise<{
 /**
  * Verifica status da conexão WhatsApp da clínica.
  */
-export async function checkInstanceStatus(clinicId: string): Promise<{
+export async function checkInstanceStatus(clinicId: string, sector: string = 'default'): Promise<{
   connected: boolean
   phone_number: string | null
   status: 'connecting' | 'connected' | 'disconnected'
 }> {
-  let session = getSession(clinicId)
+  let session = getSession(clinicId, sector)
 
   // Se a sessão está fechada na memória (ex: Next.js dev server restartou)
   // vamos checar se existe um auth_info no storage para reconectar silenciosamente
   if (session.status === 'close' || !session.socket) {
-    const authState = await loadAuthStateFromStorage(clinicId)
+    const authState = await loadAuthStateFromStorage(clinicId, sector)
     if (authState) {
-      console.log(`[WhatsApp] Lazy checking status for ${clinicId}. Data found in storage.`)
+      console.log(`[WhatsApp] Lazy checking status for ${clinicId}/${sector}. Data found in storage.`)
       // Disparamos o startBaileysSession em background
-      startBaileysSession(clinicId).catch(console.error)
+      startBaileysSession(clinicId, sector).catch(console.error)
       
       // Capturar número de telefone salvo no authState para exibição
       let phoneNumber = null
@@ -482,6 +490,19 @@ export async function checkInstanceStatus(clinicId: string): Promise<{
   }
 }
 
+/**
+ * Retorna todas as sessões WhatsApp de uma clínica (todos os setores).
+ */
+export async function getAllClinicSessions(clinicId: string): Promise<any[]> {
+  const supabase = getSupabaseAdmin()
+  const { data } = await supabase
+    .from('whatsapp_sessions')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .order('sector')
+  return data || []
+}
+
 // ========== EXPORTED: ENVIAR MENSAGEM ==========
 
 /**
@@ -492,23 +513,24 @@ export async function sendWhatsAppMessage(
   clinicId: string,
   phone: string,
   message: string,
-  triggerSource: string
+  triggerSource: string,
+  sector: string = 'default'
 ): Promise<void> {
-  let session = getSession(clinicId)
+  let session = getSession(clinicId, sector)
   const supabase = getSupabaseAdmin()
 
   if (!session.socket || session.status !== 'open') {
-    console.log(`[WhatsApp] Socket not open for ${clinicId}. Attempting lazy reconnection...`)
+    console.log(`[WhatsApp] Socket not open for ${clinicId}/${sector}. Attempting lazy reconnection...`)
     // Check if we have auth state
-    const authState = await loadAuthStateFromStorage(clinicId)
+    const authState = await loadAuthStateFromStorage(clinicId, sector)
     if (authState) {
       // Start session and wait for it to be open (up to 5 seconds)
-      startBaileysSession(clinicId).catch(console.error)
+      startBaileysSession(clinicId, sector).catch(console.error)
       
       let attempts = 0
       while (session.status !== 'open' && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 500))
-        session = getSession(clinicId)
+        session = getSession(clinicId, sector)
         attempts++
       }
     }
@@ -586,8 +608,9 @@ export async function sendWhatsAppMessage(
  * Desconecta o WhatsApp da clínica.
  * Remove sessão do Map, auth do Storage, atualiza banco.
  */
-export async function disconnectInstance(clinicId: string): Promise<void> {
-  const session = getSession(clinicId)
+export async function disconnectInstance(clinicId: string, sector: string = 'default'): Promise<void> {
+  const key = sessionKey(clinicId, sector)
+  const session = getSession(clinicId, sector)
 
   // Fechar socket
   if (session.socket) {
@@ -601,10 +624,10 @@ export async function disconnectInstance(clinicId: string): Promise<void> {
   }
 
   // Limpar Map
-  sessions.delete(clinicId)
+  sessions.delete(key)
 
   // Remover auth do Storage
-  await removeAuthStateFromStorage(clinicId)
+  await removeAuthStateFromStorage(clinicId, sector)
 
   // Atualizar banco
   const supabase = getSupabaseAdmin()
@@ -614,9 +637,9 @@ export async function disconnectInstance(clinicId: string): Promise<void> {
     qr_code: null,
     phone_number: null,
     updated_at: new Date().toISOString(),
-  }).eq('clinic_id', clinicId)
+  }).eq('clinic_id', clinicId).eq('sector', sector)
 
-  console.log(`[WhatsApp] 🔌 Clínica ${clinicId} desconectada`)
+  console.log(`[WhatsApp] 🔌 Clínica ${clinicId}/${sector} desconectada`)
 }
 
 // ========== CHATBOT CLIN — HANDLER DE MENSAGENS ==========

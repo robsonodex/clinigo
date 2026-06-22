@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createInstanceAndGetQR } from '@/lib/whatsapp/service'
 
@@ -7,10 +7,11 @@ import { createInstanceAndGetQR } from '@/lib/whatsapp/service'
  * 
  * Cria instância na Evolution API e retorna QR Code em base64.
  * O dono da clínica escaneia com o celular → conectado.
+ * Suporta múltiplos setores via body.sector
  * 
  * Roles: CLINIC_ADMIN, SUPER_ADMIN
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -33,12 +34,20 @@ export async function POST() {
       return NextResponse.json({ error: 'Apenas administradores podem conectar o WhatsApp' }, { status: 403 })
     }
 
-    const result = await createInstanceAndGetQR(profile.clinic_id)
+    // Ler sector do body (default = 'default')
+    let sector = 'default'
+    try {
+      const body = await req.json()
+      if (body?.sector) sector = body.sector
+    } catch { /* body vazio = default */ }
+
+    const result = await createInstanceAndGetQR(profile.clinic_id, sector)
 
     return NextResponse.json({
       qr_code: result.qr_code,
       status: result.status,
       instance_name: result.instance_name,
+      sector,
     })
   } catch (error: any) {
     console.error('[WhatsApp Connect]', error)

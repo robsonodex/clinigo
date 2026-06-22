@@ -173,7 +173,10 @@ Profissionais com `is_coordinator = true` na tabela `users` possuem visão ampli
 ### 4.3 Sigilo Clínico (Isolamento por Terapeuta)
 
 - **Evoluções:** DOCTORs não-coordenadores veem apenas evoluções onde são o `doctor_id`
-- **Documentos:** DOCTORs não-coordenadores veem apenas documentos de pacientes vinculados via `appointments`
+- **Documentos:** DOCTORs não-coordenadores veem apenas documentos **de saúde** (`doc_group = 'health'`) de pacientes vinculados via `appointments`
+- **Segregação de Documentos:** Documentos são categorizados em dois grupos:
+  - **Saúde** (`doc_group = 'health'`): Exame, Receita, Laudo, Encaminhamento, Atestado — visíveis para terapeutas
+  - **Administrativo** (`doc_group = 'admin'`): Convênio, Consentimento, Pessoal, Outros — visíveis apenas para recepção e admin
 - **Upload de documentos:** Restrito a `CLINIC_ADMIN`, `RECEPTIONIST` e coordenadores
 - **RLS:** Policies granulares em `session_evolutions` e `patient_documents` garantem isolamento no nível do banco
 
@@ -1762,3 +1765,84 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **Componente de Banner Discreto de Pagamento Pendente**: Desenvolvimento de componente React do lado do cliente (`'use client'`) com design moderno de alto contraste (fundo âmbar translúcido e ícone de alerta) e suporte a acessibilidade (botões com área de toque mínima de `44x44px` em conformidade com as regras PWA). O componente exibe de forma sutil o aviso de cobrança vencida a todos os usuários da clínica logados, customizando o texto: para administradores, exibe o botão ativo "Pagar Fatura" direcionando para a página de faturamento; para profissionais de saúde e recepcionistas, exibe um recado orientativo solicitando contato com o gestor da clínica.
 - Módulo → Configurações → Assinatura → e:\Backup Clinigo 11-03-2026\clinigo\clinigo-producao\app\dashboard\layout.tsx → DashboardRootLayout()
   - **Integração no Layout Geral do Dashboard**: Alterado o layout de servidor Next.js para carregar as colunas `payment_confirmed` e `subscription_due_date` do banco Supabase ao autenticar uma clínica. Caso o faturamento esteja pendente (`payment_confirmed === false`) e não seja uma clínica de demonstração (`slug !== 'demo'`), o componente renderiza o banner discreto `<BillingOverdueBanner />` no topo do painel de conteúdo do dashboard, garantindo ampla visibilidade colaborativa interna sem bloquear as operações do dia a dia.
+
+### 22/06/2026 - Reestruturação Fila de Espera, Duplicidade de Evoluções e Segregação de Documentos
+
+**Solicitado por:** Espaço Incluir (Jeferson)
+**Escopo:** Todas as clínicas
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Terapia → Fila de Espera → `app/dashboard/(clinic)/terapia/fila-espera/page.tsx` → [REWRITE]
+  - **Formulário com abas Comercial/Financeiro**: Reestruturação completa do formulário de adição/edição. Aba Comercial: Nome, Responsável, Telefone, Terapias dinâmicas (com quantidade e botão "Adicionar Terapia"), Turno preferido, Observação comercial. Aba Financeiro: Data do contato, Resultado (Convertido/Aguardando Informação/Não Convertido), Observação financeira.
+  - **Terapias dinâmicas**: Array JSONB com nome e quantidade por terapia. Botão `+` para adicionar múltiplas terapias.
+  - **Listagem expandida**: Tabela com colunas Responsável, Terapias (badges), Resultado Financeiro (badges coloridos).
+
+- Módulo → Terapia → Fila de Espera → `app/api/waiting-list/route.ts` → POST/PUT
+  - **Novos campos no POST**: `responsible_name`, `therapies` (JSONB), `commercial_notes`, `financial_contact_date`, `financial_result`, `financial_notes`.
+  - **Novos campos no PUT**: Mesmos campos adicionados ao update condicional.
+
+- Módulo → Terapia → Conformidade Evoluções → `app/api/reports/evolution-compliance/route.ts` → GET
+  - **Detecção de duplicatas**: Novo algoritmo que identifica evoluções com mesmo `doctor_id + patient_id + evolution_date`. Retorna array `duplicates` com nome do paciente, data, terapeuta e contagem.
+  - **Campo `total_duplicates`** adicionado ao summary.
+
+- Módulo → Terapia → Conformidade Evoluções → `app/dashboard/(clinic)/terapia/conformidade-evolucao/page.tsx` → UI
+  - **Card de alerta de duplicatas**: Painel visual âmbar listando possíveis evoluções duplicadas com paciente, terapeuta, data e contagem.
+
+- Módulo → Prontuário → Documentos → `components/documents/DocumentUpload.tsx` → [REWRITE]
+  - **Categorias agrupadas**: Select com grupos visuais "🏥 Saúde" (Exame, Receita, Laudo, Encaminhamento, Atestado) e "📋 Administrativo" (Carteirinha, Termo, Outro, Pessoal/ADM).
+  - **Campo `doc_group`**: Salva automaticamente `health` ou `admin` baseado no tipo selecionado.
+
+- Módulo → Prontuário → Documentos → `components/patients/PatientDocuments.tsx` → [REWRITE]
+  - **Duas seções visuais**: "Documentos de Saúde" (ícone estetoscópio, borda verde) e "Documentos Administrativos" (ícone pasta, borda padrão).
+  - **Modal de edição** com grupos de categorias idênticos ao upload.
+
+- Módulo → Prontuário → Documentos → `app/api/documents/route.ts` → GET
+  - **Filtro por role DOCTOR**: Terapeutas não-coordenadores agora só veem documentos de saúde (`doc_group = 'health'`).
+
+- Módulo → Prontuário → Documentos → `app/api/documents/[id]/route.ts` → PATCH
+  - **Salvamento de `doc_group`**: Adicionado suporte para salvar/atualizar o grupo do documento na edição.
+
+- Módulo → UI → Select → `components/ui/select.tsx`
+  - **Novo componente `SelectLabel`**: Adicionado para permitir labels visuais em grupos de select.
+  - **Novo componente `SelectSeparator`**: Adicionado para separação visual entre grupos.
+
+**Migrations SQL:**
+- `supabase/migrations/20260622000000_waiting_list_financial_and_therapies.sql`
+- `supabase/migrations/20260622000001_document_categories_health_admin.sql`
+- `supabase/migrations/EXECUTAR_MANUAL_20260622.sql` (consolidado para execução no Dashboard)
+
+### 22/06/2026 - WhatsApp Multi-Sessão por Setor
+
+**Solicitado por:** Espaço Incluir (Jeferson)
+**Escopo:** Todas as clínicas (retrocompatível)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Comunicação → WhatsApp → `lib/whatsapp/service.ts` → [MULTI-SECTOR SUPPORT]
+  - **Chave composta do Map**: Sessões agora indexadas por `clinicId__sector` ao invés de `clinicId`.
+  - **Todas as funções exportadas** (`createInstanceAndGetQR`, `checkInstanceStatus`, `sendWhatsAppMessage`, `disconnectInstance`) recebem parâmetro opcional `sector` (default: `'default'`).
+  - **Nova função `getAllClinicSessions`**: Retorna todas as sessões de uma clínica.
+  - **Retrocompatível**: Chamadores existentes sem `sector` continuam funcionando (default = `'default'`).
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/connect/route.ts` → POST
+  - Aceita `{ sector }` no body para conectar um setor específico.
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/disconnect/route.ts` → POST
+  - Aceita `{ sector }` no body para desconectar setor específico.
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/status/route.ts` → GET
+  - Aceita `?sector=` como query param. `?sector=all` retorna array de todas as sessões.
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/send/route.ts` → POST
+  - Aceita `{ sector }` no body para enviar por um número específico.
+
+- Módulo → Comunicação → WhatsApp → `app/dashboard/(clinic)/whatsapp/page.tsx` → [REWRITE]
+  - **Interface multi-sessão**: Cards de sessões conectadas/desconectadas por setor.
+  - **Modal QR Code**: Dialog com QR + polling automático por setor.
+  - **Dialog "Adicionar Setor"**: Input com sugestões pré-definidas (Recepção, Financeiro, Comercial, Clínico, Suporte).
+  - **Badges coloridos por setor** para identificação visual.
+
+**Migrations SQL:**
+- `supabase/migrations/20260622000002_whatsapp_multi_session.sql`
+- `supabase/migrations/EXECUTAR_MANUAL_20260622_WHATSAPP.sql` (consolidado para execução no Dashboard)

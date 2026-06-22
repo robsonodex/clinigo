@@ -161,15 +161,18 @@ export async function PATCH(
             return NextResponse.json({ error: 'Acesso negado - apenas administradores podem gerenciar documentos pessoais' }, { status: 403 })
         }
 
-        const { name, category, document_type, description, tags, notes } = body
+        const { name, category, document_type, description, tags, notes, doc_group } = body
 
         const updates: any = {}
         if (name !== undefined) updates.file_name = name
         if (category !== undefined) updates.category = category
-        if (document_type !== undefined) updates.file_type = document_type
+        if (document_type !== undefined) {
+            updates.category = document_type  // category é o campo real no banco
+        }
         if (description !== undefined) updates.description = description
         if (tags !== undefined) updates.tags = tags
-        if (notes !== undefined) updates.notes = notes
+        if (notes !== undefined) updates.description = notes  // notes mapeia para description
+        if (doc_group !== undefined) updates.doc_group = doc_group
 
         const { data, error } = await supabase
             .from('patient_documents')
