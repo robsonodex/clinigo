@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
+import { useAuth } from '@/lib/hooks/use-auth'
+
 interface SessionData {
   sector: string
   connected: boolean
@@ -27,22 +29,15 @@ const SECTOR_LABELS: Record<string, string> = {
   comercial: 'Comercial', clinico: 'Clínico', suporte: 'Suporte',
 }
 
-const SECTOR_COLORS: Record<string, string> = {
-  default: 'bg-green-100 text-green-800', recepcao: 'bg-blue-100 text-blue-800',
-  financeiro: 'bg-amber-100 text-amber-800', comercial: 'bg-purple-100 text-purple-800',
-  clinico: 'bg-teal-100 text-teal-800', suporte: 'bg-rose-100 text-rose-800',
-}
-
 export default function WhatsAppPage() {
+  const { user, profile } = useAuth()
   const [sessions, setSessions] = useState<SessionData[]>([])
   const [loading, setLoading] = useState(true)
   const [connectingSector, setConnectingSector] = useState<string | null>(null)
   const [qrData, setQrData] = useState<{ sector: string; qr: string } | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newSector, setNewSector] = useState('')
-  const [connectionType, setConnectionType] = useState<'sector' | 'doctor'>('sector')
   const [doctors, setDoctors] = useState<any[]>([])
-  const [selectedDoctorUserId, setSelectedDoctorUserId] = useState<string>('')
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchAllSessions = useCallback(async () => {
@@ -61,11 +56,18 @@ export default function WhatsAppPage() {
           qr_code: s.qr_code,
         })))
       } else {
-        // Fallback: buscar sessão default
+        // Fallback: buscar sessão default (ou sessão do próprio médico logado)
         const defRes = await fetch('/api/whatsapp/status')
         if (defRes.ok) {
           const defData = await defRes.json()
-          setSessions([{ ...defData, sector: 'default' }])
+          setSessions([{
+            sector: defData.sector || 'default',
+            connected: defData.connected,
+            status: defData.status || 'disconnected',
+            phone_number: defData.phone_number,
+            connected_at: defData.connected_at,
+            qr_code: defData.qr_code,
+          }])
         }
       }
     } catch { /* silent */ }
@@ -153,21 +155,12 @@ export default function WhatsAppPage() {
   }
 
   const handleAddSector = async () => {
-    if (connectionType === 'sector') {
-      const s = newSector.trim().toLowerCase().replace(/\s+/g, '_')
-      if (!s) { toast.error('Digite o nome do setor'); return }
-      if (sessions.some(ses => ses.sector === s)) { toast.error('Setor já existe'); return }
-      setAddDialogOpen(false)
-      setNewSector('')
-      handleConnect(s)
-    } else {
-      if (!selectedDoctorUserId) { toast.error('Selecione um profissional'); return }
-      if (sessions.some(ses => ses.sector === selectedDoctorUserId)) { toast.error('Este profissional já possui conexão cadastrada'); return }
-      setAddDialogOpen(false)
-      const docId = selectedDoctorUserId
-      setSelectedDoctorUserId('')
-      handleConnect(docId)
-    }
+    const s = newSector.trim().toLowerCase().replace(/\s+/g, '_')
+    if (!s) { toast.error('Digite o nome do setor'); return }
+    if (sessions.some(ses => ses.sector === s)) { toast.error('Setor já existe'); return }
+    setAddDialogOpen(false)
+    setNewSector('')
+    handleConnect(s)
   }
 
   if (loading) {
@@ -200,9 +193,11 @@ export default function WhatsAppPage() {
           <Button variant="outline" onClick={() => fetchAllSessions()} className="gap-1.5 min-h-[44px]">
             <RefreshCw className="h-4 w-4" /> Atualizar
           </Button>
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]">
-            <Plus className="h-4 w-4" /> Adicionar Conexão
-          </Button>
+          {profile?.role !== 'DOCTOR' && (
+            <Button onClick={() => setAddDialogOpen(true)} className="gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]">
+              <Plus className="h-4 w-4" /> Adicionar Conexão
+            </Button>
+          )}
         </div>
       </div>
 
@@ -220,7 +215,7 @@ export default function WhatsAppPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-green-800 dark:text-green-200">{getSectorLabel(s.sector)}</span>
-                      <Badge className={`text-xs ${SECTOR_COLORS[s.sector] || 'bg-gray-100 text-gray-800'}`}>
+                      <Badge className="text-xs bg-slate-100 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                         {SECTOR_LABELS[s.sector] ? s.sector : 'profissional'}
                       </Badge>
                       <Badge className="bg-green-500 text-white text-xs">Ativo</Badge>
@@ -256,7 +251,7 @@ export default function WhatsAppPage() {
                   </div>
                   <div className="flex-1">
                     <span className="font-bold">{getSectorLabel(s.sector)}</span>
-                    <Badge className={`ml-2 text-xs ${SECTOR_COLORS[s.sector] || 'bg-gray-100 text-gray-800'}`}>
+                    <Badge className="ml-2 text-xs bg-slate-100 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                       {SECTOR_LABELS[s.sector] ? s.sector : 'profissional'}
                     </Badge>
                     <p className="text-xs text-muted-foreground mt-0.5">Desconectado</p>
@@ -355,7 +350,7 @@ export default function WhatsAppPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Adicionar Setor/Profissional */}
+      {/* Dialog Adicionar Setor/Conexão */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -363,65 +358,10 @@ export default function WhatsAppPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Tipo de Conexão</Label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <Button
-                  type="button"
-                  variant={connectionType === 'sector' ? 'default' : 'outline'}
-                  onClick={() => { setConnectionType('sector'); setSelectedDoctorUserId('') }}
-                  className="w-full min-h-[44px]"
-                >
-                  Setor / Canal
-                </Button>
-                <Button
-                  type="button"
-                  variant={connectionType === 'doctor' ? 'default' : 'outline'}
-                  onClick={() => setConnectionType('doctor')}
-                  className="w-full min-h-[44px]"
-                >
-                  Profissional
-                </Button>
-              </div>
+              <Label>Nome do Setor / Canal</Label>
+              <Input value={newSector} onChange={e => setNewSector(e.target.value)}
+                placeholder="Ex: recepcao, financeiro, comercial" style={{ fontSize: '16px' }} className="mt-1.5" />
             </div>
-
-            {connectionType === 'sector' ? (
-              <>
-                <div>
-                  <Label>Nome do Setor</Label>
-                  <Input value={newSector} onChange={e => setNewSector(e.target.value)}
-                    placeholder="Ex: financeiro, comercial, suporte" style={{ fontSize: '16px' }} />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  <p>Setores pré-definidos disponíveis:</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {['recepcao', 'financeiro', 'comercial', 'clinico', 'suporte'].filter(s => !sessions.some(ses => ses.sector === s)).map(s => (
-                      <button key={s} type="button" onClick={() => setNewSector(s)}
-                        className={`px-2 py-1 rounded text-xs font-semibold cursor-pointer border ${SECTOR_COLORS[s] || 'bg-gray-100'}`}>
-                        {SECTOR_LABELS[s]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div>
-                <Label>Selecionar Profissional</Label>
-                <select
-                  value={selectedDoctorUserId}
-                  onChange={e => setSelectedDoctorUserId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
-                  style={{ fontSize: '16px' }}
-                >
-                  <option value="">Selecione um profissional...</option>
-                  {doctors.filter(d => d.user_id && !sessions.some(ses => ses.sector === d.user_id)).map(d => (
-                    <option key={d.id} value={d.user_id}>
-                      {d.user?.full_name || d.full_name} ({d.specialty || 'Terapeuta'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <Button onClick={handleAddSector} className="w-full gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]">
               <Plus className="h-4 w-4" /> Conectar WhatsApp
             </Button>
