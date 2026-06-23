@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         // Validate doctor belongs to clinic
         const { data: doctor } = await supabase
             .from('doctors')
-            .select('id, consultation_price, user:users(full_name)')
+            .select('id, user_id, consultation_price, user:users(full_name)')
             .eq('id', body.doctor_id)
             .eq('clinic_id', clinicId)
             .single()
@@ -633,7 +633,7 @@ export async function POST(request: NextRequest) {
         // Send WhatsApp notification if enabled
         if (body.notifications?.send_whatsapp && patient.phone) {
             try {
-                const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
+                const { sendWhatsAppMessage, checkInstanceStatus } = await import('@/lib/whatsapp/service')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
                 const clinicName = appointmentWithRelations?.clinic?.name || 'Clínica'
                 const isTelemedicina = body.type === 'telemedicina'
@@ -660,8 +660,21 @@ export async function POST(request: NextRequest) {
 
                 message += `\n\n_CliniGo - Cuidando de você! 💚_`
 
-                await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_confirmation')
-                console.log('[NOTIFICATION] WhatsApp sent to:', patient.phone)
+                let sectorToSend = 'default'
+                const doctorUserId = (doctor as any)?.user_id
+                if (doctorUserId) {
+                    try {
+                        const status = await checkInstanceStatus(clinicId, doctorUserId)
+                        if (status.connected) {
+                            sectorToSend = doctorUserId
+                        }
+                    } catch (err) {
+                        console.error(`[WhatsApp Routing Manual] Erro para terapeuta ${doctorUserId}:`, err)
+                    }
+                }
+
+                await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_confirmation', sectorToSend)
+                console.log('[NOTIFICATION] WhatsApp sent to:', patient.phone, 'via channel', sectorToSend)
             } catch (whatsappError: any) {
                 if (whatsappError.message?.includes('não conectado')) {
                     console.log('[NOTIFICATION] WhatsApp não conectado para esta clínica - notificação ignorada')

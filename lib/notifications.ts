@@ -1,6 +1,6 @@
 import { sendMail } from '@/lib/services/mail-service'; // Direct simple mail
 import { sendReminderEmail } from '@/lib/services/email'; // React-email structured
-import { sendWhatsAppMessage } from '@/lib/whatsapp/service';
+import { sendWhatsAppMessage, checkInstanceStatus } from '@/lib/whatsapp/service';
 
 export const NotificationChannels = {
     EMAIL: 'EMAIL',
@@ -54,8 +54,21 @@ export async function sendWhatsApp(
             break;
     }
 
+    let sectorToSend = 'default';
+    const doctorUserId = context.doctor?.user_id || context.doctor?.user?.id;
+    if (doctorUserId) {
+        try {
+            const status = await checkInstanceStatus(clinicId, doctorUserId);
+            if (status.connected) {
+                sectorToSend = doctorUserId;
+            }
+        } catch (err) {
+            console.error(`[WhatsApp Routing] Erro ao verificar status para terapeuta ${doctorUserId}:`, err);
+        }
+    }
+
     try {
-        await sendWhatsAppMessage(clinicId, to, message, `notification_${type}`);
+        await sendWhatsAppMessage(clinicId, to, message, `notification_${type}`, sectorToSend);
         return { success: true, reason: 'SENT', message: 'Enviado com sucesso' };
     } catch (error: any) {
         if (error.message?.includes('não conectado')) {

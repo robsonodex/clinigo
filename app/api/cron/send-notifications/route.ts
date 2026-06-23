@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
+import { sendWhatsAppMessage, checkInstanceStatus } from '@/lib/whatsapp/service'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,6 +37,13 @@ interface NotificationItem {
     appointment_id: string | null
     clinic_id: string
     metadata?: Record<string, string | undefined>
+    appointment?: {
+        id: string
+        doctor?: {
+            id: string
+            user_id: string
+        } | null
+    } | null
 }
 
 export async function GET(request: NextRequest) {
@@ -62,7 +69,16 @@ export async function GET(request: NextRequest) {
         // 1. Fetch pending notifications
         const { data: pending, error: fetchError } = await supabase
             .from('notification_queue')
-            .select('*')
+            .select(`
+                *,
+                appointment:appointments (
+                    id,
+                    doctor:doctors (
+                        id,
+                        user_id
+                    )
+                )
+            `)
             .eq('status', 'PENDING')
             .lte('scheduled_for', now)
             .order('priority', { ascending: true })
@@ -218,14 +234,28 @@ async function sendWhatsAppNotification(item: NotificationItem, checkinUrl?: str
         return false
     }
 
+    let sectorToSend = 'default'
+    const doctorUserId = item.appointment?.doctor?.user_id
+    if (doctorUserId) {
+        try {
+            const status = await checkInstanceStatus(item.clinic_id, doctorUserId)
+            if (status.connected) {
+                sectorToSend = doctorUserId
+            }
+        } catch (err) {
+            console.error(`[WhatsApp Routing Cron] Erro para terapeuta ${doctorUserId}:`, err)
+        }
+    }
+
     try {
         await sendWhatsAppMessage(
             item.clinic_id,
             item.recipient_phone,
             message,
-            `cron_${item.type}`
+            `cron_${item.type}`,
+            sectorToSend
         )
-        console.log(`[WhatsApp] ✅ Enviado para ${item.recipient_phone} (${item.type})`)
+        console.log(`[WhatsApp] ✅ Enviado para ${item.recipient_phone} (${item.type}) via canal ${sectorToSend}`)
         return true
     } catch (error: any) {
         // Se não está conectado, não é erro fatal — é modo manual

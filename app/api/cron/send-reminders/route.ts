@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
+import { sendWhatsAppMessage, checkInstanceStatus } from '@/lib/whatsapp/service'
 import { sendReminderEmail } from '@/lib/services/email'
 
 export const dynamic = 'force-dynamic'
@@ -60,7 +60,20 @@ export async function GET(request: NextRequest) {
                     const time = apt.appointment_time || ''
                     const message = `🔔 *Lembrete de Consulta*\n\nOlá ${patientName}!\n\nSua consulta é AMANHÃ:\n📅 ${tomorrowStr}\n🕐 ${time}\n👨‍⚕️ Dr(a). ${doctorName}\n\nConfirme sua presença respondendo esta mensagem.`
 
-                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_24h')
+                    let sectorToSend = 'default'
+                    const doctorUserId = apt.doctor?.user_id || apt.doctor?.user?.id
+                    if (doctorUserId) {
+                        try {
+                            const status = await checkInstanceStatus(apt.clinic.id, doctorUserId)
+                            if (status.connected) {
+                                sectorToSend = doctorUserId
+                            }
+                        } catch (err) {
+                            console.error(`[WhatsApp Routing 24h] Erro para terapeuta ${doctorUserId}:`, err)
+                        }
+                    }
+
+                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_24h', sectorToSend)
                     sent24h++
                 } else {
                     // Fallback to email
@@ -124,7 +137,20 @@ export async function GET(request: NextRequest) {
                     const time = apt.appointment_time || ''
                     const message = `⏰ *Consulta em 1 hora!*\n\n${patientName}, sua consulta é daqui a pouco:\n🕐 ${time}\n👨‍⚕️ Dr(a). ${doctorName}\n\nNão esqueça seus documentos!`
 
-                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_1h')
+                    let sectorToSend = 'default'
+                    const doctorUserId = apt.doctor?.user_id || apt.doctor?.user?.id
+                    if (doctorUserId) {
+                        try {
+                            const status = await checkInstanceStatus(apt.clinic.id, doctorUserId)
+                            if (status.connected) {
+                                sectorToSend = doctorUserId
+                            }
+                        } catch (err) {
+                            console.error(`[WhatsApp Routing 1h] Erro para terapeuta ${doctorUserId}:`, err)
+                        }
+                    }
+
+                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_1h', sectorToSend)
                     sent1h++
                 } else {
                     await sendReminderEmail(apt, 1)

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('clinic_id')
+      .select('clinic_id, role')
       .eq('id', user.id)
       .single()
 
@@ -26,12 +26,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
     }
 
-    const sector = req.nextUrl.searchParams.get('sector') || 'default'
+    let sector = req.nextUrl.searchParams.get('sector') || 'default'
 
-    // Se sector=all, retornar todas as sessões
-    if (sector === 'all') {
-      const sessions = await getAllClinicSessions(profile.clinic_id)
-      return NextResponse.json({ sessions })
+    // Se o usuário for DOCTOR, ele só pode consultar o próprio status
+    if (profile.role === 'DOCTOR') {
+      sector = user.id
+    } else {
+      // Se sector=all, retornar todas as sessões
+      if (sector === 'all') {
+        const sessions = await getAllClinicSessions(profile.clinic_id)
+        return NextResponse.json({ sessions })
+      }
     }
 
     // Buscar status em tempo real via Baileys

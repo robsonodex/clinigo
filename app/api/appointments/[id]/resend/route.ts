@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
+import { sendWhatsAppMessage, checkInstanceStatus } from '@/lib/whatsapp/service'
 import { format } from 'date-fns'
 
 export async function POST(
@@ -70,8 +70,21 @@ export async function POST(
 
         message += `\nAguardamos você!`
 
+        let sectorToSend = 'default'
+        const doctorUserId = appointment.doctor?.user_id || appointment.doctor?.user?.id
+        if (doctorUserId) {
+            try {
+                const status = await checkInstanceStatus(clinicId, doctorUserId)
+                if (status.connected) {
+                    sectorToSend = doctorUserId
+                }
+            } catch (err) {
+                console.error(`[WhatsApp Routing Resend] Erro para terapeuta ${doctorUserId}:`, err)
+            }
+        }
+
         try {
-            await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_resend')
+            await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_resend', sectorToSend)
             return NextResponse.json({ success: true })
         } catch (waError: any) {
             console.error('[RESEND] WhatsApp falhou:', waError)

@@ -30,16 +30,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
     }
 
-    if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-      return NextResponse.json({ error: 'Apenas administradores podem conectar o WhatsApp' }, { status: 403 })
+    if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'DOCTOR'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    // Ler sector do body (default = 'default')
+    // Ler sector do body (se for admin) ou forçar user.id se for DOCTOR
     let sector = 'default'
-    try {
-      const body = await req.json()
-      if (body?.sector) sector = body.sector
-    } catch { /* body vazio = default */ }
+    if (profile.role === 'DOCTOR') {
+      sector = user.id
+    } else {
+      try {
+        const body = await req.json()
+        if (body?.sector) sector = body.sector
+      } catch { /* body vazio = default */ }
+    }
 
     const result = await createInstanceAndGetQR(profile.clinic_id, sector)
 
