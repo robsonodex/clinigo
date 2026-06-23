@@ -234,7 +234,7 @@ async function sendWhatsAppNotification(item: NotificationItem, checkinUrl?: str
         return false
     }
 
-    let sectorToSend = 'default'
+    let sectorToSend = ''
     const doctorUserId = item.appointment?.doctor?.user_id
     if (doctorUserId) {
         try {
@@ -245,6 +245,11 @@ async function sendWhatsAppNotification(item: NotificationItem, checkinUrl?: str
         } catch (err) {
             console.error(`[WhatsApp Routing Cron] Erro para terapeuta ${doctorUserId}:`, err)
         }
+    }
+
+    if (!sectorToSend) {
+        console.log(`[WhatsApp Routing Cron] Cancelando envio de notificação: terapeuta ${doctorUserId} não conectado.`)
+        return false
     }
 
     try {

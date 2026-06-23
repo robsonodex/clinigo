@@ -267,9 +267,9 @@ export default function WhatsAppPage() {
         </div>
       </div>
 
-      <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
-        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-        <p>Cada setor pode ter seu próprio WhatsApp. As notificações automáticas do sistema (lembretes, confirmações) são enviadas pelo WhatsApp <strong>Principal (default)</strong>.</p>
+      <div className="flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3">
+        <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+        <p>Cada profissional que conectar seu WhatsApp terá <strong>lembretes, confirmações e notificações</strong> enviados pelo seu próprio número. Se o profissional responsável não estiver conectado, as notificações para os pacientes dele <strong>não serão enviadas</strong>.</p>
       </div>
 
       {/* QR Code Modal */}

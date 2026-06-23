@@ -70,7 +70,7 @@ export async function POST(
 
         message += `\nAguardamos você!`
 
-        let sectorToSend = 'default'
+        let sectorToSend = ''
         const doctorUserId = appointment.doctor?.user_id || appointment.doctor?.user?.id
         if (doctorUserId) {
             try {
@@ -81,6 +81,13 @@ export async function POST(
             } catch (err) {
                 console.error(`[WhatsApp Routing Resend] Erro para terapeuta ${doctorUserId}:`, err)
             }
+        }
+
+        if (!sectorToSend) {
+            return NextResponse.json(
+                { error: 'Não foi possível reenviar: o WhatsApp do profissional responsável não está conectado.' },
+                { status: 400 }
+            )
         }
 
         try {

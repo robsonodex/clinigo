@@ -54,7 +54,7 @@ export async function sendWhatsApp(
             break;
     }
 
-    let sectorToSend = 'default';
+    let sectorToSend = '';
     const doctorUserId = context.doctor?.user_id || context.doctor?.user?.id;
     if (doctorUserId) {
         try {
@@ -65,6 +65,11 @@ export async function sendWhatsApp(
         } catch (err) {
             console.error(`[WhatsApp Routing] Erro ao verificar status para terapeuta ${doctorUserId}:`, err);
         }
+    }
+
+    if (!sectorToSend) {
+        console.log(`[WhatsApp Routing] Envio cancelado: Profissional ${doctorUserId} não possui WhatsApp conectado.`);
+        return { success: false, reason: 'DOCTOR_WHATSAPP_NOT_CONNECTED', message: 'WhatsApp do profissional não conectado' };
     }
 
     try {

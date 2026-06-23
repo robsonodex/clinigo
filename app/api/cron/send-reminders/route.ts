@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
                     const time = apt.appointment_time || ''
                     const message = `🔔 *Lembrete de Consulta*\n\nOlá ${patientName}!\n\nSua consulta é AMANHÃ:\n📅 ${tomorrowStr}\n🕐 ${time}\n👨‍⚕️ Dr(a). ${doctorName}\n\nConfirme sua presença respondendo esta mensagem.`
 
-                    let sectorToSend = 'default'
+                    let sectorToSend = ''
                     const doctorUserId = apt.doctor?.user_id || apt.doctor?.user?.id
                     if (doctorUserId) {
                         try {
@@ -73,8 +73,15 @@ export async function GET(request: NextRequest) {
                         }
                     }
 
-                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_24h', sectorToSend)
-                    sent24h++
+                    if (sectorToSend) {
+                        await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_24h', sectorToSend)
+                        sent24h++
+                    } else {
+                        console.log(`[WhatsApp Routing 24h] Pulando envio para ${apt.patient.phone} - terapeuta ${doctorUserId} não conectado.`)
+                        // Fallback to email
+                        await sendReminderEmail(apt, 24)
+                        sent24h++
+                    }
                 } else {
                     // Fallback to email
                     await sendReminderEmail(apt, 24)
@@ -137,7 +144,7 @@ export async function GET(request: NextRequest) {
                     const time = apt.appointment_time || ''
                     const message = `⏰ *Consulta em 1 hora!*\n\n${patientName}, sua consulta é daqui a pouco:\n🕐 ${time}\n👨‍⚕️ Dr(a). ${doctorName}\n\nNão esqueça seus documentos!`
 
-                    let sectorToSend = 'default'
+                    let sectorToSend = ''
                     const doctorUserId = apt.doctor?.user_id || apt.doctor?.user?.id
                     if (doctorUserId) {
                         try {
@@ -150,8 +157,14 @@ export async function GET(request: NextRequest) {
                         }
                     }
 
-                    await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_1h', sectorToSend)
-                    sent1h++
+                    if (sectorToSend) {
+                        await sendWhatsAppMessage(apt.clinic.id, apt.patient.phone, message, 'reminder_1h', sectorToSend)
+                        sent1h++
+                    } else {
+                        console.log(`[WhatsApp Routing 1h] Pulando envio para ${apt.patient.phone} - terapeuta ${doctorUserId} não conectado.`)
+                        await sendReminderEmail(apt, 1)
+                        sent1h++
+                    }
                 } else {
                     await sendReminderEmail(apt, 1)
                     sent1h++

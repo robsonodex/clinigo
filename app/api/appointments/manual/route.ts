@@ -660,7 +660,7 @@ export async function POST(request: NextRequest) {
 
                 message += `\n\n_CliniGo - Cuidando de você! 💚_`
 
-                let sectorToSend = 'default'
+                let sectorToSend = ''
                 const doctorUserId = (doctor as any)?.user_id
                 if (doctorUserId) {
                     try {
@@ -673,8 +673,12 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
-                await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_confirmation', sectorToSend)
-                console.log('[NOTIFICATION] WhatsApp sent to:', patient.phone, 'via channel', sectorToSend)
+                if (sectorToSend) {
+                    await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_confirmation', sectorToSend)
+                    console.log('[NOTIFICATION] WhatsApp sent to:', patient.phone, 'via channel', sectorToSend)
+                } else {
+                    console.log('[NOTIFICATION] WhatsApp não enviado para:', patient.phone, '- terapeuta não conectado e sem fallback.')
+                }
             } catch (whatsappError: any) {
                 if (whatsappError.message?.includes('não conectado')) {
                     console.log('[NOTIFICATION] WhatsApp não conectado para esta clínica - notificação ignorada')
