@@ -65,7 +65,41 @@ export async function GET(request: NextRequest) {
                 .single()
             
             if (doctorData?.id) {
-                query = query.eq('doctor_id', doctorData.id)
+                // ── OVERRIDE TEMPORÁRIO (Espaço Incluir) ──────────────────────
+                // Solicitação: Jeferson (25/06/2026)
+                // Motivo: Avaliação inicial — acesso ao histórico de evoluções
+                // Pacientes: Leandro e Lilian Depieri Vieira
+                // Terapeutas: Denise Farias, Beatriz Viveiros, Joyce Elaine
+                // Expira: 20/07/2026 (25 dias)
+                // TODO: Remover este bloco após 20/07/2026
+                const EVOLUTION_ACCESS_OVERRIDES: Record<string, string[]> = {
+                    // doctor_id → [patient_ids com acesso liberado]
+                    '8d077aa2-c37a-4b7a-be53-3ccc5f7e8755': [ // Denise Farias (TO)
+                        'a2afeeff-cccd-479c-ae9b-0cdd08bd2333', // Leandro Depieri Vieira
+                        '69182652-9a4f-4c98-bcd0-b3aaf0071b70', // Lilian Depieri Vieira
+                    ],
+                    'd5a0ab1d-e943-4237-b70b-992038af4d69': [ // Beatriz Viveiros (Psicomotricista)
+                        'a2afeeff-cccd-479c-ae9b-0cdd08bd2333',
+                        '69182652-9a4f-4c98-bcd0-b3aaf0071b70',
+                    ],
+                    '4cdae0e2-579c-4469-91be-2dd57017c5bb': [ // Joyce Elaine (Musicoterapia)
+                        'a2afeeff-cccd-479c-ae9b-0cdd08bd2333',
+                        '69182652-9a4f-4c98-bcd0-b3aaf0071b70',
+                    ],
+                }
+                const OVERRIDE_EXPIRES = new Date('2026-07-20T23:59:59-03:00')
+
+                const overridePatients = EVOLUTION_ACCESS_OVERRIDES[doctorData.id]
+                const overrideActive = overridePatients && new Date() < OVERRIDE_EXPIRES
+
+                if (overrideActive) {
+                    // Mostra evoluções próprias + evoluções dos pacientes liberados
+                    const patientFilter = overridePatients.map(pid => `patient_id.eq.${pid}`).join(',')
+                    query = query.or(`doctor_id.eq.${doctorData.id},${patientFilter}`)
+                } else {
+                    query = query.eq('doctor_id', doctorData.id)
+                }
+                // ── FIM DO OVERRIDE TEMPORÁRIO ────────────────────────────────
             } else {
                 // Terapeuta sem registro de doctor — retorna vazio por segurança
                 return NextResponse.json({ data: [] })
