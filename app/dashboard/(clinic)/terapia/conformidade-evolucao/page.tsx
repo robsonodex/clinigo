@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import {
     FileText, AlertTriangle, CheckCircle, XCircle, Download, FileSpreadsheet,
-    ChevronDown, ChevronUp, TrendingDown, TrendingUp, Activity, Copy
+    ChevronDown, ChevronUp, TrendingDown, TrendingUp, Activity, Copy, Trash2, Loader2
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface DailyData {
     date: string
@@ -77,6 +79,7 @@ export default function ConformidadeEvolucaoPage() {
     const [data, setData] = useState<ReportData | null>(null)
     const [loading, setLoading] = useState(true)
     const [expandedDoctor, setExpandedDoctor] = useState<string | null>(null)
+    const [cleaningDuplicates, setCleaningDuplicates] = useState(false)
     const [startDate, setStartDate] = useState(() => {
         const d = new Date()
         d.setDate(d.getDate() - 30)
@@ -97,6 +100,47 @@ export default function ConformidadeEvolucaoPage() {
 
     const toggleDoctor = (id: string) => {
         setExpandedDoctor(prev => prev === id ? null : id)
+    }
+
+    const handleCleanDuplicates = async () => {
+        setCleaningDuplicates(true)
+        try {
+            const res = await fetch('/api/session-evolutions/duplicates', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auto_clean: true }),
+            })
+            const result = await res.json()
+            if (res.ok) {
+                toast.success(result.message || `${result.deleted} duplicata(s) removida(s)`)
+                fetchData() // Recarregar dados
+            } else {
+                toast.error(result.error || 'Erro ao limpar duplicatas')
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao limpar duplicatas')
+        } finally {
+            setCleaningDuplicates(false)
+        }
+    }
+
+    const handleRemoveSpecific = async (ids: string[], patientName: string) => {
+        try {
+            const res = await fetch('/api/session-evolutions/duplicates', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ evolution_ids: ids }),
+            })
+            const result = await res.json()
+            if (res.ok) {
+                toast.success(`Duplicata(s) de ${patientName} removida(s)!`)
+                fetchData()
+            } else {
+                toast.error(result.error || 'Erro ao remover duplicata')
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao remover duplicata')
+        }
     }
 
     const exportExcel = async () => {
@@ -270,13 +314,50 @@ export default function ConformidadeEvolucaoPage() {
                     {data?.duplicates && data.duplicates.length > 0 && (
                         <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 shadow-sm">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-base flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                                    <Copy className="w-5 h-5" />
-                                    Possíveis Evoluções Duplicadas ({data.duplicates.length})
-                                </CardTitle>
-                                <CardDescription className="text-xs text-amber-700 dark:text-amber-400">
-                                    Mesma terapeuta + mesmo paciente + mesma data com mais de uma evolução registrada
-                                </CardDescription>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div>
+                                        <CardTitle className="text-base flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                                            <Copy className="w-5 h-5" />
+                                            Possíveis Evoluções Duplicadas ({data.duplicates.length})
+                                        </CardTitle>
+                                        <CardDescription className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                                            Mesma terapeuta + mesmo paciente + mesma data com mais de uma evolução registrada
+                                        </CardDescription>
+                                    </div>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                size="sm"
+                                                className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl h-9 px-4 text-xs font-bold shadow-sm gap-1.5"
+                                                disabled={cleaningDuplicates}
+                                            >
+                                                {cleaningDuplicates ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                                Limpar Todas as Duplicatas
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Limpar Evoluções Duplicadas?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta ação irá remover automaticamente as evoluções duplicadas, <strong>mantendo a mais antiga</strong> de cada grupo (mesmo paciente + terapeuta + data).
+                                                    <br /><br />
+                                                    Serão removidas aproximadamente <strong>{data.duplicates.reduce((sum: number, d: DuplicateData) => sum + (d.count - 1), 0)}</strong> evolução(ões) duplicada(s).
+                                                    <br /><br />
+                                                    <strong className="text-red-600">⚠️ Esta ação não pode ser desfeita.</strong>
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={handleCleanDuplicates}
+                                                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                                                >
+                                                    Confirmar Limpeza
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto">
@@ -286,11 +367,14 @@ export default function ConformidadeEvolucaoPage() {
                                                 <th className="text-left pb-2 pr-3">Paciente</th>
                                                 <th className="text-left pb-2 px-2">Data</th>
                                                 <th className="text-center pb-2 px-2">Evoluções</th>
+                                                <th className="text-center pb-2 pl-2">Ação</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {data.duplicates.map((dup: DuplicateData, idx: number) => {
                                                 const docData = data.by_doctor.find((d: DoctorData) => d.doctor_id === dup.doctor_id)
+                                                // IDs para remover: todos exceto o primeiro (mais antigo)
+                                                const idsToRemove = dup.evolution_ids.slice(1)
                                                 return (
                                                     <tr key={idx} className="border-t border-amber-100 dark:border-amber-900/50">
                                                         <td className="py-2 pr-3">
@@ -302,6 +386,38 @@ export default function ConformidadeEvolucaoPage() {
                                                             <span className="bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100 px-2 py-0.5 rounded-full text-xs font-bold">
                                                                 {dup.count}x
                                                             </span>
+                                                        </td>
+                                                        <td className="py-2 pl-2 text-center">
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 gap-1"
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                        Remover
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Remover duplicata?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            Remover {dup.count - 1} evolução(ões) duplicada(s) de <strong>{dup.patient_name}</strong> em {dup.date.split('-').reverse().join('/')}?
+                                                                            A evolução mais antiga será mantida.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                        <AlertDialogAction
+                                                                            onClick={() => handleRemoveSpecific(idsToRemove, dup.patient_name)}
+                                                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                                                        >
+                                                                            Confirmar Exclusão
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
                                                         </td>
                                                     </tr>
                                                 )

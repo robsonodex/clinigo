@@ -142,6 +142,25 @@ export async function POST(request: NextRequest) {
             cleanBody.template_type = 'soap'
         }
 
+        // Prevenção de duplicatas: verificar se já existe evolução para o mesmo paciente + profissional + data
+        if (cleanBody.patient_id && cleanBody.doctor_id && cleanBody.evolution_date) {
+            const { data: existing } = await supabase
+                .from('session_evolutions')
+                .select('id')
+                .eq('clinic_id', userData.clinic_id)
+                .eq('patient_id', cleanBody.patient_id)
+                .eq('doctor_id', cleanBody.doctor_id)
+                .eq('evolution_date', cleanBody.evolution_date)
+                .limit(1)
+
+            if (existing && existing.length > 0) {
+                return NextResponse.json(
+                    { error: 'Já existe uma evolução registrada para este paciente, com este profissional, nesta data. Edite a evolução existente ou exclua-a antes de criar uma nova.' },
+                    { status: 409 }
+                )
+            }
+        }
+
         const { data, error } = await supabase
             .from('session_evolutions')
             .insert({ ...cleanBody, clinic_id: userData.clinic_id, created_by: user.id })
