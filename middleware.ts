@@ -157,6 +157,17 @@ function createSupabaseClient(request: NextRequest) {
 
 let _maintenanceCache: { value: boolean; expiresAt: number } | null = null
 
+// ============================================
+// SESSION VALIDATION CACHE (3s TTL)
+// Prevents race conditions of Supabase auth token rotation in rapid API/polling requests
+// ============================================
+
+const _sessionCache = new Map<string, {
+    user: any;
+    expiresAt: number;
+    cookiesToSet: Array<{ name: string; value: string; options?: any }>;
+}>()
+
 async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
     const now = Date.now()
 
@@ -265,14 +276,63 @@ export async function middleware(request: NextRequest) {
     }
 
     // ----------------------------------------
+    // SHARED SUPABASE CLIENT (single instance for entire middleware)
+    // Prevents duplicate getUser() calls that cause token refresh race conditions.
+    // With Supabase refresh token rotation, a second getUser() on a separate client
+    // would fail because the first call already consumed the refresh token,
+    // but its response (with new cookies) was discarded — causing random logouts
+    // on Super Admin pages (e.g., WhatsApp QR Code polling page).
+    // Uses a short-lived memory cache to prevent race conditions during rapid concurrent requests.
+    // ----------------------------------------
+    const { supabase, response } = createSupabaseClient(request)
+    
+    const supabaseCookiesKey = request.cookies.getAll()
+        .filter(c => c.name.includes('auth-token') || c.name.includes('supabase'))
+        .map(c => `${c.name}:${c.value}`)
+        .join('|')
+
+    let user = null
+    const now = Date.now()
+    const cachedSession = supabaseCookiesKey ? _sessionCache.get(supabaseCookiesKey) : null
+
+    if (cachedSession && now < cachedSession.expiresAt) {
+        user = cachedSession.user
+        cachedSession.cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+        })
+    } else {
+        const { data } = await supabase.auth.getUser()
+        user = data.user
+
+        if (supabaseCookiesKey) {
+            const cookiesToSet: Array<{ name: string; value: string; options?: any }> = []
+            response.cookies.getAll().forEach((c: any) => {
+                cookiesToSet.push({ name: c.name, value: c.value })
+            })
+
+            _sessionCache.set(supabaseCookiesKey, {
+                user,
+                expiresAt: now + 3000, // 3 seconds TTL
+                cookiesToSet
+            })
+
+            // Clean up cache to prevent memory leaks
+            if (_sessionCache.size > 500) {
+                for (const [key, val] of _sessionCache.entries()) {
+                    if (Date.now() >= val.expiresAt) {
+                        _sessionCache.delete(key)
+                    }
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------
     // SUPER ADMIN PROTECTION (Hidden routes)
     // ----------------------------------------
     const isSuperAdminRoute = SUPER_ADMIN_ROUTES.some(route => pathname.startsWith(route))
 
     if (isSuperAdminRoute) {
-        const { supabase } = createSupabaseClient(request)
-        const { data: { user } } = await supabase.auth.getUser()
-
         if (!user) {
             return new NextResponse('Not Found', { status: 404 })
         }
@@ -441,14 +501,8 @@ export async function middleware(request: NextRequest) {
 
     // ----------------------------------------
     // SUPABASE AUTH (Clinic/Doctor/Admin)
+    // Uses shared supabase client and user resolved above (before Super Admin check).
     // ----------------------------------------
-    const { supabase, response } = createSupabaseClient(request)
-
-    // Securely get the user (validates token against Supabase Auth)
-    // This handles token refresh if needed via the checkConfig defined above
-
-    // Now get user (session is refreshed)
-    const { data: { user } } = await supabase.auth.getUser()
 
     // Public routes that don't require any authentication
     const isPublicRoute = PUBLIC_ROUTES.some((route) => {

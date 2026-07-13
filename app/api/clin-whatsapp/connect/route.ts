@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -20,6 +21,18 @@ function getClinBotUrl(): string {
 }
 
 async function verifySuperAdmin() {
+  try {
+    const headersList = await headers()
+    const userId = headersList.get('x-user-id')
+    const userRole = headersList.get('x-user-role')
+
+    if (userId && userRole === 'SUPER_ADMIN') {
+      return { id: userId, role: userRole } as any
+    }
+  } catch (err) {
+    console.error('[verifySuperAdmin] Error verifying via headers, using fallback:', err)
+  }
+
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return null
