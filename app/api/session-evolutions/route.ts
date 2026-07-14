@@ -65,6 +65,14 @@ export async function GET(request: NextRequest) {
                 .single()
             
             if (doctorData?.id) {
+                // ── HERANÇA DE AGENDA (Espaço Incluir) ──────────────────────
+                // Isabella e Cintia herdaram a agenda da Cristiane e precisam ver suas evoluções
+                const HERDOU_AGENDA_DE: Record<string, string> = {
+                    '084b2ba1-f8ba-4eac-9b50-6cd69701ba19': '401e9601-4fb3-4b33-8e1b-0f27617c80ab', // Isabella -> Cristiane
+                    '93944585-f17f-4813-85a8-c12fde2a7ce0': '401e9601-4fb3-4b33-8e1b-0f27617c80ab', // Cintia -> Cristiane
+                }
+                const predecessorDoctorId = HERDOU_AGENDA_DE[doctorData.id]
+
                 // ── OVERRIDE TEMPORÁRIO (Espaço Incluir) ──────────────────────
                 // Solicitação: Jeferson (25/06/2026)
                 // Motivo: Avaliação inicial — acesso ao histórico de evoluções
@@ -92,14 +100,21 @@ export async function GET(request: NextRequest) {
                 const overridePatients = EVOLUTION_ACCESS_OVERRIDES[doctorData.id]
                 const overrideActive = overridePatients && new Date() < OVERRIDE_EXPIRES
 
-                if (overrideActive) {
+                if (predecessorDoctorId) {
+                    if (overrideActive) {
+                        const patientFilter = overridePatients.map(pid => `patient_id.eq.${pid}`).join(',')
+                        query = query.or(`doctor_id.eq.${doctorData.id},doctor_id.eq.${predecessorDoctorId},${patientFilter}`)
+                    } else {
+                        query = query.or(`doctor_id.eq.${doctorData.id},doctor_id.eq.${predecessorDoctorId}`)
+                    }
+                } else if (overrideActive) {
                     // Mostra evoluções próprias + evoluções dos pacientes liberados
                     const patientFilter = overridePatients.map(pid => `patient_id.eq.${pid}`).join(',')
                     query = query.or(`doctor_id.eq.${doctorData.id},${patientFilter}`)
                 } else {
                     query = query.eq('doctor_id', doctorData.id)
                 }
-                // ── FIM DO OVERRIDE TEMPORÁRIO ────────────────────────────────
+                // ── FIM DOS OVERRIDES ─────────────────────────────────────────
             } else {
                 // Terapeuta sem registro de doctor — retorna vazio por segurança
                 return NextResponse.json({ data: [] })
