@@ -297,17 +297,17 @@ export async function middleware(request: NextRequest) {
 
     if (cachedSession && now < cachedSession.expiresAt) {
         user = cachedSession.user
-        cachedSession.cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+        cachedSession.cookiesToSet.forEach((cookie) => {
+            response.cookies.set(cookie)
         })
     } else {
         const { data } = await supabase.auth.getUser()
         user = data.user
 
         if (supabaseCookiesKey) {
-            const cookiesToSet: Array<{ name: string; value: string; options?: any }> = []
+            const cookiesToSet: Array<any> = []
             response.cookies.getAll().forEach((c: any) => {
-                cookiesToSet.push({ name: c.name, value: c.value })
+                cookiesToSet.push(c)
             })
 
             _sessionCache.set(supabaseCookiesKey, {
@@ -861,8 +861,8 @@ export async function middleware(request: NextRequest) {
         finalResponse.headers.set('x-debug-mw-ts', Date.now().toString())
 
         // Copy cookies from Supabase response to maintain session
-        response.cookies.getAll().forEach((cookie: { name: string; value: string }) => {
-            finalResponse.cookies.set(cookie.name, cookie.value)
+        response.cookies.getAll().forEach((cookie: any) => {
+            finalResponse.cookies.set(cookie)
         })
 
         return finalResponse
