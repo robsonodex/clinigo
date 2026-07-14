@@ -35,6 +35,9 @@ export default function SessionEvolutionsPage() {
     const [templateType, setTemplateType] = useState('soap')
     const [signModalOpen, setSignModalOpen] = useState(false)
     const [recordToSign, setRecordToSign] = useState<string | null>(null)
+    const [filterPatientId, setFilterPatientId] = useState<string>('')
+    const [filterStartDate, setFilterStartDate] = useState<string>('')
+    const [filterEndDate, setFilterEndDate] = useState<string>('')
 
     const toggleExpand = (id: string) => {
         setExpandedEvolutions(prev => {
@@ -57,12 +60,21 @@ export default function SessionEvolutionsPage() {
     const [form, setForm] = useState(emptyForm)
 
     const fetchEvolutions = useCallback(async () => {
+        setLoading(true)
         try {
-            const res = await fetch('/api/session-evolutions')
+            const params = new URLSearchParams()
+            if (filterPatientId) params.append('patient_id', filterPatientId)
+            if (filterStartDate) params.append('start_date', filterStartDate)
+            if (filterEndDate) params.append('end_date', filterEndDate)
+            
+            const queryString = params.toString()
+            const url = queryString ? `/api/session-evolutions?${queryString}` : '/api/session-evolutions'
+
+            const res = await fetch(url)
             if (res.ok) { const d = await res.json(); setEvolutions(d.data || []) }
         } catch { toast.error('Erro ao carregar evoluções') }
         finally { setLoading(false) }
-    }, [])
+    }, [filterPatientId, filterStartDate, filterEndDate])
 
     useEffect(() => { fetchEvolutions() }, [fetchEvolutions])
 
@@ -365,10 +377,67 @@ export default function SessionEvolutionsPage() {
                 )}
             </div>
 
-            {/* Barra de Busca Premium */}
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input placeholder="Buscar por paciente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80" />
+            {/* Barra de Filtros e Busca */}
+            <div className="bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div className="md:col-span-2">
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 block">Filtrar por Paciente (Completo no Banco)</Label>
+                        <PatientSearchCombobox
+                            value={filterPatientId}
+                            onSelect={(patient) => setFilterPatientId(patient?.id || '')}
+                            onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
+                            placeholder="Buscar paciente para listar histórico..."
+                            doctorId={currentUserRole === 'DOCTOR' && currentDoctorId ? currentDoctorId : undefined}
+                        />
+                    </div>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 block">Data Inicial</Label>
+                        <Input
+                            type="date"
+                            value={filterStartDate}
+                            onChange={e => setFilterStartDate(e.target.value)}
+                            className="h-10 rounded-xl bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/20 text-sm font-medium"
+                            style={{ fontSize: '16px' }}
+                        />
+                    </div>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 block">Data Final</Label>
+                        <Input
+                            type="date"
+                            value={filterEndDate}
+                            onChange={e => setFilterEndDate(e.target.value)}
+                            className="h-10 rounded-xl bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/20 text-sm font-medium"
+                            style={{ fontSize: '16px' }}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                        <Input 
+                            placeholder="Pesquisa rápida em tela..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)} 
+                            className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80" 
+                            style={{ fontSize: '16px' }}
+                        />
+                    </div>
+                    {(filterPatientId || filterStartDate || filterEndDate || search) && (
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => {
+                                setFilterPatientId('')
+                                setFilterStartDate('')
+                                setFilterEndDate('')
+                                setSearch('')
+                            }}
+                            className="rounded-xl h-11 px-5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
+                        >
+                            Limpar Filtros
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {filtered.length === 0 ? (

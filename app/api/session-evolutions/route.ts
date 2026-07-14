@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url)
         const patientId = searchParams.get('patient_id')
         const appointmentId = searchParams.get('appointment_id')
+        const startDate = searchParams.get('start_date')
+        const endDate = searchParams.get('end_date')
 
         let query = supabase
             .from('session_evolutions')
@@ -123,6 +125,8 @@ export async function GET(request: NextRequest) {
 
         if (patientId) query = query.eq('patient_id', patientId)
         if (appointmentId) query = query.eq('appointment_id', appointmentId)
+        if (startDate) query = query.gte('evolution_date', startDate)
+        if (endDate) query = query.lte('evolution_date', endDate)
 
         const { data, error } = await query
         if (error) throw error
