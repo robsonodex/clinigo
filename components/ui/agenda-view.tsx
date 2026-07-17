@@ -507,7 +507,9 @@ export default function AgendaPage() {
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
+                // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
+                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         )
     }
 
@@ -519,7 +521,9 @@ export default function AgendaPage() {
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
+                // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
+                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
     }
 

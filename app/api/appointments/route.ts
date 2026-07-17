@@ -95,6 +95,9 @@ export async function GET(request: NextRequest) {
             queryBuilder = queryBuilder.lte('appointment_date', query.date_to)
         }
 
+        // Exclui cancelamentos decorrentes de exclusão de série recorrente de consultas
+        queryBuilder = queryBuilder.or('cancellation_reason.is.null,cancellation_reason.neq.Série recorrente cancelada')
+
         // Apply pagination and ordering
         queryBuilder = queryBuilder
             .order('appointment_date', { ascending: true })
