@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Upload } from 'lucide-react'
+import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Upload, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TherapyItem { name: string; qty: number }
@@ -117,6 +117,67 @@ export default function FilaEsperaPage() {
             const res = await fetch('/api/waiting-list', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
             if (res.ok) { toast.success('Removido!'); fetchData() }
         } catch (e) { toast.error('Erro') }
+    }
+
+    const handleRemoveDuplicates = async () => {
+        if (!data?.items?.length) { toast.error('Nenhum item na fila'); return }
+
+        // Agrupar por patient_name normalizado
+        const groups: Record<string, any[]> = {}
+        for (const item of data.items) {
+            const key = (item.patient_name || '').trim().toLowerCase()
+            if (!groups[key]) groups[key] = []
+            groups[key].push(item)
+        }
+
+        // Identificar duplicados (manter o mais antigo por created_at)
+        const idsToDelete: string[] = []
+        for (const items of Object.values(groups)) {
+            if (items.length > 1) {
+                items.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                for (let i = 1; i < items.length; i++) {
+                    idsToDelete.push(items[i].id)
+                }
+            }
+        }
+
+        if (idsToDelete.length === 0) {
+            toast.info('Nenhuma duplicata encontrada! Os dados estão limpos. 🎉')
+            return
+        }
+
+        const uniqueCount = Object.keys(groups).length
+        if (!confirm(
+            `⚠️ ATENÇÃO: Foram encontradas ${idsToDelete.length} duplicatas.\n\n` +
+            `Total atual: ${data.items.length} registros\n` +
+            `Após limpeza: ${uniqueCount} registros únicos\n\n` +
+            `Será mantido o registro mais antigo de cada paciente.\n` +
+            `Esta ação não pode ser desfeita. Confirmar?`
+        )) return
+
+        let deleted = 0
+        let errors = 0
+        toast.loading('Removendo duplicatas...', { id: 'dedup' })
+
+        for (const id of idsToDelete) {
+            try {
+                const res = await fetch('/api/waiting-list', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                })
+                if (res.ok) deleted++
+                else errors++
+            } catch { errors++ }
+        }
+
+        toast.dismiss('dedup')
+        if (errors > 0) {
+            toast.warning(`${deleted} duplicatas removidas, ${errors} erros.`)
+        } else {
+            toast.success(`✅ ${deleted} duplicatas removidas com sucesso!`)
+        }
+        fetchData()
     }
 
     const addTherapy = () => setForm(prev => ({ ...prev, therapies: [...prev.therapies, { name: '', qty: 1 }] }))
@@ -315,13 +376,17 @@ export default function FilaEsperaPage() {
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
+                    <Button variant="outline" onClick={handleRemoveDuplicates}
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800 min-h-[44px]" title="Detectar e remover registros duplicados">
+                        <Layers className="w-4 h-4 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
+                    </Button>
                     <Button variant="outline" onClick={exportExcel}
                         className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 font-semibold">
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" /><span>Excel</span>
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" /><span className="hidden sm:inline">Excel</span>
                     </Button>
                     <Button variant="outline" onClick={() => { setImportOpen(true); setPreviewItems([]); setImportError(null) }}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 min-h-[40px] font-semibold">
-                        <Upload className="w-4 h-4 text-blue-600" /><span>Importar</span>
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 min-h-[44px] font-semibold">
+                        <Upload className="w-4 h-4 text-blue-600" /><span className="hidden sm:inline">Importar</span>
                     </Button>
                     <Button onClick={openNew}
                         className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 font-semibold">
