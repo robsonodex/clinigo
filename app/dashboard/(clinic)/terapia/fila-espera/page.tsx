@@ -192,9 +192,19 @@ export default function FilaEsperaPage() {
                             // Se for criança, o contato ou mãe é o responsável
                             responsible_name = getVal(['contato', 'responsavel', 'responsable', 'mae', 'pai'])
                         } else {
-                            // Mapeamento padrão se não for planilha específica de crianças
+                            // Se não tem criança na linha, busca por termos padrão
                             patient_name = getVal(['nome', 'paciente', 'patient', 'lead'])
-                            responsible_name = getVal(['responsavel', 'responsable', 'mae', 'pai'])
+                            if (patient_name) {
+                                responsible_name = getVal(['responsavel', 'responsable', 'mae', 'pai'])
+                            } else {
+                                // Fallback: se não tiver criança nem paciente mapeado, mas tiver contato preenchido (ex: adultos na coluna Contato),
+                                // o próprio contato na linha será o paciente.
+                                const contatoVal = getVal(['contato'])
+                                if (contatoVal) {
+                                    patient_name = contatoVal
+                                    responsible_name = null
+                                }
+                            }
                         }
 
                         if (!patient_name) return null
