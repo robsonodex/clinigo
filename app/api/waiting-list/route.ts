@@ -97,33 +97,66 @@ export async function POST(request: NextRequest) {
         if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const body = await request.json()
-        const { data, error } = await supabase
-            .from('waiting_list')
-            .insert({
-                clinic_id: profile.clinic_id,
-                patient_id: body.patient_id || null,
-                patient_name: body.patient_name,
-                patient_phone: body.patient_phone,
-                patient_email: body.patient_email,
-                preferred_doctor_id: body.preferred_doctor_id || null,
-                therapy_type: body.therapy_type,
-                modality: body.modality || 'individual',
-                preferred_shift: body.preferred_shift || 'any',
-                preferred_days: body.preferred_days,
-                urgency: body.urgency || 'normal',
-                notes: body.notes,
-                responsible_name: body.responsible_name || null,
-                therapies: body.therapies || [],
-                commercial_notes: body.commercial_notes || null,
-                financial_contact_date: body.financial_contact_date || null,
-                financial_result: body.financial_result || null,
-                financial_notes: body.financial_notes || null,
-            })
-            .select()
-            .single()
+        const isArray = Array.isArray(body)
 
-        if (error) throw error
-        return NextResponse.json(data, { status: 201 })
+        if (isArray) {
+            const inserts = body.map((item: any) => ({
+                clinic_id: profile.clinic_id,
+                patient_id: item.patient_id || null,
+                patient_name: item.patient_name,
+                patient_phone: item.patient_phone || null,
+                patient_email: item.patient_email || null,
+                preferred_doctor_id: item.preferred_doctor_id || null,
+                therapy_type: item.therapy_type || null,
+                modality: item.modality || 'individual',
+                preferred_shift: item.preferred_shift || 'any',
+                preferred_days: item.preferred_days || null,
+                urgency: item.urgency || 'normal',
+                notes: item.notes || null,
+                responsible_name: item.responsible_name || null,
+                therapies: item.therapies || [],
+                commercial_notes: item.commercial_notes || null,
+                financial_contact_date: item.financial_contact_date || null,
+                financial_result: item.financial_result || null,
+                financial_notes: item.financial_notes || null,
+            }))
+
+            const { data, error } = await supabase
+                .from('waiting_list')
+                .insert(inserts)
+                .select()
+
+            if (error) throw error
+            return NextResponse.json(data, { status: 201 })
+        } else {
+            const { data, error } = await supabase
+                .from('waiting_list')
+                .insert({
+                    clinic_id: profile.clinic_id,
+                    patient_id: body.patient_id || null,
+                    patient_name: body.patient_name,
+                    patient_phone: body.patient_phone,
+                    patient_email: body.patient_email,
+                    preferred_doctor_id: body.preferred_doctor_id || null,
+                    therapy_type: body.therapy_type,
+                    modality: body.modality || 'individual',
+                    preferred_shift: body.preferred_shift || 'any',
+                    preferred_days: body.preferred_days,
+                    urgency: body.urgency || 'normal',
+                    notes: body.notes,
+                    responsible_name: body.responsible_name || null,
+                    therapies: body.therapies || [],
+                    commercial_notes: body.commercial_notes || null,
+                    financial_contact_date: body.financial_contact_date || null,
+                    financial_result: body.financial_result || null,
+                    financial_notes: body.financial_notes || null,
+                })
+                .select()
+                .single()
+
+            if (error) throw error
+            return NextResponse.json(data, { status: 201 })
+        }
     } catch (error: any) {
         console.error('[API] waiting-list POST error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
