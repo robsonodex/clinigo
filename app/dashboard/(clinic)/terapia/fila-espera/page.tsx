@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Upload, Layers } from 'lucide-react'
+import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TherapyItem { name: string; qty: number }
@@ -26,11 +26,6 @@ export default function FilaEsperaPage() {
     const [form, setForm] = useState(emptyForm)
     const [statusFilter, setStatusFilter] = useState('')
     const [activeTab, setActiveTab] = useState<'comercial' | 'financeiro'>('comercial')
-
-    const [importOpen, setImportOpen] = useState(false)
-    const [importing, setImporting] = useState(false)
-    const [previewItems, setPreviewItems] = useState<any[]>([])
-    const [importError, setImportError] = useState<string | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -180,6 +175,39 @@ export default function FilaEsperaPage() {
         fetchData()
     }
 
+    const handleDeleteAll = async () => {
+        const totalItems = data?.items?.length || 0
+        if (totalItems === 0) {
+            toast.info('A fila de espera já está vazia.')
+            return
+        }
+
+        if (!confirm(
+            `⚠️ ATENÇÃO: Todos os ${totalItems} itens da Fila de Espera serão excluídos permanentemente.\n\n` +
+            `Esta ação NÃO pode ser desfeita. Deseja realmente limpar a fila para reimportar os dados?`
+        )) return
+
+        try {
+            toast.loading('Limpando fila de espera...', { id: 'clear-all' })
+            const res = await fetch('/api/waiting-list', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ all: true })
+            })
+            toast.dismiss('clear-all')
+            if (res.ok) {
+                toast.success(`✅ Todos os ${totalItems} itens foram excluídos da fila!`)
+                fetchData()
+            } else {
+                const err = await res.json()
+                toast.error(err.error || 'Erro ao limpar a fila de espera')
+            }
+        } catch (e) {
+            toast.dismiss('clear-all')
+            toast.error('Erro ao conectar ao servidor para limpar a fila')
+        }
+    }
+
     const addTherapy = () => setForm(prev => ({ ...prev, therapies: [...prev.therapies, { name: '', qty: 1 }] }))
     const removeTherapy = (idx: number) => setForm(prev => ({ ...prev, therapies: prev.therapies.filter((_, i) => i !== idx) }))
     const updateTherapy = (idx: number, field: 'name' | 'qty', value: string | number) => {
@@ -210,150 +238,6 @@ export default function FilaEsperaPage() {
         const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'fila_espera.xlsx'; a.click()
     }
 
-    const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        setImportError(null)
-        setPreviewItems([])
-
-        try {
-            const XLSX = await import('xlsx')
-            const reader = new FileReader()
-
-            reader.onload = (evt) => {
-                try {
-                    const bstr = evt.target?.result
-                    const wb = XLSX.read(bstr, { type: 'binary' })
-                    const wsname = wb.SheetNames[0]
-                    const ws = wb.Sheets[wsname]
-                    const rawData = XLSX.utils.sheet_to_json(ws)
-
-                    if (!Array.isArray(rawData) || rawData.length === 0) {
-                        setImportError('Nenhum dado encontrado na planilha modelo.')
-                        return
-                    }
-
-                    const mapped = rawData.map((row: any) => {
-                        const keys = Object.keys(row)
-                        const getVal = (possibleKeys: string[]) => {
-                            const key = keys.find(k => {
-                                const normalized = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
-                                return possibleKeys.some(pk => normalized.includes(pk) || pk.includes(normalized))
-                            })
-                            return key ? row[key] : null
-                        }
-
-                        // Identifica o nome do paciente de forma inteligente
-                        // Se houver uma coluna "criança", assume-se que é o paciente principal.
-                        let patient_name = getVal(['crianca', 'filho', 'nome da crianca'])
-                        let responsible_name = null
-
-                        if (patient_name) {
-                            // Se for criança, o contato ou mãe é o responsável
-                            responsible_name = getVal(['contato', 'responsavel', 'responsable', 'mae', 'pai'])
-                        } else {
-                            // Se não tem criança na linha, busca por termos padrão
-                            patient_name = getVal(['nome', 'paciente', 'patient', 'lead'])
-                            if (patient_name) {
-                                responsible_name = getVal(['responsavel', 'responsable', 'mae', 'pai'])
-                            } else {
-                                // Fallback: se não tiver criança nem paciente mapeado, mas tiver contato preenchido (ex: adultos na coluna Contato),
-                                // o próprio contato na linha será o paciente.
-                                const contatoVal = getVal(['contato'])
-                                if (contatoVal) {
-                                    patient_name = contatoVal
-                                    responsible_name = null
-                                }
-                            }
-                        }
-
-                        if (!patient_name) return null
-
-                        const phoneVal = getVal(['telefone', 'celular', 'whatsapp', 'fone', 'phone'])
-                        const patient_phone = phoneVal ? String(phoneVal).replace(/\D/g, '') : ''
-
-                        const preferredShiftVal = getVal(['turno', 'shift', 'periodo']) || 'any'
-                        let preferred_shift = 'any'
-                        if (typeof preferredShiftVal === 'string') {
-                            const cleanShift = preferredShiftVal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
-                            if (cleanShift.includes('manh') || cleanShift.includes('morn')) preferred_shift = 'morning'
-                            else if (cleanShift.includes('tard') || cleanShift.includes('after')) preferred_shift = 'afternoon'
-                            else if (cleanShift.includes('noit') || cleanShift.includes('even') || cleanShift.includes('night')) preferred_shift = 'evening'
-                        }
-
-                        const therapyTypeVal = getVal(['terapia', 'especialidade', 'therapy', 'therapies']) || ''
-                        let therapies: any[] = []
-                        if (therapyTypeVal) {
-                            const types = String(therapyTypeVal).split(/[,;]/).map(t => t.trim()).filter(Boolean)
-                            therapies = types.map(t => ({ name: t, qty: 1 }))
-                        }
-
-                        // Se houver parentesco no formato dele (ex: "Mãe"), concatena na observação
-                        const parentescoVal = getVal(['parentesco', 'relacao'])
-                        const obsOriginal = getVal(['observacao', 'observacoes', 'nota', 'notas', 'notes', 'comercial', 'historico'])
-                        let commercial_notes = obsOriginal ? String(obsOriginal).trim() : null
-                        if (parentescoVal) {
-                            const parentStr = `Parentesco do Responsável: ${parentescoVal}`
-                            commercial_notes = commercial_notes ? `${parentStr} | ${commercial_notes}` : parentStr
-                        }
-
-                        return {
-                            patient_name: String(patient_name).trim(),
-                            responsible_name: responsible_name ? String(responsible_name).trim() : null,
-                            patient_phone,
-                            patient_email: getVal(['email', 'mail']) ? String(getVal(['email', 'mail'])).trim() : null,
-                            therapy_type: therapyTypeVal ? String(therapyTypeVal).trim() : null,
-                            therapies,
-                            preferred_shift,
-                            commercial_notes,
-                        }
-                    }).filter(Boolean)
-
-                    if (mapped.length === 0) {
-                        setImportError('Nenhum contato válido encontrado. Certifique-se de que a coluna "Nome do Paciente *" esteja preenchida.')
-                        return
-                    }
-
-                    setPreviewItems(mapped)
-                } catch (err: any) {
-                    console.error(err)
-                    setImportError('Erro ao ler a estrutura do arquivo. Certifique-se de ser um arquivo .xlsx ou .csv válido.')
-                }
-            }
-
-            reader.readAsBinaryString(file)
-        } catch (err) {
-            console.error(err)
-            setImportError('Erro ao carregar analisador de planilhas.')
-        }
-    }
-
-    const handleConfirmImport = async () => {
-        if (previewItems.length === 0) return
-        setImporting(true)
-        try {
-            const res = await fetch('/api/waiting-list', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(previewItems)
-            })
-            if (res.ok) {
-                toast.success(`${previewItems.length} contatos importados com sucesso!`)
-                setImportOpen(false)
-                setPreviewItems([])
-                fetchData()
-            } else {
-                const err = await res.json()
-                toast.error(err.error || 'Erro ao processar importação.')
-            }
-        } catch (e) {
-            toast.error('Erro na requisição de importação.')
-        } finally {
-            setImporting(false)
-        }
-    }
-
     const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã', afternoon: 'Tarde', evening: 'Noite' }
     const statusColors: Record<string, string> = { waiting: 'bg-yellow-100 text-yellow-800', contacted: 'bg-blue-100 text-blue-800', scheduled: 'bg-green-100 text-green-800', cancelled: 'bg-red-100 text-red-800' }
     const statusLabels: Record<string, string> = { waiting: 'Aguardando', contacted: 'Contatado', scheduled: 'Agendado', cancelled: 'Cancelado' }
@@ -370,26 +254,28 @@ export default function FilaEsperaPage() {
                 </div>
                 <div className="flex gap-2 items-center flex-wrap">
                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer" style={{ fontSize: '16px' }}>
+                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer min-h-[44px]" style={{ fontSize: '16px' }}>
                         <option value="">Todos</option>
                         <option value="waiting">Aguardando</option>
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
                     <Button variant="outline" onClick={handleRemoveDuplicates}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800 min-h-[44px]" title="Detectar e remover registros duplicados">
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
                         <Layers className="w-4 h-4 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
                     </Button>
                     <Button variant="outline" onClick={exportExcel}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 font-semibold">
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" /><span className="hidden sm:inline">Excel</span>
                     </Button>
-                    <Button variant="outline" onClick={() => { setImportOpen(true); setPreviewItems([]); setImportError(null) }}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 min-h-[44px] font-semibold">
-                        <Upload className="w-4 h-4 text-blue-600" /><span className="hidden sm:inline">Importar</span>
-                    </Button>
+                    {data?.items?.length > 0 && (
+                        <Button variant="outline" onClick={handleDeleteAll}
+                            className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-red-50 border-red-200 shadow-sm rounded-xl px-4 font-semibold text-red-600 dark:text-red-400 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-red-800" title="Excluir todos os registros da fila de espera">
+                            <Trash2 className="w-4 h-4 text-red-500" /><span className="hidden sm:inline">Excluir Todos</span>
+                        </Button>
+                    )}
                     <Button onClick={openNew}
-                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 font-semibold">
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0">
                         <Plus className="w-4 h-4" /><span>Adicionar</span>
                     </Button>
                 </div>
@@ -554,116 +440,6 @@ export default function FilaEsperaPage() {
                         className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
                         <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
                     </Button>
-                </DialogContent>
-            </Dialog>
-
-            {/* Modal de Importação */}
-            <Dialog open={importOpen} onOpenChange={setImportOpen}>
-                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto w-full p-4 md:p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                            <Upload className="w-5 h-5 text-blue-650" />
-                            Importar Contatos para Fila de Espera
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-4 my-2 text-sm text-slate-600 dark:text-slate-400">
-                        <p>
-                            Importe seus contatos/leads diretamente de uma planilha Excel ou CSV. Os contatos serão inseridos automaticamente na fila de espera com status <strong>Aguardando</strong>.
-                        </p>
-
-                        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-slate-600 dark:text-slate-400">
-                            <div className="flex items-center gap-2">
-                                <FileSpreadsheet className="w-6 h-6 text-teal-600 shrink-0" />
-                                <div>
-                                    <div className="font-semibold text-slate-700 dark:text-slate-300">Planilha de Importação</div>
-                                    <div className="text-xs">Use o modelo exato para evitar erros.</div>
-                                </div>
-                            </div>
-                            <a href="/modelo_importacao_fila.xlsx" download="modelo_importacao_fila.xlsx"
-                                className="w-full md:w-auto h-10 px-4 flex items-center justify-center gap-1.5 text-xs bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl transition-colors cursor-pointer min-h-[44px] border border-slate-200 dark:border-slate-800 shadow-sm">
-                                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                                Baixar Planilha Modelo
-                            </a>
-                        </div>
-
-                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors relative flex flex-col items-center justify-center min-h-[120px]">
-                            <input 
-                                type="file" 
-                                accept=".xlsx, .xls, .csv" 
-                                onChange={handleImportFileChange}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                            <span className="font-semibold block text-slate-700 dark:text-slate-300">Selecione ou arraste a planilha</span>
-                            <span className="text-xs text-slate-400 block mt-1">Suporta .xlsx, .xls ou .csv</span>
-                        </div>
-
-                        {importError && (
-                            <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-3 rounded-lg border border-red-200 dark:border-red-900/50 text-xs font-semibold">
-                                ⚠️ {importError}
-                            </div>
-                        )}
-
-                        {previewItems.length > 0 && (
-                            <div className="space-y-3">
-                                <div className="text-emerald-755 dark:text-emerald-400 font-semibold flex items-center gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/50">
-                                    <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
-                                    Pronto! Detectamos {previewItems.length} contato(s) para importação.
-                                </div>
-
-                                <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
-                                    <div className="max-h-[180px] overflow-y-auto">
-                                        <table className="w-full text-left text-xs border-collapse">
-                                            <thead>
-                                                <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 font-bold sticky top-0 text-slate-700 dark:text-slate-300">
-                                                    <th className="p-2">Paciente</th>
-                                                    <th className="p-2">Responsável</th>
-                                                    <th className="p-2">Telefone</th>
-                                                    <th className="p-2">Turno</th>
-                                                    <th className="p-2">Terapias</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {previewItems.slice(0, 10).map((item, idx) => (
-                                                    <tr key={idx} className="border-b border-slate-200 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-900/40">
-                                                        <td className="p-2 truncate max-w-[120px] font-semibold text-slate-800 dark:text-slate-200">{item.patient_name}</td>
-                                                        <td className="p-2 truncate max-w-[100px]">{item.responsible_name || '—'}</td>
-                                                        <td className="p-2 whitespace-nowrap">{item.patient_phone || '—'}</td>
-                                                        <td className="p-2">{shiftLabels[item.preferred_shift] || item.preferred_shift}</td>
-                                                        <td className="p-2 truncate max-w-[120px]" title={item.therapy_type}>{item.therapy_type || '—'}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    {previewItems.length > 10 && (
-                                        <div className="p-2 bg-slate-50 dark:bg-slate-900/50 text-[10px] text-slate-400 text-center border-t border-slate-200 dark:border-slate-800">
-                                            Exibindo os primeiros 10 de {previewItems.length} contatos.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex gap-2.5 mt-4 pt-2 border-t border-slate-200 dark:border-slate-800 flex-col sm:flex-row">
-                        <Button type="button" variant="outline" onClick={() => { setImportOpen(false); setPreviewItems([]); setImportError(null) }}
-                            className="flex-1 h-11 text-sm font-semibold rounded-xl min-h-[44px]">
-                            Cancelar
-                        </Button>
-                        <Button type="button" onClick={handleConfirmImport} disabled={previewItems.length === 0 || importing}
-                            className="flex-1 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white font-semibold rounded-xl border-0 justify-center items-center min-h-[44px]">
-                            {importing ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                    Importando...
-                                </div>
-                            ) : (
-                                `Importar ${previewItems.length} Contato(s)`
-                            )}
-                        </Button>
-                    </div>
                 </DialogContent>
             </Dialog>
         </div>

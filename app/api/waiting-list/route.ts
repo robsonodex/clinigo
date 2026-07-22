@@ -97,66 +97,33 @@ export async function POST(request: NextRequest) {
         if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const body = await request.json()
-        const isArray = Array.isArray(body)
-
-        if (isArray) {
-            const inserts = body.map((item: any) => ({
+        const { data, error } = await supabase
+            .from('waiting_list')
+            .insert({
                 clinic_id: profile.clinic_id,
-                patient_id: item.patient_id || null,
-                patient_name: item.patient_name,
-                patient_phone: item.patient_phone || null,
-                patient_email: item.patient_email || null,
-                preferred_doctor_id: item.preferred_doctor_id || null,
-                therapy_type: item.therapy_type || null,
-                modality: item.modality || 'individual',
-                preferred_shift: item.preferred_shift || 'any',
-                preferred_days: item.preferred_days || null,
-                urgency: item.urgency || 'normal',
-                notes: item.notes || null,
-                responsible_name: item.responsible_name || null,
-                therapies: item.therapies || [],
-                commercial_notes: item.commercial_notes || null,
-                financial_contact_date: item.financial_contact_date || null,
-                financial_result: item.financial_result || null,
-                financial_notes: item.financial_notes || null,
-            }))
+                patient_id: body.patient_id || null,
+                patient_name: body.patient_name,
+                patient_phone: body.patient_phone,
+                patient_email: body.patient_email,
+                preferred_doctor_id: body.preferred_doctor_id || null,
+                therapy_type: body.therapy_type,
+                modality: body.modality || 'individual',
+                preferred_shift: body.preferred_shift || 'any',
+                preferred_days: body.preferred_days,
+                urgency: body.urgency || 'normal',
+                notes: body.notes,
+                responsible_name: body.responsible_name || null,
+                therapies: body.therapies || [],
+                commercial_notes: body.commercial_notes || null,
+                financial_contact_date: body.financial_contact_date || null,
+                financial_result: body.financial_result || null,
+                financial_notes: body.financial_notes || null,
+            })
+            .select()
+            .single()
 
-            const { data, error } = await supabase
-                .from('waiting_list')
-                .insert(inserts)
-                .select()
-
-            if (error) throw error
-            return NextResponse.json(data, { status: 201 })
-        } else {
-            const { data, error } = await supabase
-                .from('waiting_list')
-                .insert({
-                    clinic_id: profile.clinic_id,
-                    patient_id: body.patient_id || null,
-                    patient_name: body.patient_name,
-                    patient_phone: body.patient_phone,
-                    patient_email: body.patient_email,
-                    preferred_doctor_id: body.preferred_doctor_id || null,
-                    therapy_type: body.therapy_type,
-                    modality: body.modality || 'individual',
-                    preferred_shift: body.preferred_shift || 'any',
-                    preferred_days: body.preferred_days,
-                    urgency: body.urgency || 'normal',
-                    notes: body.notes,
-                    responsible_name: body.responsible_name || null,
-                    therapies: body.therapies || [],
-                    commercial_notes: body.commercial_notes || null,
-                    financial_contact_date: body.financial_contact_date || null,
-                    financial_result: body.financial_result || null,
-                    financial_notes: body.financial_notes || null,
-                })
-                .select()
-                .single()
-
-            if (error) throw error
-            return NextResponse.json(data, { status: 201 })
-        }
+        if (error) throw error
+        return NextResponse.json(data, { status: 201 })
     } catch (error: any) {
         console.error('[API] waiting-list POST error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -210,13 +177,46 @@ export async function DELETE(request: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+        const { data: profile } = await supabase
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+
         const body = await request.json()
-        if (!body.id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
+
+        // Excluir todos os registros da fila de espera desta clínica
+        if (body.all === true) {
+            const { error } = await supabase
+                .from('waiting_list')
+                .delete()
+                .eq('clinic_id', profile.clinic_id)
+
+            if (error) throw error
+            return NextResponse.json({ success: true, message: 'Todos os registros da fila de espera foram excluídos.' })
+        }
+
+        // Excluir lote específico de IDs da clínica
+        if (Array.isArray(body.ids) && body.ids.length > 0) {
+            const { error } = await supabase
+                .from('waiting_list')
+                .delete()
+                .eq('clinic_id', profile.clinic_id)
+                .in('id', body.ids)
+
+            if (error) throw error
+            return NextResponse.json({ success: true, message: `${body.ids.length} registros excluídos.` })
+        }
+
+        if (!body.id) return NextResponse.json({ error: 'ID ou opção de exclusão é obrigatório' }, { status: 400 })
 
         const { error } = await supabase
             .from('waiting_list')
             .delete()
             .eq('id', body.id)
+            .eq('clinic_id', profile.clinic_id)
 
         if (error) throw error
         return NextResponse.json({ success: true })
