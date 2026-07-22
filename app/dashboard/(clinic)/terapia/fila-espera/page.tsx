@@ -183,7 +183,20 @@ export default function FilaEsperaPage() {
                             return key ? row[key] : null
                         }
 
-                        const patient_name = getVal(['nome', 'paciente', 'patient', 'lead'])
+                        // Identifica o nome do paciente de forma inteligente
+                        // Se houver uma coluna "criança", assume-se que é o paciente principal.
+                        let patient_name = getVal(['crianca', 'filho', 'nome da crianca'])
+                        let responsible_name = null
+
+                        if (patient_name) {
+                            // Se for criança, o contato ou mãe é o responsável
+                            responsible_name = getVal(['contato', 'responsavel', 'responsable', 'mae', 'pai'])
+                        } else {
+                            // Mapeamento padrão se não for planilha específica de crianças
+                            patient_name = getVal(['nome', 'paciente', 'patient', 'lead'])
+                            responsible_name = getVal(['responsavel', 'responsable', 'mae', 'pai'])
+                        }
+
                         if (!patient_name) return null
 
                         const phoneVal = getVal(['telefone', 'celular', 'whatsapp', 'fone', 'phone'])
@@ -205,15 +218,24 @@ export default function FilaEsperaPage() {
                             therapies = types.map(t => ({ name: t, qty: 1 }))
                         }
 
+                        // Se houver parentesco no formato dele (ex: "Mãe"), concatena na observação
+                        const parentescoVal = getVal(['parentesco', 'relacao'])
+                        const obsOriginal = getVal(['observacao', 'observacoes', 'nota', 'notas', 'notes', 'comercial', 'historico'])
+                        let commercial_notes = obsOriginal ? String(obsOriginal).trim() : null
+                        if (parentescoVal) {
+                            const parentStr = `Parentesco do Responsável: ${parentescoVal}`
+                            commercial_notes = commercial_notes ? `${parentStr} | ${commercial_notes}` : parentStr
+                        }
+
                         return {
                             patient_name: String(patient_name).trim(),
-                            responsible_name: getVal(['responsavel', 'responsable', 'mae', 'pai']) ? String(getVal(['responsavel', 'responsable', 'mae', 'pai'])).trim() : null,
+                            responsible_name: responsible_name ? String(responsible_name).trim() : null,
                             patient_phone,
                             patient_email: getVal(['email', 'mail']) ? String(getVal(['email', 'mail'])).trim() : null,
                             therapy_type: therapyTypeVal ? String(therapyTypeVal).trim() : null,
                             therapies,
                             preferred_shift,
-                            commercial_notes: getVal(['observacao', 'observacoes', 'nota', 'notas', 'notes', 'comercial', 'historico']) ? String(getVal(['observacao', 'observacoes', 'nota', 'notas', 'notes', 'comercial', 'historico'])).trim() : null,
+                            commercial_notes,
                         }
                     }).filter(Boolean)
 
