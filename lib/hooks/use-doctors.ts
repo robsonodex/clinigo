@@ -38,6 +38,7 @@ export interface CreateDoctorData {
     crm: string
     crm_state: string
     specialty: string
+    specialties_additional?: string[]
     consultation_price: number
     bio?: string
 }

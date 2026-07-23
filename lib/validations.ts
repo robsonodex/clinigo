@@ -107,7 +107,8 @@ export const doctorFormSchema = z.object({
         ),
     crm: z.string().min(4, 'CRM inválido').max(10, 'CRM muito longo'),
     crm_state: z.string().length(2, 'Estado inválido'),
-    specialty: z.string().min(3, 'Especialidade inválida'),
+    specialty: z.string().min(2, 'Especialidade principal é obrigatória'),
+    specialties_additional: z.array(z.string()).optional().default([]),
     consultation_price: z
         .number()
         .positive('Preço deve ser positivo')

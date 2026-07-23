@@ -49,9 +49,16 @@ export function DoctorCard({ doctor, onSelect }: DoctorCardProps) {
                         <p className="text-sm text-muted-foreground">
                             {councilLabel} {doctor.crm}/{doctor.crm_state}
                         </p>
-                        <Badge variant="secondary" className="mt-2">
-                            {doctor.specialty}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                            <Badge variant="secondary">
+                                {doctor.specialty}
+                            </Badge>
+                            {Array.isArray((doctor as any).specialties_additional) && (doctor as any).specialties_additional.map((spec: string, i: number) => (
+                                <Badge key={i} variant="outline" className="text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/40">
+                                    {spec}
+                                </Badge>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

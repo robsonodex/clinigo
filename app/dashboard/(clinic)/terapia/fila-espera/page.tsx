@@ -215,7 +215,7 @@ export default function FilaEsperaPage() {
         }
     }
 
-    // Processar arquivo Excel/CSV selecionado
+    // Processar arquivo Excel/CSV selecionado com leitor universal de alta tolerância
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -223,74 +223,136 @@ export default function FilaEsperaPage() {
         setIsProcessingFile(true)
 
         try {
-            const ExcelJS = (await import('exceljs')).default
-            const workbook = new ExcelJS.Workbook()
+            const XLSX = await import('xlsx')
             const buffer = await file.arrayBuffer()
-            await workbook.xlsx.load(buffer)
+            const workbook = XLSX.read(buffer, { type: 'array', cellDates: true })
             
-            const worksheet = workbook.worksheets[0]
-            if (!worksheet) {
-                toast.error('Planilha vazia ou inválida')
+            const firstSheetName = workbook.SheetNames[0]
+            if (!firstSheetName) {
+                toast.error('Planilha vazia ou sem abas válidas.')
                 setIsProcessingFile(false)
                 return
             }
 
-            const rows: any[] = []
-            let headerRowIndex = 1
-            const headers: Record<number, string> = {}
+            const worksheet = workbook.Sheets[firstSheetName]
+            // Converter para matriz de dados brutos (linhas x colunas)
+            const rawMatrix: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+            
+            if (!rawMatrix || rawMatrix.length === 0) {
+                toast.error('Nenhum dado encontrado na planilha.')
+                setIsProcessingFile(false)
+                return
+            }
 
-            worksheet.eachRow((row, rowNumber) => {
-                if (rowNumber === 1) {
-                    row.eachCell((cell, colNumber) => {
-                        const val = (cell.value?.toString() || '').trim().toLowerCase()
-                        headers[colNumber] = val
-                    })
-                } else {
-                    const rowData: any = {}
-                    row.eachCell((cell, colNumber) => {
-                        const header = headers[colNumber] || `col_${colNumber}`
-                        const rawVal = cell.value
-                        let strVal = ''
-                        if (rawVal !== null && rawVal !== undefined) {
-                            if (typeof rawVal === 'object' && 'text' in rawVal) strVal = rawVal.text || ''
-                            else if (typeof rawVal === 'object' && 'result' in rawVal) strVal = String(rawVal.result || '')
-                            else strVal = String(rawVal)
-                        }
-                        rowData[header] = strVal.trim()
-                    })
+            // Função auxiliar de limpeza e normalização
+            const clean = (v: any) => String(v ?? '').trim()
+            const norm = (v: any) => clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-                    // Mapeamento Inteligente de Colunas
-                    const patientName = rowData['nome'] || rowData['paciente'] || rowData['nome do paciente'] || rowData['nome paciente'] || rowData['col_1'] || ''
-                    const responsibleName = rowData['responsavel'] || rowData['responsável'] || rowData['nome do responsavel'] || rowData['col_2'] || ''
-                    const phone = rowData['telefone'] || rowData['fone'] || rowData['celular'] || rowData['whatsapp'] || rowData['col_3'] || ''
-                    const email = rowData['email'] || rowData['e-mail'] || rowData['col_4'] || ''
-                    const therapyType = rowData['terapias'] || rowData['terapia'] || rowData['especialidade'] || rowData['col_5'] || ''
-                    const shift = rowData['turno'] || rowData['turno preferido'] || rowData['col_6'] || 'any'
-                    const notes = rowData['observacao'] || rowData['observação'] || rowData['notas'] || rowData['obs'] || rowData['col_7'] || ''
+            // 1. Encontrar a linha do cabeçalho procurando por termos conhecidos nas primeiras 15 linhas
+            let headerRowIndex = -1
+            let nameColIdx = -1
+            let respColIdx = -1
+            let phoneColIdx = -1
+            let emailColIdx = -1
+            let therapyColIdx = -1
+            let shiftColIdx = -1
+            let notesColIdx = -1
 
-                    if (patientName) {
-                        rows.push({
-                            patient_name: patientName,
-                            responsible_name: responsibleName,
-                            patient_phone: phone,
-                            patient_email: email,
-                            therapy_type: therapyType,
-                            preferred_shift: shift,
-                            commercial_notes: notes,
-                        })
-                    }
+            const keywordsName = ['nome', 'paciente', 'crianca', 'aluno', 'cliente', 'lead', 'atendido']
+            const keywordsResp = ['responsavel', 'mae', 'pai', 'tutor', 'contato responsavel', 'nome responsavel']
+            const keywordsPhone = ['telefone', 'celular', 'fone', 'whatsapp', 'tel', 'contato', 'numero']
+            const keywordsEmail = ['email', 'e-mail']
+            const keywordsTherapy = ['terapia', 'terapias', 'especialidade', 'tratamento', 'servico', 'queixa']
+            const keywordsShift = ['turno', 'horario', 'periodo', 'preferencia']
+            const keywordsNotes = ['obs', 'observacao', 'observacoes', 'notas', 'historico', 'comentario']
+
+            for (let r = 0; r < Math.min(rawMatrix.length, 15); r++) {
+                const row = rawMatrix[r]
+                if (!Array.isArray(row)) continue
+
+                let matchCount = 0
+                for (let c = 0; c < row.length; c++) {
+                    const cellNorm = norm(row[c])
+                    if (!cellNorm) continue
+
+                    if (keywordsName.some(k => cellNorm.includes(k))) matchCount++
+                    if (keywordsPhone.some(k => cellNorm.includes(k))) matchCount++
+                    if (keywordsTherapy.some(k => cellNorm.includes(k))) matchCount++
                 }
-            })
 
-            if (rows.length === 0) {
-                toast.error('Nenhum registro de paciente encontrado na planilha.')
+                if (matchCount >= 1) {
+                    headerRowIndex = r
+                    // Mapear índices das colunas a partir deste cabeçalho
+                    row.forEach((cellVal: any, colIdx: number) => {
+                        const cellNorm = norm(cellVal)
+                        if (!cellNorm) return
+
+                        if (nameColIdx === -1 && keywordsName.some(k => cellNorm.includes(k))) nameColIdx = colIdx
+                        else if (respColIdx === -1 && keywordsResp.some(k => cellNorm.includes(k))) respColIdx = colIdx
+                        else if (phoneColIdx === -1 && keywordsPhone.some(k => cellNorm.includes(k))) phoneColIdx = colIdx
+                        else if (emailColIdx === -1 && keywordsEmail.some(k => cellNorm.includes(k))) emailColIdx = colIdx
+                        else if (therapyColIdx === -1 && keywordsTherapy.some(k => cellNorm.includes(k))) therapyColIdx = colIdx
+                        else if (shiftColIdx === -1 && keywordsShift.some(k => cellNorm.includes(k))) shiftColIdx = colIdx
+                        else if (notesColIdx === -1 && keywordsNotes.some(k => cellNorm.includes(k))) notesColIdx = colIdx
+                    })
+                    break
+                }
+            }
+
+            // Fallback: se nenhuma linha pareceu cabeçalho, assumir que a linha 0 tem o cabeçalho ou dados brutos
+            if (headerRowIndex === -1) {
+                headerRowIndex = 0
+                nameColIdx = 0
+                respColIdx = 1
+                phoneColIdx = 2
+                emailColIdx = 3
+                therapyColIdx = 4
+                shiftColIdx = 5
+                notesColIdx = 6
+            } else if (nameColIdx === -1) {
+                // Se achou linha de cabeçalho mas não achou coluna exata de nome, pega a primeira coluna com dados
+                nameColIdx = 0
+            }
+
+            // Extract rows
+            const extractedRows: any[] = []
+            const startRow = headerRowIndex + 1
+
+            for (let r = startRow; r < rawMatrix.length; r++) {
+                const row = rawMatrix[r]
+                if (!Array.isArray(row) || row.length === 0) continue
+
+                const patientName = clean(row[nameColIdx])
+                // Ignorar linhas vazias ou que repetem o próprio cabeçalho
+                if (!patientName || keywordsName.some(k => norm(patientName) === k)) continue
+
+                const responsibleName = respColIdx >= 0 ? clean(row[respColIdx]) : ''
+                const phone = phoneColIdx >= 0 ? clean(row[phoneColIdx]) : ''
+                const email = emailColIdx >= 0 ? clean(row[emailColIdx]) : ''
+                const therapyType = therapyColIdx >= 0 ? clean(row[therapyColIdx]) : ''
+                const shift = shiftColIdx >= 0 ? clean(row[shiftColIdx]) : 'any'
+                const notes = notesColIdx >= 0 ? clean(row[notesColIdx]) : ''
+
+                extractedRows.push({
+                    patient_name: patientName,
+                    responsible_name: responsibleName,
+                    patient_phone: phone,
+                    patient_email: email,
+                    therapy_type: therapyType,
+                    preferred_shift: shift || 'any',
+                    commercial_notes: notes,
+                })
+            }
+
+            if (extractedRows.length === 0) {
+                toast.error('Nenhum registro de paciente encontrado na planilha. Verifique se o arquivo tem dados nas colunas.')
             } else {
-                setImportRows(rows)
-                toast.success(`${rows.length} registros prontos para importação!`)
+                setImportRows(extractedRows)
+                toast.success(`✅ ${extractedRows.length} registros reconhecidos e prontos para importação!`)
             }
         } catch (err: any) {
             console.error('Erro ao ler planilha:', err)
-            toast.error('Erro ao ler o arquivo Excel. Certifique-se de que é um formato .xlsx válido.')
+            toast.error('Erro ao ler a planilha. Certifique-se de que é um arquivo Excel (.xlsx, .xls) ou CSV válido.')
         } finally {
             setIsProcessingFile(false)
         }

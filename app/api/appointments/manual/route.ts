@@ -54,6 +54,8 @@ interface ManualAppointmentRequest {
     notifications?: NotificationSettings
     notes?: string
     lock_id?: string // PREMIUM: Anti-overbooking lock ID
+    is_block?: boolean // Compromisso/Bloqueio interno (sem paciente)
+    block_title?: string // Título do bloqueio (ex: "Reunião de Equipe")
 }
 
 export async function POST(request: NextRequest) {
@@ -103,7 +105,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        if (!body.patient_id && !body.quick_registration) {
+        // Bloqueios internos não precisam de paciente
+        if (!body.is_block && !body.patient_id && !body.quick_registration) {
             return NextResponse.json(
                 { error: 'Paciente ou dados para cadastro são obrigatórios' },
                 { status: 400 }
@@ -128,96 +131,101 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Get or create patient
-        let patientId = body.patient_id
+        // Get or create patient (pular para bloqueios internos)
+        let patientId: string | null = body.patient_id || null
+        let patient: any = null
 
-        if (!patientId && body.quick_registration) {
-            // Quick registration
-            const { full_name, phone, date_of_birth, cpf, email } = body.quick_registration
+        if (!body.is_block) {
+            if (!patientId && body.quick_registration) {
+                // Quick registration
+                const { full_name, phone, date_of_birth, cpf, email } = body.quick_registration
 
-            if (!full_name || !phone) {
-                return NextResponse.json(
-                    { error: 'Nome e telefone são obrigatórios para cadastro rápido' },
-                    { status: 400 }
-                )
-            }
-
-            // Check if patient with same phone or CPF exists IN THIS CLINIC
-            let existingPatient = null
-
-            if (cpf) {
-                const { data } = await supabase
-                    .from('patients')
-                    .select('id')
-                    .eq('clinic_id', clinicId)
-                    .eq('cpf', cpf.replace(/\D/g, ''))
-                    .single()
-                existingPatient = data
-            }
-
-            if (!existingPatient) {
-                const { data } = await supabase
-                    .from('patients')
-                    .select('id')
-                    .eq('clinic_id', clinicId)
-                    .eq('phone', phone.replace(/\D/g, ''))
-                    .single()
-                existingPatient = data
-            }
-
-            if (existingPatient) {
-                patientId = existingPatient.id
-            } else {
-                // Create new patient
-                const { data: newPatient, error: patientError } = await supabase
-                    .from('patients')
-                    .insert({
-                        full_name,
-                        phone: phone.replace(/\D/g, ''),
-                        date_of_birth: date_of_birth || null,
-                        cpf: cpf ? cpf.replace(/\D/g, '') : null,
-                        email: email || null,
-                        clinic_id: clinicId,
-                        created_at: new Date().toISOString(),
-                    })
-                    .select('id')
-                    .single()
-
-                if (patientError) {
-                    console.error('Error creating patient:', patientError)
+                if (!full_name || !phone) {
                     return NextResponse.json(
-                        { error: 'Erro ao cadastrar paciente' },
-                        { status: 500 }
+                        { error: 'Nome e telefone são obrigatórios para cadastro rápido' },
+                        { status: 400 }
                     )
                 }
 
-                patientId = newPatient.id
+                // Check if patient with same phone or CPF exists IN THIS CLINIC
+                let existingPatient = null
+
+                if (cpf) {
+                    const { data } = await supabase
+                        .from('patients')
+                        .select('id')
+                        .eq('clinic_id', clinicId)
+                        .eq('cpf', cpf.replace(/\D/g, ''))
+                        .single()
+                    existingPatient = data
+                }
+
+                if (!existingPatient) {
+                    const { data } = await supabase
+                        .from('patients')
+                        .select('id')
+                        .eq('clinic_id', clinicId)
+                        .eq('phone', phone.replace(/\D/g, ''))
+                        .single()
+                    existingPatient = data
+                }
+
+                if (existingPatient) {
+                    patientId = existingPatient.id
+                } else {
+                    // Create new patient
+                    const { data: newPatient, error: patientError } = await supabase
+                        .from('patients')
+                        .insert({
+                            full_name,
+                            phone: phone.replace(/\D/g, ''),
+                            date_of_birth: date_of_birth || null,
+                            cpf: cpf ? cpf.replace(/\D/g, '') : null,
+                            email: email || null,
+                            clinic_id: clinicId,
+                            created_at: new Date().toISOString(),
+                        })
+                        .select('id')
+                        .single()
+
+                    if (patientError) {
+                        console.error('Error creating patient:', patientError)
+                        return NextResponse.json(
+                            { error: 'Erro ao cadastrar paciente' },
+                            { status: 500 }
+                        )
+                    }
+
+                    patientId = newPatient.id
+                }
             }
-        }
 
-        // Validate patient exists
-        const { data: patient } = await supabase
-            .from('patients')
-            .select('id, full_name, email, phone, clinic_id')
-            .eq('id', patientId)
-            .single()
+            // Validate patient exists
+            const { data: patientData } = await supabase
+                .from('patients')
+                .select('id, full_name, email, phone, clinic_id')
+                .eq('id', patientId)
+                .single()
 
-        if (!patient) {
-            return NextResponse.json(
-                { error: 'Paciente não encontrado' },
-                { status: 404 }
-            )
-        }
+            patient = patientData
 
-        if (patient.clinic_id !== clinicId) {
-            console.error(`Mismatch: Patient ${patient.id} (Clinic ${patient.clinic_id}) vs Request Clinic ${clinicId}`)
-            return NextResponse.json(
-                {
-                    error: 'Paciente pertence a outra clínica',
-                    details: 'O paciente selecionado não está vinculado a esta clínica. Atualize a página.'
-                },
-                { status: 400 }
-            )
+            if (!patient) {
+                return NextResponse.json(
+                    { error: 'Paciente não encontrado' },
+                    { status: 404 }
+                )
+            }
+
+            if (patient.clinic_id !== clinicId) {
+                console.error(`Mismatch: Patient ${patient.id} (Clinic ${patient.clinic_id}) vs Request Clinic ${clinicId}`)
+                return NextResponse.json(
+                    {
+                        error: 'Paciente pertence a outra clínica',
+                        details: 'O paciente selecionado não está vinculado a esta clínica. Atualize a página.'
+                    },
+                    { status: 400 }
+                )
+            }
         }
 
         // PREMIUM: Validate lock if provided
@@ -356,12 +364,13 @@ export async function POST(request: NextRequest) {
             id: appointmentId,
             clinic_id: clinicId,
             doctor_id: body.doctor_id,
-            patient_id: patientId,
+            patient_id: body.is_block ? null : patientId,
             appointment_date: appointmentDate,
             appointment_time: appointmentTime,
             status: 'CONFIRMED',
-            payment_type: body.payment.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR',
-            appointment_type: body.type === 'telemedicina' ? 'online' : 'presencial',
+            payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
+            appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
+            notes: body.is_block ? (body.block_title || 'Compromisso Interno') : (body.notes || null),
         }
 
         // Generate video link for telemedicine appointments
@@ -421,31 +430,31 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Create financial entry if payment was made at counter
-        try {
-            const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment.type)
+        // Create financial entry if payment was made at counter (skip for blocks)
+        if (!body.is_block) {
+            try {
+                const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment?.type)
 
-            if (paidAtCounter && price > 0) {
-                // Check if financial_entries has the new columns by inspecting the error or just trying safe insert
-                // For safety, we try unrestricted insert, but catch error if columns missing
-                await supabase
-                    .from('financial_entries')
-                    .insert({
-                        clinic_id: clinicId,
-                        type: 'income',
-                        category: 'consultation',
-                        description: `Consulta - ${patient.full_name}`,
-                        amount: body.payment.amount_paid || price,
-                        payment_method: body.payment.type.toUpperCase(),
-                        status: 'paid', // status might be missing in strict schema? no, status is usually core.
-                        paid_at: new Date().toISOString(),
-                        reference_type: 'appointment',
-                        reference_id: appointmentId,
-                        created_by: user.id,
-                    })
+                if (paidAtCounter && price > 0) {
+                    await supabase
+                        .from('financial_entries')
+                        .insert({
+                            clinic_id: clinicId,
+                            type: 'income',
+                            category: 'consultation',
+                            description: `Consulta - ${patient?.full_name || 'Paciente'}`,
+                            amount: body.payment.amount_paid || price,
+                            payment_method: body.payment.type.toUpperCase(),
+                            status: 'paid',
+                            paid_at: new Date().toISOString(),
+                            reference_type: 'appointment',
+                            reference_id: appointmentId,
+                            created_by: user.id,
+                        })
+                }
+            } catch (finError) {
+                console.warn('Non-critical: Failed to create financial entry (schema mismatch?)', finError)
             }
-        } catch (finError) {
-            console.warn('Non-critical: Failed to create financial entry (schema mismatch?)', finError)
         }
 
         // PREMIUM: Confirm lock if provided
@@ -542,8 +551,8 @@ export async function POST(request: NextRequest) {
 
         const appointmentWithRelations = fullAppointment as any
 
-        // Send email notification if enabled
-        if (body.notifications?.send_email && patient.email) {
+        // Send email notification if enabled (skip for blocks)
+        if (!body.is_block && body.notifications?.send_email && patient?.email) {
             try {
                 const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
@@ -630,8 +639,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Send WhatsApp notification if enabled
-        if (body.notifications?.send_whatsapp && patient.phone) {
+        // Send WhatsApp notification if enabled (skip for blocks)
+        if (!body.is_block && body.notifications?.send_whatsapp && patient?.phone) {
             try {
                 const { sendWhatsAppMessage, checkInstanceStatus } = await import('@/lib/whatsapp/service')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
@@ -693,18 +702,19 @@ export async function POST(request: NextRequest) {
             success: true,
             appointment: {
                 id: appointmentId,
-                patient_id: patientId,
+                patient_id: body.is_block ? null : patientId,
                 doctor_id: body.doctor_id,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',
-                appointment_type: body.type === 'telemedicina' ? 'telemedicina' : 'presencial',
-                patient: appointmentWithRelations?.patient || { full_name: (patient as any).full_name, phone: (patient as any).phone, email: (patient as any).email },
+                appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'telemedicina' : 'presencial'),
+                notes: body.is_block ? (body.block_title || 'Compromisso Interno') : (body.notes || null),
+                patient: body.is_block ? null : (appointmentWithRelations?.patient || { full_name: patient?.full_name, phone: patient?.phone, email: patient?.email }),
                 doctor: appointmentWithRelations?.doctor || { user: { full_name: (doctor as any).user?.full_name || 'Médico' } },
                 clinic: appointmentWithRelations?.clinic,
-                qr_code: qrCodeData
+                qr_code: body.is_block ? null : qrCodeData
             },
-            message: 'Agendamento criado com sucesso',
+            message: body.is_block ? 'Bloqueio/Compromisso criado com sucesso' : 'Agendamento criado com sucesso',
         })
 
     } catch (error) {

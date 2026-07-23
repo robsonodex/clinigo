@@ -304,6 +304,7 @@ async function handlePatchDoctor(request: NextRequest, doctorId: string) {
     const userFields: Record<string, unknown> = {}
 
     if (body.specialty !== undefined) doctorFields.specialty = body.specialty
+    if (body.specialties_additional !== undefined) doctorFields.specialties_additional = body.specialties_additional
     if (body.consultation_price !== undefined) doctorFields.consultation_price = body.consultation_price
     if (body.consultation_duration !== undefined) doctorFields.consultation_duration = body.consultation_duration
     if (body.display_settings !== undefined) doctorFields.display_settings = body.display_settings

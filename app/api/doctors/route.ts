@@ -333,6 +333,7 @@ export async function POST(request: NextRequest) {
                 crm: validatedData.crm,
                 crm_state: validatedData.crm_state,
                 specialty: validatedData.specialty,
+                specialties_additional: (validatedData as any).specialties_additional || [],
                 consultation_price: validatedData.consultation_price,
                 consultation_duration: validatedData.consultation_duration,
                 display_settings: validatedData.display_settings,

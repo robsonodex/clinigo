@@ -86,9 +86,8 @@ import { ManualAppointmentModal } from '@/components/appointments/ManualAppointm
 import { RecurringAppointmentModal } from '@/components/appointments/RecurringAppointmentModal'
 import { EditSeriesModal } from '@/components/appointments/EditSeriesModal'
 import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenceModal'
-import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
-import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
-import { AlertTriangle } from 'lucide-react'
+import { BlockScheduleModal } from '@/components/appointments/BlockScheduleModal'
+import { AlertTriangle, Lock } from 'lucide-react'
 import {
     Tooltip,
     TooltipContent,
@@ -194,6 +193,7 @@ export default function AgendaPage() {
     const [view, setView] = useState<'week' | 'day'>('week')
     const [calendarStyle, setCalendarStyle] = useState<'standard' | 'timeline'>('standard')
     const [manualAppointmentOpen, setManualAppointmentOpen] = useState(false)
+    const [blockModalOpen, setBlockModalOpen] = useState(false)
     const [isEncaixeMode, setIsEncaixeMode] = useState(false)
     const [recurringAppointmentOpen, setRecurringAppointmentOpen] = useState(false)
     const [absenceModalOpen, setAbsenceModalOpen] = useState(false)
@@ -507,9 +507,7 @@ export default function AgendaPage() {
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
-                // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
-                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         )
     }
 
@@ -521,9 +519,7 @@ export default function AgendaPage() {
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
-                // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
-                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
     }
 
@@ -865,6 +861,17 @@ export default function AgendaPage() {
                         Encaixe
                     </Button>
                     <Button
+                        variant="outline"
+                        className="gap-2 h-10 text-sm border-amber-300 text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl px-4 font-semibold"
+                        onClick={() => {
+                            setPreselectedSlot(null)
+                            setBlockModalOpen(true)
+                        }}
+                    >
+                        <Lock className="h-4 w-4 text-amber-600" />
+                        Bloquear Horário
+                    </Button>
+                    <Button
                         variant={showFreeSlots ? 'default' : 'outline'}
                         className={cn(
                             'gap-2 h-10 text-sm rounded-xl px-4 font-semibold',
@@ -1080,9 +1087,9 @@ export default function AgendaPage() {
                                                                                 setDetailsDrawerOpen(true)
                                                                             }}
                                                                         >
-                                                                            {/* Patient Name */}
+                                                                            {/* Patient Name / Block Title */}
                                                                             <div className={cn("font-bold truncate text-sm leading-tight", isCancelled && "line-through opacity-70")}>
-                                                                                {appointment.patient.full_name}
+                                                                                {appointment.patient?.full_name || (appointment as any).notes || '🔒 Bloqueio / Compromisso'}
                                                                             </div>
 
                                                                             {/* Start Time - End Time */}
@@ -1160,9 +1167,9 @@ export default function AgendaPage() {
                                                                     <TooltipContent side="right" className="max-w-xs">
                                                                         <div className="space-y-2">
                                                                             <div>
-                                                                                <p className="font-semibold text-sm">{appointment.patient.full_name}</p>
+                                                                                <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || '🔒 Bloqueio / Compromisso'}</p>
                                                                                 <p className="text-xs text-muted-foreground">
-                                                                                    {appointment.patient.phone && `Tel: ${appointment.patient.phone}`}
+                                                                                    {appointment.patient?.phone ? `Tel: ${appointment.patient.phone}` : 'Compromisso Interno'}
                                                                                 </p>
                                                                             </div>
                                                                             <div className="text-xs space-y-1">
@@ -1328,7 +1335,7 @@ export default function AgendaPage() {
                                                                                     }}
                                                                                 >
                                                                                     <div className="text-[11px] font-bold leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                                                                                        {appointment.patient.full_name.toUpperCase()}({doctorName.toUpperCase()}{specShort ? `-${specShort}` : ''})
+                                                                                        {(appointment.patient?.full_name || (appointment as any).notes || '🔒 BLOQUEIO').toUpperCase()}({doctorName.toUpperCase()}{specShort ? `-${specShort}` : ''})
                                                                                     </div>
                                                                                     <div className="text-[11px] opacity-90 leading-tight">
                                                                                         {appointment.appointment_time.substring(0, 5)} – {endTime}
@@ -1386,9 +1393,9 @@ export default function AgendaPage() {
                                                                             <TooltipContent side="top" className="max-w-xs">
                                                                                 <div className="space-y-2">
                                                                                     <div>
-                                                                                        <p className="font-semibold text-sm">{appointment.patient.full_name}</p>
+                                                                                        <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || '🔒 Bloqueio / Compromisso'}</p>
                                                                                         <p className="text-xs text-muted-foreground">
-                                                                                            {appointment.patient.phone && `Tel: ${appointment.patient.phone}`}
+                                                                                            {appointment.patient?.phone ? `Tel: ${appointment.patient.phone}` : 'Compromisso Interno'}
                                                                                         </p>
                                                                                     </div>
                                                                                     <div className="text-xs space-y-1">
@@ -1555,6 +1562,17 @@ export default function AgendaPage() {
                 preselectedTime={preselectedSlot?.time}
                 onSuccess={(appointmentDate) => {
                     // ✅ Navigate agenda to created appointment date so it appears immediately
+                    setSelectedDate(parseISO(appointmentDate))
+                }}
+            />
+
+            {/* Modal de Bloqueio / Compromisso Interno */}
+            <BlockScheduleModal
+                open={blockModalOpen}
+                onOpenChange={setBlockModalOpen}
+                preselectedDate={preselectedSlot?.date}
+                preselectedTime={preselectedSlot?.time}
+                onSuccess={(appointmentDate) => {
                     setSelectedDate(parseISO(appointmentDate))
                 }}
             />

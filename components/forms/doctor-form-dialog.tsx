@@ -132,9 +132,27 @@ export function DoctorFormDialog({
         }
     }
 
+    const [additionalSpecialties, setAdditionalSpecialties] = useState<string[]>([])
+    const [newAdditionalSpecialty, setNewAdditionalSpecialty] = useState('')
+
+    const handleAddAdditionalSpecialty = () => {
+        const val = newAdditionalSpecialty.trim()
+        if (!val) return
+        if (!additionalSpecialties.includes(val)) {
+            setAdditionalSpecialties(prev => [...prev, val])
+        }
+        setNewAdditionalSpecialty('')
+    }
+
+    const handleRemoveAdditionalSpecialty = (idx: number) => {
+        setAdditionalSpecialties(prev => prev.filter((_, i) => i !== idx))
+    }
+
     // Reset form when doctorToEdit changes
     useEffect(() => {
         if (open) {
+            setAdditionalSpecialties((doctorToEdit as any)?.specialties_additional || [])
+            setNewAdditionalSpecialty('')
             reset({
                 full_name: doctorToEdit?.user.full_name || '',
                 email: doctorToEdit?.user.email || '',
@@ -174,6 +192,7 @@ export function DoctorFormDialog({
                         crm: data.crm,
                         crm_state: data.crm_state,
                         specialty: data.specialty,
+                        specialties_additional: additionalSpecialties,
                         consultation_price: data.consultation_price,
                         bio: data.bio,
                         is_accepting_appointments: data.is_accepting_appointments,
@@ -192,6 +211,7 @@ export function DoctorFormDialog({
         } else {
             createDoctor.mutate({
                 ...data,
+                specialties_additional: additionalSpecialties,
                 consultation_duration: data.consultation_duration as any,
                 display_settings: displaySettings as any,
             } as any, {
@@ -381,6 +401,47 @@ export function DoctorFormDialog({
                                 <p className="text-xs text-destructive">
                                     {errors.specialty.message}
                                 </p>
+                            )}
+                        </div>
+
+                        {/* ======= OUTRAS ESPECIALIDADES & FORMAÇÕES ADICIONAIS ======= */}
+                        <div className="space-y-2 md:col-span-2 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <Label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                                <span>Especialidades & Formações Adicionais</span>
+                                <Badge variant="outline" className="text-[10px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-300">
+                                    Múltiplas Formações
+                                </Badge>
+                            </Label>
+                            <p className="text-xs text-slate-500">
+                                Cadastre todas as especialidades, certificações e formações que este profissional atende (ex: TCC, ABA, Denver, TO, Psicopedagogia). Evita criar múltiplos cadastros do mesmo terapeuta.
+                            </p>
+                            <div className="flex gap-2 items-center mt-2">
+                                <Input
+                                    value={newAdditionalSpecialty}
+                                    onChange={(e) => setNewAdditionalSpecialty(e.target.value)}
+                                    placeholder="Ex: TCC, ABA, Psicopedagogia, Denver..."
+                                    className="min-h-[44px]"
+                                    style={{ fontSize: '16px' }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            handleAddAdditionalSpecialty()
+                                        }
+                                    }}
+                                />
+                                <Button type="button" variant="outline" onClick={handleAddAdditionalSpecialty} className="shrink-0 font-semibold min-h-[44px] px-4">
+                                    <Plus className="w-4 h-4 mr-1 text-emerald-600" /> Adicionar
+                                </Button>
+                            </div>
+                            {additionalSpecialties.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+                                    {additionalSpecialties.map((spec, i) => (
+                                        <Badge key={i} className="px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                            {spec}
+                                            <X className="w-3.5 h-3.5 cursor-pointer text-blue-600 dark:text-blue-400 hover:text-red-600 transition-colors" onClick={() => handleRemoveAdditionalSpecialty(i)} />
+                                        </Badge>
+                                    ))}
+                                </div>
                             )}
                         </div>
 
