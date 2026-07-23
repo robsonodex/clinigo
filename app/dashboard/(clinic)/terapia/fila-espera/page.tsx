@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers, Upload, Download } from 'lucide-react'
+import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers, Upload, Download, MessageSquare, Send } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TherapyItem { name: string; qty: number }
@@ -33,6 +33,106 @@ export default function FilaEsperaPage() {
     const [importFileName, setImportFileName] = useState('')
     const [isProcessingFile, setIsProcessingFile] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+ 
+    // Estados de WhatsApp
+    const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
+    const [whatsappItem, setWhatsappItem] = useState<any>(null)
+    const [whatsappMessage, setWhatsappMessage] = useState('')
+    const [sendingWhatsapp, setSendingWhatsapp] = useState(false)
+    const [whatsappLogs, setWhatsappLogs] = useState<any[]>([])
+    const [loadingLogs, setLoadingLogs] = useState(false)
+ 
+    // Função de carregar histórico de mensagens
+    const fetchWhatsappLogs = async (phone: string) => {
+        setLoadingLogs(true)
+        try {
+            const res = await fetch(`/api/whatsapp/logs?phone=${encodeURIComponent(phone)}`)
+            if (res.ok) {
+                const result = await res.json()
+                setWhatsappLogs(result.logs || [])
+            }
+        } catch (e) {
+            console.error('Erro ao buscar logs de WhatsApp:', e)
+        } finally {
+            setLoadingLogs(false)
+        }
+    }
+ 
+    const openWhatsapp = useCallback((item: any) => {
+        setWhatsappItem(item)
+        const recipientName = item.responsible_name || item.patient_name || ''
+        const therapy = item.therapy_type || 'avaliação'
+        
+        // Mensagem padrão comercial
+        const defaultMsg = `Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`
+        
+        setWhatsappMessage(defaultMsg)
+        setWhatsappLogs([])
+        setWhatsappDialogOpen(true)
+        if (item.patient_phone) {
+            fetchWhatsappLogs(item.patient_phone)
+        }
+    }, [])
+ 
+    const handleSendWhatsapp = async () => {
+        if (!whatsappItem?.patient_phone) {
+            toast.error('Paciente não possui telefone cadastrado')
+            return
+        }
+        if (!whatsappMessage.trim()) {
+            toast.error('A mensagem não pode estar vazia')
+            return
+        }
+ 
+        setSendingWhatsapp(true)
+        try {
+            // Disparar WhatsApp via API
+            const res = await fetch('/api/whatsapp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: whatsappItem.patient_phone,
+                    message: whatsappMessage,
+                    sector: 'default', // comercial
+                    trigger_source: 'waiting-list'
+                })
+            })
+ 
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao enviar mensagem')
+            }
+ 
+            toast.success('Mensagem enviada com sucesso!')
+ 
+            // Registrar log no histórico do paciente (fila de espera -> commercial_notes)
+            const dateStr = new Date().toLocaleString('pt-BR')
+            const logAppend = `\n[${dateStr} - WhatsApp]: "${whatsappMessage}"`
+            const newNotes = whatsappItem.commercial_notes 
+                ? `${whatsappItem.commercial_notes}${logAppend}`
+                : logAppend
+ 
+            // Atualizar no banco
+            await fetch('/api/waiting-list', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: whatsappItem.id,
+                    commercial_notes: newNotes
+                })
+            })
+ 
+            // Recarregar os dados
+            fetchData()
+            
+            // Recarregar os logs locais no modal
+            fetchWhatsappLogs(whatsappItem.patient_phone)
+        } catch (e: any) {
+            toast.error(e.message || 'Erro ao enviar mensagem por WhatsApp')
+        } finally {
+            setSendingWhatsapp(false)
+        }
+    }
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -393,6 +493,7 @@ export default function FilaEsperaPage() {
     }
 
     // Executar importação em lote para o backend
+    // Executar importação em lote para o backend fatiado em lotes de 50 para evitar timeouts
     const handleConfirmImport = async () => {
         if (importRows.length === 0) {
             toast.error('Nenhum dado selecionado para importar.')
@@ -400,28 +501,40 @@ export default function FilaEsperaPage() {
         }
 
         try {
-            toast.loading(`Importando ${importRows.length} pacientes para a Fila de Espera...`, { id: 'bulk-import' })
-            const res = await fetch('/api/waiting-list', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(importRows)
-            })
+            const batchSize = 50
+            let importedCount = 0
+
+            toast.loading(`Iniciando importação de ${importRows.length} registros...`, { id: 'bulk-import' })
+
+            for (let i = 0; i < importRows.length; i += batchSize) {
+                const chunk = importRows.slice(i, i + batchSize)
+                const progressText = `Importando registros... (${Math.min(i + batchSize, importRows.length)} / ${importRows.length})`
+                toast.loading(progressText, { id: 'bulk-import' })
+
+                const res = await fetch('/api/waiting-list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(chunk)
+                })
+
+                if (!res.ok) {
+                    const err = await res.json()
+                    throw new Error(err.error || `Erro ao importar lote iniciando em ${i + 1}`)
+                }
+
+                const result = await res.json()
+                importedCount += result.count || chunk.length
+            }
 
             toast.dismiss('bulk-import')
-            if (res.ok) {
-                const result = await res.json()
-                toast.success(`🎉 ${result.count || importRows.length} registros importados com sucesso!`)
-                setImportModalOpen(false)
-                setImportRows([])
-                setImportFileName('')
-                fetchData()
-            } else {
-                const err = await res.json()
-                toast.error(err.error || 'Erro ao importar planilha')
-            }
-        } catch (e) {
+            toast.success(`🎉 ${importedCount} registros importados com sucesso!`)
+            setImportModalOpen(false)
+            setImportRows([])
+            setImportFileName('')
+            fetchData()
+        } catch (e: any) {
             toast.dismiss('bulk-import')
-            toast.error('Erro de conexão ao enviar dados da importação')
+            toast.error(e.message || 'Erro de conexão ao enviar dados da importação')
         }
     }
 
@@ -545,7 +658,7 @@ export default function FilaEsperaPage() {
                                                         )}
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
-                                                        {item.patient_phone ? <a href={`https://wa.me/55${item.patient_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="text-green-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{item.patient_phone}</a> : '-'}
+                                                        {item.patient_phone ? <button onClick={() => openWhatsapp(item)} className="text-green-600 hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0 font-medium min-h-[44px]" title="Enviar WhatsApp pelo sistema"><Phone className="h-3 w-3" /><span style={{ fontSize: '16px' }}>{item.patient_phone}</span></button> : '-'}
                                                     </td>
                                                     <td className="p-2 hidden md:table-cell">
                                                         {therapies.length > 0 ? (
@@ -568,10 +681,11 @@ export default function FilaEsperaPage() {
                                                     </td>
                                                     <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${statusColors[item.status] || ''}`}>{statusLabels[item.status] || item.status}</span></td>
                                                     <td className="p-2 flex gap-1">
-                                                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)}><Edit className="h-4 w-4 text-blue-500" /></Button>
-                                                        {item.status === 'waiting' && <Button variant="ghost" size="icon" title="Marcar Contatado" onClick={() => updateStatus(item.id, 'contacted')}><Phone className="h-4 w-4 text-blue-500" /></Button>}
-                                                        {(item.status === 'waiting' || item.status === 'contacted') && <Button variant="ghost" size="icon" title="Marcar Agendado" onClick={() => updateStatus(item.id, 'scheduled')}><CheckCircle className="h-4 w-4 text-green-500" /></Button>}
-                                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                                                        <Button variant="ghost" size="icon" title="Enviar WhatsApp pelo sistema" onClick={() => openWhatsapp(item)} className="min-h-[44px] min-w-[44px]"><MessageSquare className="h-4 w-4 text-green-500" /></Button>
+                                                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)} className="min-h-[44px] min-w-[44px]"><Edit className="h-4 w-4 text-blue-500" /></Button>
+                                                        {item.status === 'waiting' && <Button variant="ghost" size="icon" title="Marcar Contatado" onClick={() => updateStatus(item.id, 'contacted')} className="min-h-[44px] min-w-[44px]"><Phone className="h-4 w-4 text-blue-500" /></Button>}
+                                                        {(item.status === 'waiting' || item.status === 'contacted') && <Button variant="ghost" size="icon" title="Marcar Agendado" onClick={() => updateStatus(item.id, 'scheduled')} className="min-h-[44px] min-w-[44px]"><CheckCircle className="h-4 w-4 text-green-500" /></Button>}
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="min-h-[44px] min-w-[44px]" title="Excluir"><Trash2 className="h-4 w-4 text-red-500" /></Button>
                                                     </td>
                                                 </tr>
                                             )
@@ -776,6 +890,143 @@ export default function FilaEsperaPage() {
                             Confirmar Importação ({importRows.length})
                         </Button>
                     </div>
+
+            {/* Modal de Disparo de WhatsApp */}
+            <Dialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen}>
+                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                            <span className="p-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg">
+                                <MessageSquare className="w-5 h-5" />
+                            </span>
+                            Enviar WhatsApp para {whatsappItem?.patient_name}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            Envie mensagens personalizadas utilizando os templates comerciais cadastrados ou digitando livremente. O histórico ficará registrado.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Selector de Templates */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selecione um Modelo de Mensagem (Comercial)</Label>
+                            <select
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'default') {
+                                        const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
+                                        const therapy = whatsappItem?.therapy_type || 'avaliação'
+                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`)
+                                    } else if (val === 'followup') {
+                                        const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
+                                        const therapy = whatsappItem?.therapy_type || 'avaliação'
+                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de ${therapy} conosco. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`)
+                                    } else if (val === 'visit') {
+                                        const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
+                                        setWhatsappMessage(`Olá ${recipientName}, temos ótimas notícias! Ocorreu uma abertura de vaga em nossa agenda. Gostaria de agendar uma visita comercial ao nosso espaço para alinharmos e iniciarmos as sessões? Ficamos à total disposição. Até breve!`)
+                                    } else if (val === 'custom') {
+                                        setWhatsappMessage('')
+                                    }
+                                }}
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 min-h-[44px]"
+                                style={{ fontSize: '16px' }}
+                            >
+                                <option value="default">Modelo 1: Convite para Visita (Padrão)</option>
+                                <option value="followup">Modelo 2: Follow-up de Interesse</option>
+                                <option value="visit">Modelo 3: Abertura de Vaga / Agendamento</option>
+                                <option value="custom">Mensagem em Branco / Personalizada</option>
+                            </select>
+                        </div>
+
+                        {/* Corpo da Mensagem */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Corpo da Mensagem</Label>
+                            <textarea
+                                value={whatsappMessage}
+                                onChange={(e) => setWhatsappMessage(e.target.value)}
+                                className="w-full border rounded-xl p-3 text-sm h-32 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900 dark:border-slate-700"
+                                style={{ fontSize: '16px' }}
+                                placeholder="Digite sua mensagem aqui..."
+                            />
+                        </div>
+
+                        {/* Informações Auxiliares */}
+                        <div className="flex gap-2 items-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-lg">
+                            <span className="font-semibold text-slate-600 dark:text-slate-300">Número de Destino:</span>
+                            <span>{whatsappItem?.patient_phone}</span>
+                            {whatsappItem?.responsible_name && (
+                                <>
+                                    <span className="mx-1">•</span>
+                                    <span className="font-semibold text-slate-600 dark:text-slate-300">Responsável:</span>
+                                    <span>{whatsappItem.responsible_name}</span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Histórico Local de Mensagens */}
+                        <div className="space-y-2 pt-2 border-t">
+                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                                Histórico de Envio WhatsApp
+                                {loadingLogs && <span className="text-[10px] text-slate-400 animate-pulse normal-case font-normal">buscando...</span>}
+                            </Label>
+                            
+                            <div className="max-h-36 overflow-y-auto space-y-2 pr-1 border rounded-lg p-2 bg-slate-50/50 dark:bg-slate-950/20 text-xs">
+                                {whatsappLogs.length === 0 ? (
+                                    <div className="text-slate-400 italic text-center py-4">Nenhum envio registrado anteriormente para este número.</div>
+                                ) : (
+                                    whatsappLogs.map((log) => (
+                                        <div key={log.id} className="border-b last:border-0 pb-2 mb-2 last:pb-0 last:mb-0">
+                                            <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold mb-1">
+                                                <span>📅 {log.sent_at ? new Date(log.sent_at).toLocaleString('pt-BR') : 'Sem data'}</span>
+                                                <span className={`px-1.5 py-0.5 rounded font-mono uppercase text-[9px] ${log.status === 'sent' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                                    {log.status === 'sent' ? 'Enviado' : 'Falhou'}
+                                                </span>
+                                            </div>
+                                            <p className="text-slate-600 dark:text-slate-300 italic whitespace-pre-wrap">{log.message_preview}...</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-between pt-3 border-t">
+                        {/* Botão de WhatsApp Web como fallback/alternativa */}
+                        <a
+                            href={`https://wa.me/55${whatsappItem?.patient_phone?.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener"
+                            className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-semibold h-11 px-3 rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors uppercase tracking-wider"
+                        >
+                            Abrir WhatsApp Web Externo ↗
+                        </a>
+
+                        <div className="flex gap-2">
+                            <Button type="button" variant="outline" onClick={() => setWhatsappDialogOpen(false)} className="min-h-[44px]">
+                                Fechar
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={sendingWhatsapp || !whatsappMessage.trim()}
+                                onClick={handleSendWhatsapp}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 min-h-[44px] gap-1.5"
+                            >
+                                {sendingWhatsapp ? (
+                                    <>
+                                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                        Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-3.5 h-3.5" />
+                                        Disparar WhatsApp
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
                 </DialogContent>
             </Dialog>
         </div>

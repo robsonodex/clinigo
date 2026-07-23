@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,7 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield, Dices, Copy } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield, Dices, Copy, Plus, X } from 'lucide-react'
 import type { Doctor } from '@/lib/api-client'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { useCouncilLabel } from '@/lib/hooks/use-council-label'
@@ -84,6 +84,19 @@ export function DoctorFormDialog({
     const profLabel = useProfessionalLabel()
     const { councilLabel } = useCouncilLabel()
 
+    const extendedSchema = useMemo(() => {
+        return extendedDoctorFormSchema.extend({
+            password: isEditing
+                ? z.string().optional().or(z.literal(''))
+                : z.string()
+                    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+                    .regex(
+                        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                        'Senha deve conter letras maiúsculas, minúsculas e números'
+                    ),
+        })
+    }, [isEditing])
+
     const {
         register,
         handleSubmit,
@@ -92,7 +105,7 @@ export function DoctorFormDialog({
         reset,
         formState: { errors },
     } = useForm<ExtendedDoctorFormData>({
-        resolver: zodResolver(extendedDoctorFormSchema),
+        resolver: zodResolver(extendedSchema),
         defaultValues: {
             full_name: doctorToEdit?.user.full_name || '',
             email: doctorToEdit?.user.email || '',
