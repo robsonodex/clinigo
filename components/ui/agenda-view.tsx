@@ -663,10 +663,10 @@ export default function AgendaPage() {
         <div className="flex flex-col h-[calc(100vh-11rem)] md:h-[calc(100vh-6rem)]">
             {/* Toolbar */}
             <div className="flex flex-col gap-3 mb-3">
-                {/* Linha Única: Título e Todas as Ações Integradas */}
-                <div className="flex items-center bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 shadow-sm w-full overflow-x-auto no-scrollbar">
-                    {/* Contêiner de Ações Sem Quebra */}
-                    <div className="flex items-center gap-2.5 min-w-full shrink-0">
+                {/* Cabeçalho Responsivo da Agenda */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 shadow-sm w-full">
+                    {/* Grupo de Navegação e Filtros (Esquerda) */}
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <h1 className="text-xl font-bold whitespace-nowrap mr-1 shrink-0">Agenda</h1>
                         
                         {/* Botão de Filtros/Ações unificado */}
@@ -674,13 +674,13 @@ export default function AgendaPage() {
                             type="button"
                             variant="outline"
                             className={cn(
-                                "flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 shrink-0",
+                                "flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-3.5 font-semibold text-slate-700 dark:text-slate-300 shrink-0",
                                 showMobileFilters && "bg-slate-100 border-slate-300 dark:bg-slate-800"
                             )}
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
                         >
                             <SlidersHorizontal className="h-4 w-4 shrink-0" />
-                            <span className="hidden lg:inline">{showMobileFilters ? 'Ocultar Filtros' : 'Filtros e Ações'}</span>
+                            <span className="hidden md:inline">{showMobileFilters ? 'Ocultar' : 'Filtros e Ações'}</span>
                         </Button>
 
                         {/* Navegação de Data */}
@@ -689,11 +689,11 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={prevPeriod}
-                                className="h-10 w-9 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
+                                className="h-10 w-8 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="px-3 text-sm font-semibold min-w-[120px] text-center text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            <span className="px-2 text-xs md:text-sm font-semibold min-w-[110px] text-center text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                 {view === 'week' ? (
                                     <>
                                         {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
@@ -707,24 +707,24 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={nextPeriod}
-                                className="h-10 w-9 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
+                                className="h-10 w-8 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
 
                         {/* Botão Hoje */}
-                        <Button variant="outline" onClick={goToToday} className="bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-4 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0">
+                        <Button variant="outline" onClick={goToToday} className="bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-3 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0">
                             Hoje
                         </Button>
                         
                         {/* Seletor Dia / Semana */}
-                        <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-slate-850 p-1 rounded-xl h-10 border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0">
+                        <div className="flex items-center gap-0.5 bg-slate-100/80 dark:bg-slate-850 p-1 rounded-xl h-10 border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0">
                             <Button
                                 variant="ghost"
                                 onClick={() => setView('day')}
                                 className={cn(
-                                    "h-8 px-4 text-sm font-semibold rounded-lg transition-all duration-200 border-0 shrink-0",
+                                    "h-8 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all duration-200 border-0 shrink-0",
                                     view === 'day' 
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" 
                                         : "text-slate-600 dark:text-slate-350 hover:bg-slate-200/50 dark:hover:bg-slate-750"
@@ -736,7 +736,7 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 onClick={() => setView('week')}
                                 className={cn(
-                                    "h-8 px-4 text-sm font-semibold rounded-lg transition-all duration-200 border-0 shrink-0",
+                                    "h-8 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all duration-200 border-0 shrink-0",
                                     view === 'week' 
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" 
                                         : "text-slate-600 dark:text-slate-350 hover:bg-slate-200/50 dark:hover:bg-slate-750"
@@ -750,11 +750,11 @@ export default function AgendaPage() {
                         <Button
                             variant="outline"
                             onClick={handleOpenMural}
-                            className="bg-white dark:bg-slate-900 shadow-sm h-10 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-xl font-semibold text-amber-800 dark:text-amber-300 text-sm px-4 shrink-0"
+                            className="bg-white dark:bg-slate-900 shadow-sm h-10 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-xl font-semibold text-amber-800 dark:text-amber-300 text-xs md:text-sm px-3 shrink-0"
                             title="Ver recados e comunicados importantes"
                         >
                             <Megaphone className={cn("h-4 w-4 text-amber-500 shrink-0", unreadBulletinsCount > 0 && "animate-bounce")} />
-                            <span>Mural de Recados</span>
+                            <span className="hidden sm:inline">Mural de Recados</span>
                             {unreadBulletinsCount > 0 && (
                                 <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -767,7 +767,7 @@ export default function AgendaPage() {
 
                         {/* Seletor Padrão / Timeline */}
                         <TooltipProvider>
-                            <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-slate-850 p-1 rounded-xl h-10 border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0">
+                            <div className="hidden sm:flex items-center gap-0.5 bg-slate-100/80 dark:bg-slate-850 p-1 rounded-xl h-10 border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -806,30 +806,33 @@ export default function AgendaPage() {
                                 </Tooltip>
                             </div>
                         </TooltipProvider>
+                    </div>
 
-                        {/* Bloquear Horário (Sempre Visível) */}
+                    {/* Grupo de Ações Principais (Direita - Nunca Corta) */}
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
+                        {/* Bloquear Horário */}
                         <Button
                             variant="outline"
-                            className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-4 text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
+                            className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3.5 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
                             onClick={() => {
                                 setPreselectedSlot(null)
                                 setBlockModalOpen(true)
                             }}
                         >
                             <Lock className="h-4 w-4 shrink-0 text-amber-600" />
-                            Bloquear Horário
+                            <span>Bloquear Horário</span>
                         </Button>
 
                         {/* Novo Agendamento */}
                         <Button
-                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
+                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-4 md:px-5 text-xs md:text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
                             onClick={() => {
                                 setPreselectedSlot(null)
                                 setManualAppointmentOpen(true)
                             }}
                         >
                             <PlusCircle className="h-4 w-4 shrink-0" />
-                            Novo Agendamento
+                            <span>Novo Agendamento</span>
                         </Button>
                     </div>
                 </div>
