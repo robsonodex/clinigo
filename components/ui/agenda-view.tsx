@@ -807,6 +807,19 @@ export default function AgendaPage() {
                             </div>
                         </TooltipProvider>
 
+                        {/* Bloquear Horário (Sempre Visível) */}
+                        <Button
+                            variant="outline"
+                            className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-4 text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
+                            onClick={() => {
+                                setPreselectedSlot(null)
+                                setBlockModalOpen(true)
+                            }}
+                        >
+                            <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+                            Bloquear Horário
+                        </Button>
+
                         {/* Novo Agendamento */}
                         <Button
                             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
