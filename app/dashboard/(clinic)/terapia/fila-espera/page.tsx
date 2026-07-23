@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers, Upload, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TherapyItem { name: string; qty: number }
@@ -26,6 +26,13 @@ export default function FilaEsperaPage() {
     const [form, setForm] = useState(emptyForm)
     const [statusFilter, setStatusFilter] = useState('')
     const [activeTab, setActiveTab] = useState<'comercial' | 'financeiro'>('comercial')
+
+    // Estados de Importação
+    const [importModalOpen, setImportModalOpen] = useState(false)
+    const [importRows, setImportRows] = useState<any[]>([])
+    const [importFileName, setImportFileName] = useState('')
+    const [isProcessingFile, setIsProcessingFile] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -208,6 +215,154 @@ export default function FilaEsperaPage() {
         }
     }
 
+    // Processar arquivo Excel/CSV selecionado
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setImportFileName(file.name)
+        setIsProcessingFile(true)
+
+        try {
+            const ExcelJS = (await import('exceljs')).default
+            const workbook = new ExcelJS.Workbook()
+            const buffer = await file.arrayBuffer()
+            await workbook.xlsx.load(buffer)
+            
+            const worksheet = workbook.worksheets[0]
+            if (!worksheet) {
+                toast.error('Planilha vazia ou inválida')
+                setIsProcessingFile(false)
+                return
+            }
+
+            const rows: any[] = []
+            let headerRowIndex = 1
+            const headers: Record<number, string> = {}
+
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber === 1) {
+                    row.eachCell((cell, colNumber) => {
+                        const val = (cell.value?.toString() || '').trim().toLowerCase()
+                        headers[colNumber] = val
+                    })
+                } else {
+                    const rowData: any = {}
+                    row.eachCell((cell, colNumber) => {
+                        const header = headers[colNumber] || `col_${colNumber}`
+                        const rawVal = cell.value
+                        let strVal = ''
+                        if (rawVal !== null && rawVal !== undefined) {
+                            if (typeof rawVal === 'object' && 'text' in rawVal) strVal = rawVal.text || ''
+                            else if (typeof rawVal === 'object' && 'result' in rawVal) strVal = String(rawVal.result || '')
+                            else strVal = String(rawVal)
+                        }
+                        rowData[header] = strVal.trim()
+                    })
+
+                    // Mapeamento Inteligente de Colunas
+                    const patientName = rowData['nome'] || rowData['paciente'] || rowData['nome do paciente'] || rowData['nome paciente'] || rowData['col_1'] || ''
+                    const responsibleName = rowData['responsavel'] || rowData['responsável'] || rowData['nome do responsavel'] || rowData['col_2'] || ''
+                    const phone = rowData['telefone'] || rowData['fone'] || rowData['celular'] || rowData['whatsapp'] || rowData['col_3'] || ''
+                    const email = rowData['email'] || rowData['e-mail'] || rowData['col_4'] || ''
+                    const therapyType = rowData['terapias'] || rowData['terapia'] || rowData['especialidade'] || rowData['col_5'] || ''
+                    const shift = rowData['turno'] || rowData['turno preferido'] || rowData['col_6'] || 'any'
+                    const notes = rowData['observacao'] || rowData['observação'] || rowData['notas'] || rowData['obs'] || rowData['col_7'] || ''
+
+                    if (patientName) {
+                        rows.push({
+                            patient_name: patientName,
+                            responsible_name: responsibleName,
+                            patient_phone: phone,
+                            patient_email: email,
+                            therapy_type: therapyType,
+                            preferred_shift: shift,
+                            commercial_notes: notes,
+                        })
+                    }
+                }
+            })
+
+            if (rows.length === 0) {
+                toast.error('Nenhum registro de paciente encontrado na planilha.')
+            } else {
+                setImportRows(rows)
+                toast.success(`${rows.length} registros prontos para importação!`)
+            }
+        } catch (err: any) {
+            console.error('Erro ao ler planilha:', err)
+            toast.error('Erro ao ler o arquivo Excel. Certifique-se de que é um formato .xlsx válido.')
+        } finally {
+            setIsProcessingFile(false)
+        }
+    }
+
+    // Gerar e baixar planilha modelo Excel
+    const handleDownloadTemplate = async () => {
+        try {
+            const ExcelJS = (await import('exceljs')).default
+            const wb = new ExcelJS.Workbook()
+            const ws = wb.addWorksheet('Modelo Importação Fila')
+            
+            ws.columns = [
+                { header: 'Nome', key: 'nome', width: 30 },
+                { header: 'Responsavel', key: 'responsavel', width: 25 },
+                { header: 'Telefone', key: 'telefone', width: 18 },
+                { header: 'Email', key: 'email', width: 25 },
+                { header: 'Terapias', key: 'terapias', width: 30 },
+                { header: 'Turno', key: 'turno', width: 15 },
+                { header: 'Observacao', key: 'observacao', width: 35 },
+            ]
+
+            // Linhas de exemplo
+            ws.addRow({ nome: 'João da Silva', responsavel: 'Maria da Silva', telefone: '(11) 99999-8888', email: 'joao@email.com', terapias: 'Fonoaudiologia, Psicologia', turno: 'Manhã', observacao: 'Paciente necessita de atendimento matutino' })
+            ws.addRow({ nome: 'Lucas Oliveira', responsavel: '', telefone: '(11) 97777-6666', email: '', terapias: 'Fisioterapia', turno: 'Tarde', observacao: 'Urgente' })
+
+            const buffer = await wb.xlsx.writeBuffer()
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'modelo_importacao_fila.xlsx'
+            a.click()
+            toast.success('Modelo de planilha baixado!')
+        } catch (e) {
+            toast.error('Erro ao gerar planilha modelo')
+        }
+    }
+
+    // Executar importação em lote para o backend
+    const handleConfirmImport = async () => {
+        if (importRows.length === 0) {
+            toast.error('Nenhum dado selecionado para importar.')
+            return
+        }
+
+        try {
+            toast.loading(`Importando ${importRows.length} pacientes para a Fila de Espera...`, { id: 'bulk-import' })
+            const res = await fetch('/api/waiting-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(importRows)
+            })
+
+            toast.dismiss('bulk-import')
+            if (res.ok) {
+                const result = await res.json()
+                toast.success(`🎉 ${result.count || importRows.length} registros importados com sucesso!`)
+                setImportModalOpen(false)
+                setImportRows([])
+                setImportFileName('')
+                fetchData()
+            } else {
+                const err = await res.json()
+                toast.error(err.error || 'Erro ao importar planilha')
+            }
+        } catch (e) {
+            toast.dismiss('bulk-import')
+            toast.error('Erro de conexão ao enviar dados da importação')
+        }
+    }
+
     const addTherapy = () => setForm(prev => ({ ...prev, therapies: [...prev.therapies, { name: '', qty: 1 }] }))
     const removeTherapy = (idx: number) => setForm(prev => ({ ...prev, therapies: prev.therapies.filter((_, i) => i !== idx) }))
     const updateTherapy = (idx: number, field: 'name' | 'qty', value: string | number) => {
@@ -263,6 +418,10 @@ export default function FilaEsperaPage() {
                     <Button variant="outline" onClick={handleRemoveDuplicates}
                         className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
                         <Layers className="w-4 h-4 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
+                    </Button>
+                    <Button variant="outline" onClick={() => setImportModalOpen(true)}
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-blue-50 border-blue-200 shadow-sm rounded-xl px-4 font-semibold text-blue-700 dark:text-blue-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-blue-800" title="Importar pacientes para a Fila de Espera via planilha Excel ou CSV">
+                        <Upload className="w-4 h-4 text-blue-600" /><span className="hidden sm:inline">Importar</span>
                     </Button>
                     <Button variant="outline" onClick={exportExcel}
                         className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
@@ -440,6 +599,121 @@ export default function FilaEsperaPage() {
                         className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
                         <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
                     </Button>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Importação de Planilha Excel/CSV */}
+            <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                            <Upload className="w-5 h-5 text-blue-600" /> Importar Planilha para Fila de Espera
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            Selecione um arquivo Excel (.xlsx) ou CSV contendo os dados dos pacientes para cadastrá-los em lote.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-5 py-2">
+                        {/* Botão Baixar Modelo */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 gap-3">
+                            <div className="text-xs text-blue-900 dark:text-blue-200">
+                                <span className="font-semibold">Dica:</span> Utilize nosso modelo oficial formatado com as colunas recomendadas (Nome, Responsável, Telefone, Email, Terapias, Turno, Observação).
+                            </div>
+                            <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}
+                                className="shrink-0 text-xs font-semibold gap-1.5 bg-white hover:bg-blue-50 border-blue-200 text-blue-700 dark:bg-slate-900 dark:border-blue-800 min-h-[44px]">
+                                <Download className="w-3.5 h-3.5" /> Baixar Modelo Excel
+                            </Button>
+                        </div>
+
+                        {/* Dropzone de Upload */}
+                        <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-blue-50/20 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
+                        >
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleFileSelect} 
+                                accept=".xlsx,.xls,.csv" 
+                                className="hidden" 
+                            />
+                            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-full text-blue-600 dark:text-blue-400">
+                                <FileSpreadsheet className="w-8 h-8" />
+                            </div>
+                            <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                {importFileName ? `Arquivo: ${importFileName}` : 'Clique para selecionar a planilha (.xlsx ou .csv)'}
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                Suporta arquivos Excel (.xlsx, .xls) e arquivos CSV
+                            </p>
+                        </div>
+
+                        {/* Prévia dos Dados */}
+                        {isProcessingFile && (
+                            <div className="flex items-center justify-center py-6 text-sm text-slate-500 gap-2">
+                                <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                                Processando e validando planilha...
+                            </div>
+                        )}
+
+                        {importRows.length > 0 && !isProcessingFile && (
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                                        Prévia dos Pacientes Prontos ({importRows.length} encontrados)
+                                    </h4>
+                                    <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-1 rounded-full font-semibold">
+                                        ✅ {importRows.length} válidos
+                                    </span>
+                                </div>
+
+                                <div className="max-h-48 overflow-y-auto border rounded-xl bg-white dark:bg-slate-950 text-xs">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                                            <tr>
+                                                <th className="p-2 border-b">#</th>
+                                                <th className="p-2 border-b">Nome</th>
+                                                <th className="p-2 border-b">Responsável</th>
+                                                <th className="p-2 border-b">Telefone</th>
+                                                <th className="p-2 border-b">Terapias</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {importRows.slice(0, 50).map((row, idx) => (
+                                                <tr key={idx} className="border-b hover:bg-slate-50 dark:hover:bg-slate-900">
+                                                    <td className="p-2 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                                                    <td className="p-2 font-semibold text-slate-800 dark:text-slate-200">{row.patient_name}</td>
+                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{row.responsible_name || '—'}</td>
+                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{row.patient_phone || '—'}</td>
+                                                    <td className="p-2 text-slate-600 dark:text-slate-400 max-w-[150px] truncate" title={row.therapy_type}>{row.therapy_type || '—'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {importRows.length > 50 && (
+                                    <p className="text-[11px] text-slate-400 text-center italic">
+                                        Exibindo as primeiras 50 linhas de {importRows.length} registros.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-3 border-t">
+                        <Button type="button" variant="outline" onClick={() => { setImportModalOpen(false); setImportRows([]); setImportFileName(''); }} className="min-h-[44px]">
+                            Cancelar
+                        </Button>
+                        <Button 
+                            type="button" 
+                            disabled={importRows.length === 0 || isProcessingFile} 
+                            onClick={handleConfirmImport}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 min-h-[44px]"
+                        >
+                            Confirmar Importação ({importRows.length})
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

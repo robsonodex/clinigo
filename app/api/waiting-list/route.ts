@@ -97,6 +97,46 @@ export async function POST(request: NextRequest) {
         if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const body = await request.json()
+
+        // Suporte para importação em lote (bulk insert)
+        if (Array.isArray(body)) {
+            if (body.length === 0) return NextResponse.json({ error: 'Lista de importação vazia' }, { status: 400 })
+
+            const itemsToInsert = body.map((item: any) => ({
+                clinic_id: profile.clinic_id,
+                patient_id: item.patient_id || null,
+                patient_name: (item.patient_name || '').trim(),
+                patient_phone: item.patient_phone ? String(item.patient_phone).replace(/\D/g, '') : null,
+                patient_email: item.patient_email || null,
+                preferred_doctor_id: item.preferred_doctor_id || null,
+                therapy_type: item.therapy_type || (Array.isArray(item.therapies) ? item.therapies.map((t: any) => t.name).join(', ') : null),
+                modality: item.modality || 'individual',
+                preferred_shift: item.preferred_shift || 'any',
+                preferred_days: item.preferred_days || null,
+                urgency: item.urgency || 'normal',
+                notes: item.notes || null,
+                responsible_name: item.responsible_name || null,
+                therapies: item.therapies || (item.therapy_type ? [{ name: item.therapy_type, qty: 1 }] : []),
+                commercial_notes: item.commercial_notes || item.notes || null,
+                financial_contact_date: item.financial_contact_date || null,
+                financial_result: item.financial_result || null,
+                financial_notes: item.financial_notes || null,
+            })).filter((item: any) => item.patient_name.length > 0)
+
+            if (itemsToInsert.length === 0) {
+                return NextResponse.json({ error: 'Nenhum registro válido encontrado (nome é obrigatório)' }, { status: 400 })
+            }
+
+            const { data, error } = await supabase
+                .from('waiting_list')
+                .insert(itemsToInsert)
+                .select()
+
+            if (error) throw error
+            return NextResponse.json({ success: true, count: data.length, data }, { status: 201 })
+        }
+
+        // Inserção individual padrão
         const { data, error } = await supabase
             .from('waiting_list')
             .insert({
