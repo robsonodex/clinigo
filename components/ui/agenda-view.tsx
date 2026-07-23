@@ -86,6 +86,8 @@ import { ManualAppointmentModal } from '@/components/appointments/ManualAppointm
 import { RecurringAppointmentModal } from '@/components/appointments/RecurringAppointmentModal'
 import { EditSeriesModal } from '@/components/appointments/EditSeriesModal'
 import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenceModal'
+import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
+import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
 import { BlockScheduleModal } from '@/components/appointments/BlockScheduleModal'
 import { AlertTriangle, Lock } from 'lucide-react'
 import {
