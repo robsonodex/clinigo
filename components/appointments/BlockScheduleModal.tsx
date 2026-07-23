@@ -22,14 +22,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Lock, Clock, Calendar, UserCheck, Loader2 } from 'lucide-react'
+import { Lock, Clock, Calendar, UserCheck, Loader2, AlertCircle } from 'lucide-react'
 import { api } from '@/lib/api-client'
+import { useAuth } from '@/lib/hooks/use-auth'
 
 interface Doctor {
     id: string
     specialty: string
+    user_id?: string
     user: {
         full_name: string
+        email?: string
     }
 }
 
@@ -51,6 +54,7 @@ export function BlockScheduleModal({
     onSuccess,
 }: BlockScheduleModalProps) {
     const queryClient = useQueryClient()
+    const { user, profile } = useAuth()
 
     const [doctorId, setDoctorId] = useState('')
     const [appointmentDate, setAppointmentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -68,16 +72,33 @@ export function BlockScheduleModal({
         staleTime: 5 * 60 * 1000,
     })
 
+    // Localizar o médico correspondente ao usuário logado
+    const loggedDoctor = doctors?.find((d) => {
+        if (!user && !profile) return false
+        return (
+            d.id === profile?.id ||
+            d.user_id === user?.id ||
+            d.user_id === profile?.id ||
+            (profile?.email && d.user?.email && d.user.email.toLowerCase() === profile.email.toLowerCase()) ||
+            (profile?.full_name && d.user?.full_name && d.user.full_name.toLowerCase() === profile.full_name.toLowerCase())
+        )
+    })
+
     useEffect(() => {
         if (open) {
             if (preselectedDate) setAppointmentDate(preselectedDate)
             if (preselectedTime) setAppointmentTime(preselectedTime)
-            if (preselectedDoctorId) setDoctorId(preselectedDoctorId)
-            else if (doctors && doctors.length > 0 && !doctorId) {
+            
+            // Prioridade: se o usuário logado for um terapeuta, trava nele
+            if (loggedDoctor) {
+                setDoctorId(loggedDoctor.id)
+            } else if (preselectedDoctorId) {
+                setDoctorId(preselectedDoctorId)
+            } else if (doctors && doctors.length > 0) {
                 setDoctorId(doctors[0].id)
             }
         }
-    }, [open, preselectedDate, preselectedTime, preselectedDoctorId, doctors])
+    }, [open, preselectedDate, preselectedTime, preselectedDoctorId, doctors, loggedDoctor])
 
     const { mutate: createBlock, isPending } = useMutation({
         mutationFn: async () => {
@@ -165,11 +186,21 @@ export function BlockScheduleModal({
                         </div>
                     </div>
 
-                    {/* Terapeuta */}
+                    {/* Terapeuta (Fixo no usuário logado) */}
                     <div className="space-y-1.5">
-                        <Label className="text-sm font-semibold">Profissional / Terapeuta</Label>
-                        <Select value={doctorId} onValueChange={setDoctorId} disabled={doctorsLoading}>
-                            <SelectTrigger className="min-h-[44px]">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-sm font-semibold">Profissional / Terapeuta</Label>
+                            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
+                                <Lock className="w-3 h-3" /> Bloqueio exclusivo para a sua própria agenda
+                            </span>
+                        </div>
+                        
+                        <Select 
+                            value={doctorId} 
+                            onValueChange={setDoctorId} 
+                            disabled={doctorsLoading || !!loggedDoctor || profile?.role === 'DOCTOR'}
+                        >
+                            <SelectTrigger className="min-h-[44px] bg-slate-50 dark:bg-slate-900 border-amber-200 dark:border-amber-900/60 font-semibold">
                                 <SelectValue placeholder="Selecione o profissional..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -180,6 +211,12 @@ export function BlockScheduleModal({
                                 ))}
                             </SelectContent>
                         </Select>
+                        
+                        {!loggedDoctor && profile?.role !== 'SUPER_ADMIN' && (
+                            <p className="text-xs text-slate-500 italic mt-1">
+                                Obs: O compromisso será alocado para a sua conta de profissional cadastrada.
+                            </p>
+                        )}
                     </div>
 
                     {/* Data e Horário */}

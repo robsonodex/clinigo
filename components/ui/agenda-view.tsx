@@ -663,10 +663,9 @@ export default function AgendaPage() {
         <div className="flex flex-col h-[calc(100vh-11rem)] md:h-[calc(100vh-6rem)]">
             {/* Toolbar */}
             <div className="flex flex-col gap-3 mb-3">
-                {/* Cabeçalho Responsivo da Agenda */}
-                <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 shadow-sm w-full">
-                    {/* Grupo de Navegação e Filtros (Esquerda) */}
-                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                {/* Barra de Ferramentas Principal */}
+                <div className="flex items-center bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 shadow-sm w-full overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 w-full shrink-0">
                         <h1 className="text-xl font-bold whitespace-nowrap mr-1 shrink-0">Agenda</h1>
                         
                         {/* Botão de Filtros/Ações unificado */}
@@ -680,7 +679,7 @@ export default function AgendaPage() {
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
                         >
                             <SlidersHorizontal className="h-4 w-4 shrink-0" />
-                            <span className="hidden md:inline">{showMobileFilters ? 'Ocultar' : 'Filtros e Ações'}</span>
+                            <span className="hidden sm:inline">{showMobileFilters ? 'Ocultar Filtros' : 'Filtros e Ações'}</span>
                         </Button>
 
                         {/* Navegação de Data */}
@@ -689,11 +688,11 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={prevPeriod}
-                                className="h-10 w-8 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
+                                className="h-10 w-9 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="px-2 text-xs md:text-sm font-semibold min-w-[110px] text-center text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            <span className="px-2.5 text-sm font-semibold min-w-[115px] text-center text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                 {view === 'week' ? (
                                     <>
                                         {format(weekStart, 'd MMM', { locale: ptBR })} -{' '}
@@ -707,14 +706,14 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={nextPeriod}
-                                className="h-10 w-8 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
+                                className="h-10 w-9 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
 
                         {/* Botão Hoje */}
-                        <Button variant="outline" onClick={goToToday} className="bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-3 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0">
+                        <Button variant="outline" onClick={goToToday} className="bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-3.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0">
                             Hoje
                         </Button>
                         
@@ -746,28 +745,36 @@ export default function AgendaPage() {
                             </Button>
                         </div>
 
-                        {/* Botão Mural de Recados */}
-                        <Button
-                            variant="outline"
-                            onClick={handleOpenMural}
-                            className="bg-white dark:bg-slate-900 shadow-sm h-10 flex items-center gap-1.5 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-xl font-semibold text-amber-800 dark:text-amber-300 text-xs md:text-sm px-3 shrink-0"
-                            title="Ver recados e comunicados importantes"
-                        >
-                            <Megaphone className={cn("h-4 w-4 text-amber-500 shrink-0", unreadBulletinsCount > 0 && "animate-bounce")} />
-                            <span className="hidden sm:inline">Mural de Recados</span>
-                            {unreadBulletinsCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[10px] text-white font-extrabold items-center justify-center">
-                                        {unreadBulletinsCount}
-                                    </span>
-                                </span>
-                            )}
-                        </Button>
+                        {/* Botão Ícone Mural de Recados (Fonezinho com Tooltip) */}
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={handleOpenMural}
+                                        className="bg-white dark:bg-slate-900 shadow-sm h-10 w-10 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-xl shrink-0"
+                                    >
+                                        <Megaphone className={cn("h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0", unreadBulletinsCount > 0 && "animate-bounce")} />
+                                        {unreadBulletinsCount > 0 && (
+                                            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[10px] text-white font-extrabold items-center justify-center">
+                                                    {unreadBulletinsCount}
+                                                </span>
+                                            </span>
+                                        )}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="font-semibold text-xs bg-amber-900 text-amber-50">
+                                    Mural de Recados — Ver recados e comunicados importantes
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
 
                         {/* Seletor Padrão / Timeline */}
                         <TooltipProvider>
-                            <div className="hidden sm:flex items-center gap-0.5 bg-slate-100/80 dark:bg-slate-850 p-1 rounded-xl h-10 border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0">
+                            <div className="flex items-center gap-0.5 bg-slate-100/80 dark:bg-slate-850 p-1 rounded-xl h-10 border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -806,38 +813,36 @@ export default function AgendaPage() {
                                 </Tooltip>
                             </div>
                         </TooltipProvider>
-                    </div>
 
-                    {/* Grupo de Ações Principais (Direita - Nunca Corta) */}
-                    <div className="flex items-center gap-2 shrink-0 ml-auto">
-                        {/* Bloquear Horário */}
-                        <Button
-                            variant="outline"
-                            className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3.5 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
-                            onClick={() => {
-                                setPreselectedSlot(null)
-                                setBlockModalOpen(true)
-                            }}
-                        >
-                            <Lock className="h-4 w-4 shrink-0 text-amber-600" />
-                            <span>Bloquear Horário</span>
-                        </Button>
+                        {/* Botões de Ação Principal (Bloquear Horário e Novo Agendamento Lado a Lado) */}
+                        <div className="flex items-center gap-2 shrink-0 ml-auto">
+                            <Button
+                                variant="outline"
+                                className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3.5 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
+                                onClick={() => {
+                                    setPreselectedSlot(null)
+                                    setBlockModalOpen(true)
+                                }}
+                            >
+                                <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+                                <span>Bloquear Horário</span>
+                            </Button>
 
-                        {/* Novo Agendamento */}
-                        <Button
-                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-4 md:px-5 text-xs md:text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
-                            onClick={() => {
-                                setPreselectedSlot(null)
-                                setManualAppointmentOpen(true)
-                            }}
-                        >
-                            <PlusCircle className="h-4 w-4 shrink-0" />
-                            <span>Novo Agendamento</span>
-                        </Button>
+                            <Button
+                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-4 md:px-5 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
+                                onClick={() => {
+                                    setPreselectedSlot(null)
+                                    setManualAppointmentOpen(true)
+                                }}
+                            >
+                                <PlusCircle className="h-4 w-4 shrink-0" />
+                                <span>Novo Agendamento</span>
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
-                {/* Filtros e Ações Secundárias colapsáveis (Tanto Desktop quanto Mobile) */}
+                {/* Filtros e Ações Secundárias colapsáveis */}
                 <div className={cn(
                     "flex-wrap items-center gap-2 border-t pt-3 bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 transition-all duration-300 shadow-sm",
                     showMobileFilters ? "flex" : "hidden"
@@ -877,17 +882,6 @@ export default function AgendaPage() {
                     >
                         <UserPlus className="h-4 w-4" />
                         Encaixe
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="gap-2 h-10 text-sm border-amber-300 text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl px-4 font-semibold"
-                        onClick={() => {
-                            setPreselectedSlot(null)
-                            setBlockModalOpen(true)
-                        }}
-                    >
-                        <Lock className="h-4 w-4 text-amber-600" />
-                        Bloquear Horário
                     </Button>
                     <Button
                         variant={showFreeSlots ? 'default' : 'outline'}

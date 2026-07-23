@@ -131,6 +131,22 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Para bloqueios de agenda, apenas a própria pessoa logada pode bloquear o seu próprio horário
+        if (body.is_block && profile.role !== 'SUPER_ADMIN') {
+            const isOwnSchedule = (
+                doctor.user_id === user.id || 
+                doctor.id === user.id || 
+                doctor.id === profile.id || 
+                doctor.user_id === profile.id
+            )
+            if (!isOwnSchedule) {
+                return NextResponse.json(
+                    { error: 'Você só tem permissão para bloquear horários na sua própria agenda.' },
+                    { status: 403 }
+                )
+            }
+        }
+
         // Get or create patient (pular para bloqueios internos)
         let patientId: string | null = body.patient_id || null
         let patient: any = null
