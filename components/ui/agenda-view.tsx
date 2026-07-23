@@ -498,7 +498,7 @@ export default function AgendaPage() {
     }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter, doctorsList])
 
     // Group appointments by date and time
-    // Only exclude cancelled appointments from the agenda view
+    // Exclude cancelled appointments that are part of a cancelled recurring series
     // COMPLETED and NO_SHOW are shown (greyed out) so users can see their history
     const getAppointmentsForSlot = (date: Date, time: string): Appointment[] => {
         if (!appointments || !Array.isArray(appointments)) return []
@@ -509,7 +509,9 @@ export default function AgendaPage() {
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
+                // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
+                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         )
     }
 
@@ -521,7 +523,9 @@ export default function AgendaPage() {
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
                 (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower))
+                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
+                // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
+                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
     }
 
