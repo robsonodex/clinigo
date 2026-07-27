@@ -52,6 +52,7 @@ import { api } from '@/lib/api-client'
 interface Doctor {
     id: string
     specialty: string
+    specialties_additional?: string[]
     consultation_price: number
     user: {
         full_name: string
@@ -67,6 +68,7 @@ interface HealthInsurance {
 // Form schema
 const manualAppointmentSchema = z.object({
     doctor_id: z.string().min(1, 'Selecione um médico'),
+    specialty: z.string().optional(),
     appointment_date: z.string().min(1, 'Selecione uma data'),
     appointment_time: z.string().min(1, 'Selecione um horário'),
     duration_minutes: z.number().default(30),
@@ -183,15 +185,25 @@ export function ManualAppointmentModal({
         retry: 2,
     })
 
-    // Get selected doctor data
+    // Get selected doctor data and available specialties
     const selectedDoctor = doctors?.find(d => d.id === selectedDoctorId)
     const price = selectedDoctor?.consultation_price || 0
+    const availableSpecialties = selectedDoctor
+        ? Array.from(new Set([selectedDoctor.specialty, ...(selectedDoctor.specialties_additional || [])].filter(Boolean)))
+        : []
 
     // Create/Update appointment mutation
     const { mutate: saveAppointment, isPending } = useMutation({
         mutationFn: async (data: ManualAppointmentFormData) => {
+            const selectedSpec = data.specialty || selectedDoctor?.specialty
+            let finalNotes = data.notes || ''
+            if (selectedSpec) {
+                if (!finalNotes.includes(`[Especialidade: ${selectedSpec}]`)) {
+                    finalNotes = `[Especialidade: ${selectedSpec}]${finalNotes ? ' ' + finalNotes : ''}`
+                }
+            }
+
             const payload = {
-                // ... payload construction
                 patient_id: selectedPatient?.id,
                 quick_registration: quickRegistration,
                 doctor_id: data.doctor_id,
@@ -213,7 +225,7 @@ export function ManualAppointmentModal({
                     send_whatsapp: data.send_whatsapp,
                     send_email: data.send_email,
                 },
-                notes: data.notes,
+                notes: finalNotes,
             }
 
             let response;
@@ -412,13 +424,20 @@ export function ManualAppointmentModal({
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
                                     <Stethoscope className="h-4 w-4" />
-                                    Médico
+                                    Médico / Profissional
                                 </Label>
                                 <Controller
                                     name="doctor_id"
                                     control={form.control}
                                     render={({ field }) => (
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select onValueChange={(val) => {
+                                            field.onChange(val)
+                                            const doc = doctors?.find(d => d.id === val)
+                                            if (doc) {
+                                                const specs = Array.from(new Set([doc.specialty, ...(doc.specialties_additional || [])].filter(Boolean)))
+                                                if (specs.length > 0) setValue('specialty', specs[0])
+                                            }
+                                        }} value={field.value}>
                                             <SelectTrigger className={errors.doctor_id ? 'border-destructive' : ''}>
                                                 <SelectValue placeholder="Selecione o médico" />
                                             </SelectTrigger>
@@ -438,16 +457,20 @@ export function ManualAppointmentModal({
                                                         Nenhum médico cadastrado
                                                     </div>
                                                 )}
-                                                {doctors?.filter(d => d.id && d.user).map((doctor) => (
-                                                    <SelectItem key={doctor.id} value={doctor.id}>
-                                                        {doctor.user?.full_name || 'Médico'} - {doctor.specialty}
-                                                        {doctor.consultation_price > 0 && (
-                                                            <span className="text-muted-foreground ml-2">
-                                                                ({formatCurrency(doctor.consultation_price)})
-                                                            </span>
-                                                        )}
-                                                    </SelectItem>
-                                                ))}
+                                                {doctors?.filter(d => d.id && d.user).map((doctor) => {
+                                                    const allSpecs = Array.from(new Set([doctor.specialty, ...(doctor.specialties_additional || [])].filter(Boolean)))
+                                                    const specsLabel = allSpecs.join(', ') || 'Sem especialidade'
+                                                    return (
+                                                        <SelectItem key={doctor.id} value={doctor.id}>
+                                                            {doctor.user?.full_name || 'Médico'} - {specsLabel}
+                                                            {doctor.consultation_price > 0 && (
+                                                                <span className="text-muted-foreground ml-2">
+                                                                    ({formatCurrency(doctor.consultation_price)})
+                                                                </span>
+                                                            )}
+                                                        </SelectItem>
+                                                    )
+                                                })}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -456,6 +479,39 @@ export function ManualAppointmentModal({
                                     <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
                                 )}
                             </div>
+
+                            {/* Specialty Selection for multi-specialty doctors */}
+                            {selectedDoctor && availableSpecialties.length > 0 && (
+                                <div className="space-y-2 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-lg">
+                                    <Label className="flex items-center gap-2 text-sm font-semibold text-emerald-900 dark:text-emerald-300">
+                                        <Stethoscope className="h-4 w-4 text-emerald-600" />
+                                        Especialidade / Serviço do Agendamento
+                                    </Label>
+                                    <Controller
+                                        name="specialty"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value || availableSpecialties[0]}>
+                                                <SelectTrigger className="bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-800">
+                                                    <SelectValue placeholder="Selecione a especialidade" />
+                                                </SelectTrigger>
+                                                <SelectContent position="popper" className="z-[9999]">
+                                                    {availableSpecialties.map((spec) => (
+                                                        <SelectItem key={spec} value={spec}>
+                                                            {spec}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {availableSpecialties.length > 1 && (
+                                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                                            Este profissional possui {availableSpecialties.length} especialidades ativas. Escolha para qual especialidade é esta consulta.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Date and Time */}
                             <div className="grid grid-cols-2 gap-4">
