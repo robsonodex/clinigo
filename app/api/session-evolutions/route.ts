@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
 
         if (cleanBody.template_type === 'multidisciplinar') {
             cleanBody.template_type = 'soap'
+            if (!cleanBody.data_description && !cleanBody.content) {
+                cleanBody.data_description = ' '
+            }
         }
 
         // Prevenção de duplicatas: verificar se já existe evolução para o mesmo paciente + profissional + data

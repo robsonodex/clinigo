@@ -99,6 +99,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         if (cleanBody.template_type === 'multidisciplinar') {
             cleanBody.template_type = 'soap'
+            if (!cleanBody.data_description && !cleanBody.content) {
+                cleanBody.data_description = ' '
+            }
         }
 
         // Se a requisição pede finalização, grava o carimbo de tempo
