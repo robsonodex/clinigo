@@ -227,7 +227,6 @@ export default function SessionEvolutionsPage() {
                                     </Select>
                                 </div>
                             </div>
-                            </div>
 
                             {/* Seletor de Especialidade Aplicada (para profissionais com múltiplas especialidades) */}
                             {form.doctor_id && (() => {
