@@ -18,6 +18,25 @@ const emptyForm = {
     financial_contact_date: '', financial_result: '', financial_notes: ''
 }
 
+const TEMPLATE_ESPACO_INCLUIR_JEFERSON = `Olá {nome_responsavel}, tudo bem? Sou Jefferson do Espaço Incluir, há um tempinho atrás você nos procurou para um orçamento de terapias para o(a) {nome_paciente}, gostaria de saber se atualmente ele(a) está em alguma clínica e se vocês gostariam de vir nos visitar e conhecer nossa proposta de atendimento! 😊`
+
+const TEMPLATE_DEFAULT = `Olá {nome_responsavel}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para {terapia}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`
+
+const TEMPLATE_FOLLOWUP = `Olá {nome_responsavel}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de {terapia} conosco. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`
+
+const TEMPLATE_VISIT = `Olá {nome_responsavel}, temos ótimas notícias! Ocorreu uma abertura de vaga em nossa agenda. Gostaria de agendar uma visita comercial ao nosso espaço para alinharmos e iniciarmos as sessões? Ficamos à total disposição. Até breve!`
+
+function formatTemplateMessage(template: string, item: any): string {
+    const recipientName = item?.responsible_name || item?.patient_name || 'Cliente'
+    const patientName = item?.patient_name || 'seu filho(a)'
+    const therapy = item?.therapy_type || (item?.therapies && item.therapies[0]?.name) || 'terapia'
+
+    return template
+        .replace(/\{nome_responsavel\}/g, recipientName)
+        .replace(/\{nome_paciente\}/g, patientName)
+        .replace(/\{terapia\}/g, therapy)
+}
+
 export default function FilaEsperaPage() {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
@@ -34,14 +53,22 @@ export default function FilaEsperaPage() {
     const [isProcessingFile, setIsProcessingFile] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
  
-    // Estados de WhatsApp
+    // Estados de WhatsApp Individual
     const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
     const [whatsappItem, setWhatsappItem] = useState<any>(null)
     const [whatsappMessage, setWhatsappMessage] = useState('')
     const [sendingWhatsapp, setSendingWhatsapp] = useState(false)
     const [whatsappLogs, setWhatsappLogs] = useState<any[]>([])
     const [loadingLogs, setLoadingLogs] = useState(false)
- 
+
+    // Estados de Seleção Múltipla & Disparo em Lote WhatsApp
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
+    const [batchModalOpen, setBatchModalOpen] = useState(false)
+    const [batchTemplateKey, setBatchTemplateKey] = useState<string>('espaco_incluir')
+    const [batchMessageText, setBatchMessageText] = useState<string>(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
+    const [batchSending, setBatchSending] = useState(false)
+    const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, success: 0, fail: 0 })
+
     // Função de carregar histórico de mensagens
     const fetchWhatsappLogs = async (phone: string) => {
         setLoadingLogs(true)
@@ -60,11 +87,7 @@ export default function FilaEsperaPage() {
  
     const openWhatsapp = useCallback((item: any) => {
         setWhatsappItem(item)
-        const recipientName = item.responsible_name || item.patient_name || ''
-        const therapy = item.therapy_type || 'avaliação'
-        
-        // Mensagem padrão comercial
-        const defaultMsg = `Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`
+        const defaultMsg = formatTemplateMessage(TEMPLATE_ESPACO_INCLUIR_JEFERSON, item)
         
         setWhatsappMessage(defaultMsg)
         setWhatsappLogs([])
@@ -132,6 +155,87 @@ export default function FilaEsperaPage() {
         } finally {
             setSendingWhatsapp(false)
         }
+    }
+
+    const handleStartBatchSending = async () => {
+        if (selectedIds.length === 0) {
+            toast.error('Nenhum paciente selecionado')
+            return
+        }
+        if (!batchMessageText.trim()) {
+            toast.error('A mensagem não pode estar vazia')
+            return
+        }
+
+        const targetItems = (data?.items || []).filter((item: any) => selectedIds.includes(item.id))
+        if (targetItems.length === 0) {
+            toast.error('Registros selecionados não encontrados')
+            return
+        }
+
+        setBatchSending(true)
+        setBatchProgress({ current: 0, total: targetItems.length, success: 0, fail: 0 })
+
+        let successCount = 0
+        let failCount = 0
+
+        for (let i = 0; i < targetItems.length; i++) {
+            const item = targetItems[i]
+            setBatchProgress({ current: i + 1, total: targetItems.length, success: successCount, fail: failCount })
+
+            if (!item.patient_phone) {
+                failCount++
+                continue
+            }
+
+            const formattedMsg = formatTemplateMessage(batchMessageText, item)
+
+            try {
+                const res = await fetch('/api/whatsapp/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: item.patient_phone,
+                        message: formattedMsg,
+                        sector: 'default',
+                        trigger_source: 'waiting-list-batch'
+                    })
+                })
+
+                if (res.ok) {
+                    successCount++
+                    const dateStr = new Date().toLocaleString('pt-BR')
+                    const logAppend = `\n[${dateStr} - WhatsApp Lote]: "${formattedMsg}"`
+                    const newNotes = item.commercial_notes ? `${item.commercial_notes}${logAppend}` : logAppend
+
+                    await fetch('/api/waiting-list', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: item.id,
+                            status: item.status === 'waiting' ? 'contacted' : item.status,
+                            commercial_notes: newNotes
+                        })
+                    })
+                } else {
+                    failCount++
+                }
+            } catch {
+                failCount++
+            }
+
+            // Intervalo de 2s para evitar bloqueios no WhatsApp
+            if (i < targetItems.length - 1) {
+                await new Promise(r => setTimeout(r, 2000))
+            }
+        }
+
+        setBatchProgress({ current: targetItems.length, total: targetItems.length, success: successCount, fail: failCount })
+        setBatchSending(false)
+        toast.success(`Disparo concluído: ${successCount} mensagens enviadas! (${failCount} falhas)`)
+        fetchData()
+        setSelectedIds([])
+        setBatchModalOpen(false)
     }
 
     const fetchData = useCallback(async () => {
@@ -567,8 +671,7 @@ export default function FilaEsperaPage() {
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'fila_espera.xlsx'; a.click()
     }
-
-    const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã', afternoon: 'Tarde', evening: 'Noite' }
+const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã', afternoon: 'Tarde', evening: 'Noite' }
     const statusColors: Record<string, string> = { waiting: 'bg-yellow-100 text-yellow-800', contacted: 'bg-blue-100 text-blue-800', scheduled: 'bg-green-100 text-green-800', cancelled: 'bg-red-100 text-red-800' }
     const statusLabels: Record<string, string> = { waiting: 'Aguardando', contacted: 'Contatado', scheduled: 'Agendado', cancelled: 'Cancelado' }
     const financialLabels: Record<string, string> = { converted: 'Convertido', waiting_info: 'Aguardando Informação', not_converted: 'Não Convertido' }
@@ -590,6 +693,20 @@ export default function FilaEsperaPage() {
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
+                    <Button variant="outline" onClick={() => {
+                        const allWithPhone = (data?.items || []).filter((item: any) => item.patient_phone).map((item: any) => item.id)
+                        if (allWithPhone.length === 0) {
+                            toast.error('Nenhum paciente com telefone na fila')
+                            return
+                        }
+                        setSelectedIds(allWithPhone)
+                        setBatchMessageText(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
+                        setBatchTemplateKey('espaco_incluir')
+                        setBatchModalOpen(true)
+                    }}
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-emerald-50 hover:bg-emerald-100 border-emerald-300 shadow-sm rounded-xl px-4 font-semibold text-emerald-800 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Disparar mensagem WhatsApp comercial em lote para a Fila de Espera">
+                        <Send className="w-4 h-4 text-emerald-600" /><span className="hidden sm:inline">Disparo Comercial Lote</span>
+                    </Button>
                     <Button variant="outline" onClick={handleRemoveDuplicates}
                         className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
                         <Layers className="w-4 h-4 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
@@ -625,12 +742,77 @@ export default function FilaEsperaPage() {
                         <Card><CardHeader className="pb-2"><CardDescription>Conversão</CardDescription><CardTitle className="text-2xl text-primary">{s?.conversion_rate || 0}%</CardTitle></CardHeader></Card>
                     </div>
 
+                    {/* Barra de Ações em Lote quando houver seleção */}
+                    {selectedIds.length > 0 && (
+                        <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-3 rounded-xl shadow-sm animate-in fade-in">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-200">
+                                    {selectedIds.length} paciente(s) selecionado(s) para ação comercial
+                                </span>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSelectedIds([])}
+                                    className="text-xs min-h-[44px]"
+                                >
+                                    Desmarcar Todos
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                        setBatchMessageText(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
+                                        setBatchTemplateKey('espaco_incluir')
+                                        setBatchModalOpen(true)
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-sm min-h-[44px] px-4"
+                                >
+                                    <Send className="w-3.5 h-3.5" /> Disparar WhatsApp em Lote ({selectedIds.length})
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     <Card>
-                        <CardHeader><CardTitle>Pacientes na Fila</CardTitle></CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Pacientes na Fila</CardTitle>
+                            {data?.items?.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (selectedIds.length === data.items.length) {
+                                            setSelectedIds([])
+                                        } else {
+                                            setSelectedIds(data.items.map((i: any) => i.id))
+                                        }
+                                    }}
+                                    className="text-xs font-semibold text-emerald-600 hover:underline bg-transparent border-0 cursor-pointer p-0"
+                                >
+                                    {selectedIds.length === data.items.length ? 'Desmarcar Todos' : 'Selecionar Todos da Fila'}
+                                </button>
+                            )}
+                        </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead><tr className="border-b">
+                                        <th className="p-2 w-10 text-center">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded cursor-pointer accent-emerald-600"
+                                                checked={data?.items?.length > 0 && selectedIds.length === data?.items?.length}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedIds(data?.items?.map((item: any) => item.id) || [])
+                                                    } else {
+                                                        setSelectedIds([])
+                                                    }
+                                                }}
+                                            />
+                                        </th>
                                         <th className="text-left p-2">Nome</th>
                                         <th className="text-left p-2 hidden sm:table-cell">Telefone</th>
                                         <th className="text-left p-2 hidden md:table-cell">Terapias</th>
@@ -640,12 +822,26 @@ export default function FilaEsperaPage() {
                                         <th className="text-left p-2">Ações</th>
                                     </tr></thead>
                                     <tbody>
-                                        {data?.items?.length === 0 && <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">Fila vazia 🎉</td></tr>}
+                                        {data?.items?.length === 0 && <tr><td colSpan={8} className="text-center p-8 text-muted-foreground">Fila vazia 🎉</td></tr>}
                                         {data?.items?.map((item: any) => {
                                             const therapies = item.therapies && Array.isArray(item.therapies) && item.therapies.length > 0
                                                 ? item.therapies : (item.therapy_type ? [{ name: item.therapy_type, qty: 1 }] : [])
                                             return (
-                                                <tr key={item.id} className="border-b hover:bg-muted/50">
+                                                <tr key={item.id} className={`border-b hover:bg-muted/50 ${selectedIds.includes(item.id) ? 'bg-emerald-50/50 dark:bg-emerald-950/20' : ''}`}>
+                                                    <td className="p-2 w-10 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 rounded cursor-pointer accent-emerald-600"
+                                                            checked={selectedIds.includes(item.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedIds(prev => [...prev, item.id])
+                                                                } else {
+                                                                    setSelectedIds(prev => prev.filter(id => id !== item.id))
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
                                                     <td className="p-2">
                                                         <div className="font-semibold text-gray-800 dark:text-gray-200">{item.patient_name}</div>
                                                         {item.responsible_name && (
@@ -718,169 +914,165 @@ export default function FilaEsperaPage() {
                     </div>
 
                     {activeTab === 'comercial' && (
-                        <div className="space-y-4">
-                            <div><Label>Nome do Paciente *</Label><Input value={form.patient_name} onChange={e => setForm({ ...form, patient_name: e.target.value })} placeholder="Nome completo" style={{ fontSize: '16px' }} /></div>
-                            <div><Label>Nome do Responsável</Label><Input value={form.responsible_name} onChange={e => setForm({ ...form, responsible_name: e.target.value })} placeholder="Caso seja menor de idade" style={{ fontSize: '16px' }} /></div>
-                            <div><Label>Telefone</Label><Input value={form.patient_phone} onChange={e => setForm({ ...form, patient_phone: e.target.value })} placeholder="(00) 00000-0000" style={{ fontSize: '16px' }} /></div>
+                        <div className="space-y-4 py-2">
+                            <div><Label>Nome do Paciente *</Label><Input value={form.patient_name} onChange={e => setForm({ ...form, patient_name: e.target.value })} style={{ fontSize: '16px' }} /></div>
+                            <div><Label>Nome do Responsável</Label><Input value={form.responsible_name} onChange={e => setForm({ ...form, responsible_name: e.target.value })} placeholder="Nome da mãe, pai ou responsável" style={{ fontSize: '16px' }} /></div>
+                            <div><Label>Telefone / WhatsApp</Label><Input value={form.patient_phone} onChange={e => setForm({ ...form, patient_phone: e.target.value })} placeholder="(00) 00000-0000" style={{ fontSize: '16px' }} /></div>
+                            <div><Label>E-mail</Label><Input value={form.patient_email} onChange={e => setForm({ ...form, patient_email: e.target.value })} style={{ fontSize: '16px' }} /></div>
 
-                            {/* Terapias Dinâmicas */}
+                            {/* Terapias Múltiplas */}
                             <div className="space-y-2">
-                                <Label>Terapias e Quantidade</Label>
+                                <div className="flex justify-between items-center"><Label>Terapias Necessárias</Label><Button type="button" variant="outline" size="sm" onClick={addTherapy} className="h-7 text-xs"><Plus className="w-3 h-3 mr-1" /> Adicionar Terapia</Button></div>
                                 {form.therapies.map((t, idx) => (
                                     <div key={idx} className="flex gap-2 items-center">
-                                        <Input className="flex-1" placeholder="Ex: Fonoaudiologia" value={t.name} onChange={e => updateTherapy(idx, 'name', e.target.value)} style={{ fontSize: '16px' }} />
-                                        <Input className="w-20" type="number" min={1} value={t.qty} onChange={e => updateTherapy(idx, 'qty', parseInt(e.target.value) || 1)} style={{ fontSize: '16px' }} />
-                                        <span className="text-xs text-muted-foreground whitespace-nowrap">qtd.</span>
-                                        {form.therapies.length > 1 && (
-                                            <Button type="button" variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => removeTherapy(idx)}>
-                                                <X className="h-4 w-4 text-red-500" />
-                                            </Button>
-                                        )}
+                                        <Input value={t.name} onChange={e => updateTherapy(idx, 'name', e.target.value)} placeholder="Ex: Fisioterapia, Psiquiatria..." className="flex-1" style={{ fontSize: '16px' }} />
+                                        <Input type="number" min={1} value={t.qty} onChange={e => updateTherapy(idx, 'qty', parseInt(e.target.value) || 1)} className="w-20" style={{ fontSize: '16px' }} />
+                                        {form.therapies.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => removeTherapy(idx)} className="h-8 w-8 text-red-500"><Trash2 className="w-4 h-4" /></Button>}
                                     </div>
                                 ))}
-                                <Button type="button" variant="outline" size="sm" onClick={addTherapy} className="text-xs gap-1 h-8 rounded-lg">
-                                    <Plus className="h-3 w-3" /> Adicionar Terapia
-                                </Button>
                             </div>
 
                             <div>
-                                <Label>Turno Preferido</Label>
-                                <select value={form.preferred_shift} onChange={e => setForm({ ...form, preferred_shift: e.target.value })}
-                                    className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }}>
-                                    <option value="any">Qualquer</option><option value="morning">Manhã</option><option value="afternoon">Tarde</option><option value="evening">Noite</option>
+                                <Label>Turno Preferencial</Label>
+                                <select value={form.preferred_shift} onChange={e => setForm({ ...form, preferred_shift: e.target.value })} className="w-full border rounded p-2 text-sm bg-white dark:bg-slate-900" style={{ fontSize: '16px' }}>
+                                    {Object.entries(shiftLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                                 </select>
                             </div>
-                            <div><Label>Observação Comercial</Label><textarea value={form.commercial_notes} onChange={e => setForm({ ...form, commercial_notes: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm h-20 dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }} placeholder="Observações do comercial..." /></div>
+                            <div><Label>Observações Comerciais</Label><Input value={form.commercial_notes} onChange={e => setForm({ ...form, commercial_notes: e.target.value })} placeholder="Histórico de conversas, preferências..." style={{ fontSize: '16px' }} /></div>
                         </div>
                     )}
 
                     {activeTab === 'financeiro' && (
-                        <div className="space-y-4">
-                            <div><Label>Data do Contato</Label><Input type="date" value={form.financial_contact_date} onChange={e => setForm({ ...form, financial_contact_date: e.target.value })} style={{ fontSize: '16px' }} /></div>
+                        <div className="space-y-4 py-2">
                             <div>
-                                <Label>Resultado</Label>
-                                <select value={form.financial_result} onChange={e => setForm({ ...form, financial_result: e.target.value })}
-                                    className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }}>
-                                    <option value="">Sem resultado</option>
-                                    <option value="converted">✅ Convertido</option>
-                                    <option value="waiting_info">⏳ Aguardando Informação</option>
-                                    <option value="not_converted">❌ Não Convertido</option>
+                                <Label>Data do Contato Financeiro</Label>
+                                <Input type="date" value={form.financial_contact_date} onChange={e => setForm({ ...form, financial_contact_date: e.target.value })} style={{ fontSize: '16px' }} />
+                            </div>
+                            <div>
+                                <Label>Resultado da Abordagem Financeira</Label>
+                                <select value={form.financial_result} onChange={e => setForm({ ...form, financial_result: e.target.value })} className="w-full border rounded p-2 text-sm bg-white dark:bg-slate-900" style={{ fontSize: '16px' }}>
+                                    <option value="">Não informado</option>
+                                    <option value="converted">Convertido (Fechou Contrato)</option>
+                                    <option value="waiting_info">Aguardando Informação / Em Análise</option>
+                                    <option value="not_converted">Não Convertido (Recusou / Desistiu)</option>
                                 </select>
                             </div>
-                            <div><Label>Observação Financeira</Label><textarea value={form.financial_notes} onChange={e => setForm({ ...form, financial_notes: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm h-20 dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }} placeholder="Observações do financeiro..." /></div>
+                            <div>
+                                <Label>Observações Financeiras</Label>
+                                <textarea value={form.financial_notes} onChange={e => setForm({ ...form, financial_notes: e.target.value })} className="w-full border rounded-xl p-3 text-sm h-24 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }} placeholder="Detalhes da proposta financeira, valores oferecidos, motivos de recusa..." />
+                            </div>
                         </div>
                     )}
 
-                    <Button onClick={handleSave}
-                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
-                        <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
-                    </Button>
+                    <div className="flex gap-2 justify-end pt-2">
+                        <Button variant="outline" onClick={() => setDialogOpen(false)} className="min-h-[44px]">Cancelar</Button>
+                        <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px]">
+                            {editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Modal de Importação de Planilha Excel/CSV */}
+            {/* Modal de Importação Planilha */}
             <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                             <Upload className="w-5 h-5 text-blue-600" /> Importar Planilha para Fila de Espera
                         </DialogTitle>
                         <DialogDescription className="text-sm text-slate-500">
-                            Selecione um arquivo Excel (.xlsx) ou CSV contendo os dados dos pacientes para cadastrá-los em lote.
+                            Carregue um arquivo Excel (.xlsx) ou CSV com seus leads. Você pode baixar nosso modelo padronizado abaixo.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-5 py-2">
-                        {/* Botão Baixar Modelo */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 gap-3">
-                            <div className="text-xs text-blue-900 dark:text-blue-200">
-                                <span className="font-semibold">Dica:</span> Utilize nosso modelo oficial formatado com as colunas recomendadas (Nome, Responsável, Telefone, Email, Terapias, Turno, Observação).
-                            </div>
-                            <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}
-                                className="shrink-0 text-xs font-semibold gap-1.5 bg-white hover:bg-blue-50 border-blue-200 text-blue-700 dark:bg-slate-900 dark:border-blue-800 min-h-[44px]">
-                                <Download className="w-3.5 h-3.5" /> Baixar Modelo Excel
+                    <div className="space-y-4 py-2">
+                        {/* Botões de Ação da Importação */}
+                        <div className="flex flex-wrap gap-2 items-center justify-between bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border">
+                            <Button type="button" variant="outline" onClick={downloadTemplate} className="gap-1.5 text-xs h-9 min-h-[44px]">
+                                <Download className="w-3.5 h-3.5 text-blue-600" /> Baixar Planilha Modelo (.xlsx)
                             </Button>
-                        </div>
-
-                        {/* Dropzone de Upload */}
-                        <div 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-blue-50/20 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
-                        >
+                            
                             <input 
                                 type="file" 
                                 ref={fileInputRef} 
-                                onChange={handleFileSelect} 
-                                accept=".xlsx,.xls,.csv" 
+                                onChange={handleFileSelected} 
+                                accept=".xlsx, .xls, .csv" 
                                 className="hidden" 
                             />
-                            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-full text-blue-600 dark:text-blue-400">
-                                <FileSpreadsheet className="w-8 h-8" />
-                            </div>
-                            <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                {importFileName ? `Arquivo: ${importFileName}` : 'Clique para selecionar a planilha (.xlsx ou .csv)'}
-                            </div>
-                            <p className="text-xs text-slate-500">
-                                Suporta arquivos Excel (.xlsx, .xls) e arquivos CSV
-                            </p>
+                            
+                            <Button 
+                                type="button" 
+                                onClick={() => fileInputRef.current?.click()} 
+                                disabled={isProcessingFile}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5 h-9 min-h-[44px]"
+                            >
+                                {isProcessingFile ? (
+                                    <>
+                                        <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                                        Lendo arquivo...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileSpreadsheet className="w-3.5 h-3.5" /> Selecionar Arquivo Excel / CSV
+                                    </>
+                                )}
+                            </Button>
                         </div>
 
-                        {/* Prévia dos Dados */}
-                        {isProcessingFile && (
-                            <div className="flex items-center justify-center py-6 text-sm text-slate-500 gap-2">
-                                <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-                                Processando e validando planilha...
+                        {importFileName && (
+                            <div className="text-xs text-slate-500 font-medium">
+                                📄 Arquivo carregado: <span className="font-bold text-slate-700 dark:text-slate-300">{importFileName}</span> ({importRows.length} linhas válidas)
                             </div>
                         )}
 
-                        {importRows.length > 0 && !isProcessingFile && (
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                                        Prévia dos Pacientes Prontos ({importRows.length} encontrados)
-                                    </h4>
-                                    <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-1 rounded-full font-semibold">
-                                        ✅ {importRows.length} válidos
-                                    </span>
-                                </div>
-
-                                <div className="max-h-48 overflow-y-auto border rounded-xl bg-white dark:bg-slate-950 text-xs">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                        {/* Pré-visualização da Tabela */}
+                        {importRows.length > 0 && (
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                    Pré-visualização dos Registros que serão Importados ({importRows.length})
+                                </Label>
+                                <div className="max-h-60 overflow-y-auto border rounded-xl">
+                                    <table className="w-full text-xs">
+                                        <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 border-b">
                                             <tr>
-                                                <th className="p-2 border-b">#</th>
-                                                <th className="p-2 border-b">Nome</th>
-                                                <th className="p-2 border-b">Responsável</th>
-                                                <th className="p-2 border-b">Telefone</th>
-                                                <th className="p-2 border-b">Terapias</th>
+                                                <th className="p-2 text-left">Nome Paciente</th>
+                                                <th className="p-2 text-left">Responsável</th>
+                                                <th className="p-2 text-left">Telefone</th>
+                                                <th className="p-2 text-left">Terapias</th>
+                                                <th className="p-2 text-left">Turno</th>
+                                                <th className="p-2 text-left">Obs</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {importRows.slice(0, 50).map((row, idx) => (
-                                                <tr key={idx} className="border-b hover:bg-slate-50 dark:hover:bg-slate-900">
-                                                    <td className="p-2 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                                                    <td className="p-2 font-semibold text-slate-800 dark:text-slate-200">{row.patient_name}</td>
-                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{row.responsible_name || '—'}</td>
-                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{row.patient_phone || '—'}</td>
-                                                    <td className="p-2 text-slate-600 dark:text-slate-400 max-w-[150px] truncate" title={row.therapy_type}>{row.therapy_type || '—'}</td>
+                                            {importRows.map((r, i) => (
+                                                <tr key={i} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                                                    <td className="p-2 font-semibold">{r.patient_name}</td>
+                                                    <td className="p-2 text-slate-500">{r.responsible_name || '—'}</td>
+                                                    <td className="p-2">{r.patient_phone || '—'}</td>
+                                                    <td className="p-2">
+                                                        {r.therapies && r.therapies.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {r.therapies.map((t: any, idx: number) => (
+                                                                    <span key={idx} className="bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded text-[10px]">
+                                                                        {t.name} {t.qty > 1 ? `(${t.qty}x)` : ''}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : '—'}
+                                                    </td>
+                                                    <td className="p-2 capitalize">{shiftLabels[r.preferred_shift] || r.preferred_shift}</td>
+                                                    <td className="p-2 text-slate-400 truncate max-w-xs">{r.commercial_notes || '—'}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-                                {importRows.length > 50 && (
-                                    <p className="text-[11px] text-slate-400 text-center italic">
-                                        Exibindo as primeiras 50 linhas de {importRows.length} registros.
-                                    </p>
-                                )}
                             </div>
                         )}
                     </div>
 
                     <div className="flex gap-2 justify-end pt-3 border-t">
-                        <Button type="button" variant="outline" onClick={() => { setImportModalOpen(false); setImportRows([]); setImportFileName(''); }} className="min-h-[44px]">
-                            Cancelar
-                        </Button>
+                        <Button variant="outline" onClick={() => { setImportModalOpen(false); setImportRows([]); setImportFileName(''); }} className="min-h-[44px]">Cancelar</Button>
                         <Button 
                             type="button" 
                             disabled={importRows.length === 0 || isProcessingFile} 
@@ -890,8 +1082,10 @@ export default function FilaEsperaPage() {
                             Confirmar Importação ({importRows.length})
                         </Button>
                     </div>
+                </DialogContent>
+            </Dialog>
 
-            {/* Modal de Disparo de WhatsApp */}
+            {/* Modal de Disparo de WhatsApp Individual */}
             <Dialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen}>
                 <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -913,17 +1107,14 @@ export default function FilaEsperaPage() {
                             <select
                                 onChange={(e) => {
                                     const val = e.target.value;
-                                    if (val === 'default') {
-                                        const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
-                                        const therapy = whatsappItem?.therapy_type || 'avaliação'
-                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`)
+                                    if (val === 'espaco_incluir') {
+                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_ESPACO_INCLUIR_JEFERSON, whatsappItem))
+                                    } else if (val === 'default') {
+                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_DEFAULT, whatsappItem))
                                     } else if (val === 'followup') {
-                                        const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
-                                        const therapy = whatsappItem?.therapy_type || 'avaliação'
-                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de ${therapy} conosco. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`)
+                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_FOLLOWUP, whatsappItem))
                                     } else if (val === 'visit') {
-                                        const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
-                                        setWhatsappMessage(`Olá ${recipientName}, temos ótimas notícias! Ocorreu uma abertura de vaga em nossa agenda. Gostaria de agendar uma visita comercial ao nosso espaço para alinharmos e iniciarmos as sessões? Ficamos à total disposição. Até breve!`)
+                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_VISIT, whatsappItem))
                                     } else if (val === 'custom') {
                                         setWhatsappMessage('')
                                     }
@@ -931,6 +1122,7 @@ export default function FilaEsperaPage() {
                                 className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 min-h-[44px]"
                                 style={{ fontSize: '16px' }}
                             >
+                                <option value="espaco_incluir">Modelo Espaço Incluir: Reativação Comercial / Orçamento (Jefferson)</option>
                                 <option value="default">Modelo 1: Convite para Visita (Padrão)</option>
                                 <option value="followup">Modelo 2: Follow-up de Interesse</option>
                                 <option value="visit">Modelo 3: Abertura de Vaga / Agendamento</option>
@@ -962,36 +1154,9 @@ export default function FilaEsperaPage() {
                                 </>
                             )}
                         </div>
-
-                        {/* Histórico Local de Mensagens */}
-                        <div className="space-y-2 pt-2 border-t">
-                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                                Histórico de Envio WhatsApp
-                                {loadingLogs && <span className="text-[10px] text-slate-400 animate-pulse normal-case font-normal">buscando...</span>}
-                            </Label>
-                            
-                            <div className="max-h-36 overflow-y-auto space-y-2 pr-1 border rounded-lg p-2 bg-slate-50/50 dark:bg-slate-950/20 text-xs">
-                                {whatsappLogs.length === 0 ? (
-                                    <div className="text-slate-400 italic text-center py-4">Nenhum envio registrado anteriormente para este número.</div>
-                                ) : (
-                                    whatsappLogs.map((log) => (
-                                        <div key={log.id} className="border-b last:border-0 pb-2 mb-2 last:pb-0 last:mb-0">
-                                            <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold mb-1">
-                                                <span>📅 {log.sent_at ? new Date(log.sent_at).toLocaleString('pt-BR') : 'Sem data'}</span>
-                                                <span className={`px-1.5 py-0.5 rounded font-mono uppercase text-[9px] ${log.status === 'sent' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                                                    {log.status === 'sent' ? 'Enviado' : 'Falhou'}
-                                                </span>
-                                            </div>
-                                            <p className="text-slate-600 dark:text-slate-300 italic whitespace-pre-wrap">{log.message_preview}...</p>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
                     </div>
 
                     <div className="flex gap-2 justify-between pt-3 border-t">
-                        {/* Botão de WhatsApp Web como fallback/alternativa */}
                         <a
                             href={`https://wa.me/55${whatsappItem?.patient_phone?.replace(/\D/g, '')}`}
                             target="_blank"
@@ -1027,6 +1192,114 @@ export default function FilaEsperaPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Disparo em Lote do WhatsApp */}
+            <Dialog open={batchModalOpen} onOpenChange={setBatchModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                            <span className="p-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg">
+                                <Send className="w-5 h-5" />
+                            </span>
+                            Disparo Comercial de WhatsApp em Lote
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            Dispare mensagens automáticas para os <strong>{selectedIds.length} pacientes selecionados</strong> da Fila de Espera. Cada mensagem incluirá os dados dinâmicos do paciente.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Selector de Modelo em Lote */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Modelo da Mensagem Comercial</Label>
+                            <select
+                                value={batchTemplateKey}
+                                onChange={(e) => {
+                                    const val = e.target.value
+                                    setBatchTemplateKey(val)
+                                    if (val === 'espaco_incluir') setBatchMessageText(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
+                                    else if (val === 'default') setBatchMessageText(TEMPLATE_DEFAULT)
+                                    else if (val === 'followup') setBatchMessageText(TEMPLATE_FOLLOWUP)
+                                    else if (val === 'visit') setBatchMessageText(TEMPLATE_VISIT)
+                                    else if (val === 'custom') setBatchMessageText('')
+                                }}
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 min-h-[44px]"
+                                style={{ fontSize: '16px' }}
+                            >
+                                <option value="espaco_incluir">Modelo Espaço Incluir: Reativação Comercial / Orçamento (Jefferson)</option>
+                                <option value="default">Modelo 1: Convite para Visita (Padrão)</option>
+                                <option value="followup">Modelo 2: Follow-up de Interesse</option>
+                                <option value="visit">Modelo 3: Abertura de Vaga / Agendamento</option>
+                                <option value="custom">Mensagem Personalizada</option>
+                            </select>
+                        </div>
+
+                        {/* Corpo da Mensagem do Lote */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Texto do Modelo (Aceita Tags Dinâmicas)</Label>
+                                <span className="text-[10px] text-slate-400">Tags: &#123;nome_responsavel&#125;, &#123;nome_paciente&#125;, &#123;terapia&#125;</span>
+                            </div>
+                            <textarea
+                                value={batchMessageText}
+                                onChange={(e) => setBatchMessageText(e.target.value)}
+                                disabled={batchSending}
+                                className="w-full border rounded-xl p-3 text-sm h-36 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900 dark:border-slate-700"
+                                style={{ fontSize: '16px' }}
+                                placeholder="Digite a mensagem..."
+                            />
+                        </div>
+
+                        {/* Barra de Progresso do Disparo */}
+                        {batchSending && (
+                            <div className="space-y-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                                <div className="flex justify-between items-center text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                                    <span>Enviando mensagens em lote... ({batchProgress.current}/{batchProgress.total})</span>
+                                    <span>{Math.round((batchProgress.current / batchProgress.total) * 100)}%</span>
+                                </div>
+                                <div className="w-full bg-emerald-200 dark:bg-emerald-900 h-2.5 rounded-full overflow-hidden">
+                                    <div
+                                        className="bg-emerald-600 h-full transition-all duration-300"
+                                        style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+                                    />
+                                </div>
+                                <div className="flex gap-4 text-[11px] text-slate-500 pt-1">
+                                    <span className="text-emerald-700 font-semibold">✅ Sucessos: {batchProgress.success}</span>
+                                    <span className="text-red-600 font-semibold">❌ Falhas: {batchProgress.fail}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-3 border-t">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={batchSending}
+                            onClick={() => setBatchModalOpen(false)}
+                            className="min-h-[44px]"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={batchSending || !batchMessageText.trim() || selectedIds.length === 0}
+                            onClick={handleStartBatchSending}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 min-h-[44px] gap-2"
+                        >
+                            {batchSending ? (
+                                <>
+                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                    Processando Lote...
+                                </>
+                            ) : (
+                                <>
+                                    <Send className="w-4 h-4" />
+                                    Iniciar Disparos ({selectedIds.length})
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
