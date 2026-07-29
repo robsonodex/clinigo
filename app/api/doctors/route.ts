@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             .from('doctors')
             .select(`
         *,
-        user:users(email, full_name, avatar_url, phone, is_active),
+        user:users!inner(email, full_name, avatar_url, phone, is_active),
         clinic:clinics!doctors_clinic_id_fkey(name, slug)
       `, { count: 'exact' })
 
@@ -103,8 +103,6 @@ export async function GET(request: NextRequest) {
         if (clinicId) {
             queryBuilder = queryBuilder.eq('clinic_id', clinicId)
         } else if (userRole !== 'SUPER_ADMIN') {
-            // Unauthenticated and no slug provided -> Forbidden or empty
-            // To be safe, if we didn't find a clinic and not super admin, don't show anything
             return paginatedResponse(buildPaginatedData([], 0, page, pageSize))
         }
 
@@ -112,12 +110,15 @@ export async function GET(request: NextRequest) {
             queryBuilder = queryBuilder.eq('specialty', query.specialty)
         }
 
+        // Filter out soft-deleted / inactive users unless explicitly requested
         if (query.is_accepting !== undefined) {
             queryBuilder = queryBuilder.eq('is_accepting_appointments', query.is_accepting)
         } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN' && userRole !== 'RECEPTIONIST') {
             // Default to active only for public/patients
-            // Admins and receptionists see ALL by default
-            queryBuilder = queryBuilder.eq('is_accepting_appointments', true)
+            queryBuilder = queryBuilder.eq('is_accepting_appointments', true).eq('user.is_active', true)
+        } else {
+            // Admins and receptionists: show active users by default
+            queryBuilder = queryBuilder.eq('user.is_active', true)
         }
 
         // Apply pagination

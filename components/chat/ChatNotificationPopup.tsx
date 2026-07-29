@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { usePathname } from 'next/navigation'
@@ -19,16 +19,23 @@ interface NotificationData {
 /**
  * ChatNotificationPopup — Pop-up flutuante de notificação de chat
  * Aparece quando:
- *   1. Uma nova mensagem chega via Supabase Realtime
+ *   1. Uma nova mensagem chega via Supabase Realtime OU polling de fallback
  *   2. O usuário NÃO está na página do chat
  *   3. A mensagem é de outro usuário
- * Auto-dismiss após 5 segundos
+ * Auto-dismiss após 6 segundos
+ * 
+ * Mecanismo duplo:
+ *   - Realtime (postgres_changes) para notificações instantâneas
+ *   - Polling (/api/chat/conversations) a cada 15s como fallback robusto
  */
 export function ChatNotificationPopup() {
     const { profile } = useAuth()
     const pathname = usePathname()
     const [notifications, setNotifications] = useState<NotificationData[]>([])
     const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null)
+    const lastCheckedRef = useRef<string | null>(null)
+    const seenMsgIdsRef = useRef<Set<string>>(new Set())
+    const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
     // Não exibir notificações se já estiver na página do chat
     const isOnChatPage = pathname?.includes('/dashboard/chat')
@@ -42,7 +49,18 @@ export function ChatNotificationPopup() {
         }
     }, [])
 
-    // Subscription Realtime para novas mensagens
+    // Helper: adicionar notificação
+    const addNotification = useCallback((notif: NotificationData) => {
+        if (seenMsgIdsRef.current.has(notif.id)) return
+        seenMsgIdsRef.current.add(notif.id)
+
+        // Play sound
+        audioRef?.play().catch(() => {})
+
+        setNotifications(prev => [notif, ...prev].slice(0, 3))
+    }, [audioRef])
+
+    // Subscription Realtime para novas mensagens (mecanismo primário)
     useEffect(() => {
         if (!profile?.id) return
 
@@ -73,19 +91,14 @@ export function ChatNotificationPopup() {
                         .eq('id', msg.sender_id)
                         .single()
 
-                    const notification: NotificationData = {
+                    addNotification({
                         id: msg.id,
                         senderName: sender?.full_name || 'Usuário',
                         senderAvatar: sender?.avatar_url || null,
                         preview: msg.content?.substring(0, 80) || (msg.message_type === 'image' ? '📷 Imagem' : msg.message_type === 'document' ? '📄 Documento' : msg.message_type === 'audio' ? '🎤 Áudio' : 'Nova mensagem'),
                         conversationId: msg.conversation_id,
                         timestamp: new Date(),
-                    }
-
-                    // Play sound
-                    audioRef?.play().catch(() => {})
-
-                    setNotifications(prev => [notification, ...prev].slice(0, 3)) // máximo 3 notificações
+                    })
                 }
             )
             .subscribe()
@@ -93,15 +106,84 @@ export function ChatNotificationPopup() {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [profile?.id, isOnChatPage, audioRef])
+    }, [profile?.id, isOnChatPage, addNotification])
 
-    // Auto-dismiss após 5 segundos
+    // Polling de fallback (mecanismo secundário — garante que funcione mesmo sem Realtime)
+    useEffect(() => {
+        if (!profile?.id || isOnChatPage) {
+            if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null }
+            return
+        }
+
+        // Inicializar timestamp de referência
+        if (!lastCheckedRef.current) {
+            lastCheckedRef.current = new Date().toISOString()
+        }
+
+        const checkUnread = async () => {
+            try {
+                const res = await fetch('/api/chat/conversations')
+                if (!res.ok) return
+                const data = await res.json()
+                const conversations = data.data || data || []
+
+                for (const conv of conversations) {
+                    if (!conv.last_message_at || !conv.last_message_preview) continue
+
+                    // Verificar se tem mensagem nova após o último check
+                    const lastMsgTime = new Date(conv.last_message_at).getTime()
+                    const lastCheckTime = new Date(lastCheckedRef.current!).getTime()
+
+                    if (lastMsgTime > lastCheckTime) {
+                        // Verificar se a última mensagem é do próprio usuário
+                        const myParticipant = conv.participants?.find?.((p: any) => p.user_id === profile.id)
+                        const lastRead = myParticipant?.last_read_at ? new Date(myParticipant.last_read_at).getTime() : 0
+
+                        if (lastMsgTime > lastRead) {
+                            // Não é do próprio usuário e não foi lida — gerar notificação
+                            const msgId = `poll-${conv.id}-${conv.last_message_at}`
+
+                            // Buscar quem enviou (do nome de conversa ou participantes)
+                            const otherParticipant = conv.participants?.find?.((p: any) => p.user_id !== profile.id)
+                            const senderName = otherParticipant?.user?.full_name || conv.name || 'Chat'
+
+                            addNotification({
+                                id: msgId,
+                                senderName,
+                                senderAvatar: otherParticipant?.user?.avatar_url || null,
+                                preview: conv.last_message_preview?.substring(0, 80) || 'Nova mensagem',
+                                conversationId: conv.id,
+                                timestamp: new Date(conv.last_message_at),
+                            })
+                        }
+                    }
+                }
+
+                lastCheckedRef.current = new Date().toISOString()
+            } catch {
+                // Silenciar erros de polling
+            }
+        }
+
+        // Rodar primeiro check após 5 segundos
+        const initialTimer = setTimeout(checkUnread, 5000)
+
+        // Polling a cada 15 segundos
+        pollingRef.current = setInterval(checkUnread, 15000)
+
+        return () => {
+            clearTimeout(initialTimer)
+            if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null }
+        }
+    }, [profile?.id, isOnChatPage, addNotification])
+
+    // Auto-dismiss após 6 segundos
     useEffect(() => {
         if (notifications.length === 0) return
 
         const timer = setTimeout(() => {
             setNotifications(prev => prev.slice(0, -1)) // remove a mais antiga
-        }, 5000)
+        }, 6000)
 
         return () => clearTimeout(timer)
     }, [notifications])
@@ -124,7 +206,7 @@ export function ChatNotificationPopup() {
                     key={notif.id}
                     onClick={() => handleClick(notif.conversationId, notif.id)}
                     className={cn(
-                        "bg-white rounded-xl shadow-2xl border border-gray-200 p-4 cursor-pointer",
+                        "bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-4 cursor-pointer relative",
                         "transform transition-all duration-300 ease-out",
                         "hover:shadow-3xl hover:scale-[1.02]",
                         "animate-in slide-in-from-right-5 fade-in duration-300"
@@ -149,7 +231,7 @@ export function ChatNotificationPopup() {
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                                     {notif.senderName}
                                 </p>
                                 <button
@@ -157,12 +239,12 @@ export function ChatNotificationPopup() {
                                         e.stopPropagation()
                                         dismissNotification(notif.id)
                                     }}
-                                    className="flex-shrink-0 p-0.5 rounded hover:bg-gray-100 transition-colors"
+                                    className="flex-shrink-0 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
                                 >
                                     <X className="w-3.5 h-3.5 text-gray-400" />
                                 </button>
                             </div>
-                            <p className="text-sm text-gray-600 truncate mt-0.5">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-0.5">
                                 {notif.preview}
                             </p>
                         </div>

@@ -7,7 +7,7 @@ const UUID_FIELDS = ['patient_id', 'doctor_id', 'appointment_id', 'plan_id']
 // Campos válidos da tabela session_evolutions (evita enviar lixo do form)
 const ALLOWED_FIELDS = [
     'patient_id', 'doctor_id', 'appointment_id', 'plan_id',
-    'evolution_date', 'template_type',
+    'evolution_date', 'template_type', 'specialty',
     'subjective', 'objective', 'assessment', 'plan_notes',
     'body_functions', 'activities_participation', 'environmental_factors',
     'data_description', 'analysis', 'plan_action',

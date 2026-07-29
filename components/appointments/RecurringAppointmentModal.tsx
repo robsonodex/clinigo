@@ -43,6 +43,7 @@ import { formatCurrency } from '@/lib/utils'
 interface Doctor {
     id: string
     specialty: string
+    specialties_additional?: string[]
     consultation_price: number
     user: {
         full_name: string
@@ -266,7 +267,17 @@ export function RecurringAppointmentModal({
                                 <Stethoscope className="h-4 w-4" />
                                 Terapeuta / Médico
                             </Label>
-                            <Select value={doctorId} onValueChange={setDoctorId}>
+                            <Select 
+                                value={doctorId} 
+                                onValueChange={(val) => {
+                                    setDoctorId(val)
+                                    const doc = doctors?.find(d => d.id === val)
+                                    if (doc) {
+                                        const specs = Array.from(new Set([doc.specialty, ...(doc.specialties_additional || [])].filter(Boolean)))
+                                        if (specs.length > 0) setTherapyType(specs[0])
+                                    }
+                                }}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecione o terapeuta" />
                                 </SelectTrigger>
@@ -276,24 +287,56 @@ export function RecurringAppointmentModal({
                                             <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                                         </div>
                                     )}
-                                    {doctors?.filter(d => d.id && d.user).map((doctor) => (
-                                        <SelectItem key={doctor.id} value={doctor.id}>
-                                            {doctor.user?.full_name || 'Terapeuta'} - {doctor.specialty}
-                                        </SelectItem>
-                                    ))}
+                                    {doctors?.filter(d => d.id && d.user).map((doctor) => {
+                                        const allSpecs = Array.from(new Set([doctor.specialty, ...(doctor.specialties_additional || [])].filter(Boolean)))
+                                        const specsLabel = allSpecs.join(', ') || 'Sem especialidade'
+                                        return (
+                                            <SelectItem key={doctor.id} value={doctor.id}>
+                                                {doctor.user?.full_name || 'Terapeuta'} - {specsLabel}
+                                            </SelectItem>
+                                        )
+                                    })}
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {/* Therapy Type */}
-                        <div className="space-y-2">
-                            <Label>Tipo de Terapia</Label>
-                            <Input
-                                placeholder="Ex: ABA, Fono, TO, Psicologia..."
-                                value={therapyType}
-                                onChange={(e) => setTherapyType(e.target.value)}
-                            />
-                        </div>
+                        {/* Specialty / Therapy Selection for Multi-specialty */}
+                        {selectedDoctor && (() => {
+                            const availableSpecs = Array.from(new Set([selectedDoctor.specialty, ...(selectedDoctor.specialties_additional || [])].filter(Boolean)))
+                            return (
+                                <div className="space-y-2 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-lg">
+                                    <Label className="flex items-center gap-2 text-sm font-semibold text-emerald-900 dark:text-emerald-300">
+                                        <Stethoscope className="h-4 w-4 text-emerald-600" />
+                                        Especialidade / Terapia da Série Recorrente
+                                    </Label>
+                                    {availableSpecs.length > 1 ? (
+                                        <Select value={therapyType || availableSpecs[0]} onValueChange={setTherapyType}>
+                                            <SelectTrigger className="bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-800">
+                                                <SelectValue placeholder="Selecione a especialidade" />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper" className="z-[9999]">
+                                                {availableSpecs.map((spec) => (
+                                                    <SelectItem key={spec} value={spec}>
+                                                        {spec}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Input
+                                            placeholder="Ex: ABA, Fono, TO, Psicologia..."
+                                            value={therapyType}
+                                            onChange={(e) => setTherapyType(e.target.value)}
+                                        />
+                                    )}
+                                    {availableSpecs.length > 1 && (
+                                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                                            Este profissional possui {availableSpecs.length} especialidades ativas. Selecione para qual especialidade será criada esta série recorrente.
+                                        </p>
+                                    )}
+                                </div>
+                            )
+                        })()}
 
                         {/* Days of Week */}
                         <div className="space-y-2">

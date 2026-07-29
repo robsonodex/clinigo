@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, SmilePlus, Angry, Lock, CheckCircle2, Shield, Printer, ChevronDown, ChevronUp, TrendingUp, Stethoscope } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
@@ -50,7 +50,7 @@ export default function SessionEvolutionsPage() {
 
     const emptyForm = {
         patient_id: '', doctor_id: '', appointment_id: '', plan_id: '',
-        evolution_date: new Date().toISOString().split('T')[0], template_type: 'soap',
+        evolution_date: new Date().toISOString().split('T')[0], template_type: 'soap', specialty: '',
         subjective: '', objective: '', assessment: '', plan_notes: '',
         body_functions: '', activities_participation: '', environmental_factors: '',
         data_description: '', analysis: '', plan_action: '',
@@ -227,16 +227,48 @@ export default function SessionEvolutionsPage() {
                                     </Select>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Data</Label><Input type="date" value={form.evolution_date} onChange={e => setForm(p => ({ ...p, evolution_date: e.target.value }))} /></div>
-                                <div>
-                                    <Label>Template</Label>
-                                    <Select value={templateType} onValueChange={v => { setTemplateType(v); setForm(p => ({ ...p, template_type: v })) }}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>{Object.entries(TEMPLATE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                </div>
                             </div>
+
+                            {/* Seletor de Especialidade Aplicada (para profissionais com múltiplas especialidades) */}
+                            {form.doctor_id && (() => {
+                                const doc = doctors.find((d: any) => d.id === form.doctor_id)
+                                if (!doc) return null
+                                const specs = Array.from(new Set([doc.specialty, ...(doc.specialties_additional || [])].filter(Boolean)))
+                                if (specs.length === 0) return null
+                                const currentSpec = form.specialty || specs[0]
+                                return (
+                                    <div className="space-y-1.5 p-3 bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-900 rounded-xl">
+                                        <Label className="text-xs font-bold text-teal-900 dark:text-teal-300 flex items-center gap-1.5">
+                                            <Stethoscope className="w-3.5 h-3.5 text-teal-600" />
+                                            Especialidade Aplicada nesta Sessão *
+                                        </Label>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {specs.map((s: string) => {
+                                                const isSelected = currentSpec === s
+                                                return (
+                                                    <button
+                                                        key={s}
+                                                        type="button"
+                                                        onClick={() => setForm(p => ({ ...p, specialty: s }))}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                                            isSelected
+                                                                ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                                                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-teal-50'
+                                                        }`}
+                                                    >
+                                                        {s}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                        {specs.length > 1 && (
+                                            <p className="text-[11px] text-teal-700 dark:text-teal-400 mt-1">
+                                                Selecione qual especialidade você exerceu neste atendimento específico.
+                                            </p>
+                                        )}
+                                    </div>
+                                )
+                            })()}
 
                             {templateType === 'soap' && (
                                 <div className="space-y-3 border rounded-lg p-4">
@@ -467,6 +499,11 @@ export default function SessionEvolutionsPage() {
                                         <div className="flex items-center gap-3 mb-2 flex-wrap">
                                             <span className="font-semibold">{getName(ev.patients)}</span>
                                             <Badge variant="outline">{TEMPLATE_LABELS[ev.template_type]}</Badge>
+                                            {ev.specialty && (
+                                                <Badge className="bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800 font-semibold">
+                                                    {ev.specialty}
+                                                </Badge>
+                                            )}
                                             <span className="text-sm text-muted-foreground">{new Date(ev.evolution_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
                                             {isFinalized(ev) && (
                                                 <Badge className="bg-green-600 text-white gap-1">
