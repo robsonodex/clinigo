@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         reply: 'Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp! 📱',
         messages: ['Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp! 📱'],
         transfer: true,
-        whatsappUrl: 'https://wa.me/5521990400577?text=Olá!%20Vim%20do%20chat%20do%20site%20e%20gostaria%20de%20continuar%20a%20conversa'
+        whatsappUrl: 'https://wa.me/5521975129005?text=Olá!%20Vim%20do%20chat%20do%20site%20e%20gostaria%20de%20continuar%20a%20conversa'
       })
     }
 
@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
       sendFollowUp: engineResult.sendFollowUp || false,
       followUpMessages: engineResult.sendFollowUp ? getTrialFollowUpMessage() : undefined,
       ...(shouldTransfer ? {
-        whatsappUrl: 'https://wa.me/5521990400577?text=Olá!%20Vim%20do%20chat%20do%20site%20e%20gostaria%20de%20falar%20com%20um%20especialista'
+        whatsappUrl: 'https://wa.me/5521975129005?text=Olá!%20Vim%20do%20chat%20do%20site%20e%20gostaria%20de%20falar%20com%20um%20especialista'
       } : {})
     })
 

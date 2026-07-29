@@ -543,7 +543,7 @@ export default function LGPDPage() {
                                             <strong>Suporte:</strong> suporte@clinigo.app
                                         </p>
                                         <p className="text-gray-600 text-sm">
-                                            <strong>WhatsApp:</strong> (21) 99040-0577
+                                            <strong>WhatsApp:</strong> (21) 97512-9005
                                         </p>
                                     </div>
                                 </div>

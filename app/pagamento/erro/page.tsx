@@ -66,7 +66,7 @@ function ErrorContent() {
 
                 {/* Support */}
                 <p className="mt-8 text-xs text-gray-400">
-                    Precisa de ajuda? WhatsApp: (21) 99040-0577 | suporte@clinigo.app
+                    Precisa de ajuda? WhatsApp: (21) 97512-9005 | suporte@clinigo.app
                 </p>
             </div>
         </div>

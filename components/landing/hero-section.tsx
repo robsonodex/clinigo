@@ -77,7 +77,7 @@ export function HeroSection() {
                         </Link>
 
                         <a
-                            href="https://wa.me/5521990400577?text=Olá!%20Quero%20saber%20mais%20sobre%20o%20CliniGo"
+                            href="https://wa.me/5521975129005?text=Olá!%20Quero%20saber%20mais%20sobre%20o%20CliniGo"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
