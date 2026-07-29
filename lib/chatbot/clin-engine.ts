@@ -183,9 +183,9 @@ export function processStep(
 
   // ===== STEP: FLUXO 1 INTRO (perfil) =====
   if (currentStep === 'fluxo_1_intro') {
-    if (input === 'a') return result(MSG_FLUXO_1A_SOLO, 'fluxo_1a_solo')
-    if (input === 'b') return result(MSG_FLUXO_1B_EQUIPE, 'fluxo_1b_aguarda_num')
-    if (input === 'c') return result(MSG_FLUXO_1C_REDE, 'fluxo_1c_aguarda_resposta')
+    if (input === 'a' || input === '1') return result(MSG_FLUXO_1A_SOLO, 'fluxo_1a_solo')
+    if (input === 'b' || input === '2') return result(MSG_FLUXO_1B_EQUIPE, 'fluxo_1b_aguarda_num')
+    if (input === 'c' || input === '3') return result(MSG_FLUXO_1C_REDE, 'fluxo_1c_aguarda_resposta')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -261,7 +261,7 @@ O que prefere fazer?
 
   // ===== STEP: FLUXO 3 DEMO =====
   if (currentStep === 'fluxo_3_demo') {
-    if (input === 'a') {
+    if (input === 'a' || input === '1') {
       return result([
         `Perfeito! Vou te conectar com um especialista para agendar sua demonstração. 🤝
 
@@ -272,7 +272,7 @@ Antes de transferir, me conta rapidinho:
 🔙 *0* — Voltar ao menu principal`
       ], 'fluxo_5_aguarda_nome')
     }
-    if (input === 'b') return result(MSG_TRIAL_DIRETO_FLUXO3, 'enviar_trial_fluxo3', { sendFollowUp: true })
+    if (input === 'b' || input === '2') return result(MSG_TRIAL_DIRETO_FLUXO3, 'enviar_trial_fluxo3', { sendFollowUp: true })
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -303,9 +303,14 @@ Antes de transferir, me conta rapidinho:
   // ===== STEP: FLUXO 4 FUNCIONALIDADES =====
   if (currentStep === 'fluxo_4_funcionalidades') {
     const funcMap: Record<string, string[]> = {
-      'a': MSG_FUNC_4A, 'b': MSG_FUNC_4B, 'c': MSG_FUNC_4C,
-      'd': MSG_FUNC_4D, 'e': MSG_FUNC_4E, 'f': MSG_FUNC_4F,
-      'g': MSG_FUNC_4G, 'h': MSG_FUNC_4H,
+      'a': MSG_FUNC_4A, '1': MSG_FUNC_4A,
+      'b': MSG_FUNC_4B, '2': MSG_FUNC_4B,
+      'c': MSG_FUNC_4C, '3': MSG_FUNC_4C,
+      'd': MSG_FUNC_4D, '4': MSG_FUNC_4D,
+      'e': MSG_FUNC_4E, '5': MSG_FUNC_4E,
+      'f': MSG_FUNC_4F, '6': MSG_FUNC_4F,
+      'g': MSG_FUNC_4G, '7': MSG_FUNC_4G,
+      'h': MSG_FUNC_4H, '8': MSG_FUNC_4H,
     }
     if (funcMap[input]) {
       return result(funcMap[input], 'func_detail')
@@ -352,7 +357,8 @@ Antes de transferir, me conta rapidinho:
 
   // ===== STEP: FLUXO 5 — COLETA DOR =====
   if (currentStep === 'fluxo_5_aguarda_dor') {
-    const dorKey = input.charAt(0)
+    const numToLetterMap: Record<string, string> = { '1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e' }
+    const dorKey = numToLetterMap[input] || input.charAt(0)
     let dorText = ''
     let explicacaoDor = ''
 

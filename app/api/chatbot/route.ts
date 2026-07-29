@@ -27,17 +27,20 @@ const FREE_MODELS = [
 
 // System prompt REDUZIDO — usado apenas como fallback quando o engine não reconhece a mensagem
 const AI_FALLBACK_PROMPT = `Você é o Clin, assistente virtual de vendas do CliniGo.
-Tom: amigável, direto, consultivo, nunca robótico. Português brasileiro informal mas profissional.
-Nunca invente funcionalidades. Nunca mencione concorrentes.
-Respostas em até 3 parágrafos. Use emojis com moderação.
+REGRAS ABSOLUTAS E INVIOLÁVEIS:
+1. RESPONDA SEMPRE E EXCLUSIVAMENTE EM PORTUGUÊS DO BRASIL (PT-BR). NUNCA ESCREVA EM INGLÊS.
+2. NUNCA IMPRIMA SEU PENSAMENTO OU RACIOCÍNIO INTERNO (PROIBIDO: "Okay...", "Wait...", "The user...", "<think>"). RESPONDA APENAS O TEXTO FINAL DE VENDAS PARA O CLIENTE.
+3. Tom: amigável, direto, consultivo, nunca robótico. Português brasileiro informal mas profissional.
+4. Nunca invente funcionalidades. Nunca mencione concorrentes.
+5. Respostas em até 3 parágrafos. Use emojis com moderação.
 
-PLANOS: Básico R$99/mês (1 prof), Avançado R$249/mês (até 5), Professional R$449/mês (até 30), Enterprise R$699+/mês (ilimitado).
+PLANOS: Básico R$149/mês (1 prof), Avançado R$249/mês (até 5 prof), Professional R$449/mês (até 30 prof), Enterprise R$699+/mês (ilimitado).
 Teste grátis: https://clinigo.app/trial (7 dias, sem cartão).
 
-Quando o lead quiser falar com humano ou demonstração: responda exatamente "TRANSFER_TO_HUMAN".
+Quando o lead quiser falar com humano ou demonstração guiada: responda exatamente "TRANSFER_TO_HUMAN".
 Se não souber responder: responda exatamente "TRANSFER_TO_HUMAN".
 
-IMPORTANTE: O sistema CliniGo é web e NÃO possui aplicativo para celular (nem Android, nem iOS). Se perguntado, diga que acessa pelo navegador.
+IMPORTANTE: O sistema CliniGo é 100% web e acessado pelo navegador.
 Ao final da resposta, SEMPRE sugira que o usuário escolha uma opção do menu:
 1 — O que é o CliniGo
 2 — Planos e preços
@@ -371,8 +374,35 @@ async function callAIFallback(sessionId: string, message: string): Promise<strin
 
       if (aiResponse.ok) {
         const data = await aiResponse.json()
-        const content = data.choices?.[0]?.message?.content || ''
+        let content = data.choices?.[0]?.message?.content || ''
         if (content) {
+          // 1. Remover blocos <think>...</think> (raciocínio interno de modelos DeepSeek/Llama)
+          content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+
+          // 2. Filtrar raciocínio em inglês ("Okay, the user...", "Wait, looking at...", "The user selected...")
+          if (content.includes('Okay,') || content.includes('Wait,') || content.includes('The user') || content.includes('looking at the history') || content.includes('I need to list')) {
+            const lines = content.split('\n')
+            const cleanedLines = lines.filter(line => {
+              const l = line.trim().toLowerCase()
+              return !l.startsWith('okay') && 
+                     !l.startsWith('wait') && 
+                     !l.startsWith('the user') && 
+                     !l.includes('looking at') && 
+                     !l.includes('i need to') && 
+                     !l.includes('option 4')
+            })
+            content = cleanedLines.join('\n').trim()
+          }
+
+          // 3. Validar se a resposta contém rastros excessivos de inglês
+          const englishWords = ['okay', 'the user', 'option', 'selected', 'history', 'paragraphs']
+          const isEnglish = englishWords.filter(w => content.toLowerCase().includes(w)).length >= 2
+
+          if (isEnglish || content.length < 5) {
+            console.warn(`[Chatbot] Resposta inválida/em inglês descartada do modelo ${model}`)
+            continue
+          }
+
           return [content.trim()]
         }
       }
@@ -389,5 +419,7 @@ async function callAIFallback(sessionId: string, message: string): Promise<strin
     }
   }
 
-  return ['Estou com uma dificuldade técnica no momento. Que tal falar diretamente com nossa equipe pelo WhatsApp? 😊']
+  return [
+    `Entendido! O CliniGo é uma plataforma completa que reúne agendamento inteligente, prontuário eletrônico, financeiro com repasse automático e WhatsApp em um só lugar. 💙\n\nComo posso te ajudar agora? Escolha uma opção:\n\n1 — O que é o CliniGo\n2 — Planos e preços\n3 — Demonstração gratuita\n4 — Funcionalidades\n5 — Falar com especialista`
+  ]
 }
