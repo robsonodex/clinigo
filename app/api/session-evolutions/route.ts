@@ -132,7 +132,8 @@ export async function GET(request: NextRequest) {
         if (error) throw error
 
         const mappedData = (data || []).map((ev: any) => {
-            if (ev.template_type === 'soap' && (ev.data_description || ev.content)) {
+            const isEspacoIncluir = userData?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+            if (ev.template_type === 'soap' && (isEspacoIncluir || ev.data_description || ev.content)) {
                 return { ...ev, template_type: 'multidisciplinar' }
             }
             return ev

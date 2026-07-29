@@ -38,6 +38,7 @@ export default function SessionEvolutionsPage() {
     const [filterPatientId, setFilterPatientId] = useState<string>('')
     const [filterStartDate, setFilterStartDate] = useState<string>('')
     const [filterEndDate, setFilterEndDate] = useState<string>('')
+    const [currentClinicId, setCurrentClinicId] = useState<string | null>(null)
 
     const toggleExpand = (id: string) => {
         setExpandedEvolutions(prev => {
@@ -83,6 +84,13 @@ export default function SessionEvolutionsPage() {
         fetch('/api/auth/me').then(r => r.json()).then(d => {
             if (d?.id) setCurrentUserId(d.id)
             if (d?.role) setCurrentUserRole(d.role)
+            if (d?.clinic_id) {
+                setCurrentClinicId(d.clinic_id)
+                if (d.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46') {
+                    setTemplateType('multidisciplinar')
+                    setForm(prev => ({ ...prev, template_type: 'multidisciplinar' }))
+                }
+            }
         }).catch(() => {
             // Fallback: tenta pelo supabase diretamente
         })
@@ -103,10 +111,12 @@ export default function SessionEvolutionsPage() {
 
     // Helper: retorna form vazio preservando doctor_id para DOCTOR
     const getResetForm = () => {
+        const defaultType = currentClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' ? 'multidisciplinar' : 'soap'
+        const base = { ...emptyForm, template_type: defaultType }
         if (currentUserRole === 'DOCTOR' && currentDoctorId) {
-            return { ...emptyForm, doctor_id: currentDoctorId }
+            return { ...base, doctor_id: currentDoctorId }
         }
-        return emptyForm
+        return base
     }
 
     const handleSave = async (openSignatureModal = false, shouldFinalize = false) => {
@@ -139,6 +149,7 @@ export default function SessionEvolutionsPage() {
                 setShowDialog(false)
                 setForm(getResetForm())
                 setEditingId(null)
+                setTemplateType(currentClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' ? 'multidisciplinar' : 'soap')
             }
         } catch (err: any) { toast.error(err.message || 'Erro ao salvar evolução') }
         finally { setSaving(false); setFinalizing(false) }
@@ -203,12 +214,12 @@ export default function SessionEvolutionsPage() {
                         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Notas de evolução pós-atendimento (SOAP, CIF, DAP ou Livre)</p>
                     </div>
                 </div>
-                <Dialog open={showDialog} onOpenChange={o => { setShowDialog(o); if (!o) { setForm(getResetForm()); setEditingId(null) } }}>
+                <Dialog open={showDialog} onOpenChange={o => { setShowDialog(o); if (!o) { setForm(getResetForm()); setEditingId(null); setTemplateType(currentClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' ? 'multidisciplinar' : 'soap') } }}>
                     <DialogTrigger asChild><Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold"><Plus className="h-4 w-4 mr-2" /> Nova Evolução</Button></DialogTrigger>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{editingId ? 'Editar' : 'Nova'} Evolução</DialogTitle></DialogHeader>
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <Label>Paciente *</Label>
                                     <PatientSearchCombobox
@@ -224,6 +235,17 @@ export default function SessionEvolutionsPage() {
                                     <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))} disabled={currentUserRole === 'DOCTOR' && !!currentDoctorId}>
                                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                                         <SelectContent>{(currentUserRole === 'DOCTOR' && currentDoctorId ? doctors.filter((d: any) => d.id === currentDoctorId) : doctors).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>Modelo de Evolução (Template) *</Label>
+                                    <Select value={templateType} onValueChange={v => { setTemplateType(v); setForm(p => ({ ...p, template_type: v })) }}>
+                                        <SelectTrigger><SelectValue placeholder="Selecione o modelo" /></SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(TEMPLATE_LABELS).map(([k, v]) => (
+                                                <SelectItem key={k} value={k}>{v}</SelectItem>
+                                            ))}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                             </div>
@@ -344,7 +366,7 @@ export default function SessionEvolutionsPage() {
                             </div>
                         </div>
                         <DialogFooter className="flex gap-2 pt-2">
-                            <Button variant="outline" onClick={() => { setShowDialog(false); setForm(getResetForm()); setEditingId(null) }}>Cancelar</Button>
+                            <Button variant="outline" onClick={() => { setShowDialog(false); setForm(getResetForm()); setEditingId(null); setTemplateType(currentClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' ? 'multidisciplinar' : 'soap') }}>Cancelar</Button>
                             <Button variant="outline" onClick={() => handleSave(false, false)} disabled={saving || finalizing}>
                                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Salvar Rascunho
@@ -393,6 +415,7 @@ export default function SessionEvolutionsPage() {
                                 setForm(getResetForm())
                                 setEditingId(null)
                                 setRecordToSign(null)
+                                setTemplateType(currentClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' ? 'multidisciplinar' : 'soap')
                                 fetchEvolutions()
                             }
                         }}

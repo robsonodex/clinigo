@@ -44,8 +44,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
         if (error) throw error
         
-        if (data && data.template_type === 'soap' && (data.data_description || data.content)) {
-            data.template_type = 'multidisciplinar'
+        if (data && data.template_type === 'soap') {
+            const isEspacoIncluir = data.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+            if (isEspacoIncluir || data.data_description || data.content) {
+                data.template_type = 'multidisciplinar'
+            }
         }
 
         return NextResponse.json({ data })

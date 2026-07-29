@@ -53,8 +53,11 @@ export async function GET(request: NextRequest) {
         }
 
         const record = rawRecord as any
-        if (record && record.template_type === 'soap' && (record.data_description || record.content)) {
-            record.template_type = 'multidisciplinar'
+        if (record && record.template_type === 'soap') {
+            const isEspacoIncluir = record.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+            if (isEspacoIncluir || record.data_description || record.content) {
+                record.template_type = 'multidisciplinar'
+            }
         }
 
         // Apenas evoluções assinadas ou finalizadas podem ser vistas pela família
