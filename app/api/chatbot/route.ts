@@ -214,6 +214,10 @@ export async function POST(request: NextRequest) {
       // Engine não reconheceu → fallback para IA
       finalMessages = await callAIFallback(sessionId, message)
 
+      if (!finalMessages || finalMessages.length === 0 || !finalMessages.some(m => m && m.trim().length > 0)) {
+        finalMessages = MSG_MENU
+      }
+
       // Verificar se a IA quer transferir
       const joinedReply = finalMessages.join(' ')
       if (joinedReply.includes('TRANSFER_TO_HUMAN')) {
