@@ -18,11 +18,11 @@ const emptyForm = {
     financial_contact_date: '', financial_result: '', financial_notes: ''
 }
 
-const TEMPLATE_ESPACO_INCLUIR_JEFERSON = `Olá {nome_responsavel}, tudo bem? Sou Jefferson do Espaço Incluir, há um tempinho atrás você nos procurou para um orçamento de terapias para o(a) {nome_paciente}, gostaria de saber se atualmente ele(a) está em alguma clínica e se vocês gostariam de vir nos visitar e conhecer nossa proposta de atendimento! 😊`
+const TEMPLATE_ORCAMENTO = `Olá {nome_responsavel}, tudo bem? Há um tempo atrás você nos procurou para um orçamento de terapias para o(a) {nome_paciente}. Gostaria de saber se atualmente ele(a) está em alguma clínica e se vocês gostariam de vir nos visitar e conhecer nossa proposta de atendimento! 😊`
 
-const TEMPLATE_DEFAULT = `Olá {nome_responsavel}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para {terapia}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`
+const TEMPLATE_CONVITE = `Olá {nome_responsavel}, tudo bem? Vimos que você está na nossa fila de espera para {terapia}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`
 
-const TEMPLATE_FOLLOWUP = `Olá {nome_responsavel}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de {terapia} conosco. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`
+const TEMPLATE_FOLLOWUP = `Olá {nome_responsavel}, tudo bem? Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de {terapia} para o(a) {nome_paciente}. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`
 
 const TEMPLATE_VISIT = `Olá {nome_responsavel}, temos ótimas notícias! Ocorreu uma abertura de vaga em nossa agenda. Gostaria de agendar uma visita comercial ao nosso espaço para alinharmos e iniciarmos as sessões? Ficamos à total disposição. Até breve!`
 
@@ -64,8 +64,8 @@ export default function FilaEsperaPage() {
     // Estados de Seleção Múltipla & Disparo em Lote WhatsApp
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [batchModalOpen, setBatchModalOpen] = useState(false)
-    const [batchTemplateKey, setBatchTemplateKey] = useState<string>('espaco_incluir')
-    const [batchMessageText, setBatchMessageText] = useState<string>(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
+    const [batchTemplateKey, setBatchTemplateKey] = useState<string>('orcamento')
+    const [batchMessageText, setBatchMessageText] = useState<string>(TEMPLATE_ORCAMENTO)
     const [batchSending, setBatchSending] = useState(false)
     const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, success: 0, fail: 0 })
 
@@ -87,7 +87,7 @@ export default function FilaEsperaPage() {
  
     const openWhatsapp = useCallback((item: any) => {
         setWhatsappItem(item)
-        const defaultMsg = formatTemplateMessage(TEMPLATE_ESPACO_INCLUIR_JEFERSON, item)
+        const defaultMsg = formatTemplateMessage(TEMPLATE_ORCAMENTO, item)
         
         setWhatsappMessage(defaultMsg)
         setWhatsappLogs([])
@@ -700,8 +700,8 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                             return
                         }
                         setSelectedIds(allWithPhone)
-                        setBatchMessageText(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
-                        setBatchTemplateKey('espaco_incluir')
+                        setBatchMessageText(TEMPLATE_ORCAMENTO)
+                        setBatchTemplateKey('orcamento')
                         setBatchModalOpen(true)
                     }}
                         className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-emerald-50 hover:bg-emerald-100 border-emerald-300 shadow-sm rounded-xl px-4 font-semibold text-emerald-800 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Disparar mensagem WhatsApp comercial em lote para a Fila de Espera">
@@ -764,8 +764,8 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                                     type="button"
                                     size="sm"
                                     onClick={() => {
-                                        setBatchMessageText(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
-                                        setBatchTemplateKey('espaco_incluir')
+                                        setBatchMessageText(TEMPLATE_ORCAMENTO)
+                                        setBatchTemplateKey('orcamento')
                                         setBatchModalOpen(true)
                                     }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-sm min-h-[44px] px-4"
@@ -1072,7 +1072,9 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                     </div>
 
                     <div className="flex gap-2 justify-end pt-3 border-t">
-                        <Button variant="outline" onClick={() => { setImportModalOpen(false); setImportRows([]); setImportFileName(''); }} className="min-h-[44px]">Cancelar</Button>
+                        <Button type="button" variant="outline" onClick={() => { setImportModalOpen(false); setImportRows([]); setImportFileName(''); }} className="min-h-[44px]">
+                            Cancelar
+                        </Button>
                         <Button 
                             type="button" 
                             disabled={importRows.length === 0 || isProcessingFile} 
@@ -1085,7 +1087,6 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                 </DialogContent>
             </Dialog>
 
-            {/* Modal de Disparo de WhatsApp Individual */}
             <Dialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen}>
                 <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -1093,107 +1094,53 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                             <span className="p-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg">
                                 <MessageSquare className="w-5 h-5" />
                             </span>
-                            Enviar WhatsApp para {whatsappItem?.patient_name}
+                            Enviar WhatsApp
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-slate-500">
-                            Envie mensagens personalizadas utilizando os templates comerciais cadastrados ou digitando livremente. O histórico ficará registrado.
-                        </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
-                        {/* Selector de Templates */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selecione um Modelo de Mensagem (Comercial)</Label>
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selecione um Modelo</Label>
                             <select
                                 onChange={(e) => {
                                     const val = e.target.value;
-                                    if (val === 'espaco_incluir') {
-                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_ESPACO_INCLUIR_JEFERSON, whatsappItem))
-                                    } else if (val === 'default') {
-                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_DEFAULT, whatsappItem))
-                                    } else if (val === 'followup') {
-                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_FOLLOWUP, whatsappItem))
-                                    } else if (val === 'visit') {
-                                        setWhatsappMessage(formatTemplateMessage(TEMPLATE_VISIT, whatsappItem))
-                                    } else if (val === 'custom') {
-                                        setWhatsappMessage('')
-                                    }
+                                    if (val === 'orcamento') setWhatsappMessage(formatTemplateMessage(TEMPLATE_ORCAMENTO, whatsappItem))
+                                    else if (val === 'convite') setWhatsappMessage(formatTemplateMessage(TEMPLATE_CONVITE, whatsappItem))
+                                    else if (val === 'followup') setWhatsappMessage(formatTemplateMessage(TEMPLATE_FOLLOWUP, whatsappItem))
+                                    else if (val === 'visit') setWhatsappMessage(formatTemplateMessage(TEMPLATE_VISIT, whatsappItem))
+                                    else setWhatsappMessage('')
                                 }}
-                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 min-h-[44px]"
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900"
                                 style={{ fontSize: '16px' }}
                             >
-                                <option value="espaco_incluir">Modelo Espaço Incluir: Reativação Comercial / Orçamento (Jefferson)</option>
-                                <option value="default">Modelo 1: Convite para Visita (Padrão)</option>
-                                <option value="followup">Modelo 2: Follow-up de Interesse</option>
-                                <option value="visit">Modelo 3: Abertura de Vaga / Agendamento</option>
-                                <option value="custom">Mensagem em Branco / Personalizada</option>
+                                <option value="custom">Mensagem Personalizada</option>
+                                <option value="orcamento">Orçamento</option>
+                                <option value="convite">Convite</option>
+                                <option value="followup">Follow-up</option>
+                                <option value="visit">Agendamento</option>
                             </select>
                         </div>
 
-                        {/* Corpo da Mensagem */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Corpo da Mensagem</Label>
                             <textarea
                                 value={whatsappMessage}
                                 onChange={(e) => setWhatsappMessage(e.target.value)}
-                                className="w-full border rounded-xl p-3 text-sm h-32 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900 dark:border-slate-700"
+                                className="w-full border rounded-xl p-3 text-sm h-32 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900"
                                 style={{ fontSize: '16px' }}
-                                placeholder="Digite sua mensagem aqui..."
                             />
-                        </div>
-
-                        {/* Informações Auxiliares */}
-                        <div className="flex gap-2 items-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-lg">
-                            <span className="font-semibold text-slate-600 dark:text-slate-300">Número de Destino:</span>
-                            <span>{whatsappItem?.patient_phone}</span>
-                            {whatsappItem?.responsible_name && (
-                                <>
-                                    <span className="mx-1">•</span>
-                                    <span className="font-semibold text-slate-600 dark:text-slate-300">Responsável:</span>
-                                    <span>{whatsappItem.responsible_name}</span>
-                                </>
-                            )}
                         </div>
                     </div>
 
-                    <div className="flex gap-2 justify-between pt-3 border-t">
-                        <a
-                            href={`https://wa.me/55${whatsappItem?.patient_phone?.replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noopener"
-                            className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-semibold h-11 px-3 rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors uppercase tracking-wider"
-                        >
-                            Abrir WhatsApp Web Externo ↗
-                        </a>
-
-                        <div className="flex gap-2">
-                            <Button type="button" variant="outline" onClick={() => setWhatsappDialogOpen(false)} className="min-h-[44px]">
-                                Fechar
-                            </Button>
-                            <Button
-                                type="button"
-                                disabled={sendingWhatsapp || !whatsappMessage.trim()}
-                                onClick={handleSendWhatsapp}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 min-h-[44px] gap-1.5"
-                            >
-                                {sendingWhatsapp ? (
-                                    <>
-                                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                        Enviando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="w-3.5 h-3.5" />
-                                        Disparar WhatsApp
-                                    </>
-                                )}
-                            </Button>
-                        </div>
+                    <div className="flex gap-2 justify-end pt-3 border-t">
+                        <Button variant="outline" onClick={() => setWhatsappDialogOpen(false)} className="min-h-[44px]">Fechar</Button>
+                        <Button onClick={handleSendWhatsapp} disabled={sendingWhatsapp || !whatsappMessage.trim()} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 min-h-[44px]">
+                            {sendingWhatsapp ? 'Enviando...' : 'Disparar'}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Modal de Disparo em Lote do WhatsApp */}
             <Dialog open={batchModalOpen} onOpenChange={setBatchModalOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -1201,103 +1148,59 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                             <span className="p-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg">
                                 <Send className="w-5 h-5" />
                             </span>
-                            Disparo Comercial de WhatsApp em Lote
+                            Disparo em Lote
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-slate-500">
-                            Dispare mensagens automáticas para os <strong>{selectedIds.length} pacientes selecionados</strong> da Fila de Espera. Cada mensagem incluirá os dados dinâmicos do paciente.
-                        </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
-                        {/* Selector de Modelo em Lote */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Modelo da Mensagem Comercial</Label>
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Modelo da Mensagem</Label>
                             <select
                                 value={batchTemplateKey}
                                 onChange={(e) => {
                                     const val = e.target.value
                                     setBatchTemplateKey(val)
-                                    if (val === 'espaco_incluir') setBatchMessageText(TEMPLATE_ESPACO_INCLUIR_JEFERSON)
-                                    else if (val === 'default') setBatchMessageText(TEMPLATE_DEFAULT)
+                                    if (val === 'orcamento') setBatchMessageText(TEMPLATE_ORCAMENTO)
+                                    else if (val === 'convite') setBatchMessageText(TEMPLATE_CONVITE)
                                     else if (val === 'followup') setBatchMessageText(TEMPLATE_FOLLOWUP)
                                     else if (val === 'visit') setBatchMessageText(TEMPLATE_VISIT)
-                                    else if (val === 'custom') setBatchMessageText('')
+                                    else setBatchMessageText('')
                                 }}
-                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 min-h-[44px]"
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900"
                                 style={{ fontSize: '16px' }}
                             >
-                                <option value="espaco_incluir">Modelo Espaço Incluir: Reativação Comercial / Orçamento (Jefferson)</option>
-                                <option value="default">Modelo 1: Convite para Visita (Padrão)</option>
-                                <option value="followup">Modelo 2: Follow-up de Interesse</option>
-                                <option value="visit">Modelo 3: Abertura de Vaga / Agendamento</option>
                                 <option value="custom">Mensagem Personalizada</option>
+                                <option value="orcamento">Orçamento</option>
+                                <option value="convite">Convite</option>
+                                <option value="followup">Follow-up</option>
+                                <option value="visit">Agendamento</option>
                             </select>
                         </div>
 
-                        {/* Corpo da Mensagem do Lote */}
                         <div className="space-y-1.5">
-                            <div className="flex justify-between items-center">
-                                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Texto do Modelo (Aceita Tags Dinâmicas)</Label>
-                                <span className="text-[10px] text-slate-400">Tags: &#123;nome_responsavel&#125;, &#123;nome_paciente&#125;, &#123;terapia&#125;</span>
-                            </div>
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Texto do Modelo</Label>
                             <textarea
                                 value={batchMessageText}
                                 onChange={(e) => setBatchMessageText(e.target.value)}
                                 disabled={batchSending}
-                                className="w-full border rounded-xl p-3 text-sm h-36 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900 dark:border-slate-700"
+                                className="w-full border rounded-xl p-3 text-sm h-36 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900"
                                 style={{ fontSize: '16px' }}
-                                placeholder="Digite a mensagem..."
                             />
                         </div>
 
-                        {/* Barra de Progresso do Disparo */}
                         {batchSending && (
-                            <div className="space-y-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
-                                <div className="flex justify-between items-center text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                                    <span>Enviando mensagens em lote... ({batchProgress.current}/{batchProgress.total})</span>
-                                    <span>{Math.round((batchProgress.current / batchProgress.total) * 100)}%</span>
-                                </div>
-                                <div className="w-full bg-emerald-200 dark:bg-emerald-900 h-2.5 rounded-full overflow-hidden">
-                                    <div
-                                        className="bg-emerald-600 h-full transition-all duration-300"
-                                        style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
-                                    />
-                                </div>
-                                <div className="flex gap-4 text-[11px] text-slate-500 pt-1">
-                                    <span className="text-emerald-700 font-semibold">✅ Sucessos: {batchProgress.success}</span>
-                                    <span className="text-red-600 font-semibold">❌ Falhas: {batchProgress.fail}</span>
+                            <div className="space-y-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 rounded-xl">
+                                <div className="text-xs font-bold text-emerald-800">
+                                    Enviando... ({batchProgress.current}/{batchProgress.total})
                                 </div>
                             </div>
                         )}
                     </div>
 
                     <div className="flex gap-2 justify-end pt-3 border-t">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            disabled={batchSending}
-                            onClick={() => setBatchModalOpen(false)}
-                            className="min-h-[44px]"
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="button"
-                            disabled={batchSending || !batchMessageText.trim() || selectedIds.length === 0}
-                            onClick={handleStartBatchSending}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 min-h-[44px] gap-2"
-                        >
-                            {batchSending ? (
-                                <>
-                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                    Processando Lote...
-                                </>
-                            ) : (
-                                <>
-                                    <Send className="w-4 h-4" />
-                                    Iniciar Disparos ({selectedIds.length})
-                                </>
-                            )}
+                        <Button type="button" variant="outline" disabled={batchSending} onClick={() => setBatchModalOpen(false)} className="min-h-[44px]">Cancelar</Button>
+                        <Button type="button" disabled={batchSending || !batchMessageText.trim() || selectedIds.length === 0} onClick={handleStartBatchSending} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 min-h-[44px]">
+                            {batchSending ? 'Processando...' : `Iniciar Disparos (${selectedIds.length})`}
                         </Button>
                     </div>
                 </DialogContent>
