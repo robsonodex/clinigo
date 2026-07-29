@@ -525,3 +525,5 @@ vercel --prod
  
 - [2026-05-01] Backend -> WhatsApp -> lib/whatsapp/service.ts -> Adicionado onWhatsApp para formatar/checar nono dígito (BR) e 1.5s delay no envio para evitar Vercel timeout congelado.
 - [2026-05-01] Frontend -> Marketing -> app/(marketing)/landing-premium/page.tsx -> Inserção de Cards de Novidades: WhatsApp Integrado e Chat Interno no grid de funcionalidades.
+
+- [2026-07-29] M?dulos Diversos (Espao Incluir) -> Vorios Arquivos -> Correes Urgentes: Especialidades no agendamento recorrente e evolues, remoo de limites na fila de espera, envio avulso de mensagens no WhatsApp e melhorias na resili?cia do pop-up de chat interno.
