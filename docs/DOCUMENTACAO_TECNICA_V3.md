@@ -1846,3 +1846,20 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 **Migrations SQL:**
 - `supabase/migrations/20260622000002_whatsapp_multi_session.sql`
 - `supabase/migrations/EXECUTAR_MANUAL_20260622_WHATSAPP.sql` (consolidado para execução no Dashboard)
+
+### 30/07/2026 - Correção no Salvamento/Finalização de Evolução (Especialidade Ausente no Banco)
+
+**Solicitado por:** Espaço Incluir (Jeferson/Barbara)
+**Escopo:** Todas as clínicas (com fallback seguro e retrocompatibilidade)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Prontuário → Evoluções → `app/api/session-evolutions/route.ts` → POST
+  - **Fallback de Banco de Dados**: Adicionado interceptor de erro para quando a coluna `specialty` não existir na tabela `session_evolutions` (erro `PGRST204`). Se a coluna estiver ausente, realiza uma segunda tentativa de inserção sem o campo `specialty`, permitindo o salvamento bem-sucedido da evolução.
+
+- Módulo → Prontuário → Evoluções → `app/api/session-evolutions/[id]/route.ts` → PUT / ALLOWED_FIELDS
+  - **Permissão de Especialidade**: Adicionado o campo `'specialty'` na lista de campos permitidos (`ALLOWED_FIELDS`) para a rota de atualização (PUT), garantindo que alterações na especialidade durante a edição da evolução sejam salvas.
+  - **Fallback de Banco de Dados**: Adicionado o mesmo interceptor de erro de coluna ausente (`specialty`/`PGRST204`) para tentar a atualização sem esse campo caso a migração de banco ainda não tenha sido aplicada.
+
+**Migrations SQL:**
+- `schema/20260729_add_specialty_to_session_evolutions.sql` (a ser executada manualmente no Supabase SQL Editor para habilitar a gravação definitiva da especialidade).

@@ -207,8 +207,8 @@ export default function AgendaPage() {
     const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false)
     const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set())
 
-    // Doctor filter
-    const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('all')
+    // Doctor filter (suporta seleção única 'all' ou múltiplos IDs de profissionais)
+    const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string[]>(['all'])
     // Patient search filter
     const [patientSearch, setPatientSearch] = useState('')
     // Free slots toggle (Agenda Inversa)
@@ -381,9 +381,9 @@ export default function AgendaPage() {
             const myDoctor = doctorsList.find((d: any) => d.user_id === user.id)
             if (myDoctor) {
                 if (isCoordinator) {
-                    setSelectedDoctorFilter(prev => prev === 'all' ? myDoctor.id : prev)
+                    setSelectedDoctorFilter(prev => prev.includes('all') ? [myDoctor.id] : prev)
                 } else {
-                    setSelectedDoctorFilter(myDoctor.id)
+                    setSelectedDoctorFilter([myDoctor.id])
                 }
             }
         }
@@ -468,7 +468,7 @@ export default function AgendaPage() {
             const relevantSchedules = (schedulesData as any[]).filter((s: any) => {
                 if (!s.is_active) return false
                 if (s.day_of_week !== dayOfWeek) return false
-                if (selectedDoctorFilter !== 'all' && s.doctor_id !== selectedDoctorFilter) return false
+                if (!selectedDoctorFilter.includes('all') && !selectedDoctorFilter.includes(s.doctor_id)) return false
                 const startMin = parseInt(s.start_time.split(':')[0]) * 60 + parseInt(s.start_time.split(':')[1])
                 const endMin = parseInt(s.end_time.split(':')[0]) * 60 + parseInt(s.end_time.split(':')[1])
                 return timeMinutes >= startMin && timeMinutes < endMin
@@ -508,7 +508,7 @@ export default function AgendaPage() {
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
-                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
+                (selectedDoctorFilter.includes('all') || (a.doctor?.id && selectedDoctorFilter.includes(a.doctor.id))) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
@@ -522,7 +522,7 @@ export default function AgendaPage() {
         const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
-                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
+                (selectedDoctorFilter.includes('all') || (a.doctor?.id && selectedDoctorFilter.includes(a.doctor.id))) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
@@ -901,36 +901,87 @@ export default function AgendaPage() {
                     
                     <div className="hidden md:block w-px h-6 bg-border mx-1" />
                     
-                    <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor && !isCoordinator}>
-                        <SelectTrigger className="w-full md:w-[220px] lg:w-[280px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-                            <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
-                            <div className="flex-1 truncate text-left">
-                                <SelectValue placeholder="Profissional" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os Profissionais</SelectItem>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={isDoctor && !isCoordinator}>
+                            <Button
+                                variant="outline"
+                                className="w-full md:w-[220px] lg:w-[280px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 justify-start font-normal px-3"
+                            >
+                                <Stethoscope className="h-3.5 w-3.5 mr-2 text-muted-foreground shrink-0" />
+                                <span className="truncate flex-1 text-left font-medium">
+                                    {selectedDoctorFilter.includes('all') || selectedDoctorFilter.length === 0
+                                        ? 'Todos os Profissionais'
+                                        : selectedDoctorFilter.length === 1
+                                            ? (doctorsList?.find((d: any) => d.id === selectedDoctorFilter[0])?.user?.full_name || '1 Profissional')
+                                            : `${selectedDoctorFilter.length} Profissionais Selecionados`}
+                                </span>
+                                <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground ml-auto shrink-0 opacity-70" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[280px] max-h-[320px] overflow-y-auto p-1 z-50" align="start">
+                            <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">Filtrar Profissionais</DropdownMenuLabel>
+                            <DropdownMenuItem
+                                onSelect={(e) => {
+                                    e.preventDefault()
+                                    setSelectedDoctorFilter(['all'])
+                                }}
+                                className="flex items-center gap-2 cursor-pointer rounded-lg py-2 px-2"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={selectedDoctorFilter.includes('all')}
+                                    readOnly
+                                    className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                />
+                                <span className="font-semibold text-sm">Todos os Profissionais</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             {doctorsList?.filter((d: any) => d.id && d.user).map((doctor: any) => {
                                 const avail = professionalAvailability.find((p) => p.id === doctor.id)
+                                const isChecked = !selectedDoctorFilter.includes('all') && selectedDoctorFilter.includes(doctor.id)
                                 return (
-                                    <SelectItem key={doctor.id} value={doctor.id}>
-                                        <div className="flex items-center gap-2 overflow-hidden w-full">
-                                            <span className={cn(
-                                                'w-2 h-2 rounded-full shrink-0',
-                                                avail?.isBusy ? 'bg-red-500' : 'bg-green-500'
-                                            )} />
-                                            <span className="truncate min-w-0 font-medium">
-                                                {doctor.user?.full_name || 'Profissional'}{' '}
-                                                <span className="text-muted-foreground text-xs font-normal">
-                                                    ({doctor.specialty || 'Geral'})
-                                                </span>
+                                    <DropdownMenuItem
+                                        key={doctor.id}
+                                        onSelect={(e) => {
+                                            e.preventDefault()
+                                            if (selectedDoctorFilter.includes('all')) {
+                                                setSelectedDoctorFilter([doctor.id])
+                                            } else {
+                                                if (isChecked) {
+                                                    const next = selectedDoctorFilter.filter(id => id !== doctor.id)
+                                                    setSelectedDoctorFilter(next.length === 0 ? ['all'] : next)
+                                                } else {
+                                                    setSelectedDoctorFilter([...selectedDoctorFilter, doctor.id])
+                                                }
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 cursor-pointer rounded-lg py-1.5 px-2"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            readOnly
+                                            className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                        />
+                                        <span className={cn(
+                                            'w-2 h-2 rounded-full shrink-0',
+                                            avail?.isBusy ? 'bg-red-500' : 'bg-green-500'
+                                        )} />
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="truncate text-sm font-medium">
+                                                {doctor.user?.full_name || 'Profissional'}
                                             </span>
+                                            {doctor.specialty && (
+                                                <span className="text-[11px] text-muted-foreground truncate">
+                                                    {doctor.specialty}
+                                                </span>
+                                            )}
                                         </div>
-                                    </SelectItem>
+                                    </DropdownMenuItem>
                                 )
                             })}
-                        </SelectContent>
-                    </Select>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     
                     <div className="relative w-full md:w-auto">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

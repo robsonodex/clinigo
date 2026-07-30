@@ -988,14 +988,14 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                     <div className="space-y-4 py-2">
                         {/* Botões de Ação da Importação */}
                         <div className="flex flex-wrap gap-2 items-center justify-between bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border">
-                            <Button type="button" variant="outline" onClick={downloadTemplate} className="gap-1.5 text-xs h-9 min-h-[44px]">
+                            <Button type="button" variant="outline" onClick={handleDownloadTemplate} className="gap-1.5 text-xs h-9 min-h-[44px]">
                                 <Download className="w-3.5 h-3.5 text-blue-600" /> Baixar Planilha Modelo (.xlsx)
                             </Button>
                             
                             <input 
                                 type="file" 
                                 ref={fileInputRef} 
-                                onChange={handleFileSelected} 
+                                onChange={handleFileSelect} 
                                 accept=".xlsx, .xls, .csv" 
                                 className="hidden" 
                             />
