@@ -1861,5 +1861,17 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **Permissão de Especialidade**: Adicionado o campo `'specialty'` na lista de campos permitidos (`ALLOWED_FIELDS`) para a rota de atualização (PUT), garantindo que alterações na especialidade durante a edição da evolução sejam salvas.
   - **Fallback de Banco de Dados**: Adicionado o mesmo interceptor de erro de coluna ausente (`specialty`/`PGRST204`) para tentar a atualização sem esse campo caso a migração de banco ainda não tenha sido aplicada.
 
-**Migrations SQL:**
-- `schema/20260729_add_specialty_to_session_evolutions.sql` (a ser executada manualmente no Supabase SQL Editor para habilitar a gravação definitiva da especialidade).
+### 30/07/2026 - Correção Crash Fila de Espera & Seleção Múltipla de Terapeutas no Horários Livres (Agenda)
+
+**Solicitado por:** Espaço Incluir (Jeferson)
+**Escopo:** Todas as clínicas
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Recepção → Fila de Espera → `app/dashboard/(clinic)/terapia/fila-espera/page.tsx` → `handleDownloadTemplate` / `handleFileSelect`
+  - **Correção de Crash de Referência**: Corrigidos os nomes dos manipuladores de evento no modal de importação de planilha (`onClick={handleDownloadTemplate}` e `onChange={handleFileSelect}`), eliminando o `ReferenceError: downloadTemplate is not defined` que impedia o carregamento da Fila de Espera.
+
+- Módulo → Agendamento → Agenda → `components/ui/agenda-view.tsx` → `selectedDoctorFilter` / `getSlotFreeStatus` / Toolbar Dropdown
+  - **Seleção Múltipla de Profissionais no Horários Livres**: Alterado o estado de filtro de profissionais (`selectedDoctorFilter`) de seleção única para array (`string[]`).
+  - **Componente Multi-Select em Toolbar**: Substituído o componente `<Select>` individual por um `<DropdownMenu>` interativo com checkboxes para seleção de múltiplos terapeutas simultâneos.
+  - **Mapeamento de Disponibilidade Sequenciada**: O cálculo de horários livres (`getSlotFreeStatus`) agora cruza e exibe no grid semanal os horários vagos de todos os profissionais selecionados ao mesmo tempo, permitindo à recepção visualizar agendamentos sequenciados (ex: TO e Fonoaudiologia no mesmo dia em horários seguidos).
