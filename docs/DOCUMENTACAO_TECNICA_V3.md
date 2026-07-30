@@ -1875,3 +1875,18 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **Seleção Múltipla de Profissionais no Horários Livres**: Alterado o estado de filtro de profissionais (`selectedDoctorFilter`) de seleção única para array (`string[]`).
   - **Componente Multi-Select em Toolbar**: Substituído o componente `<Select>` individual por um `<DropdownMenu>` interativo com checkboxes para seleção de múltiplos terapeutas simultâneos.
   - **Mapeamento de Disponibilidade Sequenciada**: O cálculo de horários livres (`getSlotFreeStatus`) agora cruza e exibe no grid semanal os horários vagos de todos os profissionais selecionados ao mesmo tempo, permitindo à recepção visualizar agendamentos sequenciados (ex: TO e Fonoaudiologia no mesmo dia em horários seguidos).
+  - **Correção de Importação**: Adicionados os imports `DropdownMenuLabel` e `DropdownMenuSeparator` em `agenda-view.tsx`, corrigindo a exceção de tempo de execução `ReferenceError: DropdownMenuLabel is not defined`.
+
+### 30/07/2026 - Roteamento Inteligente & Auto-Fallback de WhatsApp + Seletor de Canais na Fila de Espera
+
+**Solicitado por:** Espaço Incluir (Jeferson / Robson)
+**Escopo:** Todas as clínicas
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Comunicação → WhatsApp → `lib/whatsapp/service.ts` → `sendWhatsAppMessage()`
+  - **Auto-Fallback Inteligente**: Se o setor solicitado estiver desconectado (ex: `default`), a API consulta automaticamente as sessões ativas da clínica e redireciona o envio para qualquer outro setor que esteja conectado (ex: `financeiro` ou `comercial`), evitando o travamento do disparo de mensagens.
+
+- Módulo → Recepção → Fila de Espera → `app/dashboard/(clinic)/terapia/fila-espera/page.tsx` → `openWhatsapp` / Modais de Disparo
+  - **Seletor de Canal de Envio**: Adicionado o seletor visual de WhatsApp no modal de envio individual e disparo em lote, permitindo escolher qual número da clínica enviar com indicador visual de status (🟢 Conectado / 🔴 Desconectado).
+  - **Modal QR Code In-Page**: Adicionado modal de QR Code direto dentro da Fila de Espera para conectar ou visualizar o QR Code de qualquer setor sem precisar sair da página.

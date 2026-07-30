@@ -537,7 +537,37 @@ export async function sendWhatsAppMessage(
   }
 
   if (!session.socket || session.status !== 'open') {
-    throw new Error('WhatsApp não conectado. Acesse Configurações > WhatsApp para conectar.')
+    // 🔄 SMART FALLBACK: Tentar encontrar qualquer outro setor conectado para esta clínica
+    const allSessions = await getAllClinicSessions(clinicId)
+    const connectedSession = allSessions.find((s: any) => s.status === 'connected' && s.sector !== sector)
+
+    if (connectedSession) {
+      console.log(`[WhatsApp] 🔄 Setor '${sector}' desconectado. Redirecionando automaticamente para o setor '${connectedSession.sector}' (${connectedSession.phone_number}).`)
+      const fallbackSector = connectedSession.sector
+      let fallbackSession = getSession(clinicId, fallbackSector)
+      
+      if (!fallbackSession.socket || fallbackSession.status !== 'open') {
+        const fallbackAuth = await loadAuthStateFromStorage(clinicId, fallbackSector)
+        if (fallbackAuth) {
+          startBaileysSession(clinicId, fallbackSector).catch(console.error)
+          let attempts = 0
+          while (fallbackSession.status !== 'open' && attempts < 20) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+            fallbackSession = getSession(clinicId, fallbackSector)
+            attempts++
+          }
+        }
+      }
+
+      if (fallbackSession.socket && fallbackSession.status === 'open') {
+        session = fallbackSession
+        sector = fallbackSector
+      }
+    }
+  }
+
+  if (!session.socket || session.status !== 'open') {
+    throw new Error(`WhatsApp (${sector}) não conectado. Acesse Configurações > WhatsApp para conectar.`)
   }
 
   // Limpar número e formatar para WhatsApp

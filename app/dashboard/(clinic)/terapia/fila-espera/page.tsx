@@ -53,13 +53,64 @@ export default function FilaEsperaPage() {
     const [isProcessingFile, setIsProcessingFile] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
  
-    // Estados de WhatsApp Individual
+    // Estados de WhatsApp Individual & Canais
     const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
     const [whatsappItem, setWhatsappItem] = useState<any>(null)
     const [whatsappMessage, setWhatsappMessage] = useState('')
     const [sendingWhatsapp, setSendingWhatsapp] = useState(false)
     const [whatsappLogs, setWhatsappLogs] = useState<any[]>([])
     const [loadingLogs, setLoadingLogs] = useState(false)
+    const [selectedSector, setSelectedSector] = useState<string>('default')
+    const [whatsappSessions, setWhatsappSessions] = useState<any[]>([])
+
+    // Estados de QR Code Modal in-page
+    const [qrModalOpen, setQrModalOpen] = useState(false)
+    const [qrCodeData, setQrCodeData] = useState<string | null>(null)
+    const [qrSector, setQrSector] = useState<string>('default')
+    const [qrLoading, setQrLoading] = useState(false)
+
+    // Buscar sessões de WhatsApp da clínica
+    const fetchWhatsappSessions = useCallback(async () => {
+        try {
+            const res = await fetch('/api/whatsapp/status?sector=all')
+            if (res.ok) {
+                const result = await res.json()
+                const sessionsList = Array.isArray(result) ? result : (result.sessions || [])
+                setWhatsappSessions(sessionsList)
+                // Se o setor default não estiver conectado, pré-selecionar o primeiro conectado
+                const connected = sessionsList.find((s: any) => s.status === 'connected')
+                if (connected) {
+                    setSelectedSector(connected.sector || 'default')
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao buscar conexões de WhatsApp:', e)
+        }
+    }, [])
+
+    const openQrModal = async (sector: string) => {
+        setQrSector(sector)
+        setQrLoading(true)
+        setQrModalOpen(true)
+        setQrCodeData(null)
+        try {
+            const res = await fetch('/api/whatsapp/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sector })
+            })
+            if (res.ok) {
+                const data = await res.json()
+                setQrCodeData(data.qr_code)
+            } else {
+                toast.error('Erro ao solicitar QR Code')
+            }
+        } catch {
+            toast.error('Erro ao solicitar QR Code')
+        } finally {
+            setQrLoading(false)
+        }
+    }
 
     // Estados de Seleção Múltipla & Disparo em Lote WhatsApp
     const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -92,10 +143,11 @@ export default function FilaEsperaPage() {
         setWhatsappMessage(defaultMsg)
         setWhatsappLogs([])
         setWhatsappDialogOpen(true)
+        fetchWhatsappSessions()
         if (item.patient_phone) {
             fetchWhatsappLogs(item.patient_phone)
         }
-    }, [])
+    }, [fetchWhatsappSessions])
  
     const handleSendWhatsapp = async () => {
         if (!whatsappItem?.patient_phone) {
@@ -116,13 +168,22 @@ export default function FilaEsperaPage() {
                 body: JSON.stringify({
                     phone: whatsappItem.patient_phone,
                     message: whatsappMessage,
-                    sector: 'default', // comercial
+                    sector: selectedSector || 'default',
                     trigger_source: 'waiting-list'
                 })
             })
  
             if (!res.ok) {
                 const err = await res.json()
+                if (err.action === 'configure_whatsapp' || err.error?.includes('não conectado')) {
+                    toast.error(err.error || 'WhatsApp não conectado', {
+                        action: {
+                            label: 'Conectar Agora',
+                            onClick: () => openQrModal(selectedSector || 'default')
+                        }
+                    })
+                    return
+                }
                 throw new Error(err.error || 'Erro ao enviar mensagem')
             }
  
@@ -130,7 +191,7 @@ export default function FilaEsperaPage() {
  
             // Registrar log no histórico do paciente (fila de espera -> commercial_notes)
             const dateStr = new Date().toLocaleString('pt-BR')
-            const logAppend = `\n[${dateStr} - WhatsApp]: "${whatsappMessage}"`
+            const logAppend = `\n[${dateStr} - WhatsApp (${selectedSector.toUpperCase()})]: "${whatsappMessage}"`
             const newNotes = whatsappItem.commercial_notes 
                 ? `${whatsappItem.commercial_notes}${logAppend}`
                 : logAppend
@@ -197,7 +258,7 @@ export default function FilaEsperaPage() {
                     body: JSON.stringify({
                         phone: item.patient_phone,
                         message: formattedMsg,
-                        sector: 'default',
+                        sector: selectedSector || 'default',
                         trigger_source: 'waiting-list-batch'
                     })
                 })
@@ -1099,6 +1160,35 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
+                        {/* Seletor do Canal de WhatsApp */}
+                        <div className="space-y-1.5 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Canal de Envio (WhatsApp)</Label>
+                                <button
+                                    type="button"
+                                    onClick={() => openQrModal(selectedSector)}
+                                    className="text-xs text-blue-600 font-semibold hover:underline bg-transparent border-0 cursor-pointer p-0"
+                                >
+                                    + Conectar / Ver QR Code
+                                </button>
+                            </div>
+                            <select
+                                value={selectedSector}
+                                onChange={(e) => setSelectedSector(e.target.value)}
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 font-semibold text-slate-800 dark:text-slate-200"
+                                style={{ fontSize: '16px' }}
+                            >
+                                <option value="default">
+                                    {whatsappSessions.find(s => s.sector === 'default')?.status === 'connected' ? '🟢 Principal (Conectado)' : '🔴 Principal (Desconectado)'}
+                                </option>
+                                {whatsappSessions.filter(s => s.sector !== 'default').map((s: any) => (
+                                    <option key={s.sector} value={s.sector}>
+                                        {s.status === 'connected' ? '🟢' : '🔴'} Setor {s.sector.toUpperCase()} {s.phone_number ? `(${s.phone_number})` : ''} - {s.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selecione um Modelo</Label>
                             <select
@@ -1153,6 +1243,35 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
+                        {/* Seletor do Canal de WhatsApp no Disparo em Lote */}
+                        <div className="space-y-1.5 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Canal de Envio em Lote (WhatsApp)</Label>
+                                <button
+                                    type="button"
+                                    onClick={() => openQrModal(selectedSector)}
+                                    className="text-xs text-blue-600 font-semibold hover:underline bg-transparent border-0 cursor-pointer p-0"
+                                >
+                                    + Conectar / Ver QR Code
+                                </button>
+                            </div>
+                            <select
+                                value={selectedSector}
+                                onChange={(e) => setSelectedSector(e.target.value)}
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 font-semibold text-slate-800 dark:text-slate-200"
+                                style={{ fontSize: '16px' }}
+                            >
+                                <option value="default">
+                                    {whatsappSessions.find(s => s.sector === 'default')?.status === 'connected' ? '🟢 Principal (Conectado)' : '🔴 Principal (Desconectado)'}
+                                </option>
+                                {whatsappSessions.filter(s => s.sector !== 'default').map((s: any) => (
+                                    <option key={s.sector} value={s.sector}>
+                                        {s.status === 'connected' ? '🟢' : '🔴'} Setor {s.sector.toUpperCase()} {s.phone_number ? `(${s.phone_number})` : ''} - {s.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Modelo da Mensagem</Label>
                             <select
@@ -1201,6 +1320,51 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                         <Button type="button" variant="outline" disabled={batchSending} onClick={() => setBatchModalOpen(false)} className="min-h-[44px]">Cancelar</Button>
                         <Button type="button" disabled={batchSending || !batchMessageText.trim() || selectedIds.length === 0} onClick={handleStartBatchSending} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 min-h-[44px]">
                             {batchSending ? 'Processando...' : `Iniciar Disparos (${selectedIds.length})`}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Conexão Rápida QR Code In-Page */}
+            <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+                <DialogContent className="max-w-md text-center">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">
+                            Conectar WhatsApp — Setor {qrSector.toUpperCase()}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            Abra o WhatsApp no seu celular, vá em Aparelhos Conectados e escaneie o código abaixo.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col items-center justify-center p-4">
+                        {qrLoading ? (
+                            <div className="flex flex-col items-center gap-2 py-8">
+                                <div className="animate-spin h-8 w-8 border-4 border-emerald-600 border-t-transparent rounded-full" />
+                                <span className="text-xs text-slate-500 font-semibold">Gerando QR Code...</span>
+                            </div>
+                        ) : qrCodeData ? (
+                            <div className="p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-md">
+                                <img src={qrCodeData} alt="QR Code WhatsApp" className="w-64 h-64 object-contain" />
+                            </div>
+                        ) : (
+                            <div className="text-sm text-slate-500 py-6">
+                                Não foi possível carregar o QR Code. Tente novamente.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-center pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setQrModalOpen(false)
+                                fetchWhatsappSessions()
+                            }}
+                            className="min-h-[44px] px-6 font-semibold"
+                        >
+                            Concluído / Atualizar Status
                         </Button>
                     </div>
                 </DialogContent>
