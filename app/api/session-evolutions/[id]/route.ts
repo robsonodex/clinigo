@@ -6,7 +6,7 @@ const UUID_FIELDS = ['patient_id', 'doctor_id', 'appointment_id', 'plan_id']
 
 const ALLOWED_FIELDS = [
     'patient_id', 'doctor_id', 'appointment_id', 'plan_id',
-    'evolution_date', 'template_type',
+    'evolution_date', 'template_type', 'specialty',
     'subjective', 'objective', 'assessment', 'plan_notes',
     'body_functions', 'activities_participation', 'environmental_factors',
     'data_description', 'analysis', 'plan_action',
@@ -114,18 +114,36 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             ? { finalized_by: user.id, finalized_at: new Date().toISOString() }
             : {}
 
-        const { data, error } = await supabase
+        let result = await supabase
             .from('session_evolutions')
             .update({ ...cleanBody, updated_at: new Date().toISOString(), ...finalizeFields })
             .eq('id', id)
             .select()
             .single()
 
-        if (error) {
-            console.error('PUT session-evolutions DB error:', error)
-            throw error
+        if (result.error) {
+            // Se o erro for de coluna inexistente (specialty), tenta novamente sem ela
+            if (
+                result.error.message?.includes('specialty') ||
+                result.error.hint?.includes('specialty') ||
+                result.error.code === 'PGRST204'
+            ) {
+                console.warn('PUT session-evolutions: column "specialty" missing in DB, falling back and trying without it.')
+                const { specialty, ...bodyWithoutSpecialty } = cleanBody
+                result = await supabase
+                    .from('session_evolutions')
+                    .update({ ...bodyWithoutSpecialty, updated_at: new Date().toISOString(), ...finalizeFields })
+                    .eq('id', id)
+                    .select()
+                    .single()
+            }
         }
-        return NextResponse.json({ data })
+
+        if (result.error) {
+            console.error('PUT session-evolutions DB error:', result.error)
+            throw result.error
+        }
+        return NextResponse.json({ data: result.data })
     } catch (error: any) {
         console.error('PUT session-evolutions error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
