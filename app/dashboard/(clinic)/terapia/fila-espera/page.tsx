@@ -68,6 +68,14 @@ export default function FilaEsperaPage() {
     const [qrCodeData, setQrCodeData] = useState<string | null>(null)
     const [qrSector, setQrSector] = useState<string>('default')
     const [qrLoading, setQrLoading] = useState(false)
+    const pollingRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Limpar polling se desmontar a página
+    useEffect(() => {
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current)
+        }
+    }, [])
 
     // Buscar sessões de WhatsApp da clínica
     const fetchWhatsappSessions = useCallback(async () => {
@@ -88,8 +96,9 @@ export default function FilaEsperaPage() {
         }
     }, [])
 
-    const openQrModal = async (sector: string) => {
-        setQrSector(sector)
+    const openQrModal = async (sector: string = 'default') => {
+        const sec = sector || 'default'
+        setQrSector(sec)
         setQrLoading(true)
         setQrModalOpen(true)
         setQrCodeData(null)
@@ -97,17 +106,50 @@ export default function FilaEsperaPage() {
             const res = await fetch('/api/whatsapp/connect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sector })
+                body: JSON.stringify({ sector: sec })
             })
-            if (res.ok) {
-                const data = await res.json()
-                setQrCodeData(data.qr_code)
-            } else {
-                toast.error('Erro ao solicitar QR Code')
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Erro ao solicitar QR Code')
+                setQrLoading(false)
+                return
             }
+
+            if (data.status === 'connected') {
+                toast.success(`WhatsApp ${sec.toUpperCase()} já está conectado! 🎉`)
+                setQrModalOpen(false)
+                fetchWhatsappSessions()
+                setQrLoading(false)
+                return
+            }
+
+            if (data.qr_code) {
+                setQrCodeData(data.qr_code)
+                setQrLoading(false)
+            }
+
+            // Polling para monitorar geração do QR Code e conexão
+            if (pollingRef.current) clearInterval(pollingRef.current)
+            pollingRef.current = setInterval(async () => {
+                try {
+                    const sRes = await fetch(`/api/whatsapp/status?sector=${sec}`)
+                    if (sRes.ok) {
+                        const sData = await sRes.json()
+                        if (sData.connected) {
+                            if (pollingRef.current) clearInterval(pollingRef.current)
+                            pollingRef.current = null
+                            setQrModalOpen(false)
+                            toast.success(`WhatsApp ${sec.toUpperCase()} conectado com sucesso! 🎉`)
+                            fetchWhatsappSessions()
+                        } else if (sData.qr_code) {
+                            setQrCodeData(sData.qr_code)
+                            setQrLoading(false)
+                        }
+                    }
+                } catch { /* silent */ }
+            }, 2000)
         } catch {
             toast.error('Erro ao solicitar QR Code')
-        } finally {
             setQrLoading(false)
         }
     }
@@ -754,6 +796,10 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
+                    <Button variant="outline" onClick={() => openQrModal(selectedSector || 'comercial')}
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-green-50 hover:bg-green-100 border-green-300 shadow-sm rounded-xl px-4 font-semibold text-green-800 dark:text-green-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-green-800" title="Conectar ou verificar status do WhatsApp Comercial/Recepção">
+                        <MessageSquare className="w-4 h-4 text-green-600" /><span className="hidden sm:inline">Conectar WhatsApp</span>
+                    </Button>
                     <Button variant="outline" onClick={() => {
                         const allWithPhone = (data?.items || []).filter((item: any) => item.patient_phone).map((item: any) => item.id)
                         if (allWithPhone.length === 0) {
@@ -1326,7 +1372,13 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
             </Dialog>
 
             {/* Modal de Conexão Rápida QR Code In-Page */}
-            <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+            <Dialog open={qrModalOpen} onOpenChange={(open) => {
+                setQrModalOpen(open)
+                if (!open && pollingRef.current) {
+                    clearInterval(pollingRef.current)
+                    pollingRef.current = null
+                }
+            }}>
                 <DialogContent className="max-w-md text-center">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold">

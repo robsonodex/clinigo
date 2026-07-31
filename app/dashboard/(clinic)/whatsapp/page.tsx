@@ -167,25 +167,28 @@ export default function WhatsAppPage() {
         return
       }
 
-      if (data.qr_code) {
-        setQrData({ sector, qr: data.qr_code })
-        // Poll até conectar
-        if (pollingRef.current) clearInterval(pollingRef.current)
-        pollingRef.current = setInterval(async () => {
+      setQrData({ sector, qr: data.qr_code || '' })
+
+      // Poll até conectar e para atualizar QR code caso mude ou demore a gerar
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      pollingRef.current = setInterval(async () => {
+        try {
           const sRes = await fetch(`/api/whatsapp/status?sector=${sector}`)
           if (sRes.ok) {
             const sData = await sRes.json()
             if (sData.connected) {
-              clearInterval(pollingRef.current!)
+              if (pollingRef.current) clearInterval(pollingRef.current)
               pollingRef.current = null
               setQrData(null)
               setConnectingSector(null)
               toast.success(`WhatsApp ${getSectorLabel(sector)} conectado! 🎉`)
               fetchAllSessions()
+            } else if (sData.qr_code) {
+              setQrData({ sector, qr: sData.qr_code })
             }
           }
-        }, 3000)
-      }
+        } catch { /* silent */ }
+      }, 2000)
     } catch { toast.error('Erro ao conectar'); setConnectingSector(null) }
   }
 
