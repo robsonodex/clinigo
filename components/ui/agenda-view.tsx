@@ -32,6 +32,7 @@ import {
     Trash2,
     Plus,
     HelpCircle,
+    Share2,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -91,6 +92,7 @@ import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenc
 import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
 import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
 import { BlockScheduleModal } from '@/components/appointments/BlockScheduleModal'
+import { ExportFreeSlotsModal } from '@/components/appointments/ExportFreeSlotsModal'
 import { AlertTriangle, Lock } from 'lucide-react'
 import {
     Tooltip,
@@ -215,6 +217,8 @@ export default function AgendaPage() {
     const [patientSearch, setPatientSearch] = useState('')
     // Free slots toggle (Agenda Inversa)
     const [showFreeSlots, setShowFreeSlots] = useState(false)
+    // Export free slots modal
+    const [exportFreeSlotsOpen, setExportFreeSlotsOpen] = useState(false)
 
     // Mural de Recados States
     const [isMuralOpen, setIsMuralOpen] = useState(false)
@@ -402,7 +406,7 @@ export default function AgendaPage() {
         },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
-        enabled: showFreeSlots,
+        enabled: showFreeSlots || exportFreeSlotsOpen,
     })
 
     // Drag and Drop
@@ -899,6 +903,14 @@ export default function AgendaPage() {
                     >
                         <EyeOff className="h-4 w-4" />
                         {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold border-sky-300 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950"
+                        onClick={() => setExportFreeSlotsOpen(true)}
+                    >
+                        <Share2 className="h-4 w-4" />
+                        Exportar Vagas
                     </Button>
                     
                     <div className="hidden md:block w-px h-6 bg-border mx-1" />
@@ -2037,6 +2049,17 @@ export default function AgendaPage() {
                     </div>
                 </div>
             )}
+
+            {/* Export Free Slots Modal */}
+            <ExportFreeSlotsModal
+                isOpen={exportFreeSlotsOpen}
+                onClose={() => setExportFreeSlotsOpen(false)}
+                selectedDate={selectedDate}
+                doctorsList={doctorsList || []}
+                schedulesData={(schedulesData as any[]) || []}
+                appointments={(appointments as any[]) || []}
+                currentDoctorFilter={selectedDoctorFilter}
+            />
         </div>
     )
 }
