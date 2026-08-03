@@ -219,7 +219,17 @@ export default function SessionEvolutionsPage() {
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{editingId ? 'Editar' : 'Nova'} Evolução</DialogTitle></DialogHeader>
                         <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <Label>Data do Atendimento *</Label>
+                                    <Input
+                                        type="date"
+                                        value={form.evolution_date}
+                                        onChange={e => setForm(p => ({ ...p, evolution_date: e.target.value }))}
+                                        className="h-10 bg-white dark:bg-slate-900 font-medium"
+                                        style={{ fontSize: '16px' }}
+                                    />
+                                </div>
                                 <div>
                                     <Label>Paciente *</Label>
                                     <PatientSearchCombobox
@@ -238,7 +248,7 @@ export default function SessionEvolutionsPage() {
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label>Modelo de Evolução (Template) *</Label>
+                                    <Label>Modelo (Template) *</Label>
                                     <Select value={templateType} onValueChange={v => { setTemplateType(v); setForm(p => ({ ...p, template_type: v })) }}>
                                         <SelectTrigger><SelectValue placeholder="Selecione o modelo" /></SelectTrigger>
                                         <SelectContent>
