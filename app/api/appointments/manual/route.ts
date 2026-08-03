@@ -56,6 +56,7 @@ interface ManualAppointmentRequest {
     lock_id?: string // PREMIUM: Anti-overbooking lock ID
     is_block?: boolean // Compromisso/Bloqueio interno (sem paciente)
     block_title?: string // Título do bloqueio (ex: "Reunião de Equipe")
+    doctor_ids?: string[] // Múltiplos profissionais para reuniões em grupo
 }
 
 export async function POST(request: NextRequest) {
@@ -131,21 +132,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Para bloqueios de agenda, apenas a própria pessoa logada pode bloquear o seu próprio horário
-        if (body.is_block && profile.role !== 'SUPER_ADMIN') {
-            const isOwnSchedule = (
-                doctor.user_id === user.id || 
-                doctor.id === user.id || 
-                doctor.id === profile.id || 
-                doctor.user_id === profile.id
-            )
-            if (!isOwnSchedule) {
-                return NextResponse.json(
-                    { error: 'Você só tem permissão para bloquear horários na sua própria agenda.' },
-                    { status: 403 }
-                )
-            }
-        }
+        // Para bloqueios de agenda (is_block), qualquer terapeuta, recepcionista ou admin da clínica pode criar compromissos/reuniões
+        // sem restrição de agenda própria, permitindo agendamento de reuniões entre equipe e pela recepção.
 
         // Get or create patient (pular para bloqueios internos)
         let patientId: string | null = body.patient_id || null
@@ -711,6 +699,31 @@ export async function POST(request: NextRequest) {
                     console.error('[NOTIFICATION] WhatsApp send failed:', whatsappError)
                 }
                 // Non-blocking - don't fail the appointment creation
+            }
+        }
+
+        // Se for um bloqueio de múltiplos profissionais (reunião de equipe)
+        if (body.is_block && Array.isArray(body.doctor_ids) && body.doctor_ids.length > 1) {
+            const otherDoctorIds = body.doctor_ids.filter(id => id !== body.doctor_id)
+            for (const otherDocId of otherDoctorIds) {
+                try {
+                    await supabase
+                        .from('appointments')
+                        .insert({
+                            id: uuidv4(),
+                            clinic_id: clinicId,
+                            doctor_id: otherDocId,
+                            patient_id: null,
+                            appointment_date: appointmentDate,
+                            appointment_time: appointmentTime,
+                            status: 'CONFIRMED',
+                            payment_type: 'PARTICULAR',
+                            appointment_type: 'BLOCK',
+                            notes: body.block_title || 'Compromisso Interno',
+                        })
+                } catch (multiBlockErr) {
+                    console.warn(`Erro ao criar bloqueio secundário para médico ${otherDocId}:`, multiBlockErr)
+                }
             }
         }
 

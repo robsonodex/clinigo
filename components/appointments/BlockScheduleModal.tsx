@@ -56,11 +56,11 @@ export function BlockScheduleModal({
     const queryClient = useQueryClient()
     const { user, profile } = useAuth()
 
-    const [doctorId, setDoctorId] = useState('')
+    const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([])
     const [appointmentDate, setAppointmentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [appointmentTime, setAppointmentTime] = useState('')
     const [durationMinutes, setDurationMinutes] = useState(30)
-    const [blockTitle, setBlockTitle] = useState('Reunião de Equipe')
+    const [blockTitle, setBlockTitle] = useState('Discussão de Casos')
 
     // Fetch doctors
     const { data: doctors, isLoading: doctorsLoading } = useQuery({
@@ -86,29 +86,31 @@ export function BlockScheduleModal({
 
     useEffect(() => {
         if (open) {
-            if (preselectedDate) setAppointmentDate(preselectedDate)
-            if (preselectedTime) setAppointmentTime(preselectedTime)
-            
-            // Prioridade: se o usuário logado for um terapeuta, trava nele
+            // Seleção inicial de profissional
+            let initialId = ''
             if (loggedDoctor) {
-                setDoctorId(loggedDoctor.id)
+                initialId = loggedDoctor.id
             } else if (preselectedDoctorId) {
-                setDoctorId(preselectedDoctorId)
+                initialId = preselectedDoctorId
             } else if (doctors && doctors.length > 0) {
-                setDoctorId(doctors[0].id)
+                initialId = doctors[0].id
+            }
+            if (initialId && selectedDoctorIds.length === 0) {
+                setSelectedDoctorIds([initialId])
             }
         }
     }, [open, preselectedDate, preselectedTime, preselectedDoctorId, doctors, loggedDoctor])
 
     const { mutate: createBlock, isPending } = useMutation({
         mutationFn: async () => {
-            if (!doctorId) throw new Error('Selecione um profissional')
+            if (selectedDoctorIds.length === 0) throw new Error('Selecione pelo menos um profissional participante')
             if (!appointmentDate) throw new Error('Selecione uma data')
             if (!appointmentTime) throw new Error('Selecione um horário')
             if (!blockTitle.trim()) throw new Error('Informe o título do compromisso')
 
             const payload = {
-                doctor_id: doctorId,
+                doctor_id: selectedDoctorIds[0],
+                doctor_ids: selectedDoctorIds,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 duration_minutes: durationMinutes,
@@ -173,7 +175,7 @@ export function BlockScheduleModal({
                             style={{ fontSize: '16px' }}
                         />
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                            {['Reunião de Equipe', 'Supervisão ABA', 'Treinamento', 'Ausência Interna', 'Horário Administrativo'].map((preset) => (
+                            {['Discussão de Casos', 'Reunião de Equipe', 'Supervisão ABA', 'Treinamento', 'Ausência Interna', 'Horário Administrativo'].map((preset) => (
                                 <button
                                     key={preset}
                                     type="button"
@@ -186,37 +188,72 @@ export function BlockScheduleModal({
                         </div>
                     </div>
 
-                    {/* Terapeuta (Fixo no usuário logado) */}
-                    <div className="space-y-1.5">
+                    {/* Seleção Múltipla de Profissionais / Terapeutas Participantes */}
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label className="text-sm font-semibold">Profissional / Terapeuta</Label>
-                            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
-                                <Lock className="w-3 h-3" /> Bloqueio exclusivo para a sua própria agenda
-                            </span>
+                            <Label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                Profissionais Participantes * ({selectedDoctorIds.length} selecionado{selectedDoctorIds.length !== 1 ? 's' : ''})
+                            </Label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (doctors && selectedDoctorIds.length === doctors.length) {
+                                        setSelectedDoctorIds([])
+                                    } else if (doctors) {
+                                        setSelectedDoctorIds(doctors.map(d => d.id))
+                                    }
+                                }}
+                                className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                            >
+                                {doctors && selectedDoctorIds.length === doctors.length ? 'Desmarcar Todos' : 'Marcar Todos'}
+                            </button>
                         </div>
-                        
-                        <Select 
-                            value={doctorId} 
-                            onValueChange={setDoctorId} 
-                            disabled={doctorsLoading || !!loggedDoctor || profile?.role === 'DOCTOR'}
-                        >
-                            <SelectTrigger className="min-h-[44px] bg-slate-50 dark:bg-slate-900 border-amber-200 dark:border-amber-900/60 font-semibold">
-                                <SelectValue placeholder="Selecione o profissional..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(doctors || []).map((doc) => (
-                                    <SelectItem key={doc.id} value={doc.id}>
-                                        {doc.user.full_name} ({doc.specialty})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        
-                        {!loggedDoctor && profile?.role !== 'SUPER_ADMIN' && (
-                            <p className="text-xs text-slate-500 italic mt-1">
-                                Obs: O compromisso será alocado para a sua conta de profissional cadastrada.
-                            </p>
+
+                        {doctorsLoading ? (
+                            <div className="flex items-center justify-center p-4 text-xs text-slate-500">
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Carregando profissionais...
+                            </div>
+                        ) : (
+                            <div className="max-h-40 overflow-y-auto space-y-1.5 p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+                                {(doctors || []).map((doc) => {
+                                    const isChecked = selectedDoctorIds.includes(doc.id)
+                                    return (
+                                        <label
+                                            key={doc.id}
+                                            className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border ${
+                                                isChecked
+                                                    ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100/60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedDoctorIds(prev => [...prev, doc.id])
+                                                        } else {
+                                                            setSelectedDoctorIds(prev => prev.filter(id => id !== doc.id))
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                                <span className="text-xs font-semibold">{doc.user?.full_name || doc.id}</span>
+                                            </div>
+                                            {doc.specialty && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                                                    {doc.specialty}
+                                                </span>
+                                            )}
+                                        </label>
+                                    )
+                                })}
+                            </div>
                         )}
+                        <p className="text-[11px] text-slate-500">
+                            Selecione todas as terapeutas que participarão da reunião/discussão. A agenda de todas será travada neste horário.
+                        </p>
                     </div>
 
                     {/* Data e Horário */}
