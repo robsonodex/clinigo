@@ -809,6 +809,7 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                         setSelectedIds(allWithPhone)
                         setBatchMessageText(TEMPLATE_ORCAMENTO)
                         setBatchTemplateKey('orcamento')
+                        fetchWhatsappSessions()
                         setBatchModalOpen(true)
                     }}
                         className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-emerald-50 hover:bg-emerald-100 border-emerald-300 shadow-sm rounded-xl px-4 font-semibold text-emerald-800 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Disparar mensagem WhatsApp comercial em lote para a Fila de Espera">
@@ -873,6 +874,7 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                                     onClick={() => {
                                         setBatchMessageText(TEMPLATE_ORCAMENTO)
                                         setBatchTemplateKey('orcamento')
+                                        fetchWhatsappSessions()
                                         setBatchModalOpen(true)
                                     }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-sm min-h-[44px] px-4"
@@ -1351,6 +1353,28 @@ const shiftLabels: Record<string, string> = { any: 'Qualquer', morning: 'Manhã'
                                 className="w-full border rounded-xl p-3 text-sm h-36 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-900"
                                 style={{ fontSize: '16px' }}
                             />
+                            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+                                <p className="text-xs font-bold text-blue-700 dark:text-blue-300">💡 Variáveis automáticas (serão substituídas para cada paciente):</p>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="text-[11px] bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded font-mono font-semibold">{'{nome_responsavel}'} → Nome do responsável</span>
+                                    <span className="text-[11px] bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded font-mono font-semibold">{'{nome_paciente}'} → Nome do paciente</span>
+                                    <span className="text-[11px] bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded font-mono font-semibold">{'{terapia}'} → Terapia solicitada</span>
+                                </div>
+                                {(() => {
+                                    const firstSelected = (data?.items || []).find((item: any) => selectedIds.includes(item.id) && item.patient_phone)
+                                    if (firstSelected && (batchMessageText.includes('{nome_responsavel}') || batchMessageText.includes('{nome_paciente}') || batchMessageText.includes('{terapia}'))) {
+                                        return (
+                                            <div className="mt-2 border-t border-blue-200 dark:border-blue-700 pt-2">
+                                                <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1">📋 Prévia (ex: {firstSelected.responsible_name || firstSelected.patient_name}):</p>
+                                                <p className="text-xs text-blue-900 dark:text-blue-100 bg-white dark:bg-slate-900 rounded p-2 border border-blue-100 dark:border-blue-800 whitespace-pre-wrap">
+                                                    {formatTemplateMessage(batchMessageText, firstSelected)}
+                                                </p>
+                                            </div>
+                                        )
+                                    }
+                                    return null
+                                })()}
+                            </div>
                         </div>
 
                         {batchSending && (
