@@ -165,20 +165,31 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Prevenção de duplicatas: verificar se já existe evolução para o mesmo paciente + profissional + data
-        if (cleanBody.patient_id && cleanBody.doctor_id && cleanBody.evolution_date) {
-            const { data: existing } = await supabase
+        // Prevenção de duplicatas inteligente:
+        // Se houver appointment_id, verifica duplicata por agendamento específico.
+        // Se não houver, verifica por paciente + profissional + data + especialidade.
+        if (cleanBody.patient_id && cleanBody.doctor_id) {
+            let dupQuery = supabase
                 .from('session_evolutions')
                 .select('id')
                 .eq('clinic_id', userData.clinic_id)
                 .eq('patient_id', cleanBody.patient_id)
                 .eq('doctor_id', cleanBody.doctor_id)
-                .eq('evolution_date', cleanBody.evolution_date)
-                .limit(1)
+
+            if (cleanBody.appointment_id) {
+                dupQuery = dupQuery.eq('appointment_id', cleanBody.appointment_id)
+            } else if (cleanBody.evolution_date) {
+                dupQuery = dupQuery.eq('evolution_date', cleanBody.evolution_date)
+                if (cleanBody.specialty) {
+                    dupQuery = dupQuery.eq('specialty', cleanBody.specialty)
+                }
+            }
+
+            const { data: existing } = await dupQuery.limit(1)
 
             if (existing && existing.length > 0) {
                 return NextResponse.json(
-                    { error: 'Já existe uma evolução registrada para este paciente, com este profissional, nesta data. Edite a evolução existente ou exclua-a antes de criar uma nova.' },
+                    { error: 'Já existe uma evolução registrada para este atendimento. Edite a evolução existente se desejar alterá-la.' },
                     { status: 409 }
                 )
             }
