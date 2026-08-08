@@ -6,7 +6,7 @@ const UUID_FIELDS = ['patient_id', 'doctor_id', 'appointment_id', 'plan_id']
 
 const ALLOWED_FIELDS = [
     'patient_id', 'doctor_id', 'appointment_id', 'plan_id',
-    'evolution_date', 'template_type', 'specialty',
+    'evolution_date', 'template_type',
     'subjective', 'objective', 'assessment', 'plan_notes',
     'body_functions', 'activities_participation', 'environmental_factors',
     'data_description', 'analysis', 'plan_action',
@@ -44,11 +44,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
         if (error) throw error
         
-        if (data && data.template_type === 'soap') {
-            const isEspacoIncluir = data.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
-            if (isEspacoIncluir || data.data_description || data.content) {
-                data.template_type = 'multidisciplinar'
-            }
+        if (data && data.template_type === 'soap' && (data.data_description || data.content)) {
+            data.template_type = 'multidisciplinar'
         }
 
         return NextResponse.json({ data })
@@ -102,9 +99,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         if (cleanBody.template_type === 'multidisciplinar') {
             cleanBody.template_type = 'soap'
-            if (!cleanBody.data_description && !cleanBody.content) {
-                cleanBody.data_description = ' '
-            }
         }
 
         // Se a requisição pede finalização, grava o carimbo de tempo
@@ -114,36 +108,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             ? { finalized_by: user.id, finalized_at: new Date().toISOString() }
             : {}
 
-        let result = await supabase
+        const { data, error } = await supabase
             .from('session_evolutions')
             .update({ ...cleanBody, updated_at: new Date().toISOString(), ...finalizeFields })
             .eq('id', id)
             .select()
             .single()
 
-        if (result.error) {
-            // Se o erro for de coluna inexistente (specialty), tenta novamente sem ela
-            if (
-                result.error.message?.includes('specialty') ||
-                result.error.hint?.includes('specialty') ||
-                result.error.code === 'PGRST204'
-            ) {
-                console.warn('PUT session-evolutions: column "specialty" missing in DB, falling back and trying without it.')
-                const { specialty, ...bodyWithoutSpecialty } = cleanBody
-                result = await supabase
-                    .from('session_evolutions')
-                    .update({ ...bodyWithoutSpecialty, updated_at: new Date().toISOString(), ...finalizeFields })
-                    .eq('id', id)
-                    .select()
-                    .single()
-            }
+        if (error) {
+            console.error('PUT session-evolutions DB error:', error)
+            throw error
         }
-
-        if (result.error) {
-            console.error('PUT session-evolutions DB error:', result.error)
-            throw result.error
-        }
-        return NextResponse.json({ data: result.data })
+        return NextResponse.json({ data })
     } catch (error: any) {
         console.error('PUT session-evolutions error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })

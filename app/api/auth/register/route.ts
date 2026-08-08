@@ -284,9 +284,9 @@ export async function POST(request: NextRequest) {
                 `📱 *WhatsApp do cliente:* ${data.phone || 'Não informado'}\n\n` +
                 `🚀 _Acesse em segundos. Sem cartão._`
 
-            // Envia do bot 21 975129005 (clin-sales-bot) para o comercial 21 96553-2247
-            await sendWhatsAppMessage('clin-sales-bot', '21965532247', waMessage, 'trial-notification')
-            console.log('[Register] WhatsApp notification successfully sent to (21) 96553-2247')
+            // Envia do bot 21 990400577 (clin-sales-bot) para o comercial 21 97512-9005
+            await sendWhatsAppMessage('clin-sales-bot', '21975129005', waMessage, 'trial-notification')
+            console.log('[Register] WhatsApp notification successfully sent to (21) 97512-9005')
         } catch (waError) {
             console.error('[Register] Failed to send WhatsApp notification:', waError)
         }

@@ -82,19 +82,6 @@ function extractNumber(text: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
-// ========== HELPER DE CORRESPONDÊNCIA DE OPÇÕES ==========
-
-function matchOption(input: string, optionNum: string, keywords: string[] = []): boolean {
-  const norm = input.toLowerCase().trim()
-  if (norm === optionNum || norm === `0${optionNum}` || norm === `opcao ${optionNum}` || norm === `opção ${optionNum}`) {
-    return true
-  }
-  if (norm.startsWith(`${optionNum} `) || norm.startsWith(`${optionNum}-`) || norm.startsWith(`${optionNum}—`) || norm.startsWith(`${optionNum} —`)) {
-    return true
-  }
-  return keywords.some(k => k && norm.includes(k))
-}
-
 // ========== NORMALIZAR INPUT ==========
 
 function normalizeInput(text: string): string {
@@ -179,24 +166,14 @@ export function processStep(
 
   // ===== STEP: MENU =====
   if (currentStep === 'menu' || currentStep === 'initial') {
-    if (matchOption(input, '1', ['oque e', 'o que e', 'o que é', 'oque é', 'sobre'])) {
-      return result(MSG_FLUXO_1_INTRO, 'fluxo_1_intro')
-    }
-    if (matchOption(input, '2', ['plano', 'preco', 'preço', 'valor', 'custa', 'tabela'])) {
-      return result(MSG_FLUXO_2_PLANOS, 'fluxo_2_aguarda_num')
-    }
-    if (matchOption(input, '3', ['demo', 'demonstra', 'teste', 'trial', 'gratis', 'grátis'])) {
-      return result(MSG_FLUXO_3_DEMO, 'fluxo_3_demo')
-    }
-    if (matchOption(input, '4', ['funcionalida', 'recurso', 'modulo', 'módulo', 'ferramenta', 'conhecer'])) {
-      return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
-    }
-    if (matchOption(input, '5', ['especialista', 'humano', 'atendente', 'falar com', 'vendedor', 'suporte'])) {
-      return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    }
+    if (input === '1') return result(MSG_FLUXO_1_INTRO, 'fluxo_1_intro')
+    if (input === '2') return result(MSG_FLUXO_2_PLANOS, 'fluxo_2_aguarda_num')
+    if (input === '3') return result(MSG_FLUXO_3_DEMO, 'fluxo_3_demo')
+    if (input === '4') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
+    if (input === '5') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
     
     // Check for the default message from the website WhatsApp button
-    if (input.includes('gostaria de saber mais sobre o clinigo') || input.includes('vim do chat do site')) {
+    if (input.includes('gostaria de saber mais sobre o clinigo') || input.includes('vim do chat do site') || input.includes('gostaria de falar com um especialista')) {
       return result(MSG_MENU, 'menu')
     }
 
@@ -206,29 +183,17 @@ export function processStep(
 
   // ===== STEP: FLUXO 1 INTRO (perfil) =====
   if (currentStep === 'fluxo_1_intro') {
-    if (matchOption(input, '1', ['solo', 'sozinho', 'atendo sozinho', 'medico solo', 'médico solo', 'terapeuta solo']) || input === 'a' || input.startsWith('a ') || input.startsWith('a-') || input.startsWith('a —')) {
-      return result(MSG_FLUXO_1A_SOLO, 'fluxo_1a_solo')
-    }
-    if (matchOption(input, '2', ['equipe', 'clinica', 'clínica', 'profissional']) || input === 'b' || input.startsWith('b ') || input.startsWith('b-') || input.startsWith('b —')) {
-      return result(MSG_FLUXO_1B_EQUIPE, 'fluxo_1b_aguarda_num')
-    }
-    if (matchOption(input, '3', ['rede', 'unidades', 'maior']) || input === 'c' || input.startsWith('c ') || input.startsWith('c-') || input.startsWith('c —')) {
-      return result(MSG_FLUXO_1C_REDE, 'fluxo_1c_aguarda_resposta')
-    }
+    if (input === 'a') return result(MSG_FLUXO_1A_SOLO, 'fluxo_1a_solo')
+    if (input === 'b') return result(MSG_FLUXO_1B_EQUIPE, 'fluxo_1b_aguarda_num')
+    if (input === 'c') return result(MSG_FLUXO_1C_REDE, 'fluxo_1c_aguarda_resposta')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
   // ===== STEP: FLUXO 1A SOLO (opções 1/2/3) =====
   if (currentStep === 'fluxo_1a_solo') {
-    if (matchOption(input, '1', ['testar', 'trial', 'gratis', 'grátis', '7 dias'])) {
-      return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
-    }
-    if (matchOption(input, '2', ['especialista', 'humano', 'atendente', 'falar', 'duvida', 'dúvida'])) {
-      return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    }
-    if (matchOption(input, '3', ['menu', 'voltar']) || input === '0') {
-      return result(MSG_MENU, 'menu')
-    }
+    if (input === '1') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === '2') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '3') return result(MSG_MENU, 'menu')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -245,9 +210,9 @@ export function processStep(
 
   // ===== STEP: FLUXO 1B RECOMENDAÇÃO =====
   if (currentStep === 'fluxo_1b_recomendacao') {
-    if (matchOption(input, '1', ['testar', 'trial', 'gratis', 'grátis'])) return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
-    if (matchOption(input, '2', ['especialista', 'humano', 'falar', 'duvida', 'dúvida'])) return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    if (matchOption(input, '3', ['menu', 'voltar'])) return result(MSG_MENU, 'menu')
+    if (input === '1') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === '2') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '3') return result(MSG_MENU, 'menu')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -259,8 +224,8 @@ export function processStep(
 
   // ===== STEP: FLUXO 1C RECOMENDAÇÃO ENTERPRISE =====
   if (currentStep === 'fluxo_1c_recomendacao_enterprise') {
-    if (matchOption(input, '1', ['especialista', 'humano', 'falar', 'sim'])) return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    if (matchOption(input, '2', ['nao', 'não', 'mais informacoes'])) return result(MSG_ENVIAR_INFO_ENTERPRISE, 'encerrado')
+    if (input === '1') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '2') return result(MSG_ENVIAR_INFO_ENTERPRISE, 'encerrado')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -271,7 +236,16 @@ export function processStep(
       lead.numProfissionais = num
       lead.planoIndicado = recomendarPlano(num)
       return result([
-        `Perfeito! Pra você, o *${lead.planoIndicado}* já resolve tudo que precisa. 😄\n\nVocê também ganha *7 dias de teste grátis*, sem precisar de cartão de crédito.\n\nO que prefere fazer?\n\n✅ *1* — Quero testar grátis agora\n💬 *2* — Tenho dúvidas, quero falar com alguém\n❓ *3* — Quero ver as funcionalidades antes\n🔙 *0* — Voltar ao menu principal`
+        `Perfeito! Pra você, o *${lead.planoIndicado}* já resolve tudo que precisa. 😄
+
+Você também ganha *7 dias de teste grátis*, sem precisar de cartão de crédito.
+
+O que prefere fazer?
+
+✅ *1* — Quero testar grátis agora
+💬 *2* — Tenho dúvidas, quero falar com alguém
+❓ *3* — Quero ver as funcionalidades antes
+🔙 *0* — Voltar ao menu principal`
       ], 'fluxo_2_recomendacao')
     }
     return result([`Não entendi. *Quantos profissionais* atendem na sua clínica? (digite um número)`], currentStep)
@@ -279,28 +253,32 @@ export function processStep(
 
   // ===== STEP: FLUXO 2 RECOMENDAÇÃO =====
   if (currentStep === 'fluxo_2_recomendacao') {
-    if (matchOption(input, '1', ['testar', 'trial', 'gratis', 'grátis'])) return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
-    if (matchOption(input, '2', ['especialista', 'humano', 'falar', 'duvida', 'dúvida'])) return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    if (matchOption(input, '3', ['funcionalida', 'recurso', 'modulo', 'módulo', 'ver'])) return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
+    if (input === '1') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === '2') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '3') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
   // ===== STEP: FLUXO 3 DEMO =====
   if (currentStep === 'fluxo_3_demo') {
-    if (matchOption(input, '1', ['especialista', 'guiada', 'agendar']) || input === 'a' || input.startsWith('a ') || input.startsWith('a-') || input.startsWith('a —')) {
+    if (input === 'a') {
       return result([
-        `Perfeito! Vou te conectar com um especialista para agendar sua demonstração. 🤝\n\nAntes de transferir, me conta rapidinho:\n\n*Qual é o seu nome?*\n\n🔙 *0* — Voltar ao menu principal`
+        `Perfeito! Vou te conectar com um especialista para agendar sua demonstração. 🤝
+
+Antes de transferir, me conta rapidinho:
+
+*Qual é o seu nome?*
+
+🔙 *0* — Voltar ao menu principal`
       ], 'fluxo_5_aguarda_nome')
     }
-    if (matchOption(input, '2', ['teste', 'conta', 'direto', '7 dias', 'gratis', 'grátis']) || input === 'b' || input.startsWith('b ') || input.startsWith('b-') || input.startsWith('b —')) {
-      return result(MSG_TRIAL_DIRETO_FLUXO3, 'enviar_trial_fluxo3', { sendFollowUp: true })
-    }
+    if (input === 'b') return result(MSG_TRIAL_DIRETO_FLUXO3, 'enviar_trial_fluxo3', { sendFollowUp: true })
     return handleIntentOrResentMenu(state, userMessage)
   }
 
   // ===== STEP: ENVIAR TRIAL =====
   if (currentStep === 'enviar_trial') {
-    if (matchOption(input, '1', ['suporte', 'duvida', 'ajuda']) || matchOption(input, '2', ['especialista', 'humano'])) {
+    if (input === '1' || input === '2') {
       return result(
         [`Entendido! Vou te transferir para um especialista que vai te ajudar. 🤝`],
         'transferred',
@@ -312,7 +290,7 @@ export function processStep(
 
   // ===== STEP: TRIAL FOLLOWUP (após 30s) =====
   if (currentStep === 'trial_followup') {
-    if (matchOption(input, '1', ['duvida', 'duvidas']) || matchOption(input, '2', ['problema', 'cadastro'])) {
+    if (input === '1' || input === '2') {
       return result(
         [`Entendido! Vou te transferir para um especialista. 🤝`],
         'transferred',
@@ -324,23 +302,22 @@ export function processStep(
 
   // ===== STEP: FLUXO 4 FUNCIONALIDADES =====
   if (currentStep === 'fluxo_4_funcionalidades') {
-    if (matchOption(input, '1', ['agenda', 'agendamento']) || input === 'a' || input.startsWith('a ') || input.startsWith('a-') || input.startsWith('a —')) return result(MSG_FUNC_4A, 'func_detail')
-    if (matchOption(input, '2', ['prontuario', 'prontuário', 'soap', 'cif', 'dap']) || input === 'b' || input.startsWith('b ') || input.startsWith('b-') || input.startsWith('b —')) return result(MSG_FUNC_4B, 'func_detail')
-    if (matchOption(input, '3', ['financeiro', 'repasse', 'dre', 'caixa']) || input === 'c' || input.startsWith('c ') || input.startsWith('c-') || input.startsWith('c —')) return result(MSG_FUNC_4C, 'func_detail')
-    if (matchOption(input, '4', ['whatsapp', 'teleconsulta', 'video', 'mensagem']) || input === 'd' || input.startsWith('d ') || input.startsWith('d-') || input.startsWith('d —')) return result(MSG_FUNC_4D, 'func_detail')
-    if (matchOption(input, '5', ['recepcao', 'recepção', 'checkin', 'check-in', 'tv', 'totem']) || input === 'e' || input.startsWith('e ') || input.startsWith('e-') || input.startsWith('e —')) return result(MSG_FUNC_4E, 'func_detail')
-    if (matchOption(input, '6', ['tiss', 'faturamento', 'convenio', 'convênio', 'ans', 'guia']) || input === 'f' || input.startsWith('f ') || input.startsWith('f-') || input.startsWith('f —')) return result(MSG_FUNC_4F, 'func_detail')
-    if (matchOption(input, '7', ['estoque', 'produto', 'insumo']) || input === 'g' || input.startsWith('g ') || input.startsWith('g-') || input.startsWith('g —')) return result(MSG_FUNC_4G, 'func_detail')
-    if (matchOption(input, '8', ['automacao', 'automação', 'relatorio', 'relatório']) || input === 'h' || input.startsWith('h ') || input.startsWith('h-') || input.startsWith('h —')) return result(MSG_FUNC_4H, 'func_detail')
-
+    const funcMap: Record<string, string[]> = {
+      'a': MSG_FUNC_4A, 'b': MSG_FUNC_4B, 'c': MSG_FUNC_4C,
+      'd': MSG_FUNC_4D, 'e': MSG_FUNC_4E, 'f': MSG_FUNC_4F,
+      'g': MSG_FUNC_4G, 'h': MSG_FUNC_4H,
+    }
+    if (funcMap[input]) {
+      return result(funcMap[input], 'func_detail')
+    }
     return handleIntentOrResentMenu(state, userMessage)
   }
 
   // ===== STEP: DETALHE DE FUNCIONALIDADE (footer 1/2/3) =====
   if (currentStep === 'func_detail') {
-    if (matchOption(input, '1', ['outra', 'funcionalidade', 'ver outra'])) return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
-    if (matchOption(input, '2', ['testar', 'trial', 'gratis', 'grátis'])) return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
-    if (matchOption(input, '3', ['especialista', 'humano', 'falar'])) return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '1') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
+    if (input === '2') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === '3') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -375,8 +352,7 @@ export function processStep(
 
   // ===== STEP: FLUXO 5 — COLETA DOR =====
   if (currentStep === 'fluxo_5_aguarda_dor') {
-    const numToLetterMap: Record<string, string> = { '1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e' }
-    const dorKey = numToLetterMap[input] || input.charAt(0)
+    const dorKey = input.charAt(0)
     let dorText = ''
     let explicacaoDor = ''
 

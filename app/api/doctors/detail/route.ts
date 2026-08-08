@@ -513,63 +513,32 @@ async function handleDeleteDoctor(doctorId: string) {
         throw new NotFoundError('Médico')
     }
 
-    const doctorUserId = (doctor as any).user_id
-    const adminClient = createServiceRoleClient() as any
+    const adminClient = createServiceRoleClient()
 
-    // 1. Clean up non-critical child tables
-    try {
-        await adminClient.from('doctor_schedules').delete().eq('doctor_id', doctorId)
-        await adminClient.from('schedules').delete().eq('doctor_id', doctorId)
-        await adminClient.from('doctor_health_insurances').delete().eq('doctor_id', doctorId)
-        await adminClient.from('doctor_contracts').delete().eq('doctor_id', doctorId)
-        await adminClient.from('therapist_agreements').delete().eq('therapist_id', doctorId)
-        await adminClient.from('appointment_slot_locks').delete().eq('doctor_id', doctorId)
-        await adminClient.from('appointment_queue').delete().eq('doctor_id', doctorId)
-    } catch (e) {
-        console.warn('[DELETE DOCTOR] Non-critical child cleanup warning:', e)
-    }
+    // Disable doctor immediately
+    await supabase
+        .from('doctors')
+        .update({ is_accepting_appointments: false } as any)
+        .eq('id', doctorId)
 
-    // 2. Try hard-delete on doctors table
-    const { error: doctorDeleteError } = await adminClient
+    // Delete from public.doctors
+    await adminClient
         .from('doctors')
         .delete()
         .eq('id', doctorId)
 
-    if (doctorDeleteError) {
-        console.log('[DELETE DOCTOR] Doctor has historical records, applying soft inactivation:', doctorDeleteError.message)
-
-        // Perform safe inactivation (Soft Delete)
-        await adminClient
-            .from('doctors')
-            .update({ is_accepting_appointments: false })
-            .eq('id', doctorId)
-
-        await adminClient
-            .from('users')
-            .update({ is_active: false })
-            .eq('id', doctorUserId)
-
-        // Delete Auth user to free email & license immediately
-        try {
-            await adminClient.auth.admin.deleteUser(doctorUserId)
-        } catch (authErr) {
-            console.error('[DELETE DOCTOR] Auth user deletion error:', authErr)
-        }
-
-        return successResponse({ message: 'Profissional inativado com sucesso (histórico de atendimentos preservado).' })
-    }
-
-    // 3. If doctor record was hard deleted, delete user profile and auth user
+    // Delete from public.users
     await adminClient
         .from('users')
         .delete()
-        .eq('id', doctorUserId)
+        .eq('id', (doctor as any).user_id)
 
-    try {
-        await adminClient.auth.admin.deleteUser(doctorUserId)
-    } catch (authErr) {
-        console.error('[DELETE DOCTOR] Auth user deletion error:', authErr)
+    // Finally, delete the Auth User so the email can be used again and license is freed
+    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser((doctor as any).user_id)
+    
+    if (authDeleteError) {
+        console.error('[DELETE /api/doctors/detail] Auth User deletion failed:', authDeleteError)
     }
 
-    return successResponse({ message: 'Profissional excluído com sucesso.' })
+    return successResponse({ message: 'Médico excluído com sucesso' })
 }

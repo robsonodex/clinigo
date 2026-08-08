@@ -9,7 +9,7 @@ interface WhatsAppFloatingButtonProps {
 }
 
 export function WhatsAppFloatingButton({
-    phoneNumber = '5521975129005',
+    phoneNumber = '5521990400577',
     message = 'Olá! Quero saber mais sobre o CliniGo'
 }: WhatsAppFloatingButtonProps) {
     const encodedMessage = encodeURIComponent(message)

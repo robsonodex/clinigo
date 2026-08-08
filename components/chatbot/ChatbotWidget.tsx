@@ -13,7 +13,7 @@ export default function ChatbotWidget() {
     return () => clearTimeout(timer)
   }, [])
 
-  const whatsappUrl = 'https://wa.me/5521975129005?text=Olá!%20Gostaria%20de%20falar%20com%20um%20especialista'
+  const whatsappUrl = 'https://wa.me/5521990400577?text=Olá!%20Gostaria%20de%20falar%20com%20um%20especialista'
 
   return (
     <>

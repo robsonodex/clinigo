@@ -168,5 +168,5 @@ npm run lint
 
 Se o problema persistir:
 - E-mail: suporte@clinigo.app
-- WhatsApp: (21) 97512-9005
+- WhatsApp: (21) 99040-0577
 - GitHub Issues: [repo]/issues

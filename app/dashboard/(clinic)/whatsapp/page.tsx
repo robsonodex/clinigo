@@ -6,12 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   MessageSquare, CheckCircle, Loader2, Wifi, WifiOff, RefreshCw,
-  Phone, AlertTriangle, Unplug, Smartphone, Plus, Trash2, Send, FileText,
+  Phone, AlertTriangle, Unplug, Smartphone, Plus, Trash2,
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -40,53 +39,6 @@ export default function WhatsAppPage() {
   const [newSector, setNewSector] = useState('')
   const [doctors, setDoctors] = useState<any[]>([])
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Estados de Envio de Mensagem por Setor
-  const [sendModalOpen, setSendModalOpen] = useState(false)
-  const [sendSector, setSendSector] = useState('')
-  const [sendPhone, setSendPhone] = useState('')
-  const [sendMessageText, setSendMessageText] = useState('')
-  const [sendingMessage, setSendingMessage] = useState(false)
-
-  const openSendMessage = (sector: string) => {
-    setSendSector(sector)
-    setSendPhone('')
-    setSendMessageText('')
-    setSendModalOpen(true)
-  }
-
-  const handleSendCustomMessage = async () => {
-    if (!sendPhone.trim()) { toast.error('Informe o número de telefone com DDD'); return }
-    if (!sendMessageText.trim()) { toast.error('Digite a mensagem a ser enviada'); return }
-
-    setSendingMessage(true)
-    try {
-      const res = await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: sendPhone.replace(/\D/g, ''),
-          message: sendMessageText,
-          sector: sendSector,
-          trigger_source: 'manual_sector'
-        })
-      })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Erro ao enviar mensagem')
-      }
-
-      toast.success(`Mensagem enviada com sucesso pelo WhatsApp ${getSectorLabel(sendSector)}! 🎉`)
-      setSendModalOpen(false)
-      setSendPhone('')
-      setSendMessageText('')
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao enviar mensagem via WhatsApp')
-    } finally {
-      setSendingMessage(false)
-    }
-  }
 
   const fetchAllSessions = useCallback(async () => {
     try {
@@ -167,28 +119,25 @@ export default function WhatsAppPage() {
         return
       }
 
-      setQrData({ sector, qr: data.qr_code || '' })
-
-      // Poll até conectar e para atualizar QR code caso mude ou demore a gerar
-      if (pollingRef.current) clearInterval(pollingRef.current)
-      pollingRef.current = setInterval(async () => {
-        try {
+      if (data.qr_code) {
+        setQrData({ sector, qr: data.qr_code })
+        // Poll até conectar
+        if (pollingRef.current) clearInterval(pollingRef.current)
+        pollingRef.current = setInterval(async () => {
           const sRes = await fetch(`/api/whatsapp/status?sector=${sector}`)
           if (sRes.ok) {
             const sData = await sRes.json()
             if (sData.connected) {
-              if (pollingRef.current) clearInterval(pollingRef.current)
+              clearInterval(pollingRef.current!)
               pollingRef.current = null
               setQrData(null)
               setConnectingSector(null)
               toast.success(`WhatsApp ${getSectorLabel(sector)} conectado! 🎉`)
               fetchAllSessions()
-            } else if (sData.qr_code) {
-              setQrData({ sector, qr: sData.qr_code })
             }
           }
-        } catch { /* silent */ }
-      }, 2000)
+        }, 3000)
+      }
     } catch { toast.error('Erro ao conectar'); setConnectingSector(null) }
   }
 
@@ -278,16 +227,10 @@ export default function WhatsAppPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" size="sm" className="text-green-700 border-green-300 hover:bg-green-50 dark:text-green-300 dark:border-green-800 dark:hover:bg-green-950 min-h-[44px] gap-1.5"
-                      onClick={() => openSendMessage(s.sector)}>
-                      <Send className="h-4 w-4" /> Enviar
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] min-w-[44px]"
-                      onClick={() => handleDisconnect(s.sector)}>
-                      <Unplug className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] min-w-[44px]"
+                    onClick={() => handleDisconnect(s.sector)}>
+                    <Unplug className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -421,58 +364,6 @@ export default function WhatsAppPage() {
             </div>
             <Button onClick={handleAddSector} className="w-full gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]">
               <Plus className="h-4 w-4" /> Conectar WhatsApp
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Envio de Mensagem Personalizada por Setor */}
-      <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-green-600" />
-              Enviar Mensagem — {getSectorLabel(sendSector)}
-            </DialogTitle>
-            <DialogDescription>
-              Envie uma mensagem personalizada pelo WhatsApp do setor <strong>{getSectorLabel(sendSector)}</strong>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium">Telefone do Destinatário *</Label>
-              <Input
-                value={sendPhone}
-                onChange={e => setSendPhone(e.target.value)}
-                placeholder="Ex: 11999998888"
-                style={{ fontSize: '16px' }}
-                className="mt-1.5"
-                type="tel"
-              />
-              <p className="text-xs text-muted-foreground mt-1">Informe o DDD + número. Sem espaços ou caracteres especiais.</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Mensagem *</Label>
-              <Textarea
-                value={sendMessageText}
-                onChange={e => setSendMessageText(e.target.value)}
-                placeholder="Digite aqui a mensagem que deseja enviar..."
-                rows={4}
-                style={{ fontSize: '16px' }}
-                className="mt-1.5 resize-none"
-              />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-              <p className="text-xs text-amber-800 dark:text-amber-300">
-                <strong>Dica:</strong> Você pode usar essa funcionalidade para enviar cobranças, avisos de pagamento, confirmações ou qualquer outra comunicação pelo número do setor conectado.
-              </p>
-            </div>
-            <Button
-              onClick={handleSendCustomMessage}
-              disabled={sendingMessage}
-              className="w-full gap-2 bg-green-600 hover:bg-green-700 min-h-[44px]"
-            >
-              {sendingMessage ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</> : <><Send className="h-4 w-4" /> Enviar Mensagem</>}
             </Button>
           </div>
         </DialogContent>

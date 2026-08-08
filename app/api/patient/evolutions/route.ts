@@ -52,8 +52,7 @@ export async function GET(request: NextRequest) {
         const finalizedEvolutions = (data || []).filter((ev: any) => ev.signed_at || ev.finalized_at)
 
         const mappedEvolutions = finalizedEvolutions.map((ev: any) => {
-            const isEspacoIncluir = ev.clinic?.id === '5163c916-8b82-4d80-8a71-01726836ee46'
-            if (ev.template_type === 'soap' && (isEspacoIncluir || ev.data_description || ev.content)) {
+            if (ev.template_type === 'soap' && (ev.data_description || ev.content)) {
                 ev.template_type = 'multidisciplinar'
             }
             return {

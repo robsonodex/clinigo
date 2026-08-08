@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * GET /api/waiting-list — Listar fila de espera
@@ -25,9 +25,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url)
         const status = searchParams.get('status')
 
-        const adminDb = createServiceRoleClient() as any
-
-        let query = adminDb
+        let query = supabase
             .from('waiting_list')
             .select(`
                 *,
@@ -35,10 +33,9 @@ export async function GET(request: NextRequest) {
                     id,
                     user:users(full_name)
                 )
-            `, { count: 'exact' })
+            `)
             .eq('clinic_id', profile.clinic_id)
             .order('created_at', { ascending: true })
-            .range(0, 9999)
 
         if (status) query = query.eq('status', status)
 

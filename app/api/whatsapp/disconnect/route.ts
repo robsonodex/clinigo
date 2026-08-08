@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
     }
 
-    if (profile.role === 'PATIENT') {
+    if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 

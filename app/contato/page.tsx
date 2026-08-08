@@ -70,15 +70,15 @@ export default function ContatoPage() {
         {
             icon: Headphones,
             title: 'Suporte Técnico',
-            value: '(21) 97512-9005',
-            href: 'https://wa.me/5521975129005?text=Olá!%20👋%20Bem-vindo%20ao%20suporte%20técnico%20do%20*CliniGo*.%0A%0ASou%20o%20assistente%20de%20atendimento%20e%20em%20breve%20um%20membro%20da%20nossa%20equipe%20entrará%20em%20contato%20para%20te%20ajudar.%0A%0APara%20agilizar%20o%20atendimento,%20nos%20informe:%0A%0A1️⃣%20Seu%20nome%20e%20nome%20da%20clínica%0A2️⃣%20Qual%20sistema%20ou%20módulo%20está%20com%20problema%0A3️⃣%20Uma%20breve%20descrição%20do%20que%20está%20acontecendo%0A%0A⏰%20Horário%20de%20atendimento:%20segunda%20a%20sexta,%20das%20*08h%20às%2018h*%0A%0AFicamos%20felizes%20em%20ajudar!%20😊',
+            value: '(21) 99040-0577',
+            href: 'https://wa.me/5521990400577?text=Olá!%20👋%20Bem-vindo%20ao%20suporte%20técnico%20do%20*CliniGo*.%0A%0ASou%20o%20assistente%20de%20atendimento%20e%20em%20breve%20um%20membro%20da%20nossa%20equipe%20entrará%20em%20contato%20para%20te%20ajudar.%0A%0APara%20agilizar%20o%20atendimento,%20nos%20informe:%0A%0A1️⃣%20Seu%20nome%20e%20nome%20da%20clínica%0A2️⃣%20Qual%20sistema%20ou%20módulo%20está%20com%20problema%0A3️⃣%20Uma%20breve%20descrição%20do%20que%20está%20acontecendo%0A%0A⏰%20Horário%20de%20atendimento:%20segunda%20a%20sexta,%20das%20*08h%20às%2018h*%0A%0AFicamos%20felizes%20em%20ajudar!%20😊',
             description: 'Ajuda técnica e problemas'
         },
         {
             icon: Phone,
             title: 'Comercial',
-            value: '(21) 97512-9005',
-            href: 'https://wa.me/5521975129005?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações',
+            value: '(21) 99040-0577',
+            href: 'https://wa.me/5521990400577?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações',
             description: 'Atendimento rápido'
         },
         {
@@ -120,7 +120,7 @@ export default function ContatoPage() {
                             Voltar ao Início
                         </Link>
                         <a
-                            href="https://wa.me/5521975129005"
+                            href="https://wa.me/5521990400577"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#25D366] text-white rounded-xl font-semibold hover:bg-[#20bd5a] transition-colors"
@@ -343,7 +343,7 @@ export default function ContatoPage() {
 
                             {/* CTA WhatsApp */}
                             <a
-                                href="https://wa.me/5521975129005?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações"
+                                href="https://wa.me/5521990400577?text=Olá!%20Vim%20pelo%20site%20e%20gostaria%20de%20mais%20informações"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="block p-6 bg-gradient-to-r from-[#25D366] to-[#128C7E] rounded-2xl hover:scale-[1.02] transition-transform"

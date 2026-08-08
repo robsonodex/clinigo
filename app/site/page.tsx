@@ -131,7 +131,7 @@ export default function SitePage() {
                             já integrados ao CliniGo. Apareça no Google e conquiste mais pacientes.
                         </p>
                         <a
-                            href="https://wa.me/5521975129005?text=Olá!%20Tenho%20interesse%20em%20desenvolver%20um%20site%20para%20minha%20clínica"
+                            href="https://wa.me/5521990400577?text=Olá!%20Tenho%20interesse%20em%20desenvolver%20um%20site%20para%20minha%20clínica"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors"
@@ -216,7 +216,7 @@ export default function SitePage() {
                                     </ul>
 
                                     <a
-                                        href={`https://wa.me/5521975129005?text=Olá!%20Tenho%20interesse%20no%20pacote%20${encodeURIComponent(pkg.name)}%20para%20desenvolvimento%20de%20site`}
+                                        href={`https://wa.me/5521990400577?text=Olá!%20Tenho%20interesse%20no%20pacote%20${encodeURIComponent(pkg.name)}%20para%20desenvolvimento%20de%20site`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={`block w-full py-4 rounded-xl font-bold text-center transition-all transform hover:-translate-y-1 ${pkg.highlight
@@ -250,7 +250,7 @@ export default function SitePage() {
                                     </p>
                                     <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                                         <a
-                                            href="https://wa.me/5521975129005?text=Olá!%20Quero%20aproveitar%20o%20Bundle%20Site%20Profissional%20+%20CliniGo"
+                                            href="https://wa.me/5521990400577?text=Olá!%20Quero%20aproveitar%20o%20Bundle%20Site%20Profissional%20+%20CliniGo"
                                             className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
                                         >
                                             Quero o Bundle Promocional
@@ -328,7 +328,7 @@ export default function SitePage() {
                         </p>
                         <div className="flex flex-wrap justify-center gap-4">
                             <a
-                                href="https://wa.me/5521975129005?text=Olá!%20Gostaria%20de%20um%20orçamento%20para%20desenvolvimento%20de%20site%20para%20minha%20clínica"
+                                href="https://wa.me/5521990400577?text=Olá!%20Gostaria%20de%20um%20orçamento%20para%20desenvolvimento%20de%20site%20para%20minha%20clínica"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 bg-white text-emerald-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors"

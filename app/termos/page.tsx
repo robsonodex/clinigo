@@ -234,7 +234,7 @@ export default function TermosPage() {
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <p className="font-medium text-gray-900">WhatsApp</p>
-                                    <a href="https://wa.me/5521975129005" className="text-emerald-600">(21) 97512-9005</a>
+                                    <a href="https://wa.me/5521990400577" className="text-emerald-600">(21) 99040-0577</a>
                                 </div>
                             </div>
                         </div>

@@ -7,7 +7,7 @@ const UUID_FIELDS = ['patient_id', 'doctor_id', 'appointment_id', 'plan_id']
 // Campos válidos da tabela session_evolutions (evita enviar lixo do form)
 const ALLOWED_FIELDS = [
     'patient_id', 'doctor_id', 'appointment_id', 'plan_id',
-    'evolution_date', 'template_type', 'specialty',
+    'evolution_date', 'template_type',
     'subjective', 'objective', 'assessment', 'plan_notes',
     'body_functions', 'activities_participation', 'environmental_factors',
     'data_description', 'analysis', 'plan_action',
@@ -132,8 +132,7 @@ export async function GET(request: NextRequest) {
         if (error) throw error
 
         const mappedData = (data || []).map((ev: any) => {
-            const isEspacoIncluir = userData?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
-            if (ev.template_type === 'soap' && (isEspacoIncluir || ev.data_description || ev.content)) {
+            if (ev.template_type === 'soap' && (ev.data_description || ev.content)) {
                 return { ...ev, template_type: 'multidisciplinar' }
             }
             return ev
@@ -160,69 +159,38 @@ export async function POST(request: NextRequest) {
 
         if (cleanBody.template_type === 'multidisciplinar') {
             cleanBody.template_type = 'soap'
-            if (!cleanBody.data_description && !cleanBody.content) {
-                cleanBody.data_description = ' '
-            }
         }
 
-        // Prevenção de duplicatas inteligente:
-        // Se houver appointment_id, verifica duplicata por agendamento específico.
-        // Se não houver, verifica por paciente + profissional + data + especialidade.
-        if (cleanBody.patient_id && cleanBody.doctor_id) {
-            let dupQuery = supabase
+        // Prevenção de duplicatas: verificar se já existe evolução para o mesmo paciente + profissional + data
+        if (cleanBody.patient_id && cleanBody.doctor_id && cleanBody.evolution_date) {
+            const { data: existing } = await supabase
                 .from('session_evolutions')
                 .select('id')
                 .eq('clinic_id', userData.clinic_id)
                 .eq('patient_id', cleanBody.patient_id)
                 .eq('doctor_id', cleanBody.doctor_id)
-
-            if (cleanBody.appointment_id) {
-                dupQuery = dupQuery.eq('appointment_id', cleanBody.appointment_id)
-            } else if (cleanBody.evolution_date) {
-                dupQuery = dupQuery.eq('evolution_date', cleanBody.evolution_date)
-                if (cleanBody.specialty) {
-                    dupQuery = dupQuery.eq('specialty', cleanBody.specialty)
-                }
-            }
-
-            const { data: existing } = await dupQuery.limit(1)
+                .eq('evolution_date', cleanBody.evolution_date)
+                .limit(1)
 
             if (existing && existing.length > 0) {
                 return NextResponse.json(
-                    { error: 'Já existe uma evolução registrada para este atendimento. Edite a evolução existente se desejar alterá-la.' },
+                    { error: 'Já existe uma evolução registrada para este paciente, com este profissional, nesta data. Edite a evolução existente ou exclua-a antes de criar uma nova.' },
                     { status: 409 }
                 )
             }
         }
 
-        let result = await supabase
+        const { data, error } = await supabase
             .from('session_evolutions')
             .insert({ ...cleanBody, clinic_id: userData.clinic_id, created_by: user.id })
             .select()
             .single()
 
-        if (result.error) {
-            // Se o erro for de coluna inexistente (specialty), tenta novamente sem ela
-            if (
-                result.error.message?.includes('specialty') ||
-                result.error.hint?.includes('specialty') ||
-                result.error.code === 'PGRST204'
-            ) {
-                console.warn('POST session-evolutions: column "specialty" missing in DB, falling back and trying without it.')
-                const { specialty, ...bodyWithoutSpecialty } = cleanBody
-                result = await supabase
-                    .from('session_evolutions')
-                    .insert({ ...bodyWithoutSpecialty, clinic_id: userData.clinic_id, created_by: user.id })
-                    .select()
-                    .single()
-            }
+        if (error) {
+            console.error('POST session-evolutions DB error:', error)
+            throw error
         }
-
-        if (result.error) {
-            console.error('POST session-evolutions DB error:', result.error)
-            throw result.error
-        }
-        return NextResponse.json({ data: result.data }, { status: 201 })
+        return NextResponse.json({ data }, { status: 201 })
     } catch (error: any) {
         console.error('POST session-evolutions error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
