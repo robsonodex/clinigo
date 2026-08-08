@@ -1325,7 +1325,9 @@ export default function AgendaPage() {
                                                                 const duration = (appointment.doctor as any).consultation_duration || 60
                                                                 const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
                                                                 const doctorName = appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'
-                                                                const specialty = (appointment.doctor as any).specialty || ''
+                                                                const specialty = appointment.reception_notes?.startsWith('[ESP:')
+                                                                    ? appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]
+                                                                    : ((appointment.doctor as any).specialty || '')
                                                                 const specShort = specialty ? specialty.substring(0, 4).toUpperCase() : ''
 
                                                                 return (

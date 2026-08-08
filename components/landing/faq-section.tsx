@@ -114,7 +114,7 @@ export function FAQSection() {
                         Ainda tem dúvidas?
                     </p>
                     <a
-                        href="https://wa.me/5521990400577?text=Olá!%20Tenho%20uma%20dúvida%20sobre%20o%20CliniGo"
+                        href="https://wa.me/5521975129005?text=Olá!%20Tenho%20uma%20dúvida%20sobre%20o%20CliniGo"
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(

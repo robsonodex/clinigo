@@ -53,7 +53,7 @@ const options: IntegracaoOption[] = [
             { nome: 'Domínio personalizado (www.suaclinica.com.br)', valor: '+R$ 47/mês' }
         ],
         ctaTexto: 'Quero meu site agora',
-        ctaLink: 'https://wa.me/5521990400577?text=Olá!%20Quero%20criar%20meu%20site%20com%20CliniGo',
+        ctaLink: 'https://wa.me/5521975129005?text=Olá!%20Quero%20criar%20meu%20site%20com%20CliniGo',
         ctaSecundario: { texto: 'Ver exemplos de sites criados', link: '#exemplos-sites' },
     },
     {
@@ -76,7 +76,7 @@ const options: IntegracaoOption[] = [
             'Suporte técnico',
         ],
         ctaTexto: 'Quero integrar',
-        ctaLink: 'https://wa.me/5521990400577?text=Olá!%20Quero%20integrar%20o%20CliniGo%20no%20meu%20site',
+        ctaLink: 'https://wa.me/5521975129005?text=Olá!%20Quero%20integrar%20o%20CliniGo%20no%20meu%20site',
         ctaSecundario: { texto: 'Ver demonstração do widget', link: '#demo-widget' },
     },
 ]

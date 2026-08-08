@@ -56,6 +56,7 @@ interface ManualAppointmentRequest {
     lock_id?: string // PREMIUM: Anti-overbooking lock ID
     is_block?: boolean // Compromisso/Bloqueio interno (sem paciente)
     block_title?: string // Título do bloqueio (ex: "Reunião de Equipe")
+    specialty?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -387,6 +388,7 @@ export async function POST(request: NextRequest) {
             payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
             appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
             notes: body.is_block ? (body.block_title || 'Compromisso Interno') : (body.notes || null),
+            reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
         }
 
         // Generate video link for telemedicine appointments

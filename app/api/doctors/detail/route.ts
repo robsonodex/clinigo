@@ -521,23 +521,68 @@ async function handleDeleteDoctor(doctorId: string) {
         .update({ is_accepting_appointments: false } as any)
         .eq('id', doctorId)
 
-    // Delete from public.doctors
-    await adminClient
-        .from('doctors')
-        .delete()
-        .eq('id', doctorId)
+    try {
+        // Delete from public.doctors
+        const { error: doctorDeleteError } = await adminClient
+            .from('doctors')
+            .delete()
+            .eq('id', doctorId)
 
-    // Delete from public.users
-    await adminClient
-        .from('users')
-        .delete()
-        .eq('id', (doctor as any).user_id)
+        if (doctorDeleteError) throw doctorDeleteError
 
-    // Finally, delete the Auth User so the email can be used again and license is freed
-    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser((doctor as any).user_id)
-    
-    if (authDeleteError) {
-        console.error('[DELETE /api/doctors/detail] Auth User deletion failed:', authDeleteError)
+        // Delete from public.users
+        const { error: userDeleteError } = await adminClient
+            .from('users')
+            .delete()
+            .eq('id', (doctor as any).user_id)
+
+        if (userDeleteError) throw userDeleteError
+
+        // Finally, delete the Auth User so the email can be used again and license is freed
+        const { error: authDeleteError } = await adminClient.auth.admin.deleteUser((doctor as any).user_id)
+        if (authDeleteError) {
+            console.error('[DELETE /api/doctors/detail] Auth User deletion failed:', authDeleteError)
+        }
+    } catch (deleteError: any) {
+        const isFkViolation = deleteError.code === '23503' || (deleteError.message && deleteError.message.includes('foreign key constraint'))
+        if (isFkViolation) {
+            console.log(`[DELETE /api/doctors/detail] Physical delete failed due to FK constraint. Reverting to logical Soft Delete for doctor ${doctorId}.`)
+            
+            // Set doctor inactive
+            await adminClient
+                .from('doctors')
+                .update({ is_accepting_appointments: false } as any)
+                .eq('id', doctorId)
+
+            // Set user profile inactive
+            await adminClient
+                .from('users')
+                .update({ is_active: false })
+                .eq('id', (doctor as any).user_id)
+
+            // Rename auth email and user email to free up original email address
+            const uniqueSuffix = doctorId.substring(0, 8)
+            const { data: authUserResult } = await adminClient.auth.admin.getUserById((doctor as any).user_id)
+            if (authUserResult && authUserResult.user && authUserResult.user.email) {
+                const currentEmail = authUserResult.user.email
+                if (!currentEmail.startsWith('inativo-')) {
+                    const newEmail = `inativo-${uniqueSuffix}-${currentEmail}`
+                    
+                    await adminClient.auth.admin.updateUserById((doctor as any).user_id, {
+                        email: newEmail,
+                        email_confirm: true,
+                        user_metadata: { ...authUserResult.user.user_metadata, is_active: false }
+                    })
+
+                    await adminClient
+                        .from('users')
+                        .update({ email: newEmail })
+                        .eq('id', (doctor as any).user_id)
+                }
+            }
+        } else {
+            throw deleteError
+        }
     }
 
     return successResponse({ message: 'Médico excluído com sucesso' })

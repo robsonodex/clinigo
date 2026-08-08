@@ -53,6 +53,7 @@ interface Doctor {
     id: string
     specialty: string
     consultation_price: number
+    specialties_additional?: string[] | null
     user: {
         full_name: string
     }
@@ -79,6 +80,7 @@ const manualAppointmentSchema = z.object({
     send_email: z.boolean().default(true),
     ignore_schedule_constraints: z.boolean().default(false),
     override_reason: z.string().optional(),
+    specialty: z.string().optional(),
 })
 
 type ManualAppointmentFormData = z.infer<typeof manualAppointmentSchema>
@@ -146,6 +148,12 @@ export function ManualAppointmentModal({
                 // other fields map as needed
             } as any)
 
+            let editingSpecialty = ''
+            if (appointmentToEdit.reception_notes && appointmentToEdit.reception_notes.startsWith('[ESP:')) {
+                const match = appointmentToEdit.reception_notes.match(/^\[ESP:([^\]]+)\]/)
+                if (match) editingSpecialty = match[1]
+            }
+
             reset({
                 doctor_id: appointmentToEdit.doctor_id,
                 appointment_date: appointmentToEdit.appointment_date,
@@ -157,6 +165,7 @@ export function ManualAppointmentModal({
                 send_whatsapp: false,
                 send_email: false,
                 ignore_schedule_constraints: true, // Assume valid if existing
+                specialty: editingSpecialty || appointmentToEdit.doctor?.specialty || '',
             })
         } else if (open && !appointmentToEdit) {
             // Reset for create mode
@@ -187,6 +196,38 @@ export function ManualAppointmentModal({
     const selectedDoctor = doctors?.find(d => d.id === selectedDoctorId)
     const price = selectedDoctor?.consultation_price || 0
 
+    const specialtiesList = (() => {
+        if (!selectedDoctor) return []
+        const list = [selectedDoctor.specialty]
+        if (selectedDoctor.specialties_additional && Array.isArray(selectedDoctor.specialties_additional)) {
+            selectedDoctor.specialties_additional.forEach((spec) => {
+                const trimmed = spec?.trim()
+                if (trimmed && !list.includes(trimmed)) {
+                    list.push(trimmed)
+                }
+            })
+        }
+        return list.filter(Boolean)
+    })()
+
+    // Automatically set specialty when selectedDoctor changes
+    useEffect(() => {
+        if (selectedDoctor) {
+            let defaultSpec = selectedDoctor.specialty
+            if (isEditing && appointmentToEdit) {
+                if (appointmentToEdit.reception_notes && appointmentToEdit.reception_notes.startsWith('[ESP:')) {
+                    const match = appointmentToEdit.reception_notes.match(/^\[ESP:([^\]]+)\]/)
+                    if (match) {
+                        defaultSpec = match[1]
+                    }
+                }
+            }
+            setValue('specialty', defaultSpec)
+        } else {
+            setValue('specialty', '')
+        }
+    }, [selectedDoctor, setValue, isEditing, appointmentToEdit])
+
     // Create/Update appointment mutation
     const { mutate: saveAppointment, isPending } = useMutation({
         mutationFn: async (data: ManualAppointmentFormData) => {
@@ -214,6 +255,7 @@ export function ManualAppointmentModal({
                     send_email: data.send_email,
                 },
                 notes: data.notes,
+                specialty: data.specialty,
             }
 
             let response;
@@ -223,6 +265,8 @@ export function ManualAppointmentModal({
                     appointment_date: data.appointment_date,
                     appointment_time: data.appointment_time,
                     appointment_type: data.type === 'telemedicina' ? 'online' : 'presencial',
+                    notes: data.notes,
+                    reception_notes: data.specialty ? `[ESP:${data.specialty}]` : null,
                 }
                 response = await fetch(`/api/appointments/${appointmentToEdit.id}`, {
                     method: 'PATCH',
@@ -452,12 +496,44 @@ export function ManualAppointmentModal({
                                         </Select>
                                     )}
                                 />
-                                {errors.doctor_id && (
-                                    <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
-                                )}
-                            </div>
+                                 {errors.doctor_id && (
+                                     <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
+                                 )}
+                             </div>
 
-                            {/* Date and Time */}
+                             {/* Specialty Selection */}
+                             {selectedDoctor && (
+                                 <div className="space-y-2">
+                                     <Label className="flex items-center gap-2">
+                                         <Stethoscope className="h-4 w-4" />
+                                         Especialidade do Atendimento
+                                     </Label>
+                                     <Controller
+                                         name="specialty"
+                                         control={form.control}
+                                         render={({ field }) => (
+                                             <Select 
+                                                 onValueChange={field.onChange} 
+                                                 value={field.value || selectedDoctor.specialty}
+                                                 disabled={specialtiesList.length <= 1}
+                                             >
+                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
+                                                     <SelectValue placeholder="Selecione a especialidade" />
+                                                 </SelectTrigger>
+                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                     {specialtiesList.map((spec) => (
+                                                         <SelectItem key={spec} value={spec}>
+                                                             {spec}
+                                                         </SelectItem>
+                                                     ))}
+                                                 </SelectContent>
+                                             </Select>
+                                         )}
+                                     />
+                                 </div>
+                             )}
+
+                             {/* Date and Time */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="flex items-center gap-2">

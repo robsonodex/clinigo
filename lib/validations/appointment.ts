@@ -134,6 +134,14 @@ export const updateAppointmentSchema = z.object({
         .datetime()
         .optional()
         .nullable(),
+    reception_notes: z
+        .string()
+        .optional()
+        .nullable(),
+    notes: z
+        .string()
+        .optional()
+        .nullable(),
 })
 
 /**

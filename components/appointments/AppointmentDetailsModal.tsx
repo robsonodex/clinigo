@@ -157,7 +157,11 @@ export function AppointmentDetailsModal({
                                 <Stethoscope className="h-3 w-3" /> Médico
                             </span>
                             <p className="font-medium">
-                                Dr. {appointment.doctor.user.full_name} <span className="text-muted-foreground font-normal">- {appointment.doctor.specialty}</span>
+                                Dr. {appointment.doctor.user.full_name} <span className="text-muted-foreground font-normal">
+                                    - {appointment.reception_notes?.startsWith('[ESP:')
+                                        ? appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]
+                                        : appointment.doctor.specialty}
+                                </span>
                             </p>
                         </div>
 
