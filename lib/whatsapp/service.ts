@@ -715,11 +715,11 @@ async function handleClinWhatsAppMessage(
       await socket.sendPresenceUpdate('paused', senderJid)
     } catch { /* best effort */ }
 
-    // Enviar cada mensagem com delay de 1.5s entre elas
+    // Enviar cada mensagem com delay rápido (300ms) entre elas para resposta imediata
     for (let i = 0; i < messages.length; i++) {
       if (i > 0) {
         try { await socket.sendPresenceUpdate('composing', senderJid) } catch { /* */ }
-        await new Promise(r => setTimeout(r, 1500))
+        await new Promise(r => setTimeout(r, 300))
       }
       await socket.sendMessage(senderJid, { text: messages[i] })
     }
