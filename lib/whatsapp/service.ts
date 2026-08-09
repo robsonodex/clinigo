@@ -806,8 +806,18 @@ export async function connectClinSession(force: boolean = false): Promise<{
   status: 'connecting' | 'connected'
 }> {
   try {
-    const endpoint = force ? `${CLIN_BOT_SERVICE_URL}/clin/connect` : `${CLIN_BOT_SERVICE_URL}/clin/qr`
-    const res = await fetch(endpoint, { cache: 'no-store' })
+    if (force) {
+      console.log('[connectClinSession] Forçando reconexão no Railway...')
+      await fetch(`${CLIN_BOT_SERVICE_URL}/clin/connect`, {
+        method: 'POST',
+        cache: 'no-store'
+      })
+      // Pequena pausa para o Baileys iniciar a geração
+      await new Promise(r => setTimeout(r, 1000))
+    }
+
+    // Buscar QR Code no endpoint GET /clin/qr do Railway
+    const res = await fetch(`${CLIN_BOT_SERVICE_URL}/clin/qr`, { cache: 'no-store' })
     if (res.ok) {
       const data = await res.json()
       return {
