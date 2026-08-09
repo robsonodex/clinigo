@@ -796,31 +796,80 @@ async function handleClinWhatsAppMessage(
 
 // ========== EXPORTED: SESSÃO CLIN (CHATBOT DE VENDAS) ==========
 
+const CLIN_BOT_SERVICE_URL = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+
 /**
- * Conecta a sessão do Clin (chatbot de vendas) e retorna QR Code nativo.
+ * Conecta a sessão do Clin (chatbot de vendas) via serviço 24/7 no Railway.
  */
 export async function connectClinSession(force: boolean = false): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
 }> {
-  return createInstanceAndGetQR(CLIN_SESSION_ID, 'default', force) as any
+  try {
+    const endpoint = force ? `${CLIN_BOT_SERVICE_URL}/clin/connect` : `${CLIN_BOT_SERVICE_URL}/clin/qr`
+    const res = await fetch(endpoint, { cache: 'no-store' })
+    if (res.ok) {
+      const data = await res.json()
+      return {
+        qr_code: data.qr || null,
+        status: data.status === 'connected' ? 'connected' : 'connecting',
+      }
+    }
+  } catch (err) {
+    console.error('[connectClinSession] Erro ao conectar ao bot Railway:', err)
+  }
+  return { qr_code: null, status: 'connecting' }
 }
 
 /**
- * Verifica status da sessão do Clin.
+ * Verifica status da sessão do Clin no serviço 24/7 Railway (com fallback DB).
  */
 export async function getClinStatus(): Promise<{
   connected: boolean
   phone_number: string | null
   status: 'connecting' | 'connected' | 'disconnected'
 }> {
-  return checkInstanceStatus(CLIN_SESSION_ID)
+  try {
+    const res = await fetch(`${CLIN_BOT_SERVICE_URL}/clin/status`, { cache: 'no-store' })
+    if (res.ok) {
+      const data = await res.json()
+      return {
+        connected: data.connected || false,
+        phone_number: data.phone_number || null,
+        status: data.status || 'disconnected',
+      }
+    }
+  } catch (err) {
+    console.error('[getClinStatus] Erro ao consultar status no bot Railway:', err)
+  }
+
+  // Fallback: consultar Supabase DB
+  try {
+    const supabase = getSupabaseAdmin()
+    const { data } = await supabase
+      .from('whatsapp_sessions')
+      .select('status, phone_number')
+      .eq('clinic_id', CLIN_SESSION_ID)
+      .single()
+
+    return {
+      connected: data?.status === 'connected',
+      phone_number: data?.phone_number || null,
+      status: (data?.status as any) || 'disconnected',
+    }
+  } catch {
+    return { connected: false, phone_number: null, status: 'disconnected' }
+  }
 }
 
 /**
- * Desconecta a sessão do Clin.
+ * Desconecta a sessão do Clin no serviço 24/7 Railway.
  */
 export async function disconnectClinSession(): Promise<void> {
   clinConversations.clear()
-  return disconnectInstance(CLIN_SESSION_ID)
+  try {
+    await fetch(`${CLIN_BOT_SERVICE_URL}/clin/disconnect`, { method: 'POST' })
+  } catch (err) {
+    console.error('[disconnectClinSession] Erro ao desconectar no Railway:', err)
+  }
 }
