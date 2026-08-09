@@ -365,7 +365,10 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
 
           if (!text.trim()) continue
 
-          const senderJid = msg.key.remoteJid!
+          let senderJid = msg.key.remoteJid!
+          if (senderJid.endsWith('@lid') && (msg.key as any).remoteJidAlt) {
+            senderJid = (msg.key as any).remoteJidAlt
+          }
           const senderPhone = senderJid.split('@')[0]
 
           console.log(`[Clin WhatsApp] 📩 Mensagem de ${senderPhone}: ${text.substring(0, 50)}`)
