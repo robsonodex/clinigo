@@ -379,6 +379,21 @@ Antes de transferir, me conta rapidinho:
       lead.dorPrincipal = userMessage.trim()
     }
 
+    // Verificar se o telefone do lead é um número válido (12 a 13 dígitos com DDI 55)
+    const cleanPhone = (lead.telefone || '').replace(/\D/g, '')
+    const isPhoneValid = cleanPhone.length >= 12 && cleanPhone.length <= 13
+
+    if (!isPhoneValid) {
+      const responseMessages: string[] = []
+      if (explicacaoDor) {
+        responseMessages.push(explicacaoDor)
+      }
+      responseMessages.push(
+        `Para que o nosso especialista entre em contato diretamente com você, *qual é o seu número de WhatsApp com DDD?* 📱 (ex: 21 99999-8888)`
+      )
+      return result(responseMessages, 'fluxo_5_aguarda_telefone')
+    }
+
     // Montar array de mensagens sequenciais
     const responseMessages: string[] = []
     if (explicacaoDor) {
@@ -392,6 +407,25 @@ Antes de transferir, me conta rapidinho:
       'transferred',
       { transfer: true, transferTag: 'vendas', leadToSave: lead }
     )
+  }
+
+  // ===== STEP: FLUXO 5 — COLETA TELEFONE (quando LID / privacidade) =====
+  if (currentStep === 'fluxo_5_aguarda_telefone') {
+    let digits = userMessage.replace(/\D/g, '')
+    if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+      digits = `55${digits}`
+    }
+
+    if (digits.length >= 12 && digits.length <= 13) {
+      lead.telefone = digits
+      return result(
+        buildHandoffMessage(lead),
+        'transferred',
+        { transfer: true, transferTag: 'vendas', leadToSave: lead }
+      )
+    }
+
+    return result([`Por favor, digite seu *número de WhatsApp com DDD* completo (ex: 21 99999-8888) para conectar você ao especialista. 😊`], currentStep)
   }
 
   // ===== STEP: OBJEÇÃO PREÇO =====
