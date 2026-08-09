@@ -352,35 +352,10 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
       await saveAuthStateToStorage(clinicId, authData, sector)
     })
 
-    // ===== CHATBOT CLIN: Listener de mensagens recebidas =====
+    // ===== CHATBOT CLIN: Gerenciado exclusivamente via Railway =====
     if (clinicId === CLIN_SESSION_ID) {
-      socket.ev.on('messages.upsert', async (m) => {
-        for (const msg of m.messages) {
-          // Ignorar mensagens enviadas por nós, de grupo, broadcasts e status
-          if (msg.key.fromMe) continue
-          if (msg.key.remoteJid?.endsWith('@g.us')) continue
-          if (msg.key.remoteJid === 'status@broadcast') continue
-
-          const text = extractMessageText(msg)
-
-          if (!text.trim()) continue
-
-          let senderJid = msg.key.remoteJid!
-          if (senderJid.endsWith('@lid') && (msg.key as any).remoteJidAlt) {
-            senderJid = (msg.key as any).remoteJidAlt
-          }
-          const senderPhone = senderJid.split('@')[0]
-
-          console.log(`[Clin WhatsApp] 📩 Mensagem de ${senderPhone}: ${text.substring(0, 50)}`)
-
-          try {
-            await handleClinWhatsAppMessage(socket, senderJid, senderPhone, text)
-          } catch (err) {
-            console.error(`[Clin WhatsApp] Erro ao processar:`, err)
-          }
-        }
-      })
-      console.log(`[Clin WhatsApp] 🤖 Listener de mensagens ativado`)
+      console.log(`[Clin WhatsApp] ℹ️ Clin Sales Bot é gerenciado 100% pelo serviço Railway standalone. Socket in-process do Next.js ignorado para evitar conflito 440.`)
+      return session.socket!
     }
 
   } catch (error) {
@@ -811,31 +786,68 @@ async function handleClinWhatsAppMessage(
 
 // ========== EXPORTED: SESSÃO CLIN (CHATBOT DE VENDAS) ==========
 
+function getRailwayUrl(): string {
+  const url = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+  return url.replace(/\/$/, '')
+}
+
 /**
- * Conecta a sessão do Clin (chatbot de vendas) e retorna QR Code.
+ * Conecta a sessão do Clin (chatbot de vendas) via Railway e retorna QR Code.
  */
 export async function connectClinSession(force: boolean = false): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
 }> {
-  return createInstanceAndGetQR(CLIN_SESSION_ID, 'default', force) as any
+  const baseUrl = getRailwayUrl()
+  try {
+    if (force) {
+      await fetch(`${baseUrl}/clin/connect`, { method: 'POST' }).catch(() => {})
+    }
+    const res = await fetch(`${baseUrl}/clin/qr`)
+    if (!res.ok) return { qr_code: null, status: 'connecting' }
+    const data = await res.json()
+    return {
+      qr_code: data.qr || null,
+      status: data.status === 'connected' ? 'connected' : 'connecting'
+    }
+  } catch (err) {
+    console.error('[connectClinSession] Erro ao consultar Railway:', err)
+    return { qr_code: null, status: 'connecting' }
+  }
 }
 
 /**
- * Verifica status da sessão do Clin.
+ * Verifica status da sessão do Clin via Railway.
  */
 export async function getClinStatus(): Promise<{
   connected: boolean
   phone_number: string | null
   status: 'connecting' | 'connected' | 'disconnected'
 }> {
-  return checkInstanceStatus(CLIN_SESSION_ID)
+  const baseUrl = getRailwayUrl()
+  try {
+    const res = await fetch(`${baseUrl}/clin/status`)
+    if (!res.ok) return { connected: false, phone_number: null, status: 'disconnected' }
+    const data = await res.json()
+    return {
+      connected: data.connected || false,
+      phone_number: data.phone_number || null,
+      status: data.status || 'disconnected'
+    }
+  } catch (err) {
+    return { connected: false, phone_number: null, status: 'disconnected' }
+  }
 }
 
 /**
- * Desconecta a sessão do Clin.
+ * Desconecta a sessão do Clin via Railway.
  */
 export async function disconnectClinSession(): Promise<void> {
   clinConversations.clear()
-  return disconnectInstance(CLIN_SESSION_ID)
+  const baseUrl = getRailwayUrl()
+  try {
+    await fetch(`${baseUrl}/clin/disconnect`, { method: 'POST' })
+  } catch (err) {
+    console.error('[disconnectClinSession] Erro ao desconectar no Railway:', err)
+  }
 }
