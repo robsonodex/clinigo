@@ -248,7 +248,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
             qr_code: qrDataUri,
             qr_code_expires_at: new Date(Date.now() + 45 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
-          } as any, { onConflict: 'clinic_id,sector' })
+          } as any, { onConflict: 'clinic_id' })
         } catch (err) {
           console.error('[WhatsApp] Erro ao gerar QR:', err)
         }
@@ -281,7 +281,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
           error_message: null,
           last_health_check: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as any, { onConflict: 'clinic_id,sector' })
+        } as any, { onConflict: 'clinic_id' })
 
         console.log(`[WhatsApp] ✅ Clínica ${clinicId} conectada (${phoneNumber})`)
 
