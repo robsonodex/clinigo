@@ -281,6 +281,13 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
         } as any, { onConflict: 'clinic_id,sector' })
 
         console.log(`[WhatsApp] ✅ Clínica ${clinicId} conectada (${phoneNumber})`)
+
+        if (clinicId === CLIN_SESSION_ID) {
+          console.log(`[WhatsApp] ✅ Clin Sales Bot conectado (${phoneNumber}). Handoff de sessão para o Railway em 3s...`)
+          setTimeout(() => {
+            try { socket.end(undefined) } catch {}
+          }, 3000)
+        }
       }
 
       if (connection === 'close') {
@@ -786,68 +793,31 @@ async function handleClinWhatsAppMessage(
 
 // ========== EXPORTED: SESSÃO CLIN (CHATBOT DE VENDAS) ==========
 
-function getRailwayUrl(): string {
-  const url = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
-  return url.replace(/\/$/, '')
-}
-
 /**
- * Conecta a sessão do Clin (chatbot de vendas) via Railway e retorna QR Code.
+ * Conecta a sessão do Clin (chatbot de vendas) e retorna QR Code nativo.
  */
 export async function connectClinSession(force: boolean = false): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
 }> {
-  const baseUrl = getRailwayUrl()
-  try {
-    if (force) {
-      await fetch(`${baseUrl}/clin/connect`, { method: 'POST' }).catch(() => {})
-    }
-    const res = await fetch(`${baseUrl}/clin/qr`)
-    if (!res.ok) return { qr_code: null, status: 'connecting' }
-    const data = await res.json()
-    return {
-      qr_code: data.qr || null,
-      status: data.status === 'connected' ? 'connected' : 'connecting'
-    }
-  } catch (err) {
-    console.error('[connectClinSession] Erro ao consultar Railway:', err)
-    return { qr_code: null, status: 'connecting' }
-  }
+  return createInstanceAndGetQR(CLIN_SESSION_ID, 'default', force) as any
 }
 
 /**
- * Verifica status da sessão do Clin via Railway.
+ * Verifica status da sessão do Clin.
  */
 export async function getClinStatus(): Promise<{
   connected: boolean
   phone_number: string | null
   status: 'connecting' | 'connected' | 'disconnected'
 }> {
-  const baseUrl = getRailwayUrl()
-  try {
-    const res = await fetch(`${baseUrl}/clin/status`)
-    if (!res.ok) return { connected: false, phone_number: null, status: 'disconnected' }
-    const data = await res.json()
-    return {
-      connected: data.connected || false,
-      phone_number: data.phone_number || null,
-      status: data.status || 'disconnected'
-    }
-  } catch (err) {
-    return { connected: false, phone_number: null, status: 'disconnected' }
-  }
+  return checkInstanceStatus(CLIN_SESSION_ID)
 }
 
 /**
- * Desconecta a sessão do Clin via Railway.
+ * Desconecta a sessão do Clin.
  */
 export async function disconnectClinSession(): Promise<void> {
   clinConversations.clear()
-  const baseUrl = getRailwayUrl()
-  try {
-    await fetch(`${baseUrl}/clin/disconnect`, { method: 'POST' })
-  } catch (err) {
-    console.error('[disconnectClinSession] Erro ao desconectar no Railway:', err)
-  }
+  return disconnectInstance(CLIN_SESSION_ID)
 }
