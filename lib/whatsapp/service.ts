@@ -795,10 +795,14 @@ async function handleClinWhatsAppMessage(
   } catch (err) {
     console.error(`[Clin WhatsApp] Erro ao chamar API:`, err)
 
-    // Resposta de fallback
+    try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* best effort */ }
+
+    // Resposta de fallback imediata enviando o menu principal
     await socket.sendMessage(senderJid, {
-      text: 'Oi! 😊 Estou com uma dificuldade técnica momentânea. Mas não se preocupe, nossa equipe já foi notificada e vai te atender em breve!'
+      text: 'Olá! 😊 Como posso te ajudar hoje?\n\n1 — O que é o CliniGo\n2 — Planos e preços\n3 — Demonstração gratuita\n4 — Funcionalidades\n5 — Falar com especialista'
     })
+  } finally {
+    try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* best effort */ }
   }
 }
 

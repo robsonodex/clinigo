@@ -159,8 +159,13 @@ export function processStep(
     sendFollowUp: extra?.sendFollowUp,
   })
 
-  // SE DIGITAR 0, VOLTAR OU MENU -> RESET OU VOLTA AO MENU PRINCIPAL EM QUALQUER PASSO!
-  if (input === '0' || input === 'voltar' || input === 'menu' || input === 'reiniciar') {
+  const isGreeting = 
+    input === 'oi' || input === 'olá' || input === 'ola' ||
+    input.startsWith('bom dia') || input.startsWith('boa tarde') || input.startsWith('boa noite') ||
+    input === 'iniciar' || input === 'start' || input === 'ajuda' || input === 'hey' || input === 'hello' || input === 'salve'
+
+  // SE DIGITAR 0, VOLTAR, MENU, REINICIAR OU SAUDAÇÃO (OI, OLÁ, ETC) -> MOSTRAR MENU PRINCIPAL INSTANTANEAMENTE
+  if (input === '0' || input === 'voltar' || input === 'menu' || input === 'reiniciar' || isGreeting) {
     return result(MSG_MENU, 'menu')
   }
 
