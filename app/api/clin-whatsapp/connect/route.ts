@@ -39,14 +39,17 @@ async function verifySuperAdmin() {
   return user
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
       return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
     }
 
-    const res = await connectClinSession()
+    const { searchParams } = new URL(request.url)
+    const force = searchParams.get('force') === 'true'
+
+    const res = await connectClinSession(force)
 
     return NextResponse.json({
       qr_code: res.qr_code || null,

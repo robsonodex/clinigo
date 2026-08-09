@@ -396,7 +396,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
  * Inicia sessão Baileys e retorna QR Code.
  * Se já estiver conectado, retorna status connected.
  */
-export async function createInstanceAndGetQR(clinicId: string, sector: string = 'default'): Promise<{
+export async function createInstanceAndGetQR(clinicId: string, sector: string = 'default', force: boolean = false): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
   instance_name: string
@@ -404,8 +404,9 @@ export async function createInstanceAndGetQR(clinicId: string, sector: string = 
   const instanceName = `baileys_${clinicId.substring(0, 16)}_${sector}`
   const session = getSession(clinicId, sector)
 
-  // Se já está conectado
-  if (session.status === 'open' && session.socket) {
+  if (force) {
+    await disconnectInstance(clinicId, sector)
+  } else if (session.status === 'open' && session.socket) {
     return { qr_code: null, status: 'connected', instance_name: instanceName }
   }
 
@@ -757,11 +758,11 @@ async function handleClinWhatsAppMessage(
 /**
  * Conecta a sessão do Clin (chatbot de vendas) e retorna QR Code.
  */
-export async function connectClinSession(): Promise<{
+export async function connectClinSession(force: boolean = false): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
 }> {
-  return createInstanceAndGetQR(CLIN_SESSION_ID) as any
+  return createInstanceAndGetQR(CLIN_SESSION_ID, 'default', force) as any
 }
 
 /**
