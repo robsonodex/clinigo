@@ -117,6 +117,9 @@ async function saveAuthStateToStorage(clinicId: string, state: any, sector: stri
   const filePath = `${clinicId}/${sector}_auth_info.json`
 
   try {
+    if (state && state.creds && state.creds.me && state.creds.me.id) {
+      state.creds.registered = true
+    }
     const jsonStr = JSON.stringify(state, BufferJSON.replacer, 2)
     const blob = new Blob([jsonStr], { type: 'application/json' })
 
