@@ -880,7 +880,7 @@ export default function ClinWhatsAppPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/clin-whatsapp/connect', { method: 'POST' })
+      const res = await fetch('/api/clin-whatsapp/connect?force=true', { method: 'POST' })
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.error)
