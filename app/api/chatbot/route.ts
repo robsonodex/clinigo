@@ -319,6 +319,7 @@ export async function POST(request: NextRequest) {
       reply,
       messages: finalMessages,
       transfer: shouldTransfer,
+      leadToSave: engineResult.leadToSave || newState.leadData || convState.leadData || {},
       sendFollowUp: engineResult.sendFollowUp || false,
       followUpMessages: engineResult.sendFollowUp ? getTrialFollowUpMessage() : undefined,
       ...(shouldTransfer ? {
