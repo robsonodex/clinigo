@@ -361,9 +361,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
           if (msg.key.remoteJid?.endsWith('@g.us')) continue
           if (msg.key.remoteJid === 'status@broadcast') continue
 
-          const text = msg.message?.conversation
-            || msg.message?.extendedTextMessage?.text
-            || ''
+          const text = extractMessageText(msg)
 
           if (!text.trim()) continue
 
@@ -646,6 +644,31 @@ export async function disconnectInstance(clinicId: string, sector: string = 'def
 // ========== CHATBOT CLIN — HANDLER DE MENSAGENS ==========
 
 /**
+ * Extrai o texto contido na mensagem Baileys (suporta efêmera, botões, listas, etc)
+ */
+function extractMessageText(msg: proto.IWebMessageInfo): string {
+  const m = msg.message
+  if (!m) return ''
+
+  const message = m.ephemeralMessage?.message
+    || m.viewOnceMessage?.message
+    || m.viewOnceMessageV2?.message
+    || m.documentWithCaptionMessage?.message
+    || m
+
+  return message.conversation
+    || message.extendedTextMessage?.text
+    || message.buttonsResponseMessage?.selectedButtonId
+    || message.buttonsResponseMessage?.selectedDisplayText
+    || message.listResponseMessage?.singleSelectReply?.selectedRowId
+    || message.listResponseMessage?.title
+    || message.templateButtonReplyMessage?.selectedId
+    || message.imageMessage?.caption
+    || message.videoMessage?.caption
+    || ''
+}
+
+/**
  * Map de conversas ativas do Clin no WhatsApp.
  * Chave: número do telefone, Valor: histórico de mensagens
  */
@@ -681,27 +704,53 @@ async function handleClinWhatsAppMessage(
   } catch { /* best effort */ }
 
   try {
-    // Chamar a API do Clin internamente
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'
-    const response = await fetch(`${baseUrl}/api/chatbot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: text,
-        sessionId: `wa-${senderPhone}`,
-        sourcePage: 'whatsapp',
-        source: 'whatsapp',
-      }),
-    })
+    // Chamar a API do Clin com fallback de URLs (Local, Env, Prod)
+    const baseUrls = [
+      process.env.NEXT_PUBLIC_APP_URL,
+      `http://127.0.0.1:${process.env.PORT || 3000}`,
+      'https://clinigo.app'
+    ].filter(Boolean) as string[]
 
-    if (!response.ok) {
-      throw new Error(`API retornou ${response.status}`)
+    let data: any = null
+    let lastErr: any = null
+
+    for (const baseUrl of baseUrls) {
+      try {
+        const response = await fetch(`${baseUrl}/api/chatbot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            sessionId: `wa-${senderPhone}`,
+            sourcePage: 'whatsapp',
+            source: 'whatsapp',
+          }),
+        })
+
+        if (response.ok) {
+          data = await response.json()
+          break
+        } else {
+          lastErr = new Error(`API retornou status ${response.status}`)
+        }
+      } catch (err) {
+        lastErr = err
+      }
     }
 
-    const data = await response.json()
+    if (!data) {
+      throw lastErr || new Error('Falha ao conectar com a API do chatbot')
+    }
 
-    // Parsear array de mensagens (novo formato)
+    // Parsear array de mensagens
     const messages: string[] = data.messages || (data.reply ? [data.reply] : [])
+
+    // Se o atendimento foi transferido e não há nova resposta do bot, mantém em silêncio para atendimento humano
+    if (messages.length === 0 && data.transfer) {
+      try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* best effort */ }
+      return
+    }
+
     if (messages.length === 0) {
       messages.push('Desculpe, estou com dificuldade técnica. Tente novamente em instantes! 😊')
     }
@@ -725,7 +774,7 @@ async function handleClinWhatsAppMessage(
       await socket.sendMessage(senderJid, { text: messages[i] })
     }
 
-    try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* */ }
+    try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* best effort */ }
 
     console.log(`[Clin WhatsApp] ✅ Respondido para ${senderPhone} (${messages.length} msg${messages.length > 1 ? 's' : ''})`)
 

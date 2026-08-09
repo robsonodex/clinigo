@@ -100,6 +100,14 @@ export async function POST(request: NextRequest) {
 
     const isWhatsApp = source === 'whatsapp' || sessionId.startsWith('wa-')
 
+    // Rate limit aplicável apenas ao chat web (mensagens do WhatsApp usam o mesmo IP do servidor e não devem ser bloqueadas)
+    if (!isWhatsApp && !checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Muitas mensagens. Aguarde um momento.' },
+        { status: 429 }
+      )
+    }
+
     // ========== BUSCAR OU CRIAR SESSÃO ==========
     const { data: existingSession } = await supabaseAdmin
       .from('chatbot_sessions')
@@ -163,23 +171,29 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Se sessão já foi transferida, não processar automaticamente (a menos que seja o reset manual)
+    // Se sessão já foi transferida, verificar se o usuário deseja reiniciar a conversa com o bot
     if (existingSession?.status === 'transferred') {
-      // RESETAR SESSÃO se o usuário enviar a mensagem padrão do botão do site
-      if (message.trim().toLowerCase() === 'olá! gostaria de saber mais sobre o clinigo' || 
-          message.trim().toLowerCase() === 'olá! gostaria de falar com um especialista' ||
-          message.trim().toLowerCase().includes('gostaria de saber mais sobre o clinigo') ||
-          message.trim().toLowerCase().includes('gostaria de falar com um especialista')) {
+      const msgClean = message.trim().toLowerCase()
+      const isGreetingOrReset = 
+        msgClean === 'oi' || msgClean === 'olá' || msgClean === 'ola' ||
+        msgClean.startsWith('bom dia') || msgClean.startsWith('boa tarde') || msgClean.startsWith('boa noite') ||
+        msgClean === 'menu' || msgClean === '0' || msgClean === 'voltar' || msgClean === 'reiniciar' ||
+        msgClean === 'iniciar' || msgClean === 'start' || msgClean === 'ajuda' ||
+        msgClean.includes('gostaria de saber mais sobre o clinigo') ||
+        msgClean.includes('gostaria de falar com um especialista') ||
+        msgClean.includes('vim do chat')
+
+      if (isGreetingOrReset) {
         await supabaseAdmin
           .from('chatbot_sessions')
           .update({
             status: 'active',
             conversation_state: createInitialState(),
-            message_count: 0
+            message_count: 0,
+            updated_at: new Date().toISOString()
           })
           .eq('session_id', sessionId)
-        
-        // Continuamos a execução para processar essa mensagem no novo estado limpo
+
         existingSession.status = 'active'
         existingSession.conversation_state = createInitialState()
         existingSession.message_count = 0
