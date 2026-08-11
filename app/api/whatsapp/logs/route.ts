@@ -25,26 +25,25 @@ export async function GET(req: NextRequest) {
     }
 
     const phone = req.nextUrl.searchParams.get('phone')
-    if (!phone) {
-      return NextResponse.json({ error: 'Telefone é obrigatório' }, { status: 400 })
-    }
-
-    // Normalizar telefone (remover não dígitos)
-    const cleanPhone = phone.replace(/\D/g, '')
-    // Montamos busca por 55... ou sem 55 para cobrir ambas possibilidades
-    const phoneFormats = [cleanPhone]
-    if (cleanPhone.startsWith('55')) {
-      phoneFormats.push(cleanPhone.substring(2))
-    } else {
-      phoneFormats.push(`55${cleanPhone}`)
-    }
-
-    const { data: logs, error } = await supabase
+    let query = supabase
       .from('whatsapp_logs')
       .select('*')
       .eq('clinic_id', profile.clinic_id)
-      .in('recipient_phone', phoneFormats)
       .order('sent_at', { ascending: false })
+
+    if (phone) {
+      // Normalizar telefone (remover não dígitos)
+      const cleanPhone = phone.replace(/\D/g, '')
+      const phoneFormats = [cleanPhone]
+      if (cleanPhone.startsWith('55')) {
+        phoneFormats.push(cleanPhone.substring(2))
+      } else {
+        phoneFormats.push(`55${cleanPhone}`)
+      }
+      query = query.in('recipient_phone', phoneFormats)
+    }
+
+    const { data: logs, error } = await query.limit(200)
 
     if (error) throw error
 

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers, Upload, Download, MessageSquare, Send } from 'lucide-react'
+import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers, Upload, Download, MessageSquare, Send, History, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TherapyItem { name: string; qty: number }
@@ -33,7 +33,7 @@ export default function FilaEsperaPage() {
     const [importFileName, setImportFileName] = useState('')
     const [isProcessingFile, setIsProcessingFile] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
- 
+
     // Estados de WhatsApp
     const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false)
     const [whatsappItem, setWhatsappItem] = useState<any>(null)
@@ -41,6 +41,28 @@ export default function FilaEsperaPage() {
     const [sendingWhatsapp, setSendingWhatsapp] = useState(false)
     const [whatsappLogs, setWhatsappLogs] = useState<any[]>([])
     const [loadingLogs, setLoadingLogs] = useState(false)
+
+    // Estados do Modal de Auditoria Geral
+    const [auditModalOpen, setAuditModalOpen] = useState(false)
+    const [auditLogs, setAuditLogs] = useState<any[]>([])
+    const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
+    const [auditSearchTerm, setAuditSearchTerm] = useState('')
+
+    const openAuditModal = async () => {
+        setAuditModalOpen(true)
+        setLoadingAuditLogs(true)
+        try {
+            const res = await fetch('/api/whatsapp/logs')
+            if (res.ok) {
+                const result = await res.json()
+                setAuditLogs(result.logs || [])
+            }
+        } catch (e) {
+            console.error('Erro ao buscar auditoria de logs:', e)
+        } finally {
+            setLoadingAuditLogs(false)
+        }
+    }
  
     // Função de carregar histórico de mensagens
     const fetchWhatsappLogs = async (phone: string) => {
@@ -94,7 +116,8 @@ export default function FilaEsperaPage() {
                     phone: whatsappItem.patient_phone,
                     message: whatsappMessage,
                     sector: 'default', // comercial
-                    trigger_source: 'waiting-list'
+                    trigger_source: 'waiting-list',
+                    waiting_list_id: whatsappItem.id
                 })
             })
  
@@ -590,6 +613,10 @@ export default function FilaEsperaPage() {
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
+                    <Button variant="outline" onClick={openAuditModal}
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-emerald-50 border-emerald-200 shadow-sm rounded-xl px-4 font-semibold text-emerald-700 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Auditoria e Histórico Geral de Mensagens Entregues via WhatsApp">
+                        <History className="w-4 h-4 text-emerald-600" /><span className="hidden sm:inline">Auditoria WhatsApp</span>
+                    </Button>
                     <Button variant="outline" onClick={handleRemoveDuplicates}
                         className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
                         <Layers className="w-4 h-4 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
@@ -655,6 +682,14 @@ export default function FilaEsperaPage() {
                                                         )}
                                                         {(item.commercial_notes) && (
                                                             <div className="text-[11px] text-gray-400 mt-1 italic max-w-xs truncate" title={item.commercial_notes}>{item.commercial_notes}</div>
+                                                        )}
+                                                        {item.commercial_notes?.includes('WhatsApp') && (
+                                                            <div className="mt-1">
+                                                                <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                                                                    <MessageSquare className="w-3 h-3 text-emerald-600" />
+                                                                    WhatsApp Disparado
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
@@ -890,6 +925,8 @@ export default function FilaEsperaPage() {
                             Confirmar Importação ({importRows.length})
                         </Button>
                     </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal de Disparo de WhatsApp */}
             <Dialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen}>
@@ -1027,6 +1064,101 @@ export default function FilaEsperaPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal Auditoria de Envio de WhatsApp */}
+            <Dialog open={auditModalOpen} onOpenChange={setAuditModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                            <History className="w-5 h-5 text-emerald-600" /> Auditoria de Entregas do WhatsApp
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            Histórico completo de mensagens disparadas pelo sistema, status de entrega e confirmações do servidor Meta WhatsApp.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="flex gap-2 items-center flex-wrap">
+                            <div className="relative flex-1 min-w-[240px]">
+                                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                <Input
+                                    placeholder="Buscar por telefone, mensagem ou status..."
+                                    value={auditSearchTerm}
+                                    onChange={e => setAuditSearchTerm(e.target.value)}
+                                    className="pl-9 min-h-[44px]"
+                                    style={{ fontSize: '16px' }}
+                                />
+                            </div>
+                            <Button variant="outline" onClick={openAuditModal} className="min-h-[44px]">
+                                Recarregar Logs
+                            </Button>
+                        </div>
+
+                        {loadingAuditLogs ? (
+                            <div className="flex justify-center py-12">
+                                <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto border rounded-xl">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50 dark:bg-slate-800 border-b">
+                                        <tr>
+                                            <th className="p-3 text-left font-semibold">Telefone</th>
+                                            <th className="p-3 text-left font-semibold">Data / Hora</th>
+                                            <th className="p-3 text-left font-semibold">Status</th>
+                                            <th className="p-3 text-left font-semibold">Origem</th>
+                                            <th className="p-3 text-left font-semibold">Mensagem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {auditLogs.filter(l =>
+                                            !auditSearchTerm ||
+                                            l.recipient_phone?.includes(auditSearchTerm) ||
+                                            l.message_preview?.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+                                            l.status?.toLowerCase().includes(auditSearchTerm.toLowerCase())
+                                        ).length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-8 text-center text-slate-400">
+                                                    Nenhum log de WhatsApp encontrado para a pesquisa.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            auditLogs
+                                                .filter(l =>
+                                                    !auditSearchTerm ||
+                                                    l.recipient_phone?.includes(auditSearchTerm) ||
+                                                    l.message_preview?.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+                                                    l.status?.toLowerCase().includes(auditSearchTerm.toLowerCase())
+                                                )
+                                                .map(log => (
+                                                    <tr key={log.id} className="border-b hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                                                        <td className="p-3 font-medium whitespace-nowrap">{log.recipient_phone}</td>
+                                                        <td className="p-3 whitespace-nowrap text-slate-500 text-xs">
+                                                            {new Date(log.sent_at).toLocaleString('pt-BR')}
+                                                        </td>
+                                                        <td className="p-3 whitespace-nowrap">
+                                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                                log.status === 'sent'
+                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                                    : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                                                            }`}>
+                                                                {log.status === 'sent' ? '✅ Entregue' : '❌ Falhou'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 whitespace-nowrap text-xs text-slate-500">
+                                                            {log.trigger_source || 'manual'}
+                                                        </td>
+                                                        <td className="p-3 text-xs text-slate-600 dark:text-slate-300 max-w-xs truncate" title={log.message_preview}>
+                                                            {log.message_preview}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

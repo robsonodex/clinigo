@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { phone, message, trigger_source, sector } = body
+    const { phone, message, trigger_source, sector, waiting_list_id } = body
 
     if (!phone || !message) {
       return NextResponse.json({ error: 'phone e message são obrigatórios' }, { status: 400 })
@@ -43,6 +43,55 @@ export async function POST(req: NextRequest) {
       trigger_source || 'manual',
       sector || 'default'
     )
+
+    // Gravação atômica no servidor da observação commercial_notes se o disparo for de fila de espera
+    if (trigger_source === 'waiting-list' || waiting_list_id) {
+      try {
+        const dateStr = new Date().toLocaleString('pt-BR')
+        const logAppend = `\n[${dateStr} - WhatsApp (${(sector || 'comercial').toUpperCase()})]: "${message}"`
+
+        let targetId = waiting_list_id
+        if (!targetId) {
+          const cleanPhone = phone.replace(/\D/g, '')
+          const lastDigits = cleanPhone.slice(-8)
+          const { data: matchedItem } = await supabase
+            .from('waiting_list')
+            .select('id, commercial_notes')
+            .eq('clinic_id', profile.clinic_id)
+            .ilike('patient_phone', `%${lastDigits}%`)
+            .limit(1)
+            .maybeSingle()
+
+          if (matchedItem) {
+            targetId = matchedItem.id
+          }
+        }
+
+        if (targetId) {
+          const { data: currentItem } = await supabase
+            .from('waiting_list')
+            .select('commercial_notes')
+            .eq('id', targetId)
+            .single()
+
+          if (currentItem) {
+            const updatedNotes = currentItem.commercial_notes
+              ? `${currentItem.commercial_notes}${logAppend}`
+              : logAppend.trim()
+
+            await supabase
+              .from('waiting_list')
+              .update({
+                commercial_notes: updatedNotes,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', targetId)
+          }
+        }
+      } catch (logErr) {
+        console.error('[WhatsApp Send] Erro ao salvar observação automática na fila:', logErr)
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
@@ -59,3 +108,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
