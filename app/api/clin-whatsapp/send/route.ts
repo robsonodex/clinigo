@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
+
+function getClinBotUrl(): string {
+  const url = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+  if (url.includes('clinigo.app') || url.includes('localhost') || !url.startsWith('http')) {
+    return 'https://clinigo-whatsapp-service-production.up.railway.app'
+  }
+  return url.replace(/\/$/, '')
+}
 
 async function verifySuperAdmin() {
   const supabase = await createClient()
@@ -29,9 +36,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Destinatário (to) e texto (text) são obrigatórios' }, { status: 400 })
     }
 
-    const success = await sendWhatsAppMessage('clin-sales-bot', to, text)
-    if (!success) {
-      throw new Error('Falha ao enviar mensagem. Verifique se o WhatsApp está conectado.')
+    const cleanTo = to.replace(/\D/g, '')
+    const fullPhone = cleanTo.startsWith('55') ? cleanTo : `55${cleanTo}`
+
+    const botUrl = getClinBotUrl()
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    const res = await fetch(`${botUrl}/clin/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: fullPhone, text }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+
+    const resText = await res.text()
+    let data: any = {}
+    try {
+      data = JSON.parse(resText)
+    } catch {
+      data = { error: 'Resposta inválida do serviço do WhatsApp' }
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Falha ao enviar mensagem. Verifique se o WhatsApp está conectado.')
     }
 
     return NextResponse.json({ success: true })
@@ -42,4 +72,5 @@ export async function POST(request: Request) {
     }, { status: 500 })
   }
 }
+
 
