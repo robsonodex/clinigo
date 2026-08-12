@@ -56,6 +56,8 @@ export default async function DashboardRootLayout({
         subscriptionDueDate = clinic?.subscription_due_date ?? null
     }
 
+    const isTrialActive = approvalStatus === 'trial' && (!trialEndsAt || new Date(trialEndsAt) > new Date())
+
     return (
         <>
             <StaffSignatureGate>
@@ -64,7 +66,7 @@ export default async function DashboardRootLayout({
                 <DashboardLayout>
                     <ImpersonationBanner />
                     <DemoBanner isDemo={isDemo} />
-                    {paymentConfirmed === false && !isDemo && (
+                    {paymentConfirmed === false && !isDemo && !isTrialActive && (
                         <BillingOverdueBanner dueDate={subscriptionDueDate} />
                     )}
                     <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
