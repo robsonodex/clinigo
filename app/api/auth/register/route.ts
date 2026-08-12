@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         // WHATSAPP NOTIFICATION
         // ============================================
         try {
-            const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
+            const { sendWhatsAppToLeadAdmin } = await import('@/lib/whatsapp/service')
             const waMessage = `🎁 *Novo Cliente Trial (7 Dias) se cadastrou!* 🎁\n\n` +
                 `👤 *Nome:* ${data.full_name}\n` +
                 `🏥 *Clínica/Consultório:* ${data.clinic_name}\n` +
@@ -284,9 +284,8 @@ export async function POST(request: NextRequest) {
                 `📱 *WhatsApp do cliente:* ${data.phone || 'Não informado'}\n\n` +
                 `🚀 _Acesse em segundos. Sem cartão._`
 
-            // Envia do bot 21 990400577 (clin-sales-bot) para o comercial 21 97512-9005
-            await sendWhatsAppMessage('clin-sales-bot', '21975129005', waMessage, 'trial-notification')
-            console.log('[Register] WhatsApp notification successfully sent to (21) 97512-9005')
+            await sendWhatsAppToLeadAdmin(waMessage, 'trial-notification')
+            console.log('[Register] WhatsApp lead notification successfully dispatched to (21) 96557-2247')
         } catch (waError) {
             console.error('[Register] Failed to send WhatsApp notification:', waError)
         }
@@ -347,7 +346,7 @@ export async function POST(request: NextRequest) {
                 .from('email_logs')
                 .insert([
                     {
-                        recipient: superAdminEmail,
+                        recipient: emailsToNotify[0],
                         subject: 'Nova Clínica Aguardando Aprovação',
                         template_used: 'CLINIC_PENDING_ADMIN',
                         status: 'sent',

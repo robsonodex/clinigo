@@ -365,7 +365,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
     // ===== CHATBOT CLIN: Gerenciado exclusivamente via Railway =====
     if (clinicId === CLIN_SESSION_ID) {
       console.log(`[Clin WhatsApp] ℹ️ Clin Sales Bot é gerenciado 100% pelo serviço Railway standalone. Socket in-process do Next.js ignorado para evitar conflito 440.`)
-      return session.socket!
+      return
     }
 
   } catch (error) {
@@ -490,6 +490,62 @@ export async function getAllClinicSessions(clinicId: string): Promise<any[]> {
   return data || []
 }
 
+// ========== EXPORTED: NOTIFICAÇÃO DE LEAD PARA O ADMIN ==========
+
+/**
+ * Envia notificação de novo Lead / cadastro para o número comercial/admin (21 96557-2247).
+ * Tenta enviar via sessão 'comercial' ou qualquer outra sessão ativa no sistema.
+ */
+export async function sendWhatsAppToLeadAdmin(
+  message: string,
+  triggerSource: string = 'lead-notification'
+): Promise<boolean> {
+  const leadPhone = process.env.ADMIN_LEAD_WHATSAPP_NUMBER || '21965572247'
+  
+  // Tenta sessões conhecidas em ordem (comercial primeiro)
+  const sessionsToTry = [
+    { clinicId: '5163c916-8b82-4d80-8a71-01726836ee46', sector: 'comercial' },
+    { clinicId: 'de000000-0000-0000-0000-000000000001', sector: 'default' }
+  ]
+
+  for (const s of sessionsToTry) {
+    try {
+      await sendWhatsAppMessage(s.clinicId, leadPhone, message, triggerSource, s.sector)
+      console.log(`[WhatsApp Lead Admin] ✅ Notificação enviada via ${s.clinicId}/${s.sector}`)
+      return true
+    } catch (err: any) {
+      console.warn(`[WhatsApp Lead Admin] Tentativa via ${s.clinicId}/${s.sector} falhou:`, err.message)
+    }
+  }
+
+  // Tenta qualquer sessão ativa no banco
+  try {
+    const supabase = getSupabaseAdmin()
+    const { data: active } = await supabase
+      .from('whatsapp_sessions')
+      .select('clinic_id, sector')
+      .eq('status', 'connected')
+      .limit(5)
+
+    if (active && active.length > 0) {
+      for (const a of active) {
+        try {
+          await sendWhatsAppMessage(a.clinic_id, leadPhone, message, triggerSource, a.sector || 'default')
+          console.log(`[WhatsApp Lead Admin] ✅ Notificação enviada via sessão ativa ${a.clinic_id}/${a.sector}`)
+          return true
+        } catch {
+          /* continua pro próximo */
+        }
+      }
+    }
+  } catch (dbErr) {
+    console.error('[WhatsApp Lead Admin] Erro ao buscar sessões ativas:', dbErr)
+  }
+
+  console.error('[WhatsApp Lead Admin] ❌ Não foi possível entregar a notificação por nenhuma sessão.')
+  return false
+}
+
 // ========== EXPORTED: ENVIAR MENSAGEM ==========
 
 /**
@@ -573,6 +629,9 @@ export async function sendWhatsAppMessage(
       status: 'sent',
     })
 
+    // Sincronizar com conversas no celular / módulo de chat
+    await syncWhatsAppToChat(supabase, clinicId, fullPhone, message)
+
     console.log(`[WhatsApp] ✅ Enviado para ${fullPhone} (${triggerSource})`)
   } catch (error: any) {
     // Log de falha
@@ -588,6 +647,96 @@ export async function sendWhatsAppMessage(
     throw error
   }
 }
+
+/**
+ * Sincroniza envio de WhatsApp para a tabela de conversas/mensagens do Chat interno
+ */
+async function syncWhatsAppToChat(
+  supabase: any,
+  clinicId: string,
+  fullPhone: string,
+  message: string
+) {
+  try {
+    const formattedPhone = fullPhone.startsWith('55')
+      ? `+55 (${fullPhone.substring(2, 4)}) ${fullPhone.substring(4, 9)}-${fullPhone.substring(9)}`
+      : fullPhone
+
+    const title = `WhatsApp: ${formattedPhone}`
+
+    let { data: conv } = await supabase
+      .from('chat_conversations')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('title', title)
+      .maybeSingle()
+
+    if (!conv) {
+      const { data: firstAdmin } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .limit(1)
+        .maybeSingle()
+
+      const createdBy = firstAdmin?.id || null
+
+      const { data: newConv, error: convErr } = await supabase
+        .from('chat_conversations')
+        .insert({
+          clinic_id: clinicId,
+          type: 'internal',
+          title: title,
+          created_by: createdBy,
+          last_message_at: new Date().toISOString(),
+          last_message_preview: message.substring(0, 100),
+        })
+        .select('id')
+        .single()
+
+      if (!convErr && newConv) {
+        conv = newConv
+        if (createdBy) {
+          await supabase.from('chat_participants').insert({
+            conversation_id: newConv.id,
+            user_id: createdBy,
+            role: 'admin',
+          })
+        }
+      }
+    }
+
+    if (conv?.id) {
+      await supabase
+        .from('chat_conversations')
+        .update({
+          last_message_at: new Date().toISOString(),
+          last_message_preview: message.substring(0, 100),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conv.id)
+
+      const { data: senderUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .limit(1)
+        .maybeSingle()
+
+      if (senderUser?.id) {
+        await supabase.from('chat_messages').insert({
+          conversation_id: conv.id,
+          sender_id: senderUser.id,
+          content: `[WhatsApp enviado para ${formattedPhone}]:\n${message}`,
+          message_type: 'text',
+        })
+      }
+    }
+  } catch (err) {
+    console.error('[WhatsApp Chat Sync Error]', err)
+  }
+}
+
 
 // ========== EXPORTED: DESCONECTAR ==========
 
