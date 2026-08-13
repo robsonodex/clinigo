@@ -463,52 +463,103 @@ export default function PatientDetailsPage() {
 
                 {/* Tab: Informações */}
                 <TabsContent value="info">
-                    <Card>
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                         <CardHeader>
-                            <CardTitle>Dados Pessoais</CardTitle>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <User className="w-5 h-5 text-primary" />
+                                Dados Pessoais do Paciente
+                            </CardTitle>
                         </CardHeader>
-                        <CardContent className="grid gap-4 md:grid-cols-2">
-                            {/* Dados sensíveis ocultos para terapeutas (DOCTOR) */}
-                            {user?.role !== 'DOCTOR' && patient.email && (
-                                <div className="flex items-center gap-2">
-                                    <Mail className="w-4 h-4 text-muted-foreground" />
-                                    <span>{patient.email}</span>
+                        <CardContent className="space-y-6">
+                            {/* Dados essenciais exigidos para relatórios semestrais */}
+                            <div className="grid gap-4 md:grid-cols-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                        Nome Completo
+                                    </span>
+                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                                        {typeof patient.full_name === 'object' ? 'Não informado' : (patient.full_name || 'Não informado')}
+                                    </p>
                                 </div>
-                            )}
-                            {user?.role !== 'DOCTOR' && patient.phone && (
-                                <div className="flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-muted-foreground" />
-                                    <span>{patient.phone}</span>
+                                <div>
+                                    <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                        Data de Nascimento
+                                    </span>
+                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                                        {(() => {
+                                            const bDate = patient.birth_date || (patient as any).date_of_birth;
+                                            if (!bDate) return 'Não informada';
+                                            try {
+                                                let dateObj: Date;
+                                                if (typeof bDate === 'string' && bDate.includes('T')) {
+                                                    dateObj = new Date(bDate);
+                                                } else if (typeof bDate === 'string' && bDate.includes('-')) {
+                                                    const [y, m, d] = bDate.split('-').map(Number);
+                                                    dateObj = new Date(y, m - 1, d);
+                                                } else if (typeof bDate === 'string' && bDate.includes('/')) {
+                                                    const [d, m, y] = bDate.split('/').map(Number);
+                                                    dateObj = new Date(y, m - 1, d);
+                                                } else {
+                                                    dateObj = new Date(bDate);
+                                                }
+                                                if (isNaN(dateObj.getTime())) return String(bDate);
+                                                const formatted = dateObj.toLocaleDateString('pt-BR');
+                                                const today = new Date();
+                                                let age = today.getFullYear() - dateObj.getFullYear();
+                                                const monthDiff = today.getMonth() - dateObj.getMonth();
+                                                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dateObj.getDate())) {
+                                                    age--;
+                                                }
+                                                return age >= 0 ? `${formatted} (${age} ${age === 1 ? 'ano' : 'anos'})` : formatted;
+                                            } catch {
+                                                return String(bDate);
+                                            }
+                                        })()}
+                                    </p>
                                 </div>
-                            )}
-                            {user?.role !== 'DOCTOR' && patient.cpf && (
-                                <div className="flex items-center gap-2">
-                                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                                    <span>{patient.cpf}</span>
+                                <div>
+                                    <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                        Nome Completo dos Responsáveis
+                                    </span>
+                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                                        {(patient as any).insurance_holder_name || (patient as any).responsible_name || (patient as any).guardian_name || (patient as any).mother_name || 'Não informado'}
+                                    </p>
                                 </div>
-                            )}
-                            {patient.birth_date && (
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                                    <span>{new Date(patient.birth_date).toLocaleDateString('pt-BR')}</span>
-                                </div>
-                            )}
-                            {user?.role !== 'DOCTOR' && (patient as any).addressText && (
-                                <div className="flex items-center gap-2 md:col-span-2">
-                                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                                    <span>{(patient as any).addressText}</span>
-                                </div>
-                            )}
-                            {(patient as any).insurance_holder_name && (
-                                <div className="flex items-center gap-2">
-                                    <User className="w-4 h-4 text-muted-foreground" />
-                                    <span><strong>Titular:</strong> {(patient as any).insurance_holder_name}</span>
-                                </div>
-                            )}
-                            {user?.role !== 'DOCTOR' && (patient as any).insurance_holder_cpf && (
-                                <div className="flex items-center gap-2">
-                                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                                    <span><strong>CPF Titular:</strong> {(patient as any).insurance_holder_cpf}</span>
+                            </div>
+
+                            {/* Demais dados cadastrais e de contato (exibidos para administradores/recepção) */}
+                            {user?.role !== 'DOCTOR' && (
+                                <div className="grid gap-4 md:grid-cols-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    {patient.email && (
+                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                            <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <span><strong>E-mail:</strong> {patient.email}</span>
+                                        </div>
+                                    )}
+                                    {patient.phone && (
+                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                            <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <span><strong>Telefone:</strong> {patient.phone}</span>
+                                        </div>
+                                    )}
+                                    {patient.cpf && (
+                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                            <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <span><strong>CPF Paciente:</strong> {patient.cpf}</span>
+                                        </div>
+                                    )}
+                                    {(patient as any).insurance_holder_cpf && (
+                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                            <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <span><strong>CPF Titular/Responsável:</strong> {(patient as any).insurance_holder_cpf}</span>
+                                        </div>
+                                    )}
+                                    {(patient as any).addressText && (
+                                        <div className="flex items-center gap-2 md:col-span-2 text-slate-700 dark:text-slate-300">
+                                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <span><strong>Endereço:</strong> {(patient as any).addressText}</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </CardContent>
@@ -778,15 +829,15 @@ export default function PatientDetailsPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="insurance_holder_name">Nome do Titular do Plano</Label>
+                                    <Label htmlFor="insurance_holder_name">Nome Completo dos Responsáveis / Titular</Label>
                                     <Input
                                         id="insurance_holder_name"
-                                        placeholder="Nome do titular"
+                                        placeholder="Ex: Maria da Silva (Mãe)"
                                         {...form.register('insurance_holder_name')}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="insurance_holder_cpf">CPF do Titular</Label>
+                                    <Label htmlFor="insurance_holder_cpf">CPF do Responsável / Titular</Label>
                                     <Input
                                         id="insurance_holder_cpf"
                                         placeholder="000.000.000-00"

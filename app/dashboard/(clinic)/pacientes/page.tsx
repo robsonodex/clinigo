@@ -605,15 +605,15 @@ export default function PacientesPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="insurance_holder_name">Nome do Titular do Plano</Label>
+                                    <Label htmlFor="insurance_holder_name">Nome Completo dos Responsáveis / Titular</Label>
                                     <Input
                                         id="insurance_holder_name"
-                                        placeholder="Nome do titular"
+                                        placeholder="Ex: Maria da Silva (Mãe)"
                                         {...form.register('insurance_holder_name')}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="insurance_holder_cpf">CPF do Titular</Label>
+                                    <Label htmlFor="insurance_holder_cpf">CPF do Responsável / Titular</Label>
                                     <Input
                                         id="insurance_holder_cpf"
                                         placeholder="000.000.000-00"
