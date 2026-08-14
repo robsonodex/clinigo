@@ -8,6 +8,10 @@
         {
             "path": "/api/cron/calculate-commissions",
             "schedule": "0 0 1 * *"
+        },
+        {
+            "path": "/api/cron/billing/send-scheduled",
+            "schedule": "*/10 * * * *"
         }
     ]
 }
