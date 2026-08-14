@@ -173,6 +173,9 @@ export default function SuperAdminDashboard() {
     const loadScheduledBillings = async () => {
         setLoadingScheduled(true)
         try {
+            // Gatilho fail-safe: processa disparos de cobrança pendentes vencidos
+            fetch('/api/cron/billing/send-scheduled').catch(() => {})
+
             const res = await fetch('/api/super-admin/clinics/scheduled-billings')
             if (res.ok) {
                 const result = await res.json()
