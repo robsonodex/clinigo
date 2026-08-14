@@ -11,7 +11,7 @@
         },
         {
             "path": "/api/cron/billing/send-scheduled",
-            "schedule": "*/10 * * * *"
+            "schedule": "0 10 * * *"
         }
     ]
 }
