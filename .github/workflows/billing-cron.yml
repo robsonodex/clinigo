@@ -1,0 +1,34 @@
+name: Scheduled Billing Dispatcher
+
+on:
+  schedule:
+    # Every 10 minutes during business hours (7am-22pm BRT = 10:00-01:00 UTC)
+    - cron: '*/10 10-23 * * *'
+    - cron: '*/10 0-1 * * *'
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  dispatch-billings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Trigger billing dispatcher
+        run: |
+          echo "Triggering scheduled billing dispatcher at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://clinigo.app/api/cron/billing/send-scheduled")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error::Billing dispatcher failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          
+          echo "✅ Billing dispatcher completed successfully"
