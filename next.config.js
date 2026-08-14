@@ -66,10 +66,6 @@ const nextConfig = {
         ignoreBuildErrors: true,  // TODO: Complete Next.js 16 async params conversion for remaining routes
     },
 
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
-
     // External packages that should not be bundled
     // These packages use Node.js APIs and need to run in Node.js runtime
     serverExternalPackages: ['nodemailer', '@react-email/components', '@react-email/render', '@whiskeysockets/baileys', 'node-forge'],
