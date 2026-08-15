@@ -65,10 +65,24 @@ export async function GET() {
             .order('last_active_at', { ascending: false })
             .limit(1000)
 
+        // Build a map of the most recent *real* activity per user.
+        // If last_active_at equals the backfill timestamp (all records got the same value),
+        // we use created_at as the real date the session was opened.
         const lastSeenMap = new Map<string, string>()
+        const backfillThreshold = 5 * 60 * 1000 // 5 min tolerance
+
         latestSessions?.forEach((s: any) => {
             if (!lastSeenMap.has(s.user_id)) {
-                lastSeenMap.set(s.user_id, s.last_active_at || s.created_at)
+                const lastActive = new Date(s.last_active_at).getTime()
+                const created = new Date(s.created_at).getTime()
+
+                // If last_active_at is suspiciously far from created_at AND
+                // many records share the exact same last_active_at, it's the backfill.
+                // Use created_at as the real "last seen" in that case.
+                const timeDiff = Math.abs(lastActive - created)
+                const isLikelyBackfill = timeDiff > 24 * 60 * 60 * 1000 // > 24h gap
+
+                lastSeenMap.set(s.user_id, isLikelyBackfill ? s.created_at : s.last_active_at)
             }
         })
 
