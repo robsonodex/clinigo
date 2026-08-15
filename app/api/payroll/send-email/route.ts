@@ -3,10 +3,13 @@ import { Resend } from 'resend';
 import { createClient } from '@/lib/supabase/server';
 import { formatCurrency } from '@/lib/utils';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(request: NextRequest) {
     try {
+        if (!process.env.RESEND_API_KEY) {
+            return NextResponse.json({ success: false, error: 'Chave de envio de e-mail não configurada' }, { status: 500 });
+        }
+
+        const resend = new Resend(process.env.RESEND_API_KEY);
         const supabase = await createClient();
 
         const { data: { user } } = await supabase.auth.getUser();
