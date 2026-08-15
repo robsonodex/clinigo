@@ -46,6 +46,8 @@ export async function registerSingleSession(
     // 2. Criar nova sessão com token único
     const sessionToken = generateSessionToken()
 
+    const now = new Date().toISOString()
+
     const { data, error } = await (supabase
         .from('active_sessions') as any)
         .insert({
@@ -54,6 +56,7 @@ export async function registerSingleSession(
             device_info: deviceInfo || null,
             ip_address: ipAddress || null,
             is_active: true,
+            last_active_at: now,
         })
         .select('id')
         .single()
@@ -73,6 +76,7 @@ export async function registerSingleSession(
 
 /**
  * Valida se o token de sessão fornecido é a sessão ativa do usuário
+ * e atualiza o timestamp de atividade recente (last_active_at)
  */
 export async function validateSession(
     supabase: SupabaseClient,
@@ -90,6 +94,14 @@ export async function validateSession(
     if (error || !data) {
         return false
     }
+
+    // Atualiza last_active_at de forma assíncrona (não bloqueia validação)
+    ;(supabase
+        .from('active_sessions') as any)
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', data.id)
+        .then(() => {})
+        .catch((err: any) => console.error('[SESSION] Error updating last_active_at:', err))
 
     return true
 }

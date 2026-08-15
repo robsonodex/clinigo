@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
     Building2,
@@ -39,6 +39,19 @@ import {
     Smartphone,
     CalendarClock,
     FileText,
+    ChevronDown,
+    ChevronUp,
+    Search,
+    Filter,
+    Activity,
+    Layers,
+    Globe,
+    UserCheck,
+    UserX,
+    Sparkles,
+    Check,
+    ExternalLink,
+    ShieldCheck,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -98,6 +111,7 @@ interface DashboardData {
         clinicId: string | null
         createdAt: string
         isOnline?: boolean
+        lastSeenAt?: string
     }>
     recentLogs: Array<{
         id: string
@@ -169,6 +183,55 @@ export default function SuperAdminDashboard() {
         error?: string
     }> | null>(null)
     const [resettingClinicPwd, setResettingClinicPwd] = useState(false)
+
+    // Users Tab Filter and Grouping States
+    const [userSearchTerm, setUserSearchTerm] = useState('')
+    const [userStatusFilter, setUserStatusFilter] = useState<'ALL' | 'ONLINE' | 'OFFLINE'>('ALL')
+    const [userRoleFilter, setUserRoleFilter] = useState<string>('ALL')
+    const [userClinicFilter, setUserClinicFilter] = useState<string>('ALL')
+    const [collapsedClinics, setCollapsedClinics] = useState<Record<string, boolean>>({})
+    const [copiedUserId, setCopiedUserId] = useState<string | null>(null)
+    const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
+
+    const toggleClinicCollapse = (clinicKey: string) => {
+        setCollapsedClinics(prev => ({
+            ...prev,
+            [clinicKey]: !prev[clinicKey],
+        }))
+    }
+
+    const expandAllClinics = () => {
+        setCollapsedClinics({})
+    }
+
+    const collapseAllClinics = (clinicKeys: string[]) => {
+        const collapsed: Record<string, boolean> = {}
+        clinicKeys.forEach(k => { collapsed[k] = true })
+        setCollapsedClinics(collapsed)
+    }
+
+    const handleCopyText = (text: string, type: 'uid' | 'email', id: string) => {
+        navigator.clipboard.writeText(text)
+        if (type === 'uid') {
+            setCopiedUserId(id)
+            setTimeout(() => setCopiedUserId(null), 2000)
+        } else {
+            setCopiedEmail(id)
+            setTimeout(() => setCopiedEmail(null), 2000)
+        }
+    }
+
+    const formatLastSeen = (dateStr?: string, isOnline?: boolean) => {
+        if (isOnline) return 'Online agora'
+        if (!dateStr) return 'Sem registro'
+        try {
+            const date = new Date(dateStr)
+            if (isNaN(date.getTime())) return 'Sem registro'
+            return formatDistanceToNow(date, { addSuffix: true, locale: ptBR })
+        } catch {
+            return 'Sem registro'
+        }
+    }
 
     const loadScheduledBillings = async () => {
         setLoadingScheduled(true)
@@ -910,6 +973,88 @@ export default function SuperAdminDashboard() {
         return <Badge variant={variants[plan] || 'outline'}>{plan}</Badge>
     }
 
+    // Process and filter users grouped by clinic
+    const filteredUsers = useMemo(() => {
+        return users.filter((user) => {
+            const term = userSearchTerm.toLowerCase().trim()
+            const matchesSearch =
+                term === '' ||
+                user.displayName.toLowerCase().includes(term) ||
+                user.email.toLowerCase().includes(term) ||
+                user.clinicName.toLowerCase().includes(term) ||
+                user.id.toLowerCase().includes(term)
+
+            const matchesStatus =
+                userStatusFilter === 'ALL' ||
+                (userStatusFilter === 'ONLINE' && user.isOnline) ||
+                (userStatusFilter === 'OFFLINE' && !user.isOnline)
+
+            const matchesRole =
+                userRoleFilter === 'ALL' || user.role === userRoleFilter
+
+            const matchesClinic =
+                userClinicFilter === 'ALL' ||
+                (userClinicFilter === 'NO_CLINIC' && !user.clinicId) ||
+                user.clinicId === userClinicFilter
+
+            return matchesSearch && matchesStatus && matchesRole && matchesClinic
+        })
+    }, [users, userSearchTerm, userStatusFilter, userRoleFilter, userClinicFilter])
+
+    // Grouping filtered users by clinic
+    const clinicGroups = useMemo(() => {
+        const groups: Record<
+            string,
+            {
+                clinicId: string | null
+                clinicName: string
+                clinicData?: DashboardData['clinics'][0]
+                users: typeof users
+                onlineCount: number
+            }
+        > = {}
+
+        filteredUsers.forEach((u) => {
+            const key = u.clinicId || 'NO_CLINIC'
+            if (!groups[key]) {
+                const clinicInfo = data?.clinics?.find((c) => c.id === u.clinicId)
+                groups[key] = {
+                    clinicId: u.clinicId,
+                    clinicName: u.clinicId
+                        ? (clinicInfo?.name || u.clinicName || 'Clínica Desconhecida')
+                        : 'Administradores Globais / Sem Clínica',
+                    clinicData: clinicInfo,
+                    users: [],
+                    onlineCount: 0,
+                }
+            }
+            groups[key].users.push(u)
+            if (u.isOnline) {
+                groups[key].onlineCount += 1
+            }
+        })
+
+        // Sort groups: groups with online users first, then by clinic name
+        return Object.entries(groups).sort(([keyA, a], [keyB, b]) => {
+            if (keyA === 'NO_CLINIC') return -1
+            if (keyB === 'NO_CLINIC') return 1
+            if (b.onlineCount !== a.onlineCount) {
+                return b.onlineCount - a.onlineCount
+            }
+            return a.clinicName.localeCompare(b.clinicName)
+        })
+    }, [filteredUsers, data?.clinics])
+
+    const totalOnlineUsers = useMemo(() => {
+        return users.filter((u) => u.isOnline).length
+    }, [users])
+
+    const totalClinicsWithOnline = useMemo(() => {
+        return new Set(
+            users.filter((u) => u.isOnline && u.clinicId).map((u) => u.clinicId)
+        ).size
+    }, [users])
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 p-6">
@@ -1277,99 +1422,692 @@ export default function SuperAdminDashboard() {
                     </TabsContent>
 
                     {/* Users Tab */}
-                    <TabsContent value="users">
-                        <Card className="bg-white border-gray-200">
-                            <CardHeader>
-                                <CardTitle className="text-gray-900">Todos os Usuários</CardTitle>
-                                <CardDescription className="text-gray-600">
-                                    Gerencie todos os usuários do sistema
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {loadingUsers ? (
-                                    <div className="text-center py-8">
-                                        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-                                        <p className="text-gray-500 mt-2">Carregando usuários...</p>
+                    <TabsContent value="users" className="space-y-6">
+                        {/* Metrics Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="bg-white border-gray-200 shadow-sm">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total de Usuários</p>
+                                        <h3 className="text-2xl font-bold text-gray-900 mt-1">{users.length}</h3>
+                                        <p className="text-xs text-gray-500 mt-0.5">Cadastrados no sistema</p>
                                     </div>
-                                ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow className="border-gray-200">
-                                                <TableHead className="text-gray-600">UID</TableHead>
-                                                <TableHead className="text-gray-600">Display name</TableHead>
-                                                <TableHead className="text-gray-600">Email</TableHead>
-                                                <TableHead className="text-gray-600">Role</TableHead>
-                                                <TableHead className="text-gray-600">Conexão</TableHead>
-                                                <TableHead className="text-gray-600">Clínica</TableHead>
-                                                <TableHead className="text-gray-600">Ações</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {users.map((user) => (
-                                                <TableRow key={user.id} className="border-gray-200 hover:bg-gray-50">
-                                                    <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                                                    <TableCell className="font-medium">{user.displayName}</TableCell>
-                                                    <TableCell>{user.email}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline">{user.role}</Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {user.isOnline ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50">
-                                                                <span className="relative flex h-2 w-2">
-                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                                </span>
-                                                                <span>Online</span>
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
-                                                                <span className="inline-flex rounded-full h-2 w-2 bg-slate-300 dark:bg-slate-700"></span>
-                                                                <span>Offline</span>
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>{user.clinicName}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-1">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => openResetPwdModal(user)}
-                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            >
-                                                                <KeyRound className="h-4 w-4 mr-1" />
-                                                                Resetar Senha
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteUser(user.id, user.displayName, false)}
-                                                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                                            >
-                                                                <AlertTriangle className="h-4 w-4 mr-1" />
-                                                                Deletar Usuário
-                                                            </Button>
-                                                            {user.clinicId && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleDeleteUser(user.id, user.displayName, true)}
-                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                >
-                                                                    <AlertTriangle className="h-4 w-4 mr-1" />
-                                                                    Deletar + Clínica
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
+                                    <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                                        <Users className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white border-gray-200 shadow-sm">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Usuários Online Agora</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <h3 className="text-2xl font-bold text-emerald-600">{totalOnlineUsers}</h3>
+                                            {totalOnlineUsers > 0 && (
+                                                <span className="relative flex h-3 w-3">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-emerald-600/90 font-medium mt-0.5">Conectados em tempo real</p>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                                        <Activity className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white border-gray-200 shadow-sm">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Clínicas Ativas Conectadas</p>
+                                        <h3 className="text-2xl font-bold text-indigo-600 mt-1">{totalClinicsWithOnline}</h3>
+                                        <p className="text-xs text-gray-500 mt-0.5">Com colaboradores online</p>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                                        <Building2 className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white border-gray-200 shadow-sm">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total de Clínicas</p>
+                                        <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                                            {new Set(users.filter(u => u.clinicId).map(u => u.clinicId)).size}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-0.5">Com usuários cadastrados</p>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                                        <Layers className="w-6 h-6" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Search, Filters & Controls Card */}
+                        <Card className="bg-white border-gray-200 shadow-sm">
+                            <CardContent className="p-4 sm:p-5 space-y-4">
+                                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+                                    {/* Search Input */}
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <Input
+                                            type="text"
+                                            placeholder="Buscar por nome, e-mail, clínica ou UID..."
+                                            value={userSearchTerm}
+                                            onChange={(e) => setUserSearchTerm(e.target.value)}
+                                            className="pl-9 text-base sm:text-sm bg-gray-50/50 border-gray-300 focus:bg-white h-10 w-full"
+                                        />
+                                        {userSearchTerm && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setUserSearchTerm('')}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 px-1 py-0.5 rounded"
+                                            >
+                                                Limpar
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons (Refresh, Expand/Collapse) */}
+                                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={loadUsers}
+                                            disabled={loadingUsers}
+                                            className="h-10 px-3 border-gray-300 hover:bg-gray-50 text-gray-700 font-medium flex items-center gap-1.5 flex-1 sm:flex-none justify-center"
+                                        >
+                                            <RefreshCw className={`w-4 h-4 text-gray-500 ${loadingUsers ? 'animate-spin' : ''}`} />
+                                            <span>Atualizar</span>
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={expandAllClinics}
+                                            className="h-10 px-3 border-gray-300 hover:bg-gray-50 text-gray-700 font-medium flex items-center gap-1.5 flex-1 sm:flex-none justify-center"
+                                            title="Expandir todas as clínicas"
+                                        >
+                                            <ChevronDown className="w-4 h-4 text-gray-500" />
+                                            <span>Expandir Todas</span>
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => collapseAllClinics(clinicGroups.map(([key]) => key))}
+                                            className="h-10 px-3 border-gray-300 hover:bg-gray-50 text-gray-700 font-medium flex items-center gap-1.5 flex-1 sm:flex-none justify-center"
+                                            title="Recolher todas as clínicas"
+                                        >
+                                            <ChevronUp className="w-4 h-4 text-gray-500" />
+                                            <span>Recolher Todas</span>
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Filter Selects and Quick Pills */}
+                                <div className="flex flex-col sm:flex-row gap-3 pt-1 border-t border-gray-100 items-stretch sm:items-center justify-between flex-wrap">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {/* Status Filter Pills */}
+                                        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs font-medium">
+                                            <button
+                                                type="button"
+                                                onClick={() => setUserStatusFilter('ALL')}
+                                                className={`px-3 py-1.5 rounded-md transition-colors ${
+                                                    userStatusFilter === 'ALL'
+                                                        ? 'bg-white text-gray-900 shadow-sm font-semibold'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Todos ({users.length})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setUserStatusFilter('ONLINE')}
+                                                className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
+                                                    userStatusFilter === 'ONLINE'
+                                                        ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                                                        : 'text-emerald-700 hover:bg-emerald-50'
+                                                }`}
+                                            >
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                                                </span>
+                                                <span>Online ({totalOnlineUsers})</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setUserStatusFilter('OFFLINE')}
+                                                className={`px-3 py-1.5 rounded-md transition-colors ${
+                                                    userStatusFilter === 'OFFLINE'
+                                                        ? 'bg-slate-700 text-white shadow-sm font-semibold'
+                                                        : 'text-gray-600 hover:text-gray-900'
+                                                }`}
+                                            >
+                                                Offline ({users.length - totalOnlineUsers})
+                                            </button>
+                                        </div>
+
+                                        {/* Clinic Dropdown Filter */}
+                                        <select
+                                            value={userClinicFilter}
+                                            onChange={(e) => setUserClinicFilter(e.target.value)}
+                                            aria-label="Filtrar por clínica"
+                                            className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
+                                        >
+                                            <option value="ALL">🏢 Todas as Clínicas</option>
+                                            <option value="NO_CLINIC">🛡️ Admins Globais / Sem Clínica</option>
+                                            {data?.clinics.map((c) => (
+                                                <option key={c.id} value={c.id}>
+                                                    {c.name}
+                                                </option>
                                             ))}
-                                        </TableBody>
-                                    </Table>
-                                )}
+                                        </select>
+
+                                        {/* Role Dropdown Filter */}
+                                        <select
+                                            value={userRoleFilter}
+                                            onChange={(e) => setUserRoleFilter(e.target.value)}
+                                            aria-label="Filtrar por cargo"
+                                            className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
+                                        >
+                                            <option value="ALL">👔 Todos os Cargos</option>
+                                            <option value="SUPER_ADMIN">Super Admin</option>
+                                            <option value="ADMIN">Administrador</option>
+                                            <option value="DOCTOR">Profissional / Médico</option>
+                                            <option value="RECEPTIONIST">Recepção</option>
+                                            <option value="FINANCIAL">Financeiro</option>
+                                            <option value="USER">Usuário Comum</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Active Filter Clear */}
+                                    {(userSearchTerm || userStatusFilter !== 'ALL' || userRoleFilter !== 'ALL' || userClinicFilter !== 'ALL') && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUserSearchTerm('')
+                                                setUserStatusFilter('ALL')
+                                                setUserRoleFilter('ALL')
+                                                setUserClinicFilter('ALL')
+                                            }}
+                                            className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline self-center"
+                                        >
+                                            Limpar todos os filtros ({filteredUsers.length} encontrados)
+                                        </button>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
+
+                        {/* Grouped Clinic List */}
+                        {loadingUsers ? (
+                            <Card className="bg-white border-gray-200">
+                                <CardContent className="py-12 text-center">
+                                    <RefreshCw className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+                                    <p className="text-gray-600 font-medium mt-3">Carregando usuários e status de conexão...</p>
+                                </CardContent>
+                            </Card>
+                        ) : clinicGroups.length === 0 ? (
+                            <Card className="bg-white border-gray-200">
+                                <CardContent className="py-12 text-center space-y-3">
+                                    <UserX className="w-12 h-12 text-gray-400 mx-auto" />
+                                    <h4 className="text-base font-semibold text-gray-800">Nenhum usuário encontrado</h4>
+                                    <p className="text-sm text-gray-500 max-w-md mx-auto">
+                                        Nenhum registro corresponde aos filtros de busca e status aplicados.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setUserSearchTerm('')
+                                            setUserStatusFilter('ALL')
+                                            setUserRoleFilter('ALL')
+                                            setUserClinicFilter('ALL')
+                                        }}
+                                        className="mt-2"
+                                    >
+                                        Limpar Filtros
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-4">
+                                {clinicGroups.map(([clinicKey, group]) => {
+                                    const isCollapsed = !!collapsedClinics[clinicKey]
+                                    const isNoClinic = clinicKey === 'NO_CLINIC'
+
+                                    return (
+                                        <Card
+                                            key={clinicKey}
+                                            className={`bg-white border-gray-200 shadow-sm transition-all duration-200 overflow-hidden ${
+                                                group.onlineCount > 0 ? 'border-emerald-200/80 ring-1 ring-emerald-100' : ''
+                                            }`}
+                                        >
+                                            {/* Clinic Accordion Header */}
+                                            <div
+                                                onClick={() => toggleClinicCollapse(clinicKey)}
+                                                className="p-4 sm:p-5 bg-gradient-to-r from-gray-50/80 to-white border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 select-none"
+                                            >
+                                                <div className="flex items-center gap-3 flex-wrap">
+                                                    <div
+                                                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                                            isNoClinic
+                                                                ? 'bg-purple-100 text-purple-700'
+                                                                : group.onlineCount > 0
+                                                                ? 'bg-emerald-100 text-emerald-700'
+                                                                : 'bg-gray-100 text-gray-600'
+                                                        }`}
+                                                    >
+                                                        {isNoClinic ? (
+                                                            <ShieldCheck className="w-5 h-5" />
+                                                        ) : (
+                                                            <Building2 className="w-5 h-5" />
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                                                                {group.clinicName}
+                                                            </h3>
+                                                            {group.clinicData?.planType && (
+                                                                <Badge variant="outline" className="text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                                                                    {group.clinicData.planType}
+                                                                </Badge>
+                                                            )}
+                                                            {group.clinicData?.approvalStatus === 'trial' && (
+                                                                <Badge className="text-xs bg-amber-500 hover:bg-amber-600 text-white">
+                                                                    Trial
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Status counters */}
+                                                        <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
+                                                            <span className="text-gray-500 font-medium">
+                                                                👥 {group.users.length} {group.users.length === 1 ? 'colaborador' : 'colaboradores'}
+                                                            </span>
+                                                            <span className="text-gray-300">•</span>
+                                                            {group.onlineCount > 0 ? (
+                                                                <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                                                    <span className="relative flex h-2 w-2">
+                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                    </span>
+                                                                    <span>{group.onlineCount} Online agora</span>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-500 font-medium">
+                                                                    ⚪ 0 Online
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Header Actions */}
+                                                <div
+                                                    className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {group.clinicId && (
+                                                        <>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => openResetClinicPwdModal(group.clinicId!, group.clinicName)}
+                                                                className="h-8 text-xs font-semibold text-amber-700 border-amber-300 hover:bg-amber-50"
+                                                                title="Resetar as senhas de todos os usuários desta clínica"
+                                                            >
+                                                                <KeyRound className="w-3.5 h-3.5 mr-1 text-amber-600" />
+                                                                Resetar Senhas
+                                                            </Button>
+
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => openImpersonateModal(group.clinicId!, group.clinicName)}
+                                                                className="h-8 text-xs font-semibold text-blue-700 border-blue-300 hover:bg-blue-50"
+                                                                title="Acessar o painel desta clínica"
+                                                            >
+                                                                <UserCog className="w-3.5 h-3.5 mr-1 text-blue-600" />
+                                                                Entrar
+                                                            </Button>
+                                                        </>
+                                                    )}
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => toggleClinicCollapse(clinicKey)}
+                                                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900"
+                                                        title={isCollapsed ? 'Expandir' : 'Recolher'}
+                                                    >
+                                                        {isCollapsed ? (
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        ) : (
+                                                            <ChevronUp className="w-4 h-4" />
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Clinic Users Table (Collapsible Body) */}
+                                            {!isCollapsed && (
+                                                <CardContent className="p-0">
+                                                    {/* Desktop Table View (>= 768px) */}
+                                                    <div className="hidden md:block overflow-x-auto">
+                                                        <Table>
+                                                            <TableHeader className="bg-gray-50/60">
+                                                                <TableRow className="border-gray-200">
+                                                                    <TableHead className="text-gray-700 font-semibold text-xs py-3 w-[260px]">Usuário / Identificação</TableHead>
+                                                                    <TableHead className="text-gray-700 font-semibold text-xs py-3">E-mail</TableHead>
+                                                                    <TableHead className="text-gray-700 font-semibold text-xs py-3 w-[140px]">Cargo</TableHead>
+                                                                    <TableHead className="text-gray-700 font-semibold text-xs py-3 w-[150px]">Conexão Real</TableHead>
+                                                                    <TableHead className="text-gray-700 font-semibold text-xs py-3 w-[150px]">Última Atividade</TableHead>
+                                                                    <TableHead className="text-gray-700 font-semibold text-xs py-3 text-right pr-4">Ações</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {group.users.map((user) => {
+                                                                    const initials = (user.displayName || user.email || 'U')
+                                                                        .split(' ')
+                                                                        .map((n) => n[0])
+                                                                        .filter(Boolean)
+                                                                        .slice(0, 2)
+                                                                        .join('')
+                                                                        .toUpperCase()
+
+                                                                    return (
+                                                                        <TableRow
+                                                                            key={user.id}
+                                                                            className={`border-gray-200 hover:bg-gray-50/80 transition-colors ${
+                                                                                user.isOnline ? 'bg-emerald-50/20' : ''
+                                                                            }`}
+                                                                        >
+                                                                            {/* User Info */}
+                                                                            <TableCell className="py-3">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className="relative">
+                                                                                        <div className="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-xs text-gray-700">
+                                                                                            {initials}
+                                                                                        </div>
+                                                                                        <span
+                                                                                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                                                                                user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                                                                                            }`}
+                                                                                            title={user.isOnline ? 'Online' : 'Offline'}
+                                                                                        />
+                                                                                    </div>
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="font-semibold text-sm text-gray-900 truncate">
+                                                                                            {user.displayName}
+                                                                                        </p>
+                                                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                                                            <span className="font-mono text-[10px] text-gray-400 truncate max-w-[120px]">
+                                                                                                {user.id}
+                                                                                            </span>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => handleCopyText(user.id, 'uid', user.id)}
+                                                                                                className="text-gray-400 hover:text-blue-600 p-0.5"
+                                                                                                title="Copiar UID"
+                                                                                            >
+                                                                                                {copiedUserId === user.id ? (
+                                                                                                    <Check className="w-3 h-3 text-emerald-600" />
+                                                                                                ) : (
+                                                                                                    <Copy className="w-3 h-3" />
+                                                                                                )}
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </TableCell>
+
+                                                                            {/* Email */}
+                                                                            <TableCell className="py-3">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="text-sm text-gray-700 font-medium truncate max-w-[200px]">
+                                                                                        {user.email}
+                                                                                    </span>
+                                                                                    {user.email !== '-' && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleCopyText(user.email, 'email', user.id)}
+                                                                                            className="text-gray-400 hover:text-blue-600 p-0.5 flex-shrink-0"
+                                                                                            title="Copiar E-mail"
+                                                                                        >
+                                                                                            {copiedEmail === user.id ? (
+                                                                                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                                                            ) : (
+                                                                                                <Copy className="w-3.5 h-3.5" />
+                                                                                            )}
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            </TableCell>
+
+                                                                            {/* Role Badge */}
+                                                                            <TableCell className="py-3">
+                                                                                {user.role === 'SUPER_ADMIN' ? (
+                                                                                    <Badge className="bg-purple-100 text-purple-800 border-purple-300 font-semibold text-xs">
+                                                                                        Super Admin
+                                                                                    </Badge>
+                                                                                ) : user.role === 'ADMIN' ? (
+                                                                                    <Badge className="bg-blue-100 text-blue-800 border-blue-300 font-semibold text-xs">
+                                                                                        Administrador
+                                                                                    </Badge>
+                                                                                ) : user.role === 'DOCTOR' ? (
+                                                                                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold text-xs">
+                                                                                        Profissional
+                                                                                    </Badge>
+                                                                                ) : user.role === 'RECEPTIONIST' ? (
+                                                                                    <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-semibold text-xs">
+                                                                                        Recepção
+                                                                                    </Badge>
+                                                                                ) : user.role === 'FINANCIAL' ? (
+                                                                                    <Badge className="bg-indigo-100 text-indigo-800 border-indigo-300 font-semibold text-xs">
+                                                                                        Financeiro
+                                                                                    </Badge>
+                                                                                ) : (
+                                                                                    <Badge variant="outline" className="text-gray-700 bg-gray-50 border-gray-200 text-xs">
+                                                                                        {user.role || 'USER'}
+                                                                                    </Badge>
+                                                                                )}
+                                                                            </TableCell>
+
+                                                                            {/* Connection Status */}
+                                                                            <TableCell className="py-3">
+                                                                                {user.isOnline ? (
+                                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+                                                                                        <span className="relative flex h-2 w-2">
+                                                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                                        </span>
+                                                                                        <span>Online</span>
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                                                        <span className="inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+                                                                                        <span>Offline</span>
+                                                                                    </span>
+                                                                                )}
+                                                                            </TableCell>
+
+                                                                            {/* Last Seen Timestamp */}
+                                                                            <TableCell className="py-3 text-xs text-gray-500 font-medium">
+                                                                                {formatLastSeen(user.lastSeenAt || user.createdAt, user.isOnline)}
+                                                                            </TableCell>
+
+                                                                            {/* Action Buttons */}
+                                                                            <TableCell className="py-3 text-right pr-4">
+                                                                                <div className="flex items-center justify-end gap-1">
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        onClick={() => openResetPwdModal(user)}
+                                                                                        className="h-8 px-2 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                                        title="Redefinir senha individual deste usuário"
+                                                                                    >
+                                                                                        <KeyRound className="h-3.5 w-3.5 mr-1" />
+                                                                                        Resetar Senha
+                                                                                    </Button>
+
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        onClick={() => handleDeleteUser(user.id, user.displayName, false)}
+                                                                                        className="h-8 px-2 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                                                        title="Excluir apenas o usuário do sistema"
+                                                                                    >
+                                                                                        <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                                                                                        Deletar
+                                                                                    </Button>
+
+                                                                                    {user.clinicId && (
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            onClick={() => handleDeleteUser(user.id, user.displayName, true)}
+                                                                                            className="h-8 px-2 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                                            title="Excluir o usuário e a clínica inteira associada"
+                                                                                        >
+                                                                                            <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                                                                                            Deletar + Clínica
+                                                                                        </Button>
+                                                                                    )}
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    )
+                                                                })}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </div>
+
+                                                    {/* Mobile Cards View (< 768px) */}
+                                                    <div className="block md:hidden divide-y divide-gray-100">
+                                                        {group.users.map((user) => {
+                                                            const initials = (user.displayName || user.email || 'U')
+                                                                .split(' ')
+                                                                .map((n) => n[0])
+                                                                .filter(Boolean)
+                                                                .slice(0, 2)
+                                                                .join('')
+                                                                .toUpperCase()
+
+                                                            return (
+                                                                <div
+                                                                    key={user.id}
+                                                                    className={`p-4 space-y-3 ${
+                                                                        user.isOnline ? 'bg-emerald-50/15' : ''
+                                                                    }`}
+                                                                >
+                                                                    {/* User Header */}
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <div className="flex items-center gap-2.5 min-w-0">
+                                                                            <div className="relative flex-shrink-0">
+                                                                                <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-xs text-gray-700">
+                                                                                    {initials}
+                                                                                </div>
+                                                                                <span
+                                                                                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                                                                        user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                                                                                    }`}
+                                                                                />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <p className="font-bold text-sm text-gray-900 truncate">
+                                                                                    {user.displayName}
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-500 truncate mt-0.5">
+                                                                                    {user.email}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Connection status badge */}
+                                                                        <div>
+                                                                            {user.isOnline ? (
+                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                                                                                    <span className="relative flex h-1.5 w-1.5">
+                                                                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
+                                                                                    </span>
+                                                                                    Online
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600">
+                                                                                    Offline
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Metadata grid */}
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
+                                                                        <div>
+                                                                            <span className="text-gray-400 block text-[10px] uppercase font-semibold">Cargo</span>
+                                                                            <span className="font-medium text-gray-800">{user.role}</span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-gray-400 block text-[10px] uppercase font-semibold">Última Atividade</span>
+                                                                            <span className="font-medium text-gray-800">
+                                                                                {formatLastSeen(user.lastSeenAt || user.createdAt, user.isOnline)}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Mobile Action Buttons (min 44px touch height) */}
+                                                                    <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => openResetPwdModal(user)}
+                                                                            className="min-h-[44px] flex-1 text-xs font-semibold text-blue-700 border-blue-200 hover:bg-blue-50"
+                                                                        >
+                                                                            <KeyRound className="w-3.5 h-3.5 mr-1" />
+                                                                            Resetar Senha
+                                                                        </Button>
+
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleDeleteUser(user.id, user.displayName, false)}
+                                                                            className="min-h-[44px] flex-1 text-xs font-semibold text-orange-700 border-orange-200 hover:bg-orange-50"
+                                                                        >
+                                                                            <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+                                                                            Deletar
+                                                                        </Button>
+
+                                                                        {user.clinicId && (
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                onClick={() => handleDeleteUser(user.id, user.displayName, true)}
+                                                                                className="min-h-[44px] flex-1 text-xs font-semibold text-red-700 border-red-200 hover:bg-red-50"
+                                                                            >
+                                                                                <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+                                                                                Deletar + Clínica
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </CardContent>
+                                            )}
+                                        </Card>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Scheduled Billings Tab */}

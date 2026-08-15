@@ -61,7 +61,6 @@ export default async function DashboardRootLayout({
     return (
         <>
             <StaffSignatureGate>
-                <SessionGuardProvider />
                 <SystemRefreshListener clinicId={effectiveClinicId} />
                 <DashboardLayout>
                     <ImpersonationBanner />

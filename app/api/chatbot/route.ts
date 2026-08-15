@@ -9,11 +9,11 @@ import {
   type EngineResult,
 } from '@/lib/chatbot/clin-engine'
 import { MSG_MENU } from '@/lib/chatbot/clin-messages'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createServiceRoleClient()
+}
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
@@ -70,6 +70,7 @@ function checkRateLimit(ip: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin()
     const ip = request.headers.get('x-forwarded-for') || 
                request.headers.get('x-real-ip') || 
                'unknown'
@@ -349,6 +350,7 @@ export async function GET() {
 // ========== AI FALLBACK ==========
 
 async function callAIFallback(sessionId: string, message: string): Promise<string[]> {
+  const supabaseAdmin = getSupabaseAdmin()
   if (!OPENROUTER_API_KEY) {
     return ['Estou com uma dificuldade técnica no momento. Que tal falar diretamente com nossa equipe pelo WhatsApp? 😊']
   }

@@ -47,13 +47,30 @@ export async function GET() {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        // Fetch active sessions to map who is online
+        // Fetch active sessions with last_active_at within the last 3 minutes (real-time presence)
+        const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+
         const { data: activeSessions } = await supabaseAdmin
             .from('active_sessions')
-            .select('user_id')
+            .select('user_id, last_active_at')
             .eq('is_active', true)
+            .gte('last_active_at', threeMinutesAgo)
 
         const activeUserIds = new Set(activeSessions?.map((s: any) => s.user_id) || [])
+
+        // Fetch the most recent activity timestamp for each user (for offline display)
+        const { data: latestSessions } = await supabaseAdmin
+            .from('active_sessions')
+            .select('user_id, last_active_at, created_at')
+            .order('last_active_at', { ascending: false })
+            .limit(1000)
+
+        const lastSeenMap = new Map<string, string>()
+        latestSessions?.forEach((s: any) => {
+            if (!lastSeenMap.has(s.user_id)) {
+                lastSeenMap.set(s.user_id, s.last_active_at || s.created_at)
+            }
+        })
 
         // Format the response
         const formattedUsers = (users as any[])?.map((user: any) => ({
@@ -61,10 +78,13 @@ export async function GET() {
             email: user.email || '-',
             displayName: user.full_name || '-',
             role: user.role || 'USER',
-            clinicName: user.clinics?.name || '-',
+            clinicName: user.clinics?.name || 'Sem Clínica Associada',
             clinicId: user.clinic_id,
             createdAt: user.created_at,
             isOnline: activeUserIds.has(user.id),
+            lastSeenAt: activeUserIds.has(user.id) 
+                ? (activeSessions?.find((s: any) => s.user_id === user.id)?.last_active_at || new Date().toISOString())
+                : (lastSeenMap.get(user.id) || user.created_at),
         })) || []
 
         return NextResponse.json({
