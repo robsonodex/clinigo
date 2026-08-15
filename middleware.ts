@@ -433,7 +433,7 @@ export async function middleware(request: NextRequest) {
 
         if (!clinic || !clinic.is_active) {
             if (!pathname.startsWith('/api')) {
-                return NextResponse.redirect(new URL('/paciente/entrar?error=clinic_inactive', request.url))
+                return NextResponse.redirect(new URL('/conta-bloqueada', request.url))
             }
             return NextResponse.json(
                 { error: 'Clínica inativa', code: 'CLINIC_INACTIVE' },
@@ -550,6 +550,7 @@ export async function middleware(request: NextRequest) {
         pathname === '/login' ||
         pathname === '/clinica' ||
         pathname === '/medico' ||
+        pathname === '/conta-bloqueada' ||
         pathname === '/cadastro' ||
         pathname === '/planos' ||
         pathname === '/buscar' ||
@@ -641,7 +642,7 @@ export async function middleware(request: NextRequest) {
                             { status: 403 }
                         )
                     }
-                    return NextResponse.redirect(new URL('/clinica?error=clinic_inactive', request.url))
+                    return NextResponse.redirect(new URL('/conta-bloqueada', request.url))
                 }
 
                 // PAYMENT REQUIRED CHECK (v3.3.0)

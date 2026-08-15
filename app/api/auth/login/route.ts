@@ -100,6 +100,40 @@ export async function POST(request: NextRequest) {
 
         console.log('[LOGIN] Success for:', data.user.email)
 
+        // STEP 3.5: Check if clinic is active (unless Super Admin)
+        const isSuperAdmin = SUPER_ADMIN_EMAILS.includes((data.user.email || '').toLowerCase())
+
+        if (!isSuperAdmin) {
+            const { data: profile } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', data.user.id)
+                .single()
+
+            if (profile?.clinic_id) {
+                const { data: clinic } = await supabase
+                    .from('clinics')
+                    .select('is_active, name')
+                    .eq('id', profile.clinic_id)
+                    .single()
+
+                if (clinic && clinic.is_active === false) {
+                    console.warn(`[LOGIN] Blocked login for inactive clinic: ${clinic.name} (${profile.clinic_id})`)
+                    await supabase.auth.signOut().catch(() => {})
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            error: {
+                                message: 'O acesso a esta clínica está bloqueado pela administração do CliniGo.',
+                                code: 'CLINIC_INACTIVE',
+                            },
+                        },
+                        { status: 403 }
+                    )
+                }
+            }
+        }
+
         // STEP 4: Register single session (invalidate all previous sessions)
         const deviceInfo = request.headers.get('user-agent') || undefined
         const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined

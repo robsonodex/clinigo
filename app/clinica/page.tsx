@@ -63,6 +63,10 @@ export default function ClinicaLoginPage() {
             const data = await response.json()
 
             if (!response.ok) {
+                if (data.error?.code === 'CLINIC_INACTIVE') {
+                    window.location.href = '/conta-bloqueada'
+                    return
+                }
                 // Log debug info if available
                 if (data.error?.debug) {
                     console.error('[LOGIN] Supabase error:', data.error.debug.supabaseError)

@@ -129,6 +129,7 @@ O `middleware.ts` implementa uma arquitetura tripartida:
 6. **Feature Gating** — Bloqueio por plano (4 tiers) com redirect para upgrade
 7. **Payment Gate** — Bloqueio de acesso se pagamento não confirmado
 8. **Trial Expiration** — Bloqueio automático após período de teste (7 dias)
+9. **Clinic Inactivation Gate** — Bloqueio imediato com redirecionamento de todas as rotas protegidas e logins para `/conta-bloqueada` quando a clínica estiver inativa (`is_active === false`)
 
 ---
 

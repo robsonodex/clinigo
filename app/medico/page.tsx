@@ -56,6 +56,10 @@ export default function MedicoLoginPage() {
             const data = await response.json()
 
             if (!response.ok) {
+                if (data.error?.code === 'CLINIC_INACTIVE') {
+                    window.location.href = '/conta-bloqueada'
+                    return
+                }
                 throw new Error(data.error?.message || 'CRM/Email ou senha incorretos')
             }
 
