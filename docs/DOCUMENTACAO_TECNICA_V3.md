@@ -1847,3 +1847,15 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 **Migrations SQL:**
 - `supabase/migrations/20260622000002_whatsapp_multi_session.sql`
 - `supabase/migrations/EXECUTAR_MANUAL_20260622_WHATSAPP.sql` (consolidado para execução no Dashboard)
+
+### 17/08/2026 - Ajuste na Tela de Conta Bloqueada (Textos e Suporte)
+
+**Escopo:** Global (Tela pública/sistema de conta bloqueada)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+- Módulo → Autenticação / Segurança → Conta Bloqueada → `app/conta-bloqueada/page.tsx` → `ContaBloqueadaPage`
+  - **Atualização de WhatsApp de Suporte**: Atualizado o link do WhatsApp para o número oficial `5521975129005` (21 97512-9005).
+  - **Ajuste dos textos explicativos**:
+    - "Por que a conta foi bloqueada? O bloqueio ocorre quando a conta da clínica está inativa por pendência administrativa."
+    - "Como solicitar o desbloqueio? O gestor responsável deve entrar em contato diretamente com o suporte para que o administrador realize a ativação."
+

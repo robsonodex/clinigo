@@ -30,7 +30,7 @@ export default function ContaBloqueadaPage() {
         }
     }
 
-    const whatsappUrl = `https://wa.me/5521965572247?text=${encodeURIComponent('Olá, sou o gestor da clínica e meu acesso ao CliniGo está bloqueado. Gostaria de solicitar a verificação/desbloqueio.')}`
+    const whatsappUrl = `https://wa.me/5521975129005?text=${encodeURIComponent('Olá, sou o gestor da clínica e meu acesso ao CliniGo está bloqueado. Gostaria de solicitar a verificação/desbloqueio.')}`
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden selection:bg-red-500 selection:text-white">
@@ -89,14 +89,14 @@ export default function ContaBloqueadaPage() {
                             <Building2 className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                             <div>
                                 <strong className="text-white block font-medium">Por que a conta foi bloqueada?</strong>
-                                O bloqueio ocorre quando a conta da clínica está inativa no painel Master Hub ou por pendência administrativa.
+                                O bloqueio ocorre quando a conta da clínica está inativa por pendência administrativa.
                             </div>
                         </div>
                         <div className="flex items-start gap-3 pt-2 border-t border-slate-800/80">
                             <HelpCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
                             <div>
                                 <strong className="text-white block font-medium">Como solicitar o desbloqueio?</strong>
-                                O gestor responsável deve entrar em contato diretamente com o suporte para que o administrador realize a ativação no Master Hub.
+                                O gestor responsável deve entrar em contato diretamente com o suporte para que o administrador realize a ativação.
                             </div>
                         </div>
                     </div>
