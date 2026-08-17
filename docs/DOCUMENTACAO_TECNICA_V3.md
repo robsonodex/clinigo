@@ -1848,9 +1848,9 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 - `supabase/migrations/20260622000002_whatsapp_multi_session.sql`
 - `supabase/migrations/EXECUTAR_MANUAL_20260622_WHATSAPP.sql` (consolidado para execução no Dashboard)
 
-### 17/08/2026 - Ajuste na Tela de Conta Bloqueada (Textos e Suporte)
+### 17/08/2026 - Ajuste na Tela de Conta Bloqueada (Textos e Suporte) & Padronização de Deploy `clinigo-saas`
 
-**Escopo:** Global (Tela pública/sistema de conta bloqueada)
+**Escopo:** Global (Tela pública/sistema de conta bloqueada & Protocolo de Deploy)
 
 **Módulo → Submódulo → Arquivo → Função/Componente alterado**
 - Módulo → Autenticação / Segurança → Conta Bloqueada → `app/conta-bloqueada/page.tsx` → `ContaBloqueadaPage`
@@ -1858,4 +1858,8 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **Ajuste dos textos explicativos**:
     - "Por que a conta foi bloqueada? O bloqueio ocorre quando a conta da clínica está inativa por pendência administrativa."
     - "Como solicitar o desbloqueio? O gestor responsável deve entrar em contato diretamente com o suporte para que o administrador realize a ativação."
+
+- Módulo → DevOps / Infraestrutura → Deploy Vercel → `docs/deploy.md`
+  - **Padronização do Projeto de Produção**: Fixado que o projeto e repositório oficial na Vercel é **`clinigo-saas`** (`branch master`), devendo todo deploy, sincronização de Git e monitoramento ser direcionado a este projeto.
+
 
