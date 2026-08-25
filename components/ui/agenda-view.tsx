@@ -207,8 +207,8 @@ export default function AgendaPage() {
     const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false)
     const [expandedSlots, setExpandedSlots] = useState<Set<string>>(new Set())
 
-    // Doctor filter
-    const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>('all')
+    // Doctor filter (suporta multi-seleção de terapeutas)
+    const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([])
     // Patient search filter
     const [patientSearch, setPatientSearch] = useState('')
     // Free slots toggle (Agenda Inversa)
@@ -381,9 +381,9 @@ export default function AgendaPage() {
             const myDoctor = doctorsList.find((d: any) => d.user_id === user.id)
             if (myDoctor) {
                 if (isCoordinator) {
-                    setSelectedDoctorFilter(prev => prev === 'all' ? myDoctor.id : prev)
+                    setSelectedDoctorIds(prev => prev.length === 0 ? [myDoctor.id] : prev)
                 } else {
-                    setSelectedDoctorFilter(myDoctor.id)
+                    setSelectedDoctorIds([myDoctor.id])
                 }
             }
         }
@@ -459,21 +459,22 @@ export default function AgendaPage() {
     })
 
     // Check if a time slot is within working hours for any (or filtered) doctor (Agenda Inversa)
-    // Returns which specific therapists are free at each slot
+    // Returns which specific therapists are free at each slot, and if all selected are simultaneously free
     const getSlotFreeStatus = useMemo(() => {
-        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false, freeDoctors: [] as { id: string; name: string }[] })
+        if (!showFreeSlots || !schedulesData) return () => ({ isWorking: false, isFree: false, isAllSelectedFree: false, freeDoctors: [] as { id: string; name: string }[] })
         return (day: Date, time: string) => {
             const dayOfWeek = day.getDay() // 0=Sunday
             const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
             const relevantSchedules = (schedulesData as any[]).filter((s: any) => {
                 if (!s.is_active) return false
                 if (s.day_of_week !== dayOfWeek) return false
-                if (selectedDoctorFilter !== 'all' && s.doctor_id !== selectedDoctorFilter) return false
+                if (selectedDoctorIds.length > 0 && !selectedDoctorIds.includes(s.doctor_id)) return false
                 const startMin = parseInt(s.start_time.split(':')[0]) * 60 + parseInt(s.start_time.split(':')[1])
                 const endMin = parseInt(s.end_time.split(':')[0]) * 60 + parseInt(s.end_time.split(':')[1])
                 return timeMinutes >= startMin && timeMinutes < endMin
             })
-            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false, freeDoctors: [] as { id: string; name: string }[] }
+            if (relevantSchedules.length === 0) return { isWorking: false, isFree: false, isAllSelectedFree: false, freeDoctors: [] as { id: string; name: string }[] }
+            
             // For each schedule in this slot, check which doctors are free
             const dateStr = format(day, 'yyyy-MM-dd')
             const freeDoctors: { id: string; name: string }[] = []
@@ -493,9 +494,14 @@ export default function AgendaPage() {
                     freeDoctors.push({ id: schedule.doctor_id, name })
                 }
             }
-            return { isWorking: true, isFree: freeDoctors.length > 0, freeDoctors }
+
+            const isAllSelectedFree = selectedDoctorIds.length > 1
+                ? selectedDoctorIds.every(reqId => freeDoctors.some(fd => fd.id === reqId))
+                : freeDoctors.length > 0
+
+            return { isWorking: true, isFree: freeDoctors.length > 0, isAllSelectedFree, freeDoctors }
         }
-    }, [showFreeSlots, schedulesData, appointments, selectedDoctorFilter, doctorsList])
+    }, [showFreeSlots, schedulesData, appointments, selectedDoctorIds, doctorsList])
 
     // Group appointments by date and time
     // Exclude cancelled appointments that are part of a cancelled recurring series
@@ -508,7 +514,7 @@ export default function AgendaPage() {
             (a) =>
                 a.appointment_date === dateStr &&
                 a.appointment_time?.substring(0, 5) === time &&
-                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
+                (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id)) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
@@ -522,7 +528,7 @@ export default function AgendaPage() {
         const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
-                (selectedDoctorFilter === 'all' || a.doctor?.id === selectedDoctorFilter) &&
+                (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id)) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
@@ -901,36 +907,113 @@ export default function AgendaPage() {
                     
                     <div className="hidden md:block w-px h-6 bg-border mx-1" />
                     
-                    <Select value={selectedDoctorFilter} onValueChange={setSelectedDoctorFilter} disabled={isDoctor && !isCoordinator}>
-                        <SelectTrigger className="w-full md:w-[220px] lg:w-[280px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
-                            <Stethoscope className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
-                            <div className="flex-1 truncate text-left">
-                                <SelectValue placeholder="Profissional" />
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={isDoctor && !isCoordinator}>
+                            <Button
+                                variant="outline"
+                                className="w-full md:w-[240px] lg:w-[300px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 justify-between px-3"
+                            >
+                                <div className="flex items-center gap-2 truncate text-left">
+                                    <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span className="truncate">
+                                        {selectedDoctorIds.length === 0
+                                            ? 'Todos os Profissionais'
+                                            : selectedDoctorIds.length === 1
+                                                ? (doctorsList?.find((d: any) => d.id === selectedDoctorIds[0])?.user?.full_name || '1 Profissional')
+                                                : `${selectedDoctorIds.length} Terapeutas Selecionadas`}
+                                    </span>
+                                </div>
+                                {selectedDoctorIds.length > 1 && (
+                                    <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[11px] h-5 bg-emerald-100 text-emerald-800 font-bold shrink-0">
+                                        {selectedDoctorIds.length}
+                                    </Badge>
+                                )}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-[300px] max-h-[380px] overflow-y-auto p-1.5 space-y-1">
+                            <div className="flex items-center justify-between px-2 py-1.5 border-b mb-1">
+                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Filtrar Terapeutas</span>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedDoctorIds([])}
+                                        className="text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                    >
+                                        Limpar
+                                    </button>
+                                    <span className="text-slate-300">|</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (doctorsList) {
+                                                setSelectedDoctorIds(doctorsList.filter((d: any) => d.id).map((d: any) => d.id))
+                                            }
+                                        }}
+                                        className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700"
+                                    >
+                                        Todas
+                                    </button>
+                                </div>
                             </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os Profissionais</SelectItem>
+
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDoctorIds([])}
+                                className={cn(
+                                    "w-full flex items-center justify-between p-2 rounded-lg text-left text-xs font-medium transition-colors",
+                                    selectedDoctorIds.length === 0
+                                        ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 font-bold"
+                                        : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                )}
+                            >
+                                <span>Ver Todos os Profissionais</span>
+                                {selectedDoctorIds.length === 0 && <span className="text-emerald-600 font-bold">✓</span>}
+                            </button>
+
                             {doctorsList?.filter((d: any) => d.id && d.user).map((doctor: any) => {
+                                const isSelected = selectedDoctorIds.includes(doctor.id)
                                 const avail = professionalAvailability.find((p) => p.id === doctor.id)
                                 return (
-                                    <SelectItem key={doctor.id} value={doctor.id}>
-                                        <div className="flex items-center gap-2 overflow-hidden w-full">
+                                    <button
+                                        key={doctor.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedDoctorIds(prev => {
+                                                if (prev.includes(doctor.id)) {
+                                                    return prev.filter(id => id !== doctor.id)
+                                                } else {
+                                                    return [...prev, doctor.id]
+                                                }
+                                            })
+                                        }}
+                                        className={cn(
+                                            "w-full flex items-center justify-between p-2 rounded-lg text-left text-xs font-medium transition-colors",
+                                            isSelected
+                                                ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 font-semibold"
+                                                : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2 truncate mr-2">
                                             <span className={cn(
                                                 'w-2 h-2 rounded-full shrink-0',
                                                 avail?.isBusy ? 'bg-red-500' : 'bg-green-500'
                                             )} />
-                                            <span className="truncate min-w-0 font-medium">
-                                                {doctor.user?.full_name || 'Profissional'}{' '}
-                                                <span className="text-muted-foreground text-xs font-normal">
-                                                    ({doctor.specialty || 'Geral'})
-                                                </span>
+                                            <span className="truncate">{doctor.user?.full_name || 'Profissional'}</span>
+                                            <span className="text-[11px] text-muted-foreground font-normal shrink-0">
+                                                ({doctor.specialty || 'Geral'})
                                             </span>
                                         </div>
-                                    </SelectItem>
+                                        <div className={cn(
+                                            "w-4 h-4 rounded flex items-center justify-center border shrink-0 text-[10px]",
+                                            isSelected ? "bg-emerald-600 border-emerald-600 text-white" : "border-slate-300 dark:border-slate-600"
+                                        )}>
+                                            {isSelected && '✓'}
+                                        </div>
+                                    </button>
                                 )
                             })}
-                        </SelectContent>
-                    </Select>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     
                     <div className="relative w-full md:w-auto">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1295,11 +1378,12 @@ export default function AgendaPage() {
                                                 <td
                                                     key={day.toISOString()}
                                                     className={cn(
-                                                        'border-r last:border-r-0 p-0 cursor-pointer overflow-hidden h-full',
+                                                        'border-r last:border-r-0 p-0 cursor-pointer overflow-hidden h-full relative transition-colors',
                                                         isSameDay(day, new Date()) && 'bg-blue-50/30',
                                                         showFreeSlots && (() => {
                                                             const status = getSlotFreeStatus(day, time)
-                                                            if (status.isFree) return 'bg-emerald-50/80'
+                                                            if (status.isAllSelectedFree && selectedDoctorIds.length > 1) return 'bg-emerald-200/80 dark:bg-emerald-950/80 ring-1 ring-inset ring-emerald-500/80'
+                                                            if (status.isFree) return 'bg-emerald-50/80 dark:bg-emerald-950/30'
                                                             if (status.isWorking) return 'bg-orange-50/40'
                                                             return 'bg-gray-50/60'
                                                         })()
@@ -1316,6 +1400,25 @@ export default function AgendaPage() {
                                                     onDragOver={(e) => slotAppointments.length === 0 && handleDragOver(e, day, time)}
                                                     onDrop={(e) => slotAppointments.length === 0 && handleDrop(e, day, time)}
                                                 >
+                                                    {slotAppointments.length === 0 && showFreeSlots && (() => {
+                                                        const status = getSlotFreeStatus(day, time)
+                                                        if (!status.isFree) return null
+                                                        return (
+                                                            <div className="w-full h-full flex items-center justify-center p-0.5 pointer-events-none">
+                                                                <span className={cn(
+                                                                    "text-[10px] px-1.5 py-0.5 rounded font-semibold truncate leading-none",
+                                                                    status.isAllSelectedFree && selectedDoctorIds.length > 1
+                                                                        ? "bg-emerald-600 text-white shadow-xs"
+                                                                        : "text-emerald-700 dark:text-emerald-300"
+                                                                )}>
+                                                                    {status.isAllSelectedFree && selectedDoctorIds.length > 1
+                                                                        ? '⭐ Todas Livres'
+                                                                        : `${status.freeDoctors.length} livre(s)`}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })()}
+
                                                     {slotAppointments.length > 0 && (
                                                         <div className="flex items-start gap-0.5 p-0.5 flex-wrap">
                                                             {slotAppointments.map((appointment) => {

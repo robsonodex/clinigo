@@ -56,7 +56,7 @@ export function BlockScheduleModal({
     const queryClient = useQueryClient()
     const { user, profile } = useAuth()
 
-    const [doctorId, setDoctorId] = useState('')
+    const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([])
     const [appointmentDate, setAppointmentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [appointmentTime, setAppointmentTime] = useState('')
     const [durationMinutes, setDurationMinutes] = useState(30)
@@ -89,26 +89,47 @@ export function BlockScheduleModal({
             if (preselectedDate) setAppointmentDate(preselectedDate)
             if (preselectedTime) setAppointmentTime(preselectedTime)
             
-            // Prioridade: se o usuário logado for um terapeuta, trava nele
-            if (loggedDoctor) {
-                setDoctorId(loggedDoctor.id)
-            } else if (preselectedDoctorId) {
-                setDoctorId(preselectedDoctorId)
+            if (preselectedDoctorId) {
+                setSelectedDoctorIds([preselectedDoctorId])
+            } else if (loggedDoctor) {
+                setSelectedDoctorIds([loggedDoctor.id])
             } else if (doctors && doctors.length > 0) {
-                setDoctorId(doctors[0].id)
+                setSelectedDoctorIds([doctors[0].id])
             }
         }
     }, [open, preselectedDate, preselectedTime, preselectedDoctorId, doctors, loggedDoctor])
 
+    const toggleDoctor = (id: string) => {
+        setSelectedDoctorIds(prev => {
+            if (prev.includes(id)) {
+                if (prev.length === 1) return prev // Mantém ao menos 1
+                return prev.filter(item => item !== id)
+            } else {
+                return [...prev, id]
+            }
+        })
+    }
+
+    const selectAllDoctors = () => {
+        if (!doctors) return
+        if (selectedDoctorIds.length === doctors.length) {
+            // Se já estão todos, seleciona apenas o primeiro ou o logado
+            setSelectedDoctorIds(loggedDoctor ? [loggedDoctor.id] : [doctors[0].id])
+        } else {
+            setSelectedDoctorIds(doctors.map(d => d.id))
+        }
+    }
+
     const { mutate: createBlock, isPending } = useMutation({
         mutationFn: async () => {
-            if (!doctorId) throw new Error('Selecione um profissional')
+            if (!selectedDoctorIds || selectedDoctorIds.length === 0) throw new Error('Selecione ao menos um profissional')
             if (!appointmentDate) throw new Error('Selecione uma data')
             if (!appointmentTime) throw new Error('Selecione um horário')
             if (!blockTitle.trim()) throw new Error('Informe o título do compromisso')
 
             const payload = {
-                doctor_id: doctorId,
+                doctor_id: selectedDoctorIds[0],
+                doctor_ids: selectedDoctorIds,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 duration_minutes: durationMinutes,
@@ -135,7 +156,8 @@ export function BlockScheduleModal({
             return res.json()
         },
         onSuccess: (data) => {
-            toast.success('🔒 Compromisso/Bloqueio salvo na agenda com sucesso!')
+            const countMsg = selectedDoctorIds.length > 1 ? ` para ${selectedDoctorIds.length} profissionais` : ''
+            toast.success(`🔒 Compromisso salvo na agenda com sucesso${countMsg}!`)
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
             onSuccess?.(appointmentDate)
             onOpenChange(false)
@@ -147,16 +169,16 @@ export function BlockScheduleModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[480px] rounded-2xl p-6">
+            <DialogContent className="w-full sm:max-w-[540px] max-h-[92vh] overflow-y-auto rounded-2xl p-4 sm:p-6">
                 <DialogHeader className="space-y-2">
-                    <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-100">
-                        <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 flex items-center justify-center">
+                    <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 flex items-center justify-center shrink-0">
                             <Lock className="w-5 h-5" />
                         </div>
                         Compromisso / Bloqueio Interno
                     </DialogTitle>
-                    <DialogDescription className="text-sm text-slate-500">
-                        Insira um compromisso (reunião, treinamento, ausência) na agenda do terapeuta sem vincular a um paciente. Impede agendamentos da recepção no horário.
+                    <DialogDescription className="text-xs sm:text-sm text-slate-500">
+                        Insira um compromisso (reunião, treinamento, ausência) na agenda de um ou múltiplos terapeutas da equipe sem vincular a um paciente.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -168,17 +190,17 @@ export function BlockScheduleModal({
                             id="block_title"
                             value={blockTitle}
                             onChange={(e) => setBlockTitle(e.target.value)}
-                            placeholder="Ex: Reunião de Equipe, Treinamento, Supervisão..."
+                            placeholder="Ex: Reunião de Equipe, Supervisão, Alinhamento..."
                             className="min-h-[44px]"
                             style={{ fontSize: '16px' }}
                         />
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                            {['Reunião de Equipe', 'Supervisão ABA', 'Treinamento', 'Ausência Interna', 'Horário Administrativo'].map((preset) => (
+                            {['Reunião de Equipe', 'Supervisão ABA', 'Treinamento', 'Alinhamento Clínico', 'Ausência Interna', 'Horário Administrativo'].map((preset) => (
                                 <button
                                     key={preset}
                                     type="button"
                                     onClick={() => setBlockTitle(preset)}
-                                    className="text-xs px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors font-medium"
+                                    className="text-xs px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors font-medium touch-manipulation"
                                 >
                                     {preset}
                                 </button>
@@ -186,41 +208,63 @@ export function BlockScheduleModal({
                         </div>
                     </div>
 
-                    {/* Terapeuta (Fixo no usuário logado) */}
-                    <div className="space-y-1.5">
+                    {/* Múltiplos Terapeutas / Profissionais */}
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label className="text-sm font-semibold">Profissional / Terapeuta</Label>
-                            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
-                                <Lock className="w-3 h-3" /> Bloqueio exclusivo para a sua própria agenda
-                            </span>
+                            <Label className="text-sm font-semibold">Profissionais / Terapeutas Envolvidos</Label>
+                            {doctors && doctors.length > 1 && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={selectAllDoctors}
+                                    className="h-8 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50 font-semibold"
+                                >
+                                    {selectedDoctorIds.length === doctors.length ? 'Desmarcar Todos' : 'Selecionar Todos da Clínica'}
+                                </Button>
+                            )}
                         </div>
-                        
-                        <Select 
-                            value={doctorId} 
-                            onValueChange={setDoctorId} 
-                            disabled={doctorsLoading || !!loggedDoctor || profile?.role === 'DOCTOR'}
-                        >
-                            <SelectTrigger className="min-h-[44px] bg-slate-50 dark:bg-slate-900 border-amber-200 dark:border-amber-900/60 font-semibold">
-                                <SelectValue placeholder="Selecione o profissional..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(doctors || []).map((doc) => (
-                                    <SelectItem key={doc.id} value={doc.id}>
-                                        {doc.user.full_name} ({doc.specialty})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        
-                        {!loggedDoctor && profile?.role !== 'SUPER_ADMIN' && (
-                            <p className="text-xs text-slate-500 italic mt-1">
-                                Obs: O compromisso será alocado para a sua conta de profissional cadastrada.
-                            </p>
+
+                        {doctorsLoading ? (
+                            <div className="flex items-center justify-center p-4 border rounded-xl bg-slate-50 dark:bg-slate-900">
+                                <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+                            </div>
+                        ) : (
+                            <div className="max-h-44 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-2 bg-slate-50/50 dark:bg-slate-900/40 space-y-1">
+                                {(doctors || []).map((doc) => {
+                                    const isSelected = selectedDoctorIds.includes(doc.id)
+                                    return (
+                                        <button
+                                            key={doc.id}
+                                            type="button"
+                                            onClick={() => toggleDoctor(doc.id)}
+                                            className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all text-sm font-medium ${
+                                                isSelected
+                                                    ? 'bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                                                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5 truncate">
+                                                <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                                                    isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                                                }`}>
+                                                    {isSelected && <span className="text-xs">✓</span>}
+                                                </div>
+                                                <span className="truncate">{doc.user?.full_name || 'Profissional'}</span>
+                                                <span className="text-xs text-muted-foreground font-normal">({doc.specialty || 'Geral'})</span>
+                                            </div>
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         )}
+                        <p className="text-xs text-slate-500">
+                            Selecionados: <strong>{selectedDoctorIds.length} profissional(is)</strong>. O compromisso será inserido na agenda de cada terapeuta selecionado simultaneamente.
+                        </p>
                     </div>
 
                     {/* Data e Horário */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                             <Label className="text-sm font-semibold">Data</Label>
                             <Input
@@ -268,12 +312,12 @@ export function BlockScheduleModal({
                     </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-3 border-t">
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3 pt-3 border-t">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={() => onOpenChange(false)}
-                        className="min-h-[44px] px-5"
+                        className="w-full sm:w-auto min-h-[44px] px-5"
                     >
                         Cancelar
                     </Button>
@@ -281,10 +325,10 @@ export function BlockScheduleModal({
                         type="button"
                         onClick={() => createBlock()}
                         disabled={isPending}
-                        className="min-h-[44px] px-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-2"
+                        className="w-full sm:w-auto min-h-[44px] px-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-2"
                     >
                         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                        Salvar Bloqueio / Compromisso
+                        Salvar Compromisso ({selectedDoctorIds.length})
                     </Button>
                 </div>
             </DialogContent>

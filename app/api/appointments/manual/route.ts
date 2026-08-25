@@ -44,7 +44,8 @@ interface ManualAppointmentRequest {
     clinic_id: string
     patient_id?: string
     quick_registration?: QuickPatientRegistration
-    doctor_id: string
+    doctor_id?: string
+    doctor_ids?: string[] // Múltiplos terapeutas no mesmo compromisso
     appointment_date: string // YYYY-MM-DD
     appointment_time: string // HH:MM
     duration_minutes?: number
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
         // Get user profile to check permissions
         const { data: profile } = await supabase
             .from('users')
-            .select('role, clinic_id')
+            .select('id, role, clinic_id, is_coordinator')
             .eq('id', user.id)
             .single()
 
@@ -98,10 +99,19 @@ export async function POST(request: NextRequest) {
 
         const body: ManualAppointmentRequest = await request.json()
 
+        // Extrai lista de profissionais (suporta tanto doctor_ids[] quanto doctor_id singular)
+        const requestedDoctorIds: string[] = (
+            Array.isArray(body.doctor_ids) && body.doctor_ids.length > 0
+                ? body.doctor_ids.filter(Boolean)
+                : body.doctor_id ? [body.doctor_id] : []
+        )
+
+        const primaryDoctorId = requestedDoctorIds[0]
+
         // Validate required fields
-        if (!body.doctor_id || !body.appointment_date || !body.appointment_time) {
+        if (!primaryDoctorId || !body.appointment_date || !body.appointment_time) {
             return NextResponse.json(
-                { error: 'Médico, data e hora são obrigatórios' },
+                { error: 'Médico/Terapeuta, data e hora são obrigatórios' },
                 { status: 400 }
             )
         }
@@ -117,34 +127,46 @@ export async function POST(request: NextRequest) {
         // Use clinic from profile (safer) unless SUPER_ADMIN overriding it
         const clinicId = profile.role === 'SUPER_ADMIN' ? (body.clinic_id || profile.clinic_id) : profile.clinic_id
 
-        // Validate doctor belongs to clinic
-        const { data: doctor } = await supabase
+        // Validate all doctors belong to clinic
+        const { data: doctorsFound, error: doctorsError } = await supabase
             .from('doctors')
-            .select('id, user_id, consultation_price, user:users(full_name)')
-            .eq('id', body.doctor_id)
+            .select('id, user_id, consultation_price, specialty, user:users(full_name)')
+            .in('id', requestedDoctorIds)
             .eq('clinic_id', clinicId)
-            .single()
 
-        if (!doctor) {
+        if (doctorsError || !doctorsFound || doctorsFound.length === 0) {
             return NextResponse.json(
-                { error: 'Médico não encontrado ou não pertence à clínica' },
+                { error: 'Nenhum profissional válido encontrado para esta clínica' },
                 { status: 404 }
             )
         }
 
-        // Para bloqueios de agenda, apenas a própria pessoa logada pode bloquear o seu próprio horário
-        if (body.is_block && profile.role !== 'SUPER_ADMIN') {
-            const isOwnSchedule = (
-                doctor.user_id === user.id || 
-                doctor.id === user.id || 
-                doctor.id === profile.id || 
-                doctor.user_id === profile.id
+        const doctor = doctorsFound.find(d => d.id === primaryDoctorId) || doctorsFound[0]
+
+        // Permissão para bloqueios de agenda / compromissos:
+        // SUPER_ADMIN, CLINIC_ADMIN, RECEPTIONIST e coordenadores podem agendar para qualquer profissional da clínica.
+        // Se for um DOCTOR comum, ele pode agendar se o seu próprio perfil for um dos participantes do compromisso.
+        if (body.is_block) {
+            const isAdminOrStaff = (
+                profile.role === 'SUPER_ADMIN' ||
+                profile.role === 'CLINIC_ADMIN' ||
+                profile.role === 'RECEPTIONIST' ||
+                (profile as any).is_coordinator === true
             )
-            if (!isOwnSchedule) {
-                return NextResponse.json(
-                    { error: 'Você só tem permissão para bloquear horários na sua própria agenda.' },
-                    { status: 403 }
+
+            if (!isAdminOrStaff) {
+                const isParticipating = doctorsFound.some(d =>
+                    d.user_id === user.id ||
+                    d.id === user.id ||
+                    d.id === profile.id ||
+                    d.user_id === profile.id
                 )
+                if (!isParticipating) {
+                    return NextResponse.json(
+                        { error: 'Você não tem permissão para incluir compromissos para outros profissionais sem ser administrador ou participante.' },
+                        { status: 403 }
+                    )
+                }
             }
         }
 
@@ -377,17 +399,33 @@ export async function POST(request: NextRequest) {
         // Using client date/time directly - no server adjustment
 
         // Build appointment data with correct column names (from working route.ts)
+        const allDoctorNames = doctorsFound.map(d => (d as any).user?.full_name).filter(Boolean).join(', ')
+        const hasMultipleDoctors = doctorsFound.length > 1
+
+        let finalNotes: string | null = null
+        if (body.is_block) {
+            finalNotes = body.block_title || 'Compromisso Interno'
+            if (hasMultipleDoctors) {
+                finalNotes = `${finalNotes} (Equipe: ${allDoctorNames})`
+            }
+        } else {
+            finalNotes = body.notes || null
+            if (hasMultipleDoctors) {
+                finalNotes = finalNotes ? `${finalNotes} [Equipe: ${allDoctorNames}]` : `[Equipe: ${allDoctorNames}]`
+            }
+        }
+
         const appointmentData: Record<string, unknown> = {
             id: appointmentId,
             clinic_id: clinicId,
-            doctor_id: body.doctor_id,
+            doctor_id: primaryDoctorId,
             patient_id: body.is_block ? null : patientId,
             appointment_date: appointmentDate,
             appointment_time: appointmentTime,
             status: 'CONFIRMED',
             payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
             appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
-            notes: body.is_block ? (body.block_title || 'Compromisso Interno') : (body.notes || null),
+            notes: finalNotes,
             reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
         }
 
@@ -417,6 +455,33 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 500 }
             )
+        }
+
+        // Se houver mais terapeutas participantes (reunião de equipe ou atendimento multidisciplinar),
+        // cria os registros espelhados para cada profissional adicional na mesma clínica/horário
+        if (hasMultipleDoctors) {
+            const additionalAppointments = requestedDoctorIds.slice(1).map(addDocId => ({
+                id: uuidv4(),
+                clinic_id: clinicId,
+                doctor_id: addDocId,
+                patient_id: body.is_block ? null : patientId,
+                appointment_date: appointmentDate,
+                appointment_time: appointmentTime,
+                status: 'CONFIRMED',
+                payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
+                appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
+                notes: finalNotes,
+                reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
+                video_link: appointmentData.video_link || null
+            }))
+
+            const { error: addError } = await supabase
+                .from('appointments')
+                .insert(additionalAppointments)
+
+            if (addError) {
+                console.warn('Aviso: Erro ao inserir compromissos adicionais para equipe:', addError)
+            }
         }
 
         // Create video_room for telemedicine appointments (CRITICAL: needed for drawer display)

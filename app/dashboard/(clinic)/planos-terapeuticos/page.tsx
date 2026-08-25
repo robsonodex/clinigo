@@ -11,8 +11,9 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
-import { Plus, Edit, Trash2, Target, TrendingUp, Loader2, Search, ClipboardList, Printer } from 'lucide-react'
+import { Plus, Edit, Trash2, Target, TrendingUp, Loader2, Search, ClipboardList, Printer, FileSpreadsheet, Layers } from 'lucide-react'
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
+import { QuestionnairesTab } from '@/components/therapeutic-plans/QuestionnairesTab'
 import { toast } from 'sonner'
 
 const STATUS_LABELS: Record<string, string> = { active: 'Ativo', paused: 'Pausado', completed: 'Concluído', cancelled: 'Cancelado' }
@@ -21,6 +22,7 @@ const GOAL_STATUS: Record<string, string> = { pending: 'Pendente', in_progress: 
 const PRIORITY_LABELS: Record<string, string> = { low: 'Baixa', medium: 'Média', high: 'Alta' }
 
 export default function TherapeuticPlansPage() {
+    const [mainTab, setMainTab] = useState<'plans' | 'questionnaires'>('plans')
     const [plans, setPlans] = useState<any[]>([])
     const [patients, setPatients] = useState<any[]>([])
     const [doctors, setDoctors] = useState<any[]>([])
@@ -155,120 +157,158 @@ export default function TherapeuticPlansPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
+            {/* Header Premium com Abas */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
                         <ClipboardList className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Planos Terapêuticos</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie os planos terapêuticos individuais dos pacientes</p>
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Planos Terapêuticos & ABA</h1>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Planos individuais, metas e folhas de registro clínico (tentativas, linha de base e ensino naturalista)</p>
                     </div>
                 </div>
-                <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm() }}>
-                    <DialogTrigger asChild>
-                        <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold"><Plus className="h-4 w-4 mr-2" /> Novo Plano</Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>{editingPlan ? 'Editar' : 'Novo'} Plano Terapêutico</DialogTitle>
-                        </DialogHeader>
-                        <Tabs defaultValue="info">
-                            <TabsList className="mb-4">
-                                <TabsTrigger value="info">Informações</TabsTrigger>
-                                <TabsTrigger value="goals">Metas ({form.goals.length})</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="info" className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label>Paciente *</Label>
-                                        <PatientSearchCombobox
-                                            value={form.patient_id}
-                                            onSelect={(patient) => setForm(p => ({ ...p, patient_id: patient?.id || '' }))}
-                                            onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
-                                            placeholder="Buscar paciente por nome, CPF..."
-                                            doctorId={currentUserRole === 'DOCTOR' && currentDoctorId ? currentDoctorId : undefined}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Profissional *</Label>
-                                        <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))} disabled={currentUserRole === 'DOCTOR' && !!currentDoctorId}>
-                                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                                            <SelectContent>
-                                                {(currentUserRole === 'DOCTOR' && currentDoctorId ? doctors.filter((d: any) => d.id === currentDoctorId) : doctors).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label>Título do Plano *</Label>
-                                    <Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Plano de Intervenção ABA" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><Label>Diagnóstico</Label><Input value={form.diagnosis} onChange={e => setForm(p => ({ ...p, diagnosis: e.target.value }))} placeholder="Ex: TEA - F84.0" /></div>
-                                    <div><Label>CID</Label><Input value={form.cid_code} onChange={e => setForm(p => ({ ...p, cid_code: e.target.value }))} placeholder="F84.0" /></div>
-                                </div>
-                                <div><Label>Objetivos Gerais</Label><Textarea value={form.objectives} onChange={e => setForm(p => ({ ...p, objectives: e.target.value }))} rows={3} /></div>
-                                <div><Label>Metodologia</Label><Textarea value={form.methodology} onChange={e => setForm(p => ({ ...p, methodology: e.target.value }))} rows={2} /></div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div><Label>Frequência</Label><Input value={form.frequency} onChange={e => setForm(p => ({ ...p, frequency: e.target.value }))} placeholder="2x por semana" /></div>
-                                    <div><Label>Duração Estimada</Label><Input value={form.estimated_duration} onChange={e => setForm(p => ({ ...p, estimated_duration: e.target.value }))} placeholder="6 meses" /></div>
-                                    <div>
-                                        <Label>Status</Label>
-                                        <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div><Label>Data Início</Label><Input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} /></div>
-                                    <div><Label>Data Fim</Label><Input type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} /></div>
-                                    <div><Label>Revisão</Label><Input type="date" value={form.review_date} onChange={e => setForm(p => ({ ...p, review_date: e.target.value }))} /></div>
-                                </div>
-                                <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} /></div>
-                            </TabsContent>
-                            <TabsContent value="goals" className="space-y-4">
-                                <Button variant="outline" onClick={addGoal} className="w-full"><Plus className="h-4 w-4 mr-2" /> Adicionar Meta</Button>
-                                {form.goals.map((goal: any, idx: number) => (
-                                    <Card key={idx}>
-                                        <CardContent className="pt-4 space-y-3">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1 space-y-3">
-                                                    <Input placeholder="Título da meta" value={goal.title} onChange={e => updateGoal(idx, 'title', e.target.value)} />
-                                                    <Textarea placeholder="Descrição" value={goal.description || ''} onChange={e => updateGoal(idx, 'description', e.target.value)} rows={2} />
-                                                    <div className="grid grid-cols-3 gap-3">
-                                                        <Select value={goal.status} onValueChange={v => updateGoal(idx, 'status', v)}>
-                                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                                            <SelectContent>{Object.entries(GOAL_STATUS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                                                        </Select>
-                                                        <Select value={goal.priority} onValueChange={v => updateGoal(idx, 'priority', v)}>
-                                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                                            <SelectContent>{Object.entries(PRIORITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                                                        </Select>
-                                                        <div className="flex items-center gap-2">
-                                                            <Input type="number" min={0} max={100} value={goal.progress} onChange={e => updateGoal(idx, 'progress', parseInt(e.target.value) || 0)} className="w-20" />
-                                                            <span className="text-sm text-muted-foreground">%</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <Button variant="ghost" size="icon" onClick={() => removeGoal(idx)} className="ml-2 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex items-center gap-1 border">
+                        <Button
+                            variant={mainTab === 'plans' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setMainTab('plans')}
+                            className={`rounded-lg text-xs font-semibold h-9 px-3.5 gap-1.5 ${mainTab === 'plans' ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}
+                        >
+                            <Layers className="w-4 h-4" />
+                            Planos & Metas ({plans.length})
+                        </Button>
+                        <Button
+                            variant={mainTab === 'questionnaires' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setMainTab('questionnaires')}
+                            className={`rounded-lg text-xs font-semibold h-9 px-3.5 gap-1.5 ${mainTab === 'questionnaires' ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'}`}
+                        >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            Folhas de Registro & ABA
+                        </Button>
+                    </div>
+
+                    {mainTab === 'plans' && (
+                        <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm() }}>
+                            <DialogTrigger asChild>
+                                <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-4 text-xs sm:text-sm font-semibold"><Plus className="h-4 w-4 mr-1.5" /> Novo Plano</Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                    <DialogTitle>{editingPlan ? 'Editar' : 'Novo'} Plano Terapêutico</DialogTitle>
+                                </DialogHeader>
+                                <Tabs defaultValue="info">
+                                    <TabsList className="mb-4">
+                                        <TabsTrigger value="info">Informações</TabsTrigger>
+                                        <TabsTrigger value="goals">Metas ({form.goals.length})</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="info" className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label>Paciente *</Label>
+                                                <PatientSearchCombobox
+                                                    value={form.patient_id}
+                                                    onSelect={(patient) => setForm(p => ({ ...p, patient_id: patient?.id || '' }))}
+                                                    onCreateNew={() => window.open('/dashboard/pacientes', '_blank')}
+                                                    placeholder="Buscar paciente por nome, CPF..."
+                                                    doctorId={currentUserRole === 'DOCTOR' && currentDoctorId ? currentDoctorId : undefined}
+                                                />
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </TabsContent>
-                        </Tabs>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => { setShowDialog(false); resetForm() }}>Cancelar</Button>
-                            <Button onClick={handleSave} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Salvar</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                            <div>
+                                                <Label>Profissional *</Label>
+                                                <Select value={form.doctor_id} onValueChange={v => setForm(p => ({ ...p, doctor_id: v }))} disabled={currentUserRole === 'DOCTOR' && !!currentDoctorId}>
+                                                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {(currentUserRole === 'DOCTOR' && currentDoctorId ? doctors.filter((d: any) => d.id === currentDoctorId) : doctors).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.id}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <Label>Título do Plano *</Label>
+                                            <Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Plano de Intervenção ABA" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div><Label>Diagnóstico</Label><Input value={form.diagnosis} onChange={e => setForm(p => ({ ...p, diagnosis: e.target.value }))} placeholder="Ex: TEA - F84.0" /></div>
+                                            <div><Label>CID</Label><Input value={form.cid_code} onChange={e => setForm(p => ({ ...p, cid_code: e.target.value }))} placeholder="F84.0" /></div>
+                                        </div>
+                                        <div><Label>Objetivos Gerais</Label><Textarea value={form.objectives} onChange={e => setForm(p => ({ ...p, objectives: e.target.value }))} rows={3} /></div>
+                                        <div><Label>Metodologia</Label><Textarea value={form.methodology} onChange={e => setForm(p => ({ ...p, methodology: e.target.value }))} rows={2} /></div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div><Label>Frequência</Label><Input value={form.frequency} onChange={e => setForm(p => ({ ...p, frequency: e.target.value }))} placeholder="2x por semana" /></div>
+                                            <div><Label>Duração Estimada</Label><Input value={form.estimated_duration} onChange={e => setForm(p => ({ ...p, estimated_duration: e.target.value }))} placeholder="6 meses" /></div>
+                                            <div>
+                                                <Label>Status</Label>
+                                                <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div><Label>Data Início</Label><Input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} /></div>
+                                            <div><Label>Data Fim</Label><Input type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} /></div>
+                                            <div><Label>Revisão</Label><Input type="date" value={form.review_date} onChange={e => setForm(p => ({ ...p, review_date: e.target.value }))} /></div>
+                                        </div>
+                                        <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} /></div>
+                                    </TabsContent>
+                                    <TabsContent value="goals" className="space-y-4">
+                                        <Button variant="outline" onClick={addGoal} className="w-full"><Plus className="h-4 w-4 mr-2" /> Adicionar Meta</Button>
+                                        {form.goals.map((goal: any, idx: number) => (
+                                            <Card key={idx}>
+                                                <CardContent className="pt-4 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-1 space-y-3">
+                                                            <Input placeholder="Título da meta" value={goal.title} onChange={e => updateGoal(idx, 'title', e.target.value)} />
+                                                            <Textarea placeholder="Descrição" value={goal.description || ''} onChange={e => updateGoal(idx, 'description', e.target.value)} rows={2} />
+                                                            <div className="grid grid-cols-3 gap-3">
+                                                                <Select value={goal.status} onValueChange={v => updateGoal(idx, 'status', v)}>
+                                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                    <SelectContent>{Object.entries(GOAL_STATUS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                                                                </Select>
+                                                                <Select value={goal.priority} onValueChange={v => updateGoal(idx, 'priority', v)}>
+                                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                    <SelectContent>{Object.entries(PRIORITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                                                                </Select>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Input type="number" min={0} max={100} value={goal.progress} onChange={e => updateGoal(idx, 'progress', parseInt(e.target.value) || 0)} className="w-20" />
+                                                                    <span className="text-sm text-muted-foreground">%</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <Button variant="ghost" size="icon" onClick={() => removeGoal(idx)} className="ml-2 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </TabsContent>
+                                </Tabs>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => { setShowDialog(false); resetForm() }}>Cancelar</Button>
+                                    <Button onClick={handleSave} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Salvar</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
             </div>
+
+            {/* CONTEÚDO DA ABA SELECIONADA */}
+            {mainTab === 'questionnaires' ? (
+                <QuestionnairesTab
+                    plans={plans}
+                    patients={patients}
+                    doctors={doctors}
+                    currentUserDoctorId={currentDoctorId}
+                    currentUserRole={currentUserRole}
+                />
+            ) : (
+                <>
 
             {/* Barra de Busca Premium */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -348,6 +388,8 @@ export default function TherapeuticPlansPage() {
                         )
                     })}
                 </div>
+            )}
+                </>
             )}
         </div>
     )
