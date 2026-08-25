@@ -86,24 +86,24 @@ npm run build
 
 ---
 
-## 🌐 Deploy para Produção (Repositório / Projeto: `clinigo-saas`)
+## 🌐 Deploy para Produção (Repositório / Projeto Oficial: `clinigo`)
 
-> ⚠️ **IMPORTANTE**: O projeto de produção oficial na Vercel é o **`clinigo-saas`** (conectado à branch `master`). Todo deploy e integração de produção deve ter como alvo este projeto.
+> ⚠️ **IMPORTANTE**: O projeto de produção oficial na Vercel e no GitHub é o **`clinigo`** (Repositório: `https://github.com/robsonodex/clinigo`, branch `master`). Todo deploy e integração de produção é baseado no repositório **`clinigo`** (e **NÃO** em `clinigo-saas`).
 
 ### Via GitHub / Git Push (Fluxo Principal)
 
-1. Commit e push para branch `master`:
+1. Commit e push para branch `master` no repositório `clinigo`:
    ```bash
    git push origin master
    ```
-2. O Vercel detecta a alteração no projeto **`clinigo-saas`** e executa o build de produção automaticamente.
-3. Acompanhe em: [vercel.com/dashboard](https://vercel.com/dashboard) → Projeto **`clinigo-saas`**.
+2. O Vercel detecta a alteração no projeto **`clinigo`** e executa o build de produção automaticamente.
+3. Acompanhe em: [vercel.com/dashboard](https://vercel.com/dashboard) → Projeto **`clinigo`**.
 
 ### Via Vercel CLI
 
 ```bash
-# Vincular/garantir vínculo ao projeto clinigo-saas
-vercel link --project clinigo-saas
+# Vincular/garantir vínculo ao projeto oficial clinigo
+vercel link --project clinigo
 
 # Deploy direto em produção
 vercel --prod

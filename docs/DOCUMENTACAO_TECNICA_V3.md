@@ -1,9 +1,10 @@
-# CliniGo SaaS — Documentação Técnica Oficial V4
+# CliniGo SaaS — Documentação Técnica Oficial V5
 
-> **Última atualização:** 11 de Maio de 2026  
+> **Última atualização:** 25 de Agosto de 2026  
 > **Status:** Documento vivo — reflete 100% das funcionalidades implementadas e ativas em produção.  
 > **Stack:** Next.js 16 · React 19 · Supabase (PostgreSQL + Auth + Storage + RLS) · TailwindCSS 3 · Vercel  
-> **Repositório:** `clinigo-producao`
+> **Repositório Oficial:** `clinigo` (`https://github.com/robsonodex/clinigo`)  
+> **Deploy de Produção:** Vercel (Projeto `clinigo`, branch `master`)
 
 ---
 
@@ -1848,9 +1849,9 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 - `supabase/migrations/20260622000002_whatsapp_multi_session.sql`
 - `supabase/migrations/EXECUTAR_MANUAL_20260622_WHATSAPP.sql` (consolidado para execução no Dashboard)
 
-### 17/08/2026 - Ajuste na Tela de Conta Bloqueada (Textos e Suporte) & Padronização de Deploy `clinigo-saas`
+### 17/08/2026 - Ajuste na Tela de Conta Bloqueada (Textos e Suporte)
 
-**Escopo:** Global (Tela pública/sistema de conta bloqueada & Protocolo de Deploy)
+**Escopo:** Global (Tela pública/sistema de conta bloqueada)
 
 **Módulo → Submódulo → Arquivo → Função/Componente alterado**
 - Módulo → Autenticação / Segurança → Conta Bloqueada → `app/conta-bloqueada/page.tsx` → `ContaBloqueadaPage`
@@ -1859,7 +1860,47 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
     - "Por que a conta foi bloqueada? O bloqueio ocorre quando a conta da clínica está inativa por pendência administrativa."
     - "Como solicitar o desbloqueio? O gestor responsável deve entrar em contato diretamente com o suporte para que o administrador realize a ativação."
 
-- Módulo → DevOps / Infraestrutura → Deploy Vercel → `docs/deploy.md`
-  - **Padronização do Projeto de Produção**: Fixado que o projeto e repositório oficial na Vercel é **`clinigo-saas`** (`branch master`), devendo todo deploy, sincronização de Git e monitoramento ser direcionado a este projeto.
+### 25/08/2026 - Agenda Multi-Terapeuta, Horários Livres Simultâneos & Módulo de Questionários Clínicos ABA
+
+**Solicitado por:** Espaço Incluir (Jeferson)  
+**Escopo:** Global (Todas as clínicas multi-tenant com isolamento RLS por `clinic_id`)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+1. **Recepção → Agenda → Permissões de Compromisso & Reunião Multi-Terapeuta**
+   - Arquivo: `app/api/appointments/manual/route.ts` → `POST`
+     - **Permissão de Bloqueio/Compromisso para Gestores**: Liberada a permissão para `CLINIC_ADMIN`, `RECEPTIONIST`, `SUPER_ADMIN` e coordenadores criarem compromissos/bloqueios na agenda de qualquer profissional da equipe, eliminando a restrição indevida de "só é possível incluir compromisso na própria agenda".
+     - **Suporte a Múltiplos Profissionais**: Suporte ao array `doctor_ids?: string[]` no payload, persistindo o compromisso principal e gerando registros espelhados para todas as terapeutas selecionadas simultaneamente com nota descritiva de equipe.
+
+2. **Recepção → Agenda → Modal de Bloqueio/Reunião de Equipe**
+   - Arquivo: `components/appointments/BlockScheduleModal.tsx` → `BlockScheduleModal`
+     - **Seleção Múltipla com Checkboxes**: Interface PWA/Mobile com busca rápida, badges de terapeutas selecionadas e botão de ação em massa *"Selecionar Todos da Clínica"*.
+     - **Acessibilidade Touch**: Botões e áreas de toque com dimensões ≥ 44×44px e inputs com 16px para evitar zoom automático no iOS Safari.
+
+3. **Recepção → Agenda → Filtro e Destaque de Horários Livres Simultâneos**
+   - Arquivo: `components/ui/agenda-view.tsx` → `AgendaView`
+     - **Multi-Seleção no Filtro de Profissionais**: Dropdown com checkboxes permitindo filtrar a agenda de várias terapeutas simultaneamente.
+     - **Cálculo de Disponibilidade Concomitante**: Lógica de `getSlotFreeStatus` atualizada com `isAllSelectedFree` e tag visual **`⭐ Todas Livres`** nas células da grade semanal onde todas as terapeutas marcadas estão desocupadas no mesmo horário.
+
+4. **Terapia → Planos Terapêuticos → Módulo de Questionários e Folhas de Registro ABA**
+   - Arquivo: `app/dashboard/(clinic)/planos-terapeuticos/page.tsx` → `TherapeuticPlansPage`
+     - **Navegação em Abas no Cabeçalho**: Alternância fluida entre *"Planos & Metas"* e *"Folhas de Registro & ABA"*.
+   - Arquivo: `components/therapeutic-plans/QuestionnairesTab.tsx` → `QuestionnairesTab` [NOVO]
+     - **Modelos Padronizados Disponíveis**:
+       - 🎯 *Registro de Tentativas ABA*: Antecedente / Estímulo, Resposta Alvo, Dica (`I`, `AFT`, `AFL`, `AG`, `AV`, `M`), Resultado rápido (`+`, `d+`, `d-`, `-`) e Legenda de Esvanecimento de Dicas.
+       - 📊 *Folha de Registro — Linha de Base*: Coleta inicial de estímulos sem dica com 1ªT, 2ªT, 3ªT, taxa de acerto e critérios de aquisição.
+       - 🌿 *Folha de Registro — Ensino Naturalista / Incidental*: Coleta ecológica com tentativas com dica vs. independentes e % de aproveitamento.
+     - **Histórico Clínico Imutável**: Armazenamento com snapshot da estrutura da folha no momento da aplicação, métricas consolidadas, filtros por paciente e visualizador/impressão.
+   - Arquivo: `app/api/therapeutic-plans/questionnaires/templates/route.ts` → [NOVO]
+     - CRUD de templates de questionários clínicos com os 3 modelos padrão pré-carregados.
+   - Arquivo: `app/api/therapeutic-plans/questionnaires/responses/route.ts` → [NOVO]
+     - CRUD de respostas e histórico de aplicações com auditoria e isolamento por `clinic_id`.
+   - Migration: `supabase/migrations/20260825000000_create_therapeutic_questionnaires.sql` [NOVO]
+     - Tabelas `therapeutic_plan_questionnaire_templates` e `therapeutic_plan_questionnaire_responses` com índices e RLS.
+
+5. **DevOps / Infraestrutura → Repositório & Projeto Oficial: `clinigo`**
+   - Arquivo: `docs/deploy.md`
+     - **Padronização Oficial**: Documentado que o repositório oficial no GitHub é **`clinigo`** (`https://github.com/robsonodex/clinigo`, branch `master`) e o projeto oficial na Vercel é **`clinigo`** (e **NÃO** `clinigo-saas`). Todo push na branch `master` do repositório `clinigo` dispara a esteira de CI/CD automática.
+
 
 
