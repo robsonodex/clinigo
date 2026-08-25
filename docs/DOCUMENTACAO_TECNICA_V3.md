@@ -3,8 +3,7 @@
 > **Última atualização:** 25 de Agosto de 2026  
 > **Status:** Documento vivo — reflete 100% das funcionalidades implementadas e ativas em produção.  
 > **Stack:** Next.js 16 · React 19 · Supabase (PostgreSQL + Auth + Storage + RLS) · TailwindCSS 3 · Vercel  
-> **Repositório Oficial:** `clinigo` (`https://github.com/robsonodex/clinigo`)  
-> **Deploy de Produção:** Vercel (Projeto `clinigo`, branch `master`)
+> **Projeto de Produção Oficial:** `clinigo-saas` (Vercel, branch `master`)
 
 ---
 
