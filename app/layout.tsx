@@ -11,38 +11,41 @@ import ChatbotProvider from '@/components/chatbot/ChatbotProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-    title: 'CliniGO | O Melhor Sistema de Gestão de Clínicas e Consultórios',
-    description: 'CliniGO: gestão completa para clínicas com TISS nativo, WhatsApp integrado e prontuário eletrônico. Menos burocracia, mais pacientes. Teste 7 dias grátis!',
+    metadataBase: new URL('https://clinigo.app'),
+    title: 'CliniGO | Sistema para Gestão de Clínicas e Consultórios',
+    description: 'Software completo para gestão de clínicas e consultórios médicos. Prontuário eletrônico, agendamento online, faturamento TISS e check-in facial. Teste 7 dias grátis!',
     alternates: {
         canonical: 'https://clinigo.app',
     },
     keywords: [
-        'sistema de clinica',
-        'software para clinica',
-        'sistema para consultorio',
-        'prontuario eletronico',
+        'sistema para gestão de clínicas',
+        'software para clínica médica',
+        'sistema de agendamento para clínicas',
+        'prontuário eletrônico para clínicas',
+        'gestão de clínicas online',
+        'sistema de clínica',
         'software de psicologia',
         'faturamento TISS',
-        'check-in facial',
-        'agenda medica',
-        'clinigo',
-        'gestao de clinicas',
-        'software de terapia'
+        'check-in facial médica',
+        'agenda médica online',
+        'clinigo'
     ],
-    manifest: '/manifest.json',
+    manifest: '/site.webmanifest',
     icons: {
         icon: [
-            { url: '/favicon.png', type: 'image/png' },
-            { url: '/favicon.ico', sizes: 'any' },
+            { url: '/favicon.ico', sizes: '48x48 32x32 16x16', type: 'image/x-icon' },
+            { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+            { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
             { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
+        shortcut: '/favicon.ico',
         apple: [
-            { url: '/icons/icon-512x512.png', sizes: '512x512' },
+            { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
         ],
     },
     openGraph: {
-        title: 'CliniGO | O Melhor Sistema de Gestão de Clínicas e Consultórios',
-        description: 'Prontuário eletrônico adaptativo, agenda integrada anti-overbooking, faturamento TISS completo, check-in facial inovador e automação por WhatsApp. Conheça o CliniGO.',
+        title: 'CliniGO | Sistema para Gestão de Clínicas e Consultórios',
+        description: 'Software completo para gestão de clínicas e consultórios médicos. Prontuário eletrônico, agendamento online, faturamento TISS e check-in facial. Teste 7 dias grátis!',
         url: 'https://clinigo.app',
         siteName: 'CliniGO',
         images: [
@@ -50,11 +53,17 @@ export const metadata: Metadata = {
                 url: 'https://clinigo.app/dashboard-preview.png',
                 width: 1200,
                 height: 630,
-                alt: 'CliniGO - Sistema de Gestão de Clínicas',
+                alt: 'CliniGO - Sistema para Gestão de Clínicas e Consultórios',
             }
         ],
         locale: 'pt_BR',
         type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'CliniGO | Sistema para Gestão de Clínicas e Consultórios',
+        description: 'Software para clínica médica com prontuário eletrônico, agendamento online, faturamento TISS e check-in facial.',
+        images: ['https://clinigo.app/dashboard-preview.png'],
     },
     robots: {
         index: true,
@@ -70,7 +79,7 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',
-        title: 'CliniGo',
+        title: 'CliniGO',
     },
     formatDetection: {
         telephone: true,
@@ -116,9 +125,8 @@ export default function RootLayout({
                 {/* PWA - Apple specific tags */}
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-                <meta name="apple-mobile-web-app-title" content="CliniGo" />
-                <link rel="apple-touch-icon" href="/icons/icon-512x512.png" />
-                <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+                <meta name="apple-mobile-web-app-title" content="CliniGO" />
+                <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
                 {/* Android Chrome theme */}
                 <meta name="theme-color" content="#16a34a" />

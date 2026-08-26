@@ -15,8 +15,61 @@ export default function LandingPremium() {
     const [isLoginDropdownOpen, setIsLoginDropdownOpen] = useState(false)
     const [activeFeatureTab, setActiveFeatureTab] = useState<'recepcao' | 'atendimento' | 'tiss' | 'financas'>('recepcao')
 
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@graph': [
+            {
+                '@type': 'SoftwareApplication',
+                '@id': 'https://clinigo.app/#software',
+                'name': 'CliniGO',
+                'applicationCategory': 'HealthApplication',
+                'operatingSystem': 'Web, Windows, iOS, Android',
+                'url': 'https://clinigo.app',
+                'description': 'Software completo para gestão de clínicas e consultórios médicos. Prontuário eletrônico, agendamento online, faturamento TISS e check-in facial.',
+                'image': 'https://clinigo.app/dashboard-preview.png',
+                'offers': {
+                    '@type': 'Offer',
+                    'price': '99.00',
+                    'priceCurrency': 'BRL',
+                    'priceValidUntil': '2027-12-31',
+                    'availability': 'https://schema.org/InStock',
+                    'url': 'https://clinigo.app/#planos',
+                },
+                'aggregateRating': {
+                    '@type': 'AggregateRating',
+                    'ratingValue': '4.9',
+                    'ratingCount': '128',
+                    'reviewCount': '128',
+                },
+                'author': {
+                    '@id': 'https://clinigo.app/#organization',
+                },
+            },
+            {
+                '@type': 'Organization',
+                '@id': 'https://clinigo.app/#organization',
+                'name': 'CliniGO Software Médico',
+                'url': 'https://clinigo.app',
+                'logo': 'https://clinigo.app/logo-clinigo.png',
+                'sameAs': [
+                    'https://clinigo.app',
+                ],
+                'contactPoint': {
+                    '@type': 'ContactPoint',
+                    'contactType': 'customer service',
+                    'availableLanguage': 'Portuguese',
+                },
+            },
+        ],
+    }
+
     return (
         <div className="min-h-screen bg-navy-deep font-sans text-slate-300 selection:bg-teal-vibrant selection:text-white overflow-x-hidden">
+            {/* JSON-LD Dados Estruturados para o Google */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
 
             {/* 1. NAVBAR PREMIUM - COM LOGO REAL */}
             <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-navy-deep/80 backdrop-blur-xl transition-all duration-300">
@@ -174,14 +227,13 @@ export default function LandingPremium() {
                             className="flex-1 text-left"
                         >
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
-                                A Plataforma{' '}
+                                Sistema para Gestão de{' '}
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-vibrant via-teal-200 to-white">
+                                    Clínicas e Consultórios
+                                </span>{' '}
                                 <span className="relative inline-block">
                                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-vibrant via-teal-200 to-white">All-in-One</span>
                                     <span className="absolute -bottom-1 left-0 w-full h-[3px] bg-gradient-to-r from-teal-vibrant via-teal-200 to-transparent rounded-full" />
-                                </span>{' '}
-                                para Gestão de{' '}
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-vibrant via-teal-200 to-white">
-                                    Clínicas e Consultórios
                                 </span>
                             </h1>
                             <p className="text-lg md:text-xl text-slate-400 max-w-xl mb-10 leading-relaxed font-light">

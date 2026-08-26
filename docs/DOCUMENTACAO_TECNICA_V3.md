@@ -1901,5 +1901,39 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - Arquivo: `docs/deploy.md`
      - **Padronização Oficial**: Documentado que o repositório oficial no GitHub é **`clinigo`** (`https://github.com/robsonodex/clinigo`, branch `master`) e o projeto oficial na Vercel é **`clinigo`** (e **NÃO** `clinigo-saas`). Todo push na branch `master` do repositório `clinigo` dispara a esteira de CI/CD automática.
 
+### 26/08/2026 - Ícones Oficiais, Favicon PWA e SEO Técnico Completo (Landing Page)
+
+**Solicitado por:** CliniGO / Robson Oliveira  
+**Escopo:** Global (Landing Page pública `clinigo.app` e Metadados Globais do Sistema)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+1. **SEO / Frontend → Favicon e Ícones da Marca (PWA & App Router)**
+   - Arquivo: `app/layout.tsx` → `metadata` / `<head>`
+     - Configuração completa do objeto `metadata.icons` com ícones multi-resolução (`favicon.ico` 16x16/32x32/48x48, `favicon.png` 32x32, `icon-192x192.png`, `icon-512x512.png` e `apple-touch-icon.png` 180x180).
+     - Referência oficial para o manifest em `/site.webmanifest`.
+   - Arquivos: `public/site.webmanifest`, `public/manifest.json` [NOVO / ATUALIZADO]
+     - Manifest PWA padronizado com nome *"CliniGO - Sistema para Gestão de Clínicas e Consultórios"*, suporte maskable em alta resolução e tema visual `#16a34a`.
+   - Arquivos: `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`, `public/favicon.ico`, `public/favicon.png`, `public/apple-touch-icon.png` [NOVOS]
+     - Geração e distribuição de ícones nos tamanhos corretos exigidos pelas diretrizes de busca do Google e navegadores móveis (Safari iOS / Chrome Android).
+
+2. **SEO Técnico → Metadados, OpenGraph & Twitter Cards**
+   - Arquivo: `app/layout.tsx` → `metadata`
+     - Palavra-chave principal otimizada: *"sistema para gestão de clínicas"*.
+     - Variações secundárias: *"software para clínica médica"*, *"sistema de agendamento para clínicas"*, *"prontuário eletrônico para clínicas"*, *"gestão de clínicas online"*, *"faturamento TISS"*.
+     - OpenGraph e Twitter Card com imagem promocional 1200x630 (`/dashboard-preview.png`), título e descrição comercial.
+
+3. **SEO Técnico → Dados Estruturados (JSON-LD) & Hierarquia Semântica**
+   - Arquivo: `app/(marketing)/landing-premium/page.tsx` → `LandingPremium`
+     - Inserção de JSON-LD Schema.org (`SoftwareApplication` e `Organization`) com preço a partir de R$ 99/mês, rating 4.9/5 e categoria `HealthApplication`.
+     - Ajuste semântico da tag `<h1>` para conter a palavra-chave primária exata.
+
+4. **SEO Técnico → Controle de Robôs e Sitemap Dinâmico**
+   - Arquivo: `app/robots.ts` [NOVO]
+     - Permite crawling das páginas públicas (`/`, `/planos`, `/blog`, `/contato`, `/sobre`) e bloqueia áreas privadas (`/dashboard`, `/api`, `/paciente`, `/partners`, `/admin`, `/totem`, `/system-master-hub`).
+   - Arquivo: `app/sitemap.ts` [NOVO]
+     - Sitemap XML dinâmico gerando todas as páginas públicas com prioridades e frequências de atualização para o Google Search Console.
+
+
 
 
