@@ -1282,7 +1282,13 @@ export default function SuperAdminDashboard() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    R$ {clinic.revenue.toLocaleString('pt-BR')}
+                                                    {clinic.revenue > 0 ? (
+                                                        <span className="font-medium text-slate-900">R$ {clinic.revenue.toLocaleString('pt-BR')}</span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                                                            R$ 0,00 (Demo)
+                                                        </span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {format(new Date(clinic.renewalDate), 'dd/MM/yyyy', { locale: ptBR })}

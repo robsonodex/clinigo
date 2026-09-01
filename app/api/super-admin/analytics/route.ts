@@ -54,16 +54,19 @@ export async function GET(request: NextRequest) {
                 .gte('date', monthStart)
                 .lt('date', monthEnd)
 
-            // Calculate MRR (simplified - based on active clinics)
+            // Calculate MRR (simplified - based on real active clinics)
             const { data: clinicsWithPlans } = await getSupabaseAdmin()
                 .from('clinics')
-                .select('plan_type')
+                .select('id, name, plan_type, custom_price, is_demo')
                 .eq('is_active', true)
                 .lte('created_at', monthEnd)
 
-            const planPrices = { BASIC: 97, PRO: 297, ENTERPRISE: 997 }
+            const planPrices: Record<string, number> = { BASIC: 199, BASICO: 299, PROFESSIONAL: 449, PRO: 399, ENTERPRISE: 799 }
             const mrr = clinicsWithPlans?.reduce((sum, c) => {
-                return sum + (planPrices[c.plan_type as keyof typeof planPrices] || 0)
+                const isDemo = c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
+                if (isDemo) return sum
+                const price = c.custom_price !== null && c.custom_price !== undefined ? Number(c.custom_price) : (planPrices[c.plan_type] || 0)
+                return sum + price
             }, 0) || 0
 
             // Get AI tokens

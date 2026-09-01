@@ -44,38 +44,42 @@ export async function GET(request: NextRequest) {
         // Get all clinics
         const { data: clinics } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price')
+            .select('id, name, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price')
             .order('created_at', { ascending: false })
 
-        // Count metrics
-        const totalClinics = clinics?.length || 0
-        const activeClinics = clinics?.filter(c => c.is_active).length || 0
+        const isDemoClinic = (c: any) => c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
 
-        // MRR calculation - custom_price has priority over default plan prices
+        // Count metrics (excluding demo from active count if desired, or keeping totalClinics)
+        const totalClinics = clinics?.length || 0
+        const activeClinics = clinics?.filter(c => c.is_active && !isDemoClinic(c)).length || 0
+
+        // MRR calculation - Demo clinics are ALWAYS zeroed out (R$ 0). Only real clinics (Espaço Incluir, WorldSensory, etc.) count.
         const mrr = clinics?.reduce((sum, c) => {
-            if (!c.is_active) return sum
-            const price = c.custom_price ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
+            if (!c.is_active || isDemoClinic(c)) return sum
+            const price = c.custom_price !== null && c.custom_price !== undefined ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
             return sum + price
         }, 0) || 0
 
-        // Clinics by plan
+        // Clinics by plan (real clinics only for enterprise/starter counts)
         const clinicsByPlan = {
-            STARTER: clinics?.filter(c => c.plan_type === 'STARTER').length || 0,
-            BASICO: clinics?.filter(c => c.plan_type === 'BASICO').length || 0,
-            AVANCADO: clinics?.filter(c => c.plan_type === 'AVANCADO').length || 0,
-            ENTERPRISE: clinics?.filter(c => c.plan_type === 'ENTERPRISE').length || 0,
+            STARTER: clinics?.filter(c => c.plan_type === 'STARTER' && !isDemoClinic(c)).length || 0,
+            BASICO: clinics?.filter(c => c.plan_type === 'BASICO' && !isDemoClinic(c)).length || 0,
+            AVANCADO: clinics?.filter(c => c.plan_type === 'AVANCADO' && !isDemoClinic(c)).length || 0,
+            PROFESSIONAL: clinics?.filter(c => c.plan_type === 'PROFESSIONAL' && !isDemoClinic(c)).length || 0,
+            ENTERPRISE: clinics?.filter(c => c.plan_type === 'ENTERPRISE' && !isDemoClinic(c)).length || 0,
         }
 
         // New clinics last 30 days
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         const newClinics = clinics?.filter(c =>
-            new Date(c.created_at) > thirtyDaysAgo
+            !isDemoClinic(c) && new Date(c.created_at) > thirtyDaysAgo
         ).length || 0
 
         // Churn rate
-        const inactiveClinics = totalClinics - activeClinics
-        const churnRate = totalClinics > 0 ? (inactiveClinics / totalClinics) * 100 : 0
+        const inactiveClinics = clinics?.filter(c => !c.is_active && !isDemoClinic(c)).length || 0
+        const realClinicsTotal = clinics?.filter(c => !isDemoClinic(c)).length || 0
+        const churnRate = realClinicsTotal > 0 ? (inactiveClinics / realClinicsTotal) * 100 : 0
 
         // Total counts
         const { count: totalDoctors } = await supabaseAdmin
@@ -122,15 +126,17 @@ export async function GET(request: NextRequest) {
 
         // Clinic data for frontend
         const mockClinics = clinics?.map(c => {
-            const price = c.custom_price ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
+            const isDemo = isDemoClinic(c)
+            const price = isDemo ? 0 : (c.custom_price !== null && c.custom_price !== undefined ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0))
             const renewalDate = c.subscription_due_date
                 ? new Date(c.subscription_due_date + 'T00:00:00').toISOString()
                 : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
             return {
                 id: c.id,
                 name: c.name,
-                planType: c.plan_type,
+                planType: isDemo ? 'DEMO' : c.plan_type,
                 isActive: c.is_active,
+                isDemo: isDemo,
                 revenue: price,
                 renewalDate,
                 aiTokensUsed: 0,

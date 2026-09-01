@@ -1960,3 +1960,9 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 4. **Recepção → Painel de TV → Criação de Consultórios na Clínica Demo**
    - Banco de Dados / Scripts: `consulting_rooms`
      - Criadas as salas padrão *"Consultório 1 - Cardiologia"*, *"Consultório 2 - Ortopedia"* e *"Consultório 3 - Pediatria / Geral"* na clínica Demo (`de000000-0000-0000-0000-000000000001`), assegurando exibição de salas e vocalização perfeita via Web Speech API no `/painel-tv/[clinicId]`.
+
+5. **Super Admin / Financeiro Global → Exclusão da Clínica Demo do MRR e Ajuste de Faturamento**
+   - Arquivos: `app/api/super-admin/dashboard/route.ts`, `app/api/super-admin/analytics/route.ts`, `app/dashboard/(admin)/cobranca/page.tsx`, `app/system-master-hub/page.tsx`
+     - **Isolamento de MRR**: A *Clínica Demo Excellence* (`is_demo: true`) foi zerada (`revenue: 0`) nos cálculos de Receita Mensal Recorrente (MRR), ARR e métricas globais do Super Admin.
+     - **MRR Real**: O MRR global reflete estritamente as clínicas reais ativas (*Espaço Incluir* e *WorldSensory Terapias Multidisciplinares*), eliminando inflação fictícia de R$ 799/mês.
+

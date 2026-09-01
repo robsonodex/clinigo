@@ -30,12 +30,13 @@ export default function CobrancaPage() {
     })
 
     const clinics = response?.data || []
-    const activeClinics = clinics.filter(c => c.is_active)
-    const totalClinics = clinics.length
+    const isDemoClinic = (c: any) => c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
+    const activeClinics = clinics.filter(c => c.is_active && !isDemoClinic(c))
+    const totalClinics = clinics.filter(c => !isDemoClinic(c)).length
 
-    // Calculate MRR from active clinics
+    // Calculate MRR from active clinics (excluding demo)
     const mrr = activeClinics.reduce((sum, c) => {
-        const planPrice = PLANS[c.plan_type]?.price || 0
+        const planPrice = c.custom_price !== null && c.custom_price !== undefined ? Number(c.custom_price) : (PLANS[c.plan_type]?.price || 0)
         return sum + planPrice
     }, 0)
 
