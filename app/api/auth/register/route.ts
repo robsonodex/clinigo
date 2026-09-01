@@ -295,8 +295,10 @@ export async function POST(request: NextRequest) {
         const trialEndFormatted = trialEndsAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
         console.log('[Register] Sending welcome email to:', data.email)
+        const bccList = ['contato.clinigo@gmail.com', 'robson.e.cleiniane@gmail.com', 'contato@clinigo.app']
         const welcomeEmailResult = await sendMail({
             to: data.email,
+            bcc: bccList,
             subject: 'Bem-vindo ao CliniGo! Seu teste grátis começou',
             html: `
                 <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">

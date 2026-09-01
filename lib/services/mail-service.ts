@@ -6,6 +6,7 @@ export interface EmailOptions {
     html: string
     text?: string
     from?: string
+    bcc?: string | string[]
 }
 
 /**
@@ -86,6 +87,7 @@ export async function sendMail(options: EmailOptions) {
         const info = await transporter.sendMail({
             from: options.from || from,
             to: options.to,
+            bcc: options.bcc,
             subject: options.subject,
             html: options.html,
             text: options.text,
