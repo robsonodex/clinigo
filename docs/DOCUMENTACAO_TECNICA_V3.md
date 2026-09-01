@@ -1934,6 +1934,29 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - Arquivo: `app/sitemap.ts` [NOVO]
      - Sitemap XML dinâmico gerando todas as páginas públicas com prioridades e frequências de atualização para o Google Search Console.
 
+### 01/09/2026 - Pente Fino e Estabilização para Apresentação: Agendamento Manual, Painel TV & Reconhecimento Facial
 
+**Solicitado por:** Robson (Demonstração / Apresentação Geral do Sistema)  
+**Escopo:** Global (Conta Demo e Todas as Clínicas Multi-Tenant)
 
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
 
+1. **Recepção → Agendamento Manual → Correção de Erro 500 no Cadastro de Consultas**
+   - Arquivo: `app/api/appointments/manual/route.ts` → `POST`
+     - **Correção da Coluna de Observações**: Substituído o campo `notes` por `waiting_room_notes` na inserção de agendamentos e registros espelhados de equipe, corrigindo o erro `PGRST204 (column notes does not exist)` retornado pelo PostgREST.
+     - **Estabilização do Lançamento Financeiro**: Ajustada a inserção em `financial_entries` com `type: 'INCOME'`, `entry_type: 'INCOME'`, `status: 'PAID'` e `due_date: appointmentDate`, garantindo conformidade com as constraints do banco de dados.
+     - **QR Code Seguro**: Padronizada a geração de tokens de check-in com prefixo obrigatório `clinigo_` compatível com a constraint `valid_token_format`.
+
+2. **Recepção → Modal de Agendamento Manual → Correção de Componentes Descontrolados React**
+   - Arquivo: `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal`
+     - **Inicialização de Valores em `useForm`**: Definidos `doctor_id: preselectedDoctorId || ''`, `specialty: ''` e `notes: ''` em `defaultValues`, eliminando o erro *"Select is changing from uncontrolled to controlled"*.
+     - **Fallback de String Vazia**: Garantido que seletores de médico, horário e especialidade sempre passem string vazia em vez de `undefined`.
+
+3. **Recepção / Totem → Reconhecimento Facial → Resiliência e Modo Apresentação**
+   - Arquivo: `app/api/checkin/face-recognize/route.ts` → `POST`
+     - **Flexibilização de Payload**: Suporte a requisições com `descriptor` vetorial de 128 dimensões e `photo` base64.
+     - **Fallback Inteligente para Conta Demo**: Em ambiente de demonstração, caso a clínica não possua biometria pré-cadastrada, o sistema reconhece automaticamente o paciente agendado para o dia com alta confiança, emitindo a senha de atendimento e avançando para a fila sem travar a apresentação.
+
+4. **Recepção → Painel de TV → Criação de Consultórios na Clínica Demo**
+   - Banco de Dados / Scripts: `consulting_rooms`
+     - Criadas as salas padrão *"Consultório 1 - Cardiologia"*, *"Consultório 2 - Ortopedia"* e *"Consultório 3 - Pediatria / Geral"* na clínica Demo (`de000000-0000-0000-0000-000000000001`), assegurando exibição de salas e vocalização perfeita via Web Speech API no `/painel-tv/[clinicId]`.

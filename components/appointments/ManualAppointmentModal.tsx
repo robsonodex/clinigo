@@ -122,6 +122,7 @@ export function ManualAppointmentModal({
     const form = useForm<ManualAppointmentFormData>({
         resolver: zodResolver(manualAppointmentSchema),
         defaultValues: {
+            doctor_id: preselectedDoctorId || '',
             appointment_date: preselectedDate || format(new Date(), 'yyyy-MM-dd'),
             appointment_time: preselectedTime || '',
             duration_minutes: 30,
@@ -130,6 +131,8 @@ export function ManualAppointmentModal({
             send_whatsapp: true,
             send_email: true,
             ignore_schedule_constraints: false,
+            specialty: '',
+            notes: '',
         },
     })
 
@@ -462,7 +465,7 @@ export function ManualAppointmentModal({
                                     name="doctor_id"
                                     control={form.control}
                                     render={({ field }) => (
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value || ''}>
                                             <SelectTrigger className={errors.doctor_id ? 'border-destructive' : ''}>
                                                 <SelectValue placeholder="Selecione o médico" />
                                             </SelectTrigger>
@@ -514,7 +517,7 @@ export function ManualAppointmentModal({
                                          render={({ field }) => (
                                              <Select 
                                                  onValueChange={field.onChange} 
-                                                 value={field.value || selectedDoctor.specialty}
+                                                 value={field.value || selectedDoctor.specialty || ''}
                                                  disabled={specialtiesList.length <= 1}
                                              >
                                                  <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
@@ -555,7 +558,7 @@ export function ManualAppointmentModal({
                                         name="appointment_time"
                                         control={form.control}
                                         render={({ field }) => (
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value || ''}>
                                                 <SelectTrigger className={errors.appointment_time ? 'border-destructive' : ''}>
                                                     <SelectValue placeholder="Selecione" />
                                                 </SelectTrigger>

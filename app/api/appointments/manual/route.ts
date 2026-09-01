@@ -425,7 +425,7 @@ export async function POST(request: NextRequest) {
             status: 'CONFIRMED',
             payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
             appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
-            notes: finalNotes,
+            waiting_room_notes: finalNotes,
             reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
         }
 
@@ -470,7 +470,7 @@ export async function POST(request: NextRequest) {
                 status: 'CONFIRMED',
                 payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
                 appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
-                notes: finalNotes,
+                waiting_room_notes: finalNotes,
                 reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
                 video_link: appointmentData.video_link || null
             }))
@@ -523,13 +523,15 @@ export async function POST(request: NextRequest) {
                         .from('financial_entries')
                         .insert({
                             clinic_id: clinicId,
-                            type: 'income',
+                            type: 'INCOME',
+                            entry_type: 'INCOME',
                             category: 'consultation',
                             description: `Consulta - ${patient?.full_name || 'Paciente'}`,
                             amount: body.payment.amount_paid || price,
                             payment_method: body.payment.type.toUpperCase(),
-                            status: 'paid',
+                            status: 'PAID',
                             paid_at: new Date().toISOString(),
+                            due_date: appointmentDate || new Date().toISOString().split('T')[0],
                             reference_type: 'appointment',
                             reference_id: appointmentId,
                             created_by: user.id,

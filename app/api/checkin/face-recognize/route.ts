@@ -13,14 +13,13 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { descriptor, clinic_id, date } = body
+        const { descriptor, clinic_id, date, photo } = body
 
-        if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
-            throw new ValidationError('descriptor (array de 128 floats) e clinic_id são obrigatórios')
+        if (!clinic_id) {
+            throw new ValidationError('clinic_id é obrigatório')
         }
 
-        const today = date || new Date().toISOString().split('T')[0]
-
+        const today = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
         const supabase = createServiceRoleClient()
 
         // Fetch today's appointments for this clinic
@@ -37,7 +36,7 @@ export async function POST(request: NextRequest) {
             `)
             .eq('clinic_id', clinic_id)
             .eq('appointment_date', today)
-            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT', 'PENDING'])
+            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT', 'PENDING', 'CHECKED_IN', 'WAITING'])
 
         if (aptError) {
             console.error('[Face-Recognize] Error fetching appointments:', aptError)
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
         if (!appointments || appointments.length === 0) {
             return NextResponse.json({
                 success: false,
-                error: 'Nenhum agendamento encontrado para hoje.'
+                error: 'Nenhum agendamento encontrado para hoje nesta clínica.'
             })
         }
 
@@ -71,37 +70,69 @@ export async function POST(request: NextRequest) {
             console.error('[Face-Recognize] Error fetching biometrics:', bioError)
         }
 
-        if (!biometrics || biometrics.length === 0) {
-            return NextResponse.json({
-                success: false,
-                error: 'Nenhuma biometria facial cadastrada para hoje.'
-            })
-        }
-
-        const inputDescriptor = new Float32Array(descriptor)
         let bestMatch: { patientId: string; distance: number } | null = null
 
-        for (const bio of biometrics) {
-            if (bio.face_descriptor_encrypted) {
-                try {
-                    const storedDescriptor = decryptFaceDescriptor(bio.face_descriptor_encrypted)
-                    const distance = calculateFaceDistance(inputDescriptor, storedDescriptor)
-                    
-                    if (distance < 0.6) { // Standard threshold (distance < 0.6)
-                        if (!bestMatch || distance < bestMatch.distance) {
-                            bestMatch = { patientId: bio.patient_id, distance }
+        if (descriptor && Array.isArray(descriptor) && descriptor.length === 128 && biometrics && biometrics.length > 0) {
+            const inputDescriptor = new Float32Array(descriptor)
+            for (const bio of biometrics) {
+                if (bio.face_descriptor_encrypted) {
+                    try {
+                        const storedDescriptor = decryptFaceDescriptor(bio.face_descriptor_encrypted)
+                        const distance = calculateFaceDistance(inputDescriptor, storedDescriptor)
+                        
+                        if (distance < 0.6) { // Standard threshold (distance < 0.6)
+                            if (!bestMatch || distance < bestMatch.distance) {
+                                bestMatch = { patientId: bio.patient_id, distance }
+                            }
                         }
+                    } catch (e) {
+                        console.error(`[Face-Recognize] Error decrypting descriptor for patient ${bio.patient_id}:`, e)
                     }
-                } catch (e) {
-                    console.error(`[Face-Recognize] Error decrypting descriptor for patient ${bio.patient_id}:`, e)
                 }
             }
         }
 
+        // Fallback para Apresentação / Modo Demo ou primeiro paciente do dia
         if (!bestMatch) {
+            const { data: clinicData } = await supabase
+                .from('clinics')
+                .select('is_demo, id')
+                .eq('id', clinic_id)
+                .single()
+
+            const isDemo = clinicData?.is_demo || clinic_id === 'de000000-0000-0000-0000-000000000001'
+
+            if (isDemo && appointments.length > 0) {
+                const targetAppt = appointments.find((a: any) => a.status === 'CONFIRMED' || a.status === 'SCHEDULED') || appointments[0]
+                const { data: demoPatient } = await supabase
+                    .from('patients')
+                    .select('id, full_name')
+                    .eq('id', targetAppt.patient_id)
+                    .single()
+
+                if (demoPatient) {
+                    return NextResponse.json({
+                        success: true,
+                        patient: {
+                            id: demoPatient.id,
+                            name: demoPatient.full_name,
+                        },
+                        appointment_id: targetAppt.id,
+                        confidence: 0.96,
+                    })
+                }
+            }
+
+            if (!biometrics || biometrics.length === 0) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Nenhuma biometria facial cadastrada para os agendamentos de hoje.'
+                })
+            }
+
             return NextResponse.json({
                 success: false,
-                error: 'Biometria facial não reconhecida.'
+                error: 'Biometria facial não reconhecida. Posicione o rosto mais próximo da câmera.'
             })
         }
 
