@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
         const { sendMail } = await import('@/lib/services/mail-service')
 
         // Email 1: To Super Admin (notificação de novo trial de 7 dias para os e-mails informados)
-        const emailsToNotify = ['contato@clinigo.app', 'contato.clinigo@gmail.com']
+        const emailsToNotify = ['contato@clinigo.app', 'clinigo.contato@gmail.com']
         const approveLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/dashboard/super/clinicas-pendentes`
 
         const notificationHtml = `
@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
         const trialEndFormatted = trialEndsAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
         console.log('[Register] Sending welcome email to:', data.email)
-        const bccList = ['contato.clinigo@gmail.com', 'robson.e.cleiniane@gmail.com', 'contato@clinigo.app']
+        const bccList = ['contato@clinigo.app', 'clinigo.contato@gmail.com']
         const welcomeEmailResult = await sendMail({
             to: data.email,
             bcc: bccList,
