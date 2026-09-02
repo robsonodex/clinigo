@@ -776,7 +776,7 @@ function NavItemComponent({
                         }
                     }}
                     className={cn(
-                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all group',
+                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-sm text-xs font-semibold transition-all group',
                         touchClass,
                         parentIsLocked
                             ? isDark
@@ -845,7 +845,7 @@ function NavItemComponent({
                                     <Link
                                         href={child.href}
                                         className={cn(
-                                            'flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all group',
+                                            'flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium transition-all group',
                                             touchClass,
                                             isDark
                                                 ? isChildActive
@@ -918,12 +918,12 @@ function NavItemComponent({
         <Link
             href={item.href}
             className={cn(
-                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all relative group',
+                'flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-all relative group',
                 touchClass,
                 isActive
                     ? isDark
-                        ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 shadow-xs'
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs'
+                        ? 'bg-emerald-500/15 text-emerald-300 font-semibold'
+                        : 'bg-emerald-50 text-emerald-700 font-semibold'
                     : isLocked
                         ? isDark
                             ? 'text-emerald-100/30 hover:bg-white/5'
@@ -1140,7 +1140,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                     <button
                                         onClick={() => toggleSection(section.title)}
                                         className={cn(
-                                            "flex items-center justify-between w-full px-2.5 py-1.5 rounded-md group cursor-pointer transition-all duration-200",
+                                            "flex items-center justify-between w-full px-2.5 py-1.5 rounded-sm group cursor-pointer transition-all duration-200",
                                             isDark 
                                                 ? "hover:bg-white/5 text-emerald-100/50 hover:text-emerald-200"
                                                 : "hover:bg-slate-100/80 text-slate-500 hover:text-slate-800"
@@ -1209,7 +1209,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                 <button
                     onClick={handleToggleTheme}
                     className={cn(
-                        "flex items-center justify-between w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer",
+                        "flex items-center justify-between w-full px-2.5 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer",
                         isDark 
                             ? "bg-emerald-950/50 hover:bg-emerald-900/40 text-emerald-300 border border-emerald-800/40"
                             : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
