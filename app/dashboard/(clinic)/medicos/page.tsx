@@ -45,7 +45,6 @@ import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pen
 import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog'
 import { type Doctor, api } from '@/lib/api-client'
 import { formatCurrency, getInitials } from '@/lib/utils'
-import Link from 'next/link'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 export default function DoctorsPage() {
