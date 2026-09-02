@@ -1981,6 +1981,19 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
      - **Grid Responsivo Adaptativo**: Atualizado para `grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3`, permitindo visualização fluida em dispositivos móveis, tablets e telas widescreen.
      - **Consistência de Título**: Padronizado o título da etapa 3 para *"Cadastrar Paciente"* (mantendo *"Registre o primeiro paciente no sistema"* na descrição), alinhando a nomenclatura com os demais passos do onboarding.
 
+2. **Financeiro → Repasses e Folha de Pagamento → Extrato de Repasse Interativo via WhatsApp (Prioridade 1)**
+   - Arquivos:
+     - `supabase/migrations/20260902000001_whatsapp_repasse_extract.sql` [NOVO]
+     - `lib/services/whatsapp-repasse.ts` [NOVO]
+     - `app/api/whatsapp/repasse-extract/route.ts` [NOVO]
+     - `lib/whatsapp/service.ts` → `startBaileysSession` (listener `messages.upsert`)
+     - `app/dashboard/(clinic)/financial/payroll/components/WhatsAppExtratoModal.tsx` [NOVO]
+     - `app/dashboard/(clinic)/financial/payroll/page.tsx` → `PayrollPage`
+     - `__tests__/api/payroll/whatsapp-repasse.test.ts` [NOVO]
+   - **Comandos Interativos via WhatsApp**: Qualquer profissional cadastrado e ativo pode enviar comandos como *"extrato"*, *"repasse"*, *"quanto já ganhei"* ou *"saldo"* para o WhatsApp conectado da clínica.
+   - **Autenticação Segura por Telefone (LGPD)**: O sistema normaliza e valida o número remetente contra a base de usuários (`users.phone`) e profissionais da clínica (`doctors`). Números desconhecidos recebem aviso de bloqueio por sigilo financeiro e LGPD.
+   - **Cálculo em Tempo Real**: Totaliza atendimentos concluídos no mês (`status = 'COMPLETED'`), faturamento bruto gerado, percentuais e valores fixos de contratos ativos (`doctor_contracts`), valor acumulado a receber e projeção de consultas futuras até o fim do mês.
+   - **Preview e Teste no Painel**: Adicionado modal interativo com prévia fiel da mensagem WhatsApp e botão para disparo de teste direto para o celular do profissional.
 
 
-- **[2026-09-02] Reformula��o Visual Enterprise:** Remo��o completa da est�tica SaaS IA (gradientes, sombras exageradas, bordas arredondadas e emojis) em prol de uma interface densa, plana e s�ria. M�dulo: Global (components/ui, landing, app/dashboard, etc).
+

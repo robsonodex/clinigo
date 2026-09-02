@@ -55,6 +55,7 @@ import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 import { NotaRepasseButton } from './components/NotaRepasseButton';
+import { WhatsAppExtratoModal } from './components/WhatsAppExtratoModal';
 
 interface Payroll {
     id: string;
@@ -214,21 +215,44 @@ export default function PayrollPage() {
         },
     });
 
+    // Buscar lista de profissionais para simulações e extrato WhatsApp
+    const { data: doctorsData } = useQuery({
+        queryKey: ['doctors-list-payroll'],
+        queryFn: async () => {
+            const res = await fetch('/api/doctors');
+            const json = await res.json();
+            return json.data || [];
+        },
+    });
+
     const payrolls = data?.data || [];
     const summary = data?.summary;
     const monthOptions = getMonthOptions();
 
+    const allDoctors = (doctorsData && doctorsData.length > 0)
+        ? doctorsData
+        : payrolls.map((p) => ({
+            id: p.doctor.id,
+            name: p.doctor.name || p.doctor.user?.email,
+            crm: p.doctor.crm,
+            specialty: p.doctor.specialty,
+            user: {
+                full_name: p.doctor.name,
+                phone: '',
+            },
+        }));
+
     return (
         <div className="space-y-6 p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">{profLabel.repasse}</h1>
                     <p className="text-muted-foreground">
                         Gestão de repasses e folha de pagamento dos {profLabel.plural.toLowerCase()}
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                         <SelectTrigger className="w-[200px]">
                             <SelectValue />
@@ -241,6 +265,7 @@ export default function PayrollPage() {
                             ))}
                         </SelectContent>
                     </Select>
+                    <WhatsAppExtratoModal doctors={allDoctors} />
                     <Link href="/dashboard/financial/payroll/report">
                         <Button variant="outline">
                             <BarChart3 className="w-4 h-4 mr-2" />

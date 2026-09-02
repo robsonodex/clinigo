@@ -362,6 +362,31 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
       await saveAuthStateToStorage(clinicId, authData, sector)
     })
 
+    // Ouvir mensagens recebidas para comandos interativos (ex: Extrato de Repasse do Profissional)
+    socket.ev.on('messages.upsert', async ({ messages, type }: { messages: any[]; type: string }) => {
+      if (type !== 'notify') return
+      for (const msg of messages) {
+        try {
+          if (!msg.message || msg.key.fromMe) continue
+          const remoteJid = msg.key.remoteJid
+          if (!remoteJid || remoteJid.endsWith('@g.us')) continue // Ignora grupos
+
+          const text =
+            msg.message.conversation ||
+            msg.message.extendedTextMessage?.text ||
+            msg.message.imageMessage?.caption ||
+            ''
+
+          if (text) {
+            const { processIncomingWhatsAppRepasse } = await import('@/lib/services/whatsapp-repasse')
+            await processIncomingWhatsAppRepasse(clinicId, remoteJid, text, sector)
+          }
+        } catch (msgErr: any) {
+          console.error('[WhatsApp] Erro ao processar mensagem recebida:', msgErr?.message || msgErr)
+        }
+      }
+    })
+
     // ===== CHATBOT CLIN: Gerenciado exclusivamente via Railway =====
     if (clinicId === CLIN_SESSION_ID) {
       console.log(`[Clin WhatsApp] ℹ️ Clin Sales Bot é gerenciado 100% pelo serviço Railway standalone. Socket in-process do Next.js ignorado para evitar conflito 440.`)
