@@ -216,8 +216,9 @@ export const updateSchedulesSchema = z
  */
 export const listDoctorsQuerySchema = z.object({
     clinic_slug: z.string().optional(),
-    clinic_id: z.string().uuid().optional(),
+    clinic_id: z.string().optional(),
     specialty: z.string().optional(),
+    search: z.string().optional(),
     is_accepting: z
         .string()
         .transform((val) => val === 'true')
@@ -232,7 +233,7 @@ export const listDoctorsQuerySchema = z.object({
         .regex(/^\d+$/)
         .transform(Number)
         .optional(),
-})
+}).passthrough()
 
 // Type exports
 export type CreateDoctorInput = z.infer<typeof createDoctorSchema>

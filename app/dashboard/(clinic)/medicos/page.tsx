@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRole } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -39,7 +41,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar, Users, Stethoscope } from 'lucide-react'
+import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar, Users, Stethoscope, DollarSign } from 'lucide-react'
 import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog'
 import { type Doctor, api } from '@/lib/api-client'
 import { formatCurrency, getInitials } from '@/lib/utils'
@@ -56,6 +58,14 @@ export default function DoctorsPage() {
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const profLabel = useProfessionalLabel()
+    const searchParams = useSearchParams()
+
+    useEffect(() => {
+        if (searchParams.get('action') === 'novo') {
+            setEditingDoctor(null)
+            setIsDialogOpen(true)
+        }
+    }, [searchParams])
 
 
     const { data: response, isLoading, error } = useQuery({
