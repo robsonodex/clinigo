@@ -14,22 +14,27 @@ const bulletinSchema = z.object({
 // GET: Retorna os boletins ativos da clínica
 export async function GET(request: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id')
+        const supabase = await createClient()
+
+        let userId = request.headers.get('x-user-id')
         if (!userId) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            const { data: { user } } = await supabase.auth.getUser()
+            userId = user?.id || null
         }
 
-        const supabase = await createClient()
+        if (!userId) {
+            return NextResponse.json({ bulletins: [] })
+        }
 
         // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
             .select('clinic_id')
             .eq('id', userId)
-            .single()
+            .maybeSingle()
 
         if (userError || !currentUser?.clinic_id) {
-            return NextResponse.json({ error: 'Clínica não encontrada para o usuário' }, { status: 404 })
+            return NextResponse.json({ bulletins: [] })
         }
 
         const { data: bulletins, error } = await supabase
@@ -40,15 +45,15 @@ export async function GET(request: NextRequest) {
             .order('created_at', { ascending: false })
 
         if (error) {
-            console.error('Erro ao buscar bulletins:', error)
-            return NextResponse.json({ error: 'Erro ao buscar boletins' }, { status: 500 })
+            console.warn('[Bulletins] Tabela ou consulta indisponível:', error.message)
+            return NextResponse.json({ bulletins: [] })
         }
 
         return NextResponse.json({ bulletins: bulletins || [] })
 
     } catch (error) {
-        console.error('Erro interno na API de bulletins:', error)
-        return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+        console.error('Erro na API de bulletins:', error)
+        return NextResponse.json({ bulletins: [] })
     }
 }
 

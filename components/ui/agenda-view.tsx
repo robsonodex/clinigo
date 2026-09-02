@@ -32,6 +32,7 @@ import {
     Trash2,
     Plus,
     HelpCircle,
+    UserCheck,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -89,6 +90,7 @@ import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenc
 import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
 import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
 import { BlockScheduleModal } from '@/components/appointments/BlockScheduleModal'
+import { RoomQrModal } from '@/components/appointments/RoomQrModal'
 import { AlertTriangle, Lock } from 'lucide-react'
 import {
     Tooltip,
@@ -675,7 +677,7 @@ export default function AgendaPage() {
             <div className="flex flex-col gap-3 mb-3">
                 {/* Barra de Ferramentas Principal */}
                 <div className="flex items-center bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-xl border border-slate-200/60 shadow-sm w-full overflow-x-auto no-scrollbar">
-                    <div className="flex items-center gap-2 w-full shrink-0">
+                    <div className="flex items-center gap-2 min-w-max w-full pr-1">
                         <h1 className="text-xl font-bold whitespace-nowrap mr-1 shrink-0">Agenda</h1>
                         
                         {/* Botão de Filtros/Ações unificado */}
@@ -828,25 +830,29 @@ export default function AgendaPage() {
                         <div className="flex items-center gap-2 shrink-0 ml-auto">
                             <Button
                                 variant="outline"
-                                className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3.5 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
+                                className="rounded-xl border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
                                 onClick={() => {
                                     setPreselectedSlot(null)
                                     setBlockModalOpen(true)
                                 }}
+                                title="Bloquear Horário"
                             >
                                 <Lock className="h-4 w-4 shrink-0 text-amber-600" />
-                                <span>Bloquear Horário</span>
+                                <span>Bloquear</span>
                             </Button>
 
+                            <RoomQrModal />
+
                             <Button
-                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-4 md:px-5 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
+                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-3.5 sm:px-4 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
                                 onClick={() => {
                                     setPreselectedSlot(null)
                                     setManualAppointmentOpen(true)
                                 }}
+                                title="Novo Agendamento"
                             >
                                 <PlusCircle className="h-4 w-4 shrink-0" />
-                                <span>Novo Agendamento</span>
+                                <span>Novo</span>
                             </Button>
                         </div>
                     </div>
@@ -1229,6 +1235,18 @@ export default function AgendaPage() {
                                                                                             <User className="w-4 h-4 mr-2" />
                                                                                             Ver Detalhes
                                                                                         </DropdownMenuItem>
+                                                                                        {appointment.status !== 'CANCELLED' && (
+                                                                                            <DropdownMenuItem 
+                                                                                                onClick={() => {
+                                                                                                    setSelectedAppointmentId(appointment.id)
+                                                                                                    setDetailsDrawerOpen(true)
+                                                                                                }}
+                                                                                                className="text-emerald-700 dark:text-emerald-400 font-semibold"
+                                                                                            >
+                                                                                                <UserCheck className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                                                {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
+                                                                                            </DropdownMenuItem>
+                                                                                        )}
                                                                                         {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
                                                                                             <DropdownMenuItem
                                                                                                 className="text-destructive focus:text-destructive"
@@ -1477,6 +1495,18 @@ export default function AgendaPage() {
                                                                                                     <User className="w-4 h-4 mr-2" />
                                                                                                     Ver Detalhes
                                                                                                 </DropdownMenuItem>
+                                                                                                {appointment.status !== 'CANCELLED' && (
+                                                                                                    <DropdownMenuItem 
+                                                                                                        onClick={() => {
+                                                                                                            setSelectedAppointmentId(appointment.id)
+                                                                                                            setDetailsDrawerOpen(true)
+                                                                                                        }}
+                                                                                                        className="text-emerald-700 dark:text-emerald-400 font-semibold"
+                                                                                                    >
+                                                                                                        <UserCheck className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                                                        {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
+                                                                                                    </DropdownMenuItem>
+                                                                                                )}
                                                                                                 {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
                                                                                                     <DropdownMenuItem
                                                                                                         className="text-destructive focus:text-destructive"

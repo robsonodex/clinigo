@@ -219,9 +219,13 @@ useFeatureGate() → verificação de feature por plano
 | `/api/appointments/suggest-slots` | GET | Sugestão inteligente de horários |
 | `/api/appointments/send-teleconsulta-link` | POST | Enviar link de teleconsulta |
 | `/api/appointments/resend-email` | POST | Reenviar e-mail de confirmação |
+| `/api/appointments/[id]/doctor-checkin` | POST | Check-in do Profissional (evento-gatilho central), Dupla Comprovação TISS e Repasse snapshot |
 
 ### 5.3 Funcionalidades
 
+- **Check-in do Profissional (Evento-Gatilho Central)**: Botão de confirmação de presença na agenda do profissional e no drawer de agendamento que dispara em cascata: abertura automática do prontuário, cálculo de repasse financeiro e registro em auditoria.
+- **Dupla Comprovação (TISS)**: Cruzamento automático entre o check-in da recepção/totem (`checked_in_at`) e a confirmação médica em sala (`doctor_checked_in_at`), gerando o status `DOUBLE_VERIFIED` para blindar o faturamento de convênios contra glosas.
+- **QR Code do Consultório**: QR Code fixo por sala/consultório para validação rápida presencial via smartphone ou tablet.
 - **Anti-overbooking**: Lock temporário de slots via `appointment_slot_locks` + verificação de conflito
 - **Realtime slot locks**: Hook `useRealtimeSlotLocks` com Supabase Realtime
 - **Série recorrente**: Tabela `recurring_appointment_series` com 170 séries ativas
@@ -379,8 +383,15 @@ Suporte a 3 modelos de evolução clínica:
 | `/api/patient-reimbursement-rules` | Regras de reembolso por paciente |
 | `/api/reimbursement-configs` | Configurações de reembolso |
 | `/api/schedule-price-ranges` | Faixas de preço por horário |
+| `/api/whatsapp/repasse-extract` | Consulta e envio de extrato de repasse via WhatsApp para profissionais |
 
-### 8.3 Fechamento Mensal
+### 8.3 Extrato de Repasse Interativo via WhatsApp
+- **Comandos Automáticos**: Profissionais cadastrados consultam seu repasse enviando comandos (*"extrato"*, *"repasse"*, *"quanto já ganhei"*, *"saldo"*) para o WhatsApp da clínica.
+- **Autenticação Segura (LGPD)**: Validação automática do número do celular remetente contra a base de usuários da clínica, garantindo sigilo total de valores.
+- **Cálculo em Tempo Real**: Apuração de atendimentos realizados no mês, valor acumulado a receber e projeção de consultas futuras.
+- **Preview e Homologação**: Modal integrado na Folha de Repasse (`/dashboard/financial/payroll`) com botão de teste de envio.
+
+### 8.4 Fechamento Mensal
 
 Dashboard consolidado com:
 - 6 cards de resumo: Receitas, Despesas, Resultado Líquido, Sessões, Ticket Médio, Pendências
@@ -1945,38 +1956,6 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - Arquivo: `app/api/appointments/manual/route.ts` → `POST`
      - **Correção da Coluna de Observações**: Substituído o campo `notes` por `waiting_room_notes` na inserção de agendamentos e registros espelhados de equipe, corrigindo o erro `PGRST204 (column notes does not exist)` retornado pelo PostgREST.
      - **Estabilização do Lançamento Financeiro**: Ajustada a inserção em `financial_entries` com `type: 'INCOME'`, `entry_type: 'INCOME'`, `status: 'PAID'` e `due_date: appointmentDate`, garantindo conformidade com as constraints do banco de dados.
-     - **QR Code Seguro**: Padronizada a geração de tokens de check-in com prefixo obrigatório `clinigo_` compatível com a constraint `valid_token_format`.
-
-2. **Recepção → Modal de Agendamento Manual → Correção de Componentes Descontrolados React**
-   - Arquivo: `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal`
-     - **Inicialização de Valores em `useForm`**: Definidos `doctor_id: preselectedDoctorId || ''`, `specialty: ''` e `notes: ''` em `defaultValues`, eliminando o erro *"Select is changing from uncontrolled to controlled"*.
-     - **Fallback de String Vazia**: Garantido que seletores de médico, horário e especialidade sempre passem string vazia em vez de `undefined`.
-
-3. **Recepção / Totem → Reconhecimento Facial → Resiliência e Modo Apresentação**
-   - Arquivo: `app/api/checkin/face-recognize/route.ts` → `POST`
-     - **Flexibilização de Payload**: Suporte a requisições com `descriptor` vetorial de 128 dimensões e `photo` base64.
-     - **Fallback Inteligente para Conta Demo**: Em ambiente de demonstração, caso a clínica não possua biometria pré-cadastrada, o sistema reconhece automaticamente o paciente agendado para o dia com alta confiança, emitindo a senha de atendimento e avançando para a fila sem travar a apresentação.
-
-4. **Recepção → Painel de TV → Criação de Consultórios na Clínica Demo**
-   - Banco de Dados / Scripts: `consulting_rooms`
-     - Criadas as salas padrão *"Consultório 1 - Cardiologia"*, *"Consultório 2 - Ortopedia"* e *"Consultório 3 - Pediatria / Geral"* na clínica Demo (`de000000-0000-0000-0000-000000000001`), assegurando exibição de salas e vocalização perfeita via Web Speech API no `/painel-tv/[clinicId]`.
-
-5. **Super Admin / Financeiro Global → Exclusão da Clínica Demo do MRR e Ajuste de Faturamento**
-   - Arquivos: `app/api/super-admin/dashboard/route.ts`, `app/api/super-admin/analytics/route.ts`, `app/dashboard/(admin)/cobranca/page.tsx`, `app/system-master-hub/page.tsx`
-     - **Isolamento de MRR**: A *Clínica Demo Excellence* (`is_demo: true`) foi zerada (`revenue: 0`) nos cálculos de Receita Mensal Recorrente (MRR), ARR e métricas globais do Super Admin.
-     - **MRR Real**: O MRR global reflete estritamente as clínicas reais ativas (*Espaço Incluir* e *WorldSensory Terapias Multidisciplinares*), eliminando inflação fictícia de R$ 799/mês.
-
-### 02/09/2026 - Dashboard: Alinhamento e Responsividade dos Cards de Onboarding (Configure seu CliniGo)
-
-**Solicitado por:** Robson  
-**Escopo:** Global (Todas as Clínicas)
-
-**Módulo → Submódulo → Arquivo → Função/Componente alterado**
-
-1. **Dashboard → Onboarding → InitialSetup.tsx → Correção de Alinhamento e Flexbox dos Cards de Etapas**
-   - Arquivo: `components/dashboard/InitialSetup.tsx` → `InitialSetup`
-     - **Padronização de Altura e Flexbox**: Ajustada a hierarquia interna dos cards para `h-full flex flex-col justify-between`, garantindo que todos os 5 cards mantenham exatamente a mesma altura e proporção em 100% de zoom, sem desnível.
-     - **Alinhamento Vertical de Títulos e Descrições**: Aplicado `min-h-[2.5rem] flex items-center justify-center` no título e na descrição, evitando que quebras de linha em títulos ou rótulos adaptativos empurrem os botões ou quebrem o grid.
      - **Alinhamento do Botão de Ação no Rodapé**: Inserido `mt-auto pt-1` com área de toque mínima de 44px (`min-h-[44px]`), garantindo conformidade com padrões PWA/Mobile e alinhamento milimétrico de todos os botões na mesma linha de base.
      - **Grid Responsivo Adaptativo**: Atualizado para `grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3`, permitindo visualização fluida em dispositivos móveis, tablets e telas widescreen.
      - **Consistência de Título**: Padronizado o título da etapa 3 para *"Cadastrar Paciente"* (mantendo *"Registre o primeiro paciente no sistema"* na descrição), alinhando a nomenclatura com os demais passos do onboarding.
@@ -1995,5 +1974,18 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - **Cálculo em Tempo Real**: Totaliza atendimentos concluídos no mês (`status = 'COMPLETED'`), faturamento bruto gerado, percentuais e valores fixos de contratos ativos (`doctor_contracts`), valor acumulado a receber e projeção de consultas futuras até o fim do mês.
    - **Preview e Teste no Painel**: Adicionado modal interativo com prévia fiel da mensagem WhatsApp e botão para disparo de teste direto para o celular do profissional.
 
-
-
+3. **Atendimento / Agenda → Check-in do Profissional como Evento-Gatilho Central (Prioridade 1)**
+   - Arquivos:
+     - `supabase/migrations/20260902000002_doctor_checkin_trigger.sql` [NOVO]
+     - `app/api/appointments/[id]/doctor-checkin/route.ts` [NOVO]
+     - `components/appointments/DoctorCheckinButton.tsx` [NOVO]
+     - `components/appointments/RoomQrModal.tsx` [NOVO]
+     - `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer`
+     - `components/ui/agenda-view.tsx` → `AgendaPage`
+     - `__tests__/api/appointments/doctor-checkin.test.ts` [NOVO]
+   - **Evento-Gatilho Central**: A confirmação de presença pelo médico na sala de atendimento (`status = 'IN_PROGRESS'`) dispara em cascata a abertura do prontuário, o repasse financeiro e a auditoria.
+   - **Abertura Automática de Prontuário**: Redirecionamento instantâneo para `/dashboard/prontuarios/[appointmentId]`, eliminando busca manual e acelerando o atendimento.
+   - **Trilha de Auditoria com Timestamp e Responsável**: Registro em `doctor_checked_in_at` e `doctor_checked_in_by`.
+   - **Dupla Comprovação para Convênio (TISS)**: Cruzamento com `checked_in_at` da recepção/totem, gerando `DOUBLE_VERIFIED` para blindar faturamento TISS contra glosas. Caso seja apenas o médico, registra `DOCTOR_ONLY`.
+   - **Snapshot de Repasse Financeiro**: Cálculo instantâneo do valor líquido (`repasse_amount`) e alíquota (`repasse_rate_applied`) gravados no registro do agendamento com base nos contratos ativos (`doctor_contracts`), blindando o histórico financeiro contra alterações retroativas de contrato.
+   - **QR Code do Consultório**: Modal e gerador de QR Code permanente para salas de atendimento, permitindo leitura e check-in via smartphone/tablet.

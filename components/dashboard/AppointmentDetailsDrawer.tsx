@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send } from 'lucide-react'
+import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
 interface AppointmentDetailsDrawerProps {
     appointmentId: string | null
@@ -304,6 +305,10 @@ export function AppointmentDetailsDrawer({
         appointment?.doctor?.user?.full_name ||
         'Médico'
 
+    const patientName = appointment?.patient?.full_name ||
+        appointment?.patient?.name ||
+        'Paciente'
+
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
             <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
@@ -379,6 +384,27 @@ export function AppointmentDetailsDrawer({
                                 </div>
                             </div>
                         )}
+
+                        {/* CHECK-IN DO PROFISSIONAL (EVENTO-GATILHO CENTRAL) */}
+                        <div className="pt-3 pb-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                                Atendimento Clínico
+                            </Label>
+                            <DoctorCheckinButton
+                                appointmentId={appointment.id}
+                                patientName={patientName}
+                                scheduledTime={formattedDate}
+                                status={appointment.status}
+                                hasReceptionCheckin={Boolean(appointment.checked_in || appointment.checked_in_at)}
+                                doctorCheckedInAt={appointment.doctor_checked_in_at}
+                                verificationLevel={appointment.verification_level}
+                                repasseAmount={appointment.repasse_amount}
+                                className="w-full justify-center"
+                                onSuccess={() => {
+                                    loadAppointment();
+                                }}
+                            />
+                        </div>
 
                         <div className="pt-2">
                             <Button 

@@ -864,9 +864,13 @@ function NavItemComponent({
                                                     : isChildActive ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-700"
                                             )} />
                                             {child.title}
-                                            <Link
-                                                href={`/dashboard/help#${getHelpAnchor(child.title)}`}
-                                                onClick={(e) => e.stopPropagation()}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    window.location.href = `/dashboard/help#${getHelpAnchor(child.title)}`
+                                                }}
                                                 className={cn(
                                                     "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
                                                     isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-200/50 text-muted-foreground hover:text-foreground"
@@ -874,7 +878,7 @@ function NavItemComponent({
                                                 title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
                                             >
                                                 <HelpCircle className="w-3 h-3" />
-                                            </Link>
+                                            </button>
                                         </span>
                                     </Link>
                                 </VisualLock>
@@ -949,9 +953,13 @@ function NavItemComponent({
             )}>
                 {item.title}
                 {!isLocked && (
-                    <Link
-                        href={`/dashboard/help#${getHelpAnchor(item.title)}`}
-                        onClick={(e) => e.stopPropagation()}
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            window.location.href = `/dashboard/help#${getHelpAnchor(item.title)}`
+                        }}
                         className={cn(
                             "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
                             isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-100 text-slate-400 hover:text-slate-600"
@@ -959,7 +967,7 @@ function NavItemComponent({
                         title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
                     >
                         <HelpCircle className="w-3 h-3" />
-                    </Link>
+                    </button>
                 )}
             </span>
             {isLocked && (
