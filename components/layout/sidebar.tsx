@@ -763,6 +763,7 @@ function NavItemComponent({
         const parentIsLocked = parentCurrentLevel < parentRequiredLevel
 
         const [showUpgrade, setShowUpgrade] = useState(false)
+        const pathname = usePathname()
 
         return (
             <div>
@@ -783,8 +784,8 @@ function NavItemComponent({
                                 : 'text-muted-foreground/50 hover:bg-muted/50'
                             : isActive
                                 ? isDark
-                                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 shadow-xs'
-                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs'
+                                    ? 'text-emerald-300 font-bold hover:bg-white/5'
+                                    : 'text-emerald-700 font-bold hover:bg-slate-100/80'
                                 : isDark
                                     ? 'text-emerald-100/70 hover:bg-white/5 hover:text-white active:bg-white/10'
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60'
@@ -793,11 +794,15 @@ function NavItemComponent({
                     <div className="flex items-center gap-2.5">
                         <item.icon className={cn(
                             "w-4 h-4 transition-colors shrink-0",
-                            isDark ? "text-emerald-100/60 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900"
+                            isDark
+                                ? isActive ? "text-emerald-300" : "text-emerald-100/60 group-hover:text-white"
+                                : isActive ? "text-emerald-600" : "text-slate-500 group-hover:text-slate-900"
                         )} />
                         <span className={cn(
                             "flex items-center transition-colors",
-                            isDark ? "text-emerald-100/80 group-hover:text-white" : ""
+                            isDark
+                                ? isActive ? "text-emerald-300" : "text-emerald-100/80 group-hover:text-white"
+                                : isActive ? "text-emerald-700" : ""
                         )}>
                             {item.title}
                             {!parentIsLocked && (
@@ -828,48 +833,53 @@ function NavItemComponent({
                         "ml-3.5 pl-3 border-l space-y-0.5 mt-1 mb-1 transition-colors",
                         isDark ? "border-emerald-900/40" : "border-slate-200"
                     )}>
-                        {item.children?.map((child) => (
-                            <VisualLock
-                                key={child.href}
-                                requiredPlan={child.minPlan || 'BASICO'}
-                                currentPlan={currentPlan}
-                                featureName={child.title}
-                            >
-                                <Link
-                                    href={child.href}
-                                    className={cn(
-                                        'flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all group',
-                                        touchClass,
-                                        isDark
-                                            ? isActive
-                                                ? 'bg-emerald-500/10 text-emerald-300 font-semibold'
-                                                : 'text-emerald-100/60 hover:bg-white/5 hover:text-white active:bg-white/10'
-                                            : isActive
-                                                ? 'bg-emerald-50 text-emerald-700 font-semibold'
-                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60'
-                                    )}
+                        {item.children?.map((child) => {
+                            const isChildActive = pathname === child.href || pathname.startsWith(`${child.href}/`)
+                            return (
+                                <VisualLock
+                                    key={child.href}
+                                    requiredPlan={child.minPlan || 'BASICO'}
+                                    currentPlan={currentPlan}
+                                    featureName={child.title}
                                 >
-                                    <span className="flex items-center gap-2.5">
-                                        <child.icon className={cn(
-                                            "w-3.5 h-3.5 transition-colors shrink-0",
-                                            isDark ? "text-emerald-100/50 group-hover:text-white" : "text-slate-400 group-hover:text-slate-700"
-                                        )} />
-                                        {child.title}
-                                        <Link
-                                            href={`/dashboard/help#${getHelpAnchor(child.title)}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className={cn(
-                                                "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
-                                                isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-200/50 text-muted-foreground hover:text-foreground"
-                                            )}
-                                            title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
-                                        >
-                                            <HelpCircle className="w-3 h-3" />
-                                        </Link>
-                                    </span>
-                                </Link>
-                            </VisualLock>
-                        ))}
+                                    <Link
+                                        href={child.href}
+                                        className={cn(
+                                            'flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all group',
+                                            touchClass,
+                                            isDark
+                                                ? isChildActive
+                                                    ? 'bg-emerald-500/15 text-emerald-300 font-semibold'
+                                                    : 'text-emerald-100/60 hover:bg-white/5 hover:text-white active:bg-white/10'
+                                                : isChildActive
+                                                    ? 'bg-emerald-50 text-emerald-700 font-semibold'
+                                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60'
+                                        )}
+                                    >
+                                        <span className="flex items-center gap-2.5">
+                                            <child.icon className={cn(
+                                                "w-3.5 h-3.5 transition-colors shrink-0",
+                                                isDark
+                                                    ? isChildActive ? "text-emerald-300" : "text-emerald-100/50 group-hover:text-white"
+                                                    : isChildActive ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-700"
+                                            )} />
+                                            {child.title}
+                                            <Link
+                                                href={`/dashboard/help#${getHelpAnchor(child.title)}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={cn(
+                                                    "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
+                                                    isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-200/50 text-muted-foreground hover:text-foreground"
+                                                )}
+                                                title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
+                                            >
+                                                <HelpCircle className="w-3 h-3" />
+                                            </Link>
+                                        </span>
+                                    </Link>
+                                </VisualLock>
+                            )
+                        })}
                     </div>
                 )}
                 {/* UpgradeModal para itens bloqueados com children */}
