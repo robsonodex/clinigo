@@ -12,7 +12,6 @@ import {
   Save,
   Clock,
   RotateCcw,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   X,
@@ -561,10 +560,6 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             <h2 className="text-xl font-bold text-foreground">
               Valores por Paciente (Overrides de Repasse)
             </h2>
-            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-2 py-0.5 shadow-sm animate-pulse">
-              <Sparkles className="w-3 h-3 mr-1" />
-              NOVO
-            </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Defina repasses específicos para cada paciente deste profissional. Valores
