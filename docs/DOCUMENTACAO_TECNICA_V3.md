@@ -1982,3 +1982,5 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
      - **ConsistÃªncia de TÃ­tulo**: Padronizado o tÃ­tulo da etapa 3 para *"Cadastrar Paciente"* (mantendo *"Registre o primeiro paciente no sistema"* na descriÃ§Ã£o), alinhando a nomenclatura com os demais passos do onboarding.
 
 
+
+- **[2026-09-02] Reformulação Visual Enterprise:** Remoção completa da estética SaaS IA (gradientes, sombras exageradas, bordas arredondadas e emojis) em prol de uma interface densa, plana e séria. Módulo: Global (components/ui, landing, app/dashboard, etc).

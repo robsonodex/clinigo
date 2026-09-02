@@ -353,9 +353,9 @@ export default function DashboardPage() {
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
         const date = new Date(dateStr + 'T00:00:00')
-        if (date.getTime() === today.getTime()) return '📅 Hoje'
-        if (date.getTime() === tomorrow.getTime()) return '📅 Amanhã'
-        return `📅 ${formatDate(dateStr)}`
+        if (date.getTime() === today.getTime()) return ' Hoje'
+        if (date.getTime() === tomorrow.getTime()) return ' Amanhã'
+        return ` ${formatDate(dateStr)}`
     }
 
     return (
@@ -502,7 +502,6 @@ export default function DashboardPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold text-purple-900">R$ 0</div>
-                                    <p className="text-xs text-purple-700">Este mês</p>
                                 </CardContent>
                             </Card>
                         </Link>

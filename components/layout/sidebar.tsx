@@ -172,7 +172,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/prescricoes',
                 icon: Clipboard,
                 roles: ['DOCTOR'],
-                badge: 'PRO',
                 minPlan: 'PROFESSIONAL',
             },
             {
@@ -241,7 +240,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/terapia/retencao',
                 icon: BarChart3,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -336,7 +334,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/financial/payroll',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -361,7 +358,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/financial/dre',
                 icon: BarChart3,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -415,7 +411,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/tiss',
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'PRO',
                 minPlan: 'PROFESSIONAL',
                 children: [
                     {
@@ -440,7 +435,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/meu-financeiro',
                 icon: Wallet,
                 roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -493,7 +487,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/chat',
                 icon: MessagesSquare,
                 roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },
             {
@@ -501,7 +494,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/whatsapp',
                 icon: MessageCircle,
                 roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },
             {
@@ -516,7 +508,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/crm',
                 icon: Megaphone,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -564,7 +555,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/importacao',
                 icon: Upload,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },
             {
@@ -572,7 +562,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/automacao',
                 icon: Bot,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -647,7 +636,6 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/integracoes',
                 icon: Globe,
                 roles: ['CLINIC_ADMIN'],
-                badge: 'AVÇ',
                 minPlan: 'AVANCADO',
             },
 
@@ -662,7 +650,6 @@ const navigationSections: NavSection[] = [
                 href: '/system-master-hub',
                 icon: Shield,
                 roles: ['SUPER_ADMIN'],
-                badge: 'ADMIN',
             },
             {
                 title: 'Clínicas',
@@ -788,7 +775,7 @@ function NavItemComponent({
                         }
                     }}
                     className={cn(
-                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group',
+                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all group',
                         touchClass,
                         parentIsLocked
                             ? isDark
@@ -796,17 +783,17 @@ function NavItemComponent({
                                 : 'text-muted-foreground/50 hover:bg-muted/50'
                             : isActive
                                 ? isDark
-                                    ? 'bg-emerald-800/40 text-white border border-emerald-700/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
-                                    : 'bg-primary text-primary-foreground'
+                                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 shadow-xs'
+                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs'
                                 : isDark
                                     ? 'text-emerald-100/70 hover:bg-white/5 hover:text-white active:bg-white/10'
-                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60'
                     )}
                 >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                         <item.icon className={cn(
-                            "w-5 h-5 transition-colors",
-                            isDark ? "text-emerald-100/60 group-hover:text-white" : ""
+                            "w-4 h-4 transition-colors shrink-0",
+                            isDark ? "text-emerald-100/60 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900"
                         )} />
                         <span className={cn(
                             "flex items-center transition-colors",
@@ -819,43 +806,27 @@ function NavItemComponent({
                                     onClick={(e) => e.stopPropagation()}
                                     className={cn(
                                         "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
-                                        isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-white/20 text-muted-foreground hover:text-foreground"
+                                        isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-200/50 text-muted-foreground hover:text-foreground"
                                     )}
                                     title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
                                 >
-                                    <HelpCircle className="w-3.5 h-3.5" />
+                                    <HelpCircle className="w-3 h-3" />
                                 </Link>
                             )}
                         </span>
-                        {item.badge && !parentIsLocked && (
-                            <span className={cn(
-                                "px-1.5 py-0.5 text-[10px] font-bold rounded transition-all",
-                                isDark
-                                    ? item.badge === 'PRO' ? "bg-blue-500/10 text-blue-300 border border-blue-500/20" :
-                                        item.badge === 'ENT' ? "bg-purple-500/10 text-purple-300 border border-purple-500/20" :
-                                            item.badge === 'AVÇ' ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20" :
-                                                "bg-white/10 text-slate-300 border border-white/20"
-                                    : item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
-                                        item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
-                                            item.badge === 'AVÇ' ? "bg-emerald-100 text-emerald-700" :
-                                                "bg-gray-100 text-gray-700"
-                            )}>
-                                {item.badge}
-                            </span>
-                        )}
                     </div>
                     {parentIsLocked ? (
                         <Lock className={cn("h-3.5 w-3.5", isDark ? "text-emerald-100/30" : "text-muted-foreground")} />
                     ) : isOpen ? (
-                        <ChevronDown className={cn("w-4 h-4 transition-colors", isDark ? "text-emerald-100/50 group-hover:text-white" : "")} />
+                        <ChevronDown className={cn("w-3.5 h-3.5 transition-colors", isDark ? "text-emerald-100/50 group-hover:text-white" : "text-slate-400 group-hover:text-slate-700")} />
                     ) : (
-                        <ChevronRight className={cn("w-4 h-4 transition-colors", isDark ? "text-emerald-100/50 group-hover:text-white" : "")} />
+                        <ChevronRight className={cn("w-3.5 h-3.5 transition-colors", isDark ? "text-emerald-100/50 group-hover:text-white" : "text-slate-400 group-hover:text-slate-700")} />
                     )}
                 </button>
                 {isOpen && !parentIsLocked && (
                     <div className={cn(
-                        "ml-4 pl-4 border-l mt-1 space-y-1 transition-colors",
-                        isDark ? "border-emerald-900/30" : ""
+                        "ml-3.5 pl-3 border-l space-y-0.5 mt-1 mb-1 transition-colors",
+                        isDark ? "border-emerald-900/40" : "border-slate-200"
                     )}>
                         {item.children?.map((child) => (
                             <VisualLock
@@ -867,21 +838,21 @@ function NavItemComponent({
                                 <Link
                                     href={child.href}
                                     className={cn(
-                                        'flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all group',
+                                        'flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all group',
                                         touchClass,
                                         isDark
                                             ? isActive
-                                                ? 'bg-emerald-900/30 text-white font-semibold'
+                                                ? 'bg-emerald-500/10 text-emerald-300 font-semibold'
                                                 : 'text-emerald-100/60 hover:bg-white/5 hover:text-white active:bg-white/10'
                                             : isActive
-                                                ? 'bg-muted text-foreground font-semibold'
-                                                : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                                                ? 'bg-emerald-50 text-emerald-700 font-semibold'
+                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60'
                                     )}
                                 >
-                                    <span className="flex items-center gap-3">
+                                    <span className="flex items-center gap-2.5">
                                         <child.icon className={cn(
-                                            "w-4 h-4 transition-colors",
-                                            isDark ? "text-emerald-100/50 group-hover:text-white" : ""
+                                            "w-3.5 h-3.5 transition-colors shrink-0",
+                                            isDark ? "text-emerald-100/50 group-hover:text-white" : "text-slate-400 group-hover:text-slate-700"
                                         )} />
                                         {child.title}
                                         <Link
@@ -893,7 +864,7 @@ function NavItemComponent({
                                             )}
                                             title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
                                         >
-                                            <HelpCircle className="w-3.5 h-3.5" />
+                                            <HelpCircle className="w-3 h-3" />
                                         </Link>
                                     </span>
                                 </Link>
@@ -937,12 +908,12 @@ function NavItemComponent({
         <Link
             href={item.href}
             className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all relative group',
+                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all relative group',
                 touchClass,
                 isActive
                     ? isDark
-                        ? 'bg-emerald-800/40 text-white border border-emerald-700/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
-                        : 'bg-primary text-primary-foreground'
+                        ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 shadow-xs'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs'
                     : isLocked
                         ? isDark
                             ? 'text-emerald-100/30 hover:bg-white/5'
@@ -953,14 +924,14 @@ function NavItemComponent({
                                 : 'text-emerald-600 hover:bg-emerald-50/50 dark:text-emerald-450 dark:hover:bg-emerald-950/20 active:bg-emerald-100/30 font-semibold'
                             : isDark
                                 ? 'text-emerald-100/70 hover:bg-white/5 hover:text-white active:bg-white/10'
-                                : 'text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60'
             )}
         >
             <item.icon className={cn(
-                "w-5 h-5 transition-colors",
+                "w-4 h-4 transition-colors shrink-0",
                 isDark 
                     ? !isActive && item.title === 'Checklist Inicial' ? "text-emerald-400" : "text-emerald-100/60 group-hover:text-white"
-                    : !isActive && item.title === 'Checklist Inicial' ? "text-emerald-500 dark:text-emerald-450" : ""
+                    : !isActive && item.title === 'Checklist Inicial' ? "text-emerald-500 dark:text-emerald-450" : "text-slate-500 group-hover:text-slate-900"
             )} />
             <span className={cn(
                 "flex-1 flex items-center transition-colors",
@@ -977,28 +948,12 @@ function NavItemComponent({
                         )}
                         title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
                     >
-                        <HelpCircle className="w-3.5 h-3.5" />
+                        <HelpCircle className="w-3 h-3" />
                     </Link>
                 )}
             </span>
             {isLocked && (
                 <Lock className={cn("h-3.5 w-3.5", isDark ? "text-emerald-100/30" : "text-muted-foreground")} />
-            )}
-            {item.badge && !isLocked && (
-                <span className={cn(
-                    "px-1.5 py-0.5 text-[10px] font-bold rounded transition-all",
-                    isDark
-                        ? item.badge === 'AVÇ' ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" :
-                            item.badge === 'PRO' ? "bg-blue-500/10 text-blue-300 border-blue-500/20" :
-                                item.badge === 'ENT' ? "bg-purple-500/10 text-purple-300 border-purple-500/20" :
-                                    "bg-white/10 text-slate-300 border-white/20"
-                        : item.badge === 'AVÇ' ? "bg-emerald-100 text-emerald-700" :
-                            item.badge === 'PRO' ? "bg-blue-100 text-blue-700" :
-                                item.badge === 'ENT' ? "bg-purple-100 text-purple-700" :
-                                    "bg-gray-100 text-gray-700"
-                )}>
-                    {item.badge}
-                </span>
             )}
         </Link>
     )
@@ -1109,7 +1064,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
 
     return (
         <aside className={cn(
-            "flex flex-col h-full transition-all duration-300 ease-in-out",
+            "flex flex-col h-full transition-all duration-300 ease-in-out select-none",
             isDark
                 ? "bg-[#013727] border-r border-emerald-900/30 text-emerald-100"
                 : "bg-white border-r border-slate-200 text-slate-800",
@@ -1135,41 +1090,27 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto">
+            <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
                 {filteredSections.map((section) => {
                     const isPrincipal = section.title === 'Principal'
                     const isOpen = isPrincipal || (openSections[section.title] ?? false)
 
-                    // Section theme config dynamically calculated based on theme selection
-                    const sectionTheme: Record<string, { icon: React.ComponentType<{className?: string}>, bg: string, text: string, border: string, headerBg: string }> = isDark ? {
-                        'Agendamento': { icon: Calendar, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Equipe': { icon: Users2, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Prontuário': { icon: HeartPulse, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Terapia': { icon: Brain, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Financeiro': { icon: DollarSign, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Comunicação': { icon: MessageCircle, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Gestão': { icon: BarChart3, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Configurações': { icon: Settings, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                        'Administração': { icon: Shield, bg: 'bg-emerald-950/40', text: 'text-emerald-300', border: 'border-emerald-900/30', headerBg: 'hover:bg-white/5' },
-                    } : {
-                        'Agendamento': { icon: Calendar, bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-400', headerBg: 'hover:bg-blue-50/60' },
-                        'Equipe': { icon: Users2, bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-400', headerBg: 'hover:bg-teal-50/60' },
-                        'Prontuário': { icon: HeartPulse, bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-400', headerBg: 'hover:bg-amber-50/60' },
-                        'Terapia': { icon: Brain, bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-400', headerBg: 'hover:bg-indigo-50/60' },
-                        'Financeiro': { icon: DollarSign, bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', headerBg: 'hover:bg-emerald-50/60' },
-                        'Comunicação': { icon: MessageCircle, bg: 'bg-sky-50', text: 'text-sky-600', border: 'border-sky-400', headerBg: 'hover:bg-sky-50/60' },
-                        'Gestão': { icon: BarChart3, bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-400', headerBg: 'hover:bg-orange-50/60' },
-                        'Configurações': { icon: Settings, bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-400', headerBg: 'hover:bg-slate-50/60' },
-                        'Administração': { icon: Shield, bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-400', headerBg: 'hover:bg-red-50/60' },
-                    }
-
-                    const theme = sectionTheme[section.title]
-                    const SectionIcon = theme?.icon
+                    const SectionIcon: Record<string, React.ComponentType<{className?: string}>> = {
+                        'Agendamento': Calendar,
+                        'Equipe': Users2,
+                        'Prontuário': HeartPulse,
+                        'Terapia': Brain,
+                        'Financeiro': DollarSign,
+                        'Comunicação': MessageCircle,
+                        'Gestão': BarChart3,
+                        'Configurações': Settings,
+                        'Administração': Shield,
+                    }[section.title] || Layers
 
                     return (
-                        <div key={section.title}>
+                        <div key={section.title} className="space-y-1">
                             {isPrincipal ? (
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     {section.items.map((item) => {
                                         const isActive = pathname === item.href
                                         return (
@@ -1185,54 +1126,43 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                     })}
                                 </div>
                             ) : (
-                                <div className={cn(
-                                    "rounded-lg transition-all duration-200 overflow-hidden border",
-                                    isOpen && theme 
-                                        ? isDark 
-                                            ? `${theme.bg} ${theme.border}` 
-                                            : `${theme.bg} ${theme.border}/20` 
-                                        : "border-transparent"
-                                    )}>
+                                <div>
                                     <button
                                         onClick={() => toggleSection(section.title)}
                                         className={cn(
-                                            "flex items-center justify-between w-full px-3 py-2 rounded-lg group cursor-pointer transition-all duration-200",
+                                            "flex items-center justify-between w-full px-2.5 py-1.5 rounded-md group cursor-pointer transition-all duration-200",
                                             isDark 
-                                                ? theme?.headerBg || 'hover:bg-white/5'
-                                                : theme?.headerBg || 'hover:bg-muted/50',
-                                            theme ? theme.text : isDark ? 'text-emerald-100/70' : 'text-muted-foreground'
+                                                ? "hover:bg-white/5 text-emerald-100/50 hover:text-emerald-200"
+                                                : "hover:bg-slate-100/80 text-slate-500 hover:text-slate-800"
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
                                             {SectionIcon && (
                                                 <SectionIcon className={cn(
-                                                    "w-4 h-4 transition-colors duration-200",
+                                                    "w-3.5 h-3.5 transition-colors duration-200 opacity-70",
                                                     isDark
-                                                        ? isOpen ? "text-emerald-300" : "text-emerald-100/50 group-hover:text-white"
-                                                        : theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
+                                                        ? isOpen ? "text-emerald-300 opacity-100" : "text-emerald-100/40 group-hover:text-emerald-200"
+                                                        : isOpen ? "text-emerald-600 opacity-100" : "text-slate-400 group-hover:text-slate-700"
                                                 )} />
                                             )}
                                             <span className={cn(
-                                                "text-xs font-semibold uppercase tracking-wider transition-colors duration-200",
+                                                "text-[11px] font-bold uppercase tracking-wider transition-colors duration-200",
                                                 isDark
-                                                    ? isOpen ? "text-white" : "text-emerald-100/50 group-hover:text-white"
-                                                    : theme ? theme.text : "text-muted-foreground group-hover:text-foreground"
+                                                    ? isOpen ? "text-white" : "text-emerald-100/50 group-hover:text-emerald-200"
+                                                    : isOpen ? "text-slate-800" : "text-slate-500 group-hover:text-slate-800"
                                             )}>
                                                 {section.title}
                                             </span>
                                         </div>
                                         <ChevronDown className={cn(
-                                            "w-3.5 h-3.5 transition-all duration-200",
-                                            isDark
-                                                ? isOpen ? "text-emerald-300" : "text-emerald-100/50 group-hover:text-white"
-                                                : theme ? theme.text : "text-muted-foreground group-hover:text-foreground",
+                                            "w-3.5 h-3.5 transition-transform duration-200 opacity-60",
                                             !isOpen && "-rotate-90"
                                         )} />
                                     </button>
                                     <div
                                         className={cn(
                                             "overflow-hidden transition-all duration-200 ease-in-out",
-                                            isOpen ? "max-h-[2000px] opacity-100 pb-1.5 px-1" : "max-h-0 opacity-0"
+                                            isOpen ? "max-h-[2000px] opacity-100 py-1" : "max-h-0 opacity-0"
                                         )}
                                     >
                                         <div className="space-y-0.5">
@@ -1261,15 +1191,15 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                 })}
             </nav>
 
-            {/* Alternador de Tema da Sidebar (Claro vs Escuro Verde) */}
+            {/* Alternador de Tema da Sidebar (Escuro vs Claro) */}
             <div className={cn(
-                "px-4 py-2.5 border-t transition-colors duration-300 shrink-0",
+                "px-3 py-2 border-t transition-colors duration-300 shrink-0",
                 isDark ? "border-emerald-900/30 bg-black/10" : "border-slate-200 bg-slate-50"
             )}>
                 <button
                     onClick={handleToggleTheme}
                     className={cn(
-                        "flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer shadow-sm",
+                        "flex items-center justify-between w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer",
                         isDark 
                             ? "bg-emerald-950/50 hover:bg-emerald-900/40 text-emerald-300 border border-emerald-800/40"
                             : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
@@ -1280,17 +1210,17 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         {isDark ? (
                             <>
                                 <Moon className="w-3.5 h-3.5 text-emerald-400" />
-                                <span>Tema Verde</span>
+                                <span>Tema Escuro</span>
                             </>
                         ) : (
                             <>
-                                <Sun className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                                <span>Tema Clássico</span>
+                                <Sun className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Tema Claro</span>
                             </>
                         )}
                     </div>
                     <span className={cn(
-                        "text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded",
+                        "text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-semibold",
                         isDark ? "bg-emerald-800/20 text-emerald-400" : "bg-slate-100 text-slate-500"
                     )}>
                         Mudar
@@ -1300,29 +1230,29 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
 
             {/* Role indicator */}
             <div className={cn(
-                "px-4 py-3 border-t text-xs shrink-0 transition-colors duration-300",
-                isDark ? "border-emerald-900/30 bg-black/20 text-emerald-100/60" : "border-slate-200 bg-white text-muted-foreground"
+                "px-3 py-2.5 border-t text-xs shrink-0 transition-colors duration-300",
+                isDark ? "border-emerald-900/30 bg-black/20 text-emerald-100/60" : "border-slate-200 bg-white text-slate-500"
             )}>
                 {role === 'SUPER_ADMIN' && (
                     <span className={cn(
-                        "inline-flex items-center gap-1 px-2 py-1 rounded-full",
-                        isDark ? "bg-red-500/10 text-red-300 border border-red-500/20" : "bg-red-100 text-red-700"
+                        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold",
+                        isDark ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-red-50 text-red-700 border border-red-200"
                     )}>
                         <Shield className="w-3 h-3" /> Super Admin
                     </span>
                 )}
                 {role === 'CLINIC_ADMIN' && (
                     <span className={cn(
-                        "inline-flex items-center gap-1 px-2 py-1 rounded-full",
-                        isDark ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/20" : "bg-blue-100 text-blue-700"
+                        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold",
+                        isDark ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     )}>
                         <Building2 className="w-3 h-3" /> Admin da Clínica
                     </span>
                 )}
                 {role === 'DOCTOR' && (
                     <span className={cn(
-                        "inline-flex items-center gap-1 px-2 py-1 rounded-full",
-                        isDark ? "bg-teal-500/15 text-teal-300 border border-teal-400/20" : "bg-green-100 text-green-700"
+                        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold",
+                        isDark ? "bg-teal-500/10 text-teal-300 border border-teal-500/20" : "bg-teal-50 text-teal-700 border border-teal-200"
                     )}>
                         <Stethoscope className="w-3 h-3" /> {profLabel.singular}
                     </span>
