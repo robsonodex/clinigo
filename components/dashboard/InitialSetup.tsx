@@ -70,7 +70,7 @@ export function InitialSetup() {
             action: 'Configurar',
         },
         {
-            title: 'Cadastrar Primeiro Paciente',
+            title: 'Cadastrar Paciente',
             description: 'Registre o primeiro paciente no sistema',
             icon: Users,
             completed: status.hasPatient,
@@ -188,19 +188,19 @@ export function InitialSetup() {
                     </p>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid md:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                         {setupSteps.map((step, index) => (
                             <Card
                                 key={step.title}
-                                className={`transition-all ${step.completed
+                                className={`h-full flex flex-col transition-all ${step.completed
                                         ? 'border-green-200 bg-green-50/60 dark:bg-green-950/20'
                                         : 'hover:shadow-sm hover:border-primary/30'
                                     }`}
                             >
-                                <CardContent className="pt-5 pb-4 px-4">
-                                    <div className="flex flex-col items-center text-center space-y-2.5">
+                                <CardContent className="p-4 pt-5 flex-1 flex flex-col justify-between">
+                                    <div className="flex flex-col items-center text-center flex-1">
                                         {/* Step number + icon */}
-                                        <div className="relative">
+                                        <div className="relative mb-3">
                                             <div
                                                 className={`p-2.5 rounded-full ${step.completed
                                                         ? 'bg-green-100 dark:bg-green-900/30'
@@ -222,23 +222,29 @@ export function InitialSetup() {
                                             </span>
                                         </div>
 
-                                        <h3 className="font-semibold text-sm leading-tight">{step.title}</h3>
-                                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                                            {step.description}
-                                        </p>
+                                        <div className="flex flex-col items-center justify-center flex-1 w-full space-y-1.5 mb-3">
+                                            <h3 className="font-semibold text-sm leading-tight min-h-[2.5rem] flex items-center justify-center text-center">
+                                                {step.title}
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground leading-relaxed min-h-[2.5rem] flex items-center justify-center text-center line-clamp-2">
+                                                {step.description}
+                                            </p>
+                                        </div>
 
-                                        {step.completed ? (
-                                            <div className="flex items-center gap-1.5 text-green-600">
-                                                <CheckCircle className="w-4 h-4" />
-                                                <span className="text-xs font-medium">Concluído</span>
-                                            </div>
-                                        ) : (
-                                            <Link href={step.href} className="w-full">
-                                                <Button size="sm" className="w-full text-xs h-8">
-                                                    {step.action}
-                                                </Button>
-                                            </Link>
-                                        )}
+                                        <div className="w-full mt-auto pt-1">
+                                            {step.completed ? (
+                                                <div className="flex items-center justify-center gap-1.5 text-green-600 min-h-[44px]">
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    <span className="text-xs font-medium">Concluído</span>
+                                                </div>
+                                            ) : (
+                                                <Link href={step.href} className="w-full block">
+                                                    <Button size="sm" className="w-full text-xs min-h-[44px]">
+                                                        {step.action}
+                                                    </Button>
+                                                </Link>
+                                            )}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

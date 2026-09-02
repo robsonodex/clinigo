@@ -1966,3 +1966,19 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
      - **Isolamento de MRR**: A *Clínica Demo Excellence* (`is_demo: true`) foi zerada (`revenue: 0`) nos cálculos de Receita Mensal Recorrente (MRR), ARR e métricas globais do Super Admin.
      - **MRR Real**: O MRR global reflete estritamente as clínicas reais ativas (*Espaço Incluir* e *WorldSensory Terapias Multidisciplinares*), eliminando inflação fictícia de R$ 799/mês.
 
+### 02/09/2026 - Dashboard: Alinhamento e Responsividade dos Cards de Onboarding (Configure seu CliniGo)
+
+**Solicitado por:** Robson  
+**Escopo:** Global (Todas as Clínicas)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+1. **Dashboard → Onboarding → InitialSetup.tsx → Correção de Alinhamento e Flexbox dos Cards de Etapas**
+   - Arquivo: `components/dashboard/InitialSetup.tsx` → `InitialSetup`
+     - **Padronização de Altura e Flexbox**: Ajustada a hierarquia interna dos cards para `h-full flex flex-col justify-between`, garantindo que todos os 5 cards mantenham exatamente a mesma altura e proporção em 100% de zoom, sem desnível.
+     - **Alinhamento Vertical de Títulos e Descrições**: Aplicado `min-h-[2.5rem] flex items-center justify-center` no título e na descrição, evitando que quebras de linha em títulos ou rótulos adaptativos empurrem os botões ou quebrem o grid.
+     - **Alinhamento do Botão de Ação no Rodapé**: Inserido `mt-auto pt-1` com área de toque mínima de 44px (`min-h-[44px]`), garantindo conformidade com padrões PWA/Mobile e alinhamento milimétrico de todos os botões na mesma linha de base.
+     - **Grid Responsivo Adaptativo**: Atualizado para `grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3`, permitindo visualização fluida em dispositivos móveis, tablets e telas widescreen.
+     - **Consistência de Título**: Padronizado o título da etapa 3 para *"Cadastrar Paciente"* (mantendo *"Registre o primeiro paciente no sistema"* na descrição), alinhando a nomenclatura com os demais passos do onboarding.
+
+
