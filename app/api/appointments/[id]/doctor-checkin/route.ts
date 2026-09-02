@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { resolveDoctorRepasseValue } from '@/lib/services/repasse-calculator';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,42 +69,25 @@ export async function POST(
     const hasReceptionCheckin = Boolean(appointment.checked_in_at);
     const verificationLevel = hasReceptionCheckin ? 'DOUBLE_VERIFIED' : 'DOCTOR_ONLY';
 
-    // 5. Cálculo Automático do Repasse Financeiro (Snapshot Imutável)
-    const { data: contracts } = await supabaseAdmin
-      .from('doctor_contracts')
-      .select('*')
-      .eq('doctor_id', appointment.doctor_id)
-      .eq('clinic_id', currentUser.clinic_id)
-      .eq('is_active', true)
-      .limit(1);
-
-    const contract = contracts?.[0] || null;
+    // 5. Cálculo Centralizado do Repasse Financeiro (Snapshot Imutável)
+    // Prioridade 1: doctor_patient_rates (override por paciente)
+    // Prioridade 2: doctor_contracts (contrato geral)
     const isInsurance = Boolean(
       appointment.health_insurance_id ||
       appointment.type === 'convenio' ||
       appointment.payment_type === 'CONVENIO'
     );
-
-    let appliedRate = contract
-      ? (isInsurance ? Number(contract.percentage_insurance) : Number(contract.percentage_private))
-      : (Number(appointment.doctor?.percentage) || 70);
-
-    // Se houver regra específica de convênio no contrato
-    if (contract && appointment.health_insurance_id) {
-      const { data: rule } = await supabaseAdmin
-        .from('doctor_contract_insurance_rules')
-        .select('percentage')
-        .eq('contract_id', contract.id)
-        .eq('insurance_id', appointment.health_insurance_id)
-        .maybeSingle();
-
-      if (rule?.percentage !== undefined && rule.percentage !== null) {
-        appliedRate = Number(rule.percentage);
-      }
-    }
-
     const grossPrice = Number(appointment.price) || 0;
-    const repasseAmount = Number(((grossPrice * appliedRate) / 100).toFixed(2));
+
+    const repasseResult = await resolveDoctorRepasseValue({
+      clinicId: currentUser.clinic_id,
+      doctorId: appointment.doctor_id,
+      patientId: appointment.patient_id,
+      appointmentValue: grossPrice,
+      isInsurance,
+      healthInsuranceId: appointment.health_insurance_id,
+      supabaseClient: supabaseAdmin,
+    });
 
     // 6. Atualização em Cascata do Agendamento
     const { data: updatedAppointment, error: updateError } = await (supabaseAdmin
@@ -115,9 +99,11 @@ export async function POST(
         doctor_checkin_method: checkinMethod,
         verification_level: verificationLevel,
         in_consultation_at: now,
-        repasse_amount: repasseAmount,
-        repasse_rate_applied: appliedRate,
-        repasse_contract_id: contract?.id || null,
+        repasse_amount: repasseResult.amount,
+        repasse_rate_applied: repasseResult.rateApplied,
+        repasse_contract_id: repasseResult.contractId,
+        rate_source: repasseResult.source,
+        repasse_rate_id: repasseResult.rateId,
         updated_at: now,
       })
       .eq('id', appointmentId)
@@ -141,9 +127,12 @@ export async function POST(
         is_double_verified: verificationLevel === 'DOUBLE_VERIFIED',
         repasse: {
           gross_price: grossPrice,
-          applied_rate: appliedRate,
-          amount: repasseAmount,
-          contract_id: contract?.id || null,
+          applied_rate: repasseResult.rateApplied,
+          amount: repasseResult.amount,
+          contract_id: repasseResult.contractId,
+          rate_type: repasseResult.rateType,
+          rate_source: repasseResult.source,
+          rate_id: repasseResult.rateId,
         },
         prontuario_url: prontuarioUrl,
       },

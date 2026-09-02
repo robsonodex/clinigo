@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service';
+import { computeRepasseFromRules } from '@/lib/services/repasse-calculator';
 
 /**
  * Normaliza número de telefone brasileiro e retorna lista de variações
@@ -240,33 +241,33 @@ export async function calculateDoctorMonthlyExtract(
   }
 
   // 3. Buscar contrato ativo
-  const { data: contracts } = await supabase
-    .from('doctor_contracts')
+  const { data: contracts } = await (supabase
+    .from('doctor_contracts') as any)
     .select('*')
     .eq('doctor_id', doctorId)
     .eq('clinic_id', clinicId)
     .eq('is_active', true)
     .limit(1);
 
-  const contract = contracts?.[0];
+  const contract = (contracts as any)?.[0];
 
   // Buscar regras específicas de convênio caso existam
   let insuranceRulesMap: Record<string, number> = {};
   if (contract) {
-    const { data: rules } = await supabase
-      .from('doctor_contract_insurance_rules')
+    const { data: rules } = await (supabase
+      .from('doctor_contract_insurance_rules') as any)
       .select('health_insurance_id, payment_type, percentage')
       .eq('doctor_contract_id', contract.id);
 
     if (rules) {
-      rules.forEach((r) => {
+      (rules as any[]).forEach((r: any) => {
         const key = r.health_insurance_id ? `${r.health_insurance_id}` : `type_${r.payment_type}`;
         insuranceRulesMap[key] = r.percentage;
       });
     }
   }
 
-  const defaultPercentage = contract?.percentage_private ?? doctor.percentage ?? 70;
+  const defaultPercentage = contract?.percentage_private ?? (doctor as any).percentage ?? 70;
   const insurancePercentage = contract?.percentage_insurance ?? defaultPercentage;
 
   let ruleDescription = `${defaultPercentage}% Particular`;
@@ -274,11 +275,25 @@ export async function calculateDoctorMonthlyExtract(
     ruleDescription += ` / ${insurancePercentage}% Convênio`;
   }
 
-  // 4. Buscar atendimentos concluídos no período
-  const { data: completedApts } = await supabase
-    .from('appointments')
+  // 4. Buscar overrides por paciente ativos para este médico
+  const { data: patientOverrides } = await (supabase
+    .from('doctor_patient_rates') as any)
+    .select('id, clinic_id, doctor_id, patient_id, rate_type, fixed_value, percentage, active')
+    .eq('clinic_id', clinicId)
+    .eq('doctor_id', doctorId)
+    .eq('active', true);
+
+  const overrideMap = new Map<string, any>();
+  (patientOverrides as any[] || []).forEach((ov: any) => {
+    overrideMap.set(ov.patient_id, ov);
+  });
+
+  // 5. Buscar atendimentos concluídos no período
+  const { data: completedApts } = await (supabase
+    .from('appointments') as any)
     .select(`
       id, appointment_date, price, type, status,
+      patient_id, repasse_amount, repasse_rate_applied, rate_source,
       health_insurance_id,
       health_insurance:health_insurances(id, name)
     `)
@@ -300,19 +315,33 @@ export async function calculateDoctorMonthlyExtract(
     const price = Number(apt.price) || 0;
     const isInsurance = Boolean(apt.health_insurance_id || apt.type === 'convenio');
 
+    let itemRepasse = 0;
+    if (apt.repasse_amount != null && Number(apt.repasse_amount) >= 0) {
+      itemRepasse = Number(apt.repasse_amount);
+    } else {
+      const override = apt.patient_id ? overrideMap.get(apt.patient_id) : null;
+      const calcResult = computeRepasseFromRules({
+        appointmentValue: price,
+        override,
+        contract,
+        insuranceRulePercentage:
+          apt.health_insurance_id && insuranceRulesMap[apt.health_insurance_id] !== undefined
+            ? insuranceRulesMap[apt.health_insurance_id]
+            : null,
+        doctorFallbackPercentage: defaultPercentage,
+        isInsurance,
+      });
+      itemRepasse = calcResult.amount;
+    }
+
     if (isInsurance) {
       insuranceCount++;
       insuranceGross += price;
-
-      let pct = insurancePercentage;
-      if (apt.health_insurance_id && insuranceRulesMap[apt.health_insurance_id] !== undefined) {
-        pct = insuranceRulesMap[apt.health_insurance_id];
-      }
-      insuranceRepasse += price * (pct / 100);
+      insuranceRepasse += itemRepasse;
     } else {
       privateCount++;
       privateGross += price;
-      privateRepasse += price * (defaultPercentage / 100);
+      privateRepasse += itemRepasse;
     }
   });
 
@@ -409,7 +438,7 @@ export function formatUnauthorizedRepasseMessage(): string {
     ``,
     `⚠️ *Acesso Não Autorizado:* Não localizamos um cadastro profissional ativo vinculado a este número de WhatsApp nesta clínica.`,
     ``,
-    `Por motivos de sigilo financeiro e LGPD, os dados de comissão só são liberados para o número cadastrado no perfil do profissional.`,
+    `Por motivos de LGPD e sigilo financeiro, os dados de comissão só são liberados para o número cadastrado no perfil do profissional.`,
     ``,
     `_Se você é membro da equipe, solicite à administração da clínica a atualização do seu telefone no sistema._`,
   ].join('\n');
@@ -467,3 +496,64 @@ export async function processIncomingWhatsAppRepasse(
     return { handled: true, sent: false, message: responseText };
   }
 }
+
+/**
+ * Dispara notificação via WhatsApp ao médico quando um valor customizado é cadastrado/alterado
+ */
+export async function sendDoctorPatientRateNotification(params: {
+  clinicId: string;
+  doctorId: string;
+  patientName: string;
+  rateType: 'FIXED' | 'PERCENTAGE';
+  value: number;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServiceRoleClient();
+
+    // 1. Buscar dados do médico e clínica
+    const { data: doctor } = await (supabase
+      .from('doctors') as any)
+      .select('id, user:users(full_name, phone), clinic:clinics(name)')
+      .eq('id', params.doctorId)
+      .eq('clinic_id', params.clinicId)
+      .single();
+
+    if (!doctor) {
+      return { success: false, error: 'Médico não encontrado' };
+    }
+
+    const docUser = Array.isArray(doctor.user) ? doctor.user[0] : doctor.user;
+    const clinic = Array.isArray(doctor.clinic) ? doctor.clinic[0] : doctor.clinic;
+
+    if (!docUser?.phone) {
+      return { success: false, error: 'Profissional não possui telefone cadastrado' };
+    }
+
+    const valueFormatted =
+      params.rateType === 'FIXED'
+        ? `R$ ${Number(params.value).toFixed(2).replace('.', ',')}`
+        : `${params.value}%`;
+
+    const message =
+      `Olá, Dr(a). ${docUser.full_name}! 👋\n\n` +
+      `Foi definido um novo valor de repasse personalizado para seus atendimentos:\n\n` +
+      `👤 *Paciente:* ${params.patientName}\n` +
+      `💰 *Novo Repasse:* ${valueFormatted}\n` +
+      `🏥 *Clínica:* ${clinic?.name || 'CliniGo'}\n\n` +
+      `Este valor será aplicado automaticamente nos seus próximos atendimentos deste paciente.`;
+
+    await sendWhatsAppMessage(
+      params.clinicId,
+      docUser.phone,
+      message,
+      'doctor-patient-rate-notification',
+      'default'
+    );
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[WhatsApp Repasse Notification] Erro ao notificar profissional:', err);
+    return { success: false, error: err.message };
+  }
+}
+

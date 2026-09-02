@@ -67,3 +67,12 @@ jest.mock('@/lib/rate-limit', () => ({
     withRateLimit: jest.fn(() => Promise.resolve(null)),
     checkRateLimit: jest.fn(() => Promise.resolve({ success: true, remaining: 100, reset: 0 }))
 }))
+
+// Mock WhatsApp service to prevent ESM issues with @whiskeysockets/baileys in Jest
+jest.mock('@/lib/whatsapp/service', () => ({
+    sendWhatsAppMessage: jest.fn(() => Promise.resolve({ success: true })),
+    getClinicSession: jest.fn(() => null),
+    initClinicWhatsAppSession: jest.fn(() => Promise.resolve({ status: 'connected' })),
+    disconnectClinicSession: jest.fn(() => Promise.resolve({ success: true })),
+}))
+

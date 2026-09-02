@@ -11,11 +11,27 @@ import {
     SheetTitle,
     SheetDescription
 } from '@/components/ui/sheet'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
+} from '@/components/ui/dialog'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send } from 'lucide-react'
+import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Sparkles } from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
 interface AppointmentDetailsDrawerProps {
@@ -36,6 +52,42 @@ export function AppointmentDetailsDrawer({
     const [copied, setCopied] = useState(false)
     const [teleconsultaCopied, setTeleconsultaCopied] = useState(false)
     const [isResending, setIsResending] = useState(false)
+    const [rateModalOpen, setRateModalOpen] = useState(false)
+    const [rateType, setRateType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE')
+    const [rateValue, setRateValue] = useState<number>(70)
+    const [savingRate, setSavingRate] = useState(false)
+
+    async function handleSavePermanentRate() {
+        if (!appointment?.doctor_id || !appointment?.patient_id) {
+            toast.error('Dados do médico ou paciente não disponíveis')
+            return
+        }
+        setSavingRate(true)
+        try {
+            const res = await fetch('/api/doctor-patient-rates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    doctor_id: appointment.doctor_id,
+                    patient_id: appointment.patient_id,
+                    rate_type: rateType,
+                    fixed_value: rateType === 'FIXED' ? rateValue : null,
+                    percentage: rateType === 'PERCENTAGE' ? rateValue : null,
+                })
+            })
+            const json = await res.json()
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Falha ao salvar valor permanente')
+            }
+            toast.success('Valor permanente definido para este paciente com sucesso!')
+            setRateModalOpen(false)
+            loadAppointment()
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao salvar valor do paciente')
+        } finally {
+            setSavingRate(false)
+        }
+    }
 
     useEffect(() => {
         if (appointmentId && isOpen) {
@@ -404,6 +456,57 @@ export function AppointmentDetailsDrawer({
                                     loadAppointment();
                                 }}
                             />
+
+                            {/* REPASSE & ATALHO DE VALOR PERMANENTE */}
+                            <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2 mt-2">
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                                        Repasse do Atendimento:
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {appointment.repasse_amount != null && Number(appointment.repasse_amount) > 0 ? (
+                                            <span className="font-bold text-foreground">
+                                                R$ {Number(appointment.repasse_amount).toFixed(2)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground">Gravado no check-in</span>
+                                        )}
+                                        {appointment.rate_source && (
+                                            <Badge
+                                                variant="outline"
+                                                className={`text-[10px] px-1.5 py-0 ${
+                                                    appointment.rate_source === 'PATIENT_OVERRIDE'
+                                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300'
+                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-300'
+                                                }`}
+                                            >
+                                                {appointment.rate_source === 'PATIENT_OVERRIDE' ? 'Personalizado' : 'Contrato'}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {appointment.doctor_id && appointment.patient_id && (
+                                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setRateValue(
+                                                    appointment.repasse_rate_applied
+                                                        ? Number(appointment.repasse_rate_applied)
+                                                        : 70
+                                                );
+                                                setRateModalOpen(true);
+                                            }}
+                                            className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1 min-h-[36px]"
+                                        >
+                                            <Sparkles className="w-3 h-3" />
+                                            <span>Ajustar valor permanente deste paciente</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="pt-2">
@@ -499,6 +602,84 @@ export function AppointmentDetailsDrawer({
                         </div>
                     </div>
                 )}
+
+                {/* MINI-MODAL PARA AJUSTAR VALOR PERMANENTE DESTE PACIENTE */}
+                <Dialog open={rateModalOpen} onOpenChange={setRateModalOpen}>
+                    <DialogContent className="rounded-2xl max-w-md w-[95vw] sm:w-full">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-emerald-600" />
+                                <span>Ajustar Repasse Permanente</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Defina o repasse para o paciente <strong>{patientName}</strong> com o profissional <strong>Dr(a). {doctorName}</strong>.
+                                Este valor será aplicado automaticamente nos próximos atendimentos.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-3">
+                            <div>
+                                <Label className="text-xs font-semibold">Tipo de Repasse</Label>
+                                <Select
+                                    value={rateType}
+                                    onValueChange={(val: 'PERCENTAGE' | 'FIXED') => setRateType(val)}
+                                >
+                                    <SelectTrigger className="mt-1 h-11 min-h-[44px] rounded-xl">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PERCENTAGE">Percentual (%)</SelectItem>
+                                        <SelectItem value="FIXED">Valor Fixo (R$)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <Label className="text-xs font-semibold">
+                                    {rateType === 'PERCENTAGE' ? 'Percentual (%)' : 'Valor Fixo (R$)'}
+                                </Label>
+                                <div className="relative mt-1">
+                                    <Input
+                                        type="number"
+                                        step={rateType === 'PERCENTAGE' ? '0.5' : '1.00'}
+                                        min={0}
+                                        max={rateType === 'PERCENTAGE' ? 100 : 99999}
+                                        value={rateValue}
+                                        onChange={(e) => setRateValue(Number(e.target.value))}
+                                        className="h-11 text-base font-bold pr-8 rounded-xl"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                                        {rateType === 'PERCENTAGE' ? '%' : 'R$'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setRateModalOpen(false)}
+                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                onClick={handleSavePermanentRate}
+                                disabled={savingRate}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
+                            >
+                                {savingRate ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Salvando...</span>
+                                    </>
+                                ) : (
+                                    <span>Salvar Valor Permanente</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </SheetContent>
         </Sheet>
     )

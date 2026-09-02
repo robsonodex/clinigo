@@ -393,7 +393,12 @@ export default function DoctorsPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/dashboard/medicos/${doctor.id}`}>
+                                                                <DollarSign className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                Valores por Paciente
+                                                            </Link>
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleEdit(doctor)}>
                                                             <Pencil className="w-4 h-4 mr-2" />
                                                             Editar

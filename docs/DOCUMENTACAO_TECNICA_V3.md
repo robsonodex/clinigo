@@ -227,7 +227,7 @@ useFeatureGate() → verificação de feature por plano
 - **Dupla Comprovação (TISS)**: Cruzamento automático entre o check-in da recepção/totem (`checked_in_at`) e a confirmação médica em sala (`doctor_checked_in_at`), gerando o status `DOUBLE_VERIFIED` para blindar o faturamento de convênios contra glosas.
 - **QR Code do Consultório**: QR Code fixo por sala/consultório para validação rápida presencial via smartphone ou tablet.
 - **Anti-overbooking**: Lock temporário de slots via `appointment_slot_locks` + verificação de conflito
-- **Realtime slot locks**: Hook `useRealtimeSlotLocks` com Supabase Realtime
+- **Realtime slot locks**: Hook `useRealtimeSlotLocks` with Supabase Realtime
 - **Série recorrente**: Tabela `recurring_appointment_series` com 170 séries ativas
 - **QR Code por consulta**: Gerado automaticamente (`appointment_qr_codes` — 105 registros)
 - **Reagendamento por link**: Rota pública `/reschedule/[token]` via `reschedule_tokens`
@@ -243,12 +243,14 @@ useFeatureGate() → verificação de feature por plano
 | Rota | Função |
 |------|--------|
 | `/dashboard/medicos` | Listagem de profissionais (label dinâmico: Médicos/Terapeutas) |
+| `/dashboard/medicos/[id]` | Perfil do profissional com gestão de Valores por Paciente e Contrato Geral |
 | `/api/doctors` | CRUD de profissionais |
 | `/api/doctors/[id]` | Perfil, horários, convênios |
 | `/api/doctors/[id]/schedules` | Grade de disponibilidade |
 | `/api/doctors/[id]/health-insurances` | Convênios aceitos |
+| `/api/doctor-patient-rates` | Gestão de repasse customizado por paciente com auditoria |
 
-**Tabelas:** `doctors` (19 registros), `doctor_contracts` (16), `schedules` (88 grades de horário)
+**Tabelas:** `doctors` (19 registros), `doctor_contracts` (16), `doctor_patient_rates` (overrides por paciente), `doctor_patient_rate_history` (auditoria), `schedules` (88 grades de horário)
 
 **Nomenclatura adaptativa:** O hook `useProfessionalLabel()` retorna labels dinâmicos conforme o tipo da clínica:
 - Clínica médica → "Médicos" / "Repasse Médico"
@@ -351,6 +353,7 @@ Suporte a 3 modelos de evolução clínica:
 | Financeiro | `/dashboard/financeiro` | ADMIN | Básico |
 | Pagamentos | `/dashboard/pagamentos` | ADMIN | Básico |
 | Repasse Profissional | `/dashboard/financial/payroll` | ADMIN | Avançado |
+| Perfil do Médico & Valores por Paciente | `/dashboard/medicos/[id]` | ADMIN | Básico |
 | DRE | `/dashboard/financial/dre` | ADMIN | Avançado |
 | Auditoria Financeira | `/dashboard/financial/audit` | ADMIN | Avançado |
 | Convênios | `/dashboard/convenios` | ADMIN | Básico |
@@ -384,6 +387,10 @@ Suporte a 3 modelos de evolução clínica:
 | `/api/reimbursement-configs` | Configurações de reembolso |
 | `/api/schedule-price-ranges` | Faixas de preço por horário |
 | `/api/whatsapp/repasse-extract` | Consulta e envio de extrato de repasse via WhatsApp para profissionais |
+| `/api/doctor-patient-rates` | Listagem consolidada, métricas e upsert de repasse por paciente |
+| `/api/doctor-patient-rates/bulk` | Atualização e importação em lote com diff preview |
+| `/api/doctor-patient-rates/[id]` | Soft-delete de valor individual com histórico |
+| `/api/doctor-patient-rates/[id]/history` | Trilha de auditoria por paciente |
 
 ### 8.3 Extrato de Repasse Interativo via WhatsApp
 - **Comandos Automáticos**: Profissionais cadastrados consultam seu repasse enviando comandos (*"extrato"*, *"repasse"*, *"quanto já ganhei"*, *"saldo"*) para o WhatsApp da clínica.
@@ -407,6 +414,8 @@ Dashboard consolidado com:
 | `health_insurances` | 4 |
 | `patient_reimbursement_rules` | 103 |
 | `doctor_contracts` | 16 |
+| `doctor_patient_rates` | - |
+| `doctor_patient_rate_history` | - |
 
 ---
 
@@ -1989,3 +1998,30 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - **Dupla Comprovação para Convênio (TISS)**: Cruzamento com `checked_in_at` da recepção/totem, gerando `DOUBLE_VERIFIED` para blindar faturamento TISS contra glosas. Caso seja apenas o médico, registra `DOCTOR_ONLY`.
    - **Snapshot de Repasse Financeiro**: Cálculo instantâneo do valor líquido (`repasse_amount`) e alíquota (`repasse_rate_applied`) gravados no registro do agendamento com base nos contratos ativos (`doctor_contracts`), blindando o histórico financeiro contra alterações retroativas de contrato.
    - **QR Code do Consultório**: Modal e gerador de QR Code permanente para salas de atendimento, permitindo leitura e check-in via smartphone/tablet.
+
+4. **Financeiro / Equipe → Valores por Paciente (Doctor-Patient Rates Override)**
+   - Arquivos:
+     - `supabase/migrations/20260902000003_doctor_patient_rates.sql` [NOVO]
+     - `lib/services/repasse-calculator.ts` [NOVO]
+     - `app/api/doctor-patient-rates/route.ts` [NOVO]
+     - `app/api/doctor-patient-rates/bulk/route.ts` [NOVO]
+     - `app/api/doctor-patient-rates/[id]/route.ts` [NOVO]
+     - `app/api/doctor-patient-rates/[id]/history/route.ts` [NOVO]
+     - `components/doctors/PatientRatesTab.tsx` [NOVO]
+     - `app/dashboard/(clinic)/medicos/[id]/page.tsx` [NOVO]
+     - `app/dashboard/(clinic)/medicos/page.tsx` → `DoctorsPage` (link no menu de ações)
+     - `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer` (exibição de repasse, badge de origem e mini-modal de atalho)
+     - `app/api/appointments/[id]/doctor-checkin/route.ts` → `POST` (integração do repasse-calculator, rate_source e repasse_rate_id)
+     - `app/api/payroll/route.ts` → `POST` (integração centralizada para apurações retroativas/repasses)
+     - `lib/services/whatsapp-repasse.ts` → `calculateDoctorMonthlyExtract` e `sendDoctorPatientRateNotification`
+     - `__tests__/services/repasse-calculator.test.ts` [NOVO]
+     - `__tests__/api/doctor-patient-rates/crud.test.ts` [NOVO]
+     - `__tests__/api/doctor-patient-rates/bulk-import.test.ts` [NOVO]
+   - **Camada de Override por Par (Profissional, Paciente)**: Permite que o ADMIN da clínica defina valores específicos de repasse (valor fixo em R$ ou percentual) para um determinado paciente atendido por aquele médico, prevalecendo sobre o contrato geral (`doctor_contracts`).
+   - **Centralização em repasse-calculator.ts**: Todas as áreas que realizam cálculo de repasse (check-in, folha e extrato WhatsApp) consultam agora exclusivamente o motor centralizado com fallback transparente para o contrato geral.
+   - **Rastreabilidade e Auditoria (rate_source)**: Gravação do campo `rate_source` ('PATIENT_OVERRIDE' vs 'CONTRACT_DEFAULT') e `repasse_rate_id` nos agendamentos, mantendo a blindagem contra alterações retroativas.
+   - **Interface Planilha & Insights (Efeito UAU)**: Nova aba em `/dashboard/medicos/[id]` com 3 cards de métricas (média de repasse, % customizados vs contrato, extremos), edição inline com inputs diretos, seleção múltipla e botão de salvamento em lote.
+   - **Importação/Exportação Excel (.xlsx)**: Geração de modelo pré-preenchido via ExcelJS e modal com preview de diff (valor anterior → novo) antes de confirmar a importação em massa.
+   - **Timeline de Auditoria**: Drawer lateral com histórico completo de alterações (quem mudou, quando e valor anterior).
+   - **Atalho no Drawer de Agendamento**: Link e mini-modal direto em `AppointmentDetailsDrawer.tsx` para ajustar o valor permanente do paciente sem sair da agenda.
+   - **Notificação WhatsApp Opcional**: Disparo automático de aviso via WhatsApp ao médico quando um novo valor individual for cadastrado.
