@@ -82,20 +82,29 @@ const config: Config = {
                 'body': ['var(--font-cabinet-grotesk)', 'Inter', 'system-ui', 'sans-serif'],
             },
             borderRadius: {
-                lg: 'var(--radius)',
-                md: 'calc(var(--radius) - 2px)',
-                sm: 'calc(var(--radius) - 4px)',
-                // --- NOVOS RADIUS (ELEGANT) ---
-                'xl': '1rem',
-                '2xl': '1.5rem',
-                '3xl': '2rem', // Usado nos cards features
-                'full': '9999px',
-                'brutal': '2px', // Mantido legado
+                none: '0',
+                xs: '2px',
+                sm: '2px',
+                DEFAULT: '2px',
+                md: '2px',
+                lg: '2px',
+                xl: '2px',
+                '2xl': '2px',
+                '3xl': '2px',
+                full: '2px',
+                brutal: '2px',
             },
             boxShadow: {
-                // Sombras refinadas para o tema dark
-                'premium': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                'glow-teal': '0 0 20px rgba(20, 184, 166, 0.3), 0 0 40px rgba(20, 184, 166, 0.1)',
+                none: 'none',
+                xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                sm: '0 1px 3px 0 rgba(0, 0, 0, 0.08)',
+                DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.08)',
+                md: '0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                lg: '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
+                xl: '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
+                '2xl': '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
+                premium: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                'glow-teal': 'none',
             },
             keyframes: {
                 'accordion-down': {

@@ -666,7 +666,7 @@ export function AppointmentDetailsDrawer({
                             <Button
                                 onClick={handleSavePermanentRate}
                                 disabled={savingRate}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
                             >
                                 {savingRate ? (
                                     <>

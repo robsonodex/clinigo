@@ -300,7 +300,7 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
                     <div className="flex flex-wrap gap-4">
                         {/* Primary Button */}
                         <button
-                            className="px-6 py-3 rounded-lg font-semibold text-white transition-all hover:opacity-90"
+                            className="px-6 py-3 rounded-xs font-semibold text-white transition-all hover:opacity-90"
                             style={{ backgroundColor: theme.colors.primary }}
                         >
                             Botão Primário
@@ -308,7 +308,7 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
 
                         {/* Secondary Button */}
                         <button
-                            className="px-6 py-3 rounded-lg font-semibold text-white transition-all hover:opacity-90"
+                            className="px-6 py-3 rounded-xs font-semibold text-white transition-all hover:opacity-90"
                             style={{ backgroundColor: theme.colors.secondary }}
                         >
                             Botão Secundário
@@ -316,7 +316,7 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
 
                         {/* Accent Button */}
                         <button
-                            className="px-6 py-3 rounded-lg font-semibold text-white transition-all hover:opacity-90"
+                            className="px-6 py-3 rounded-xs font-semibold text-white transition-all hover:opacity-90"
                             style={{ backgroundColor: theme.colors.accent }}
                         >
                             CTA Destaque

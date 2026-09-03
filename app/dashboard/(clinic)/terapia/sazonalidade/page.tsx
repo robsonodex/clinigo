@@ -38,7 +38,7 @@ export default function SazonalidadePage() {
                 <Button
                     variant="outline"
                     onClick={exportExcel}
-                    className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                    className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                 >
                     <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                     <span>Excel</span>

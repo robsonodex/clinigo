@@ -177,7 +177,7 @@ export default function OnboardingPage() {
                             <PartyPopper className="w-8 h-8 text-green-600" />
                             <div>
                                 <h3 className="font-bold text-green-800 dark:text-green-300 text-lg">
-                                    Parabéns! Tudo configurado! 🎉
+                                    Parabéns! Todas as etapas foram configuradas.
                                 </h3>
                                 <p className="text-sm text-green-700 dark:text-green-400">
                                     Sua clínica está pronta para operar com o CliniGo.
@@ -243,7 +243,7 @@ export default function OnboardingPage() {
                                     </p>
                                     {!step.completed && (
                                         <p className="text-xs text-muted-foreground/70 mt-1.5 italic">
-                                            💡 {step.tip}
+                                            {step.tip}
                                         </p>
                                     )}
                                 </div>

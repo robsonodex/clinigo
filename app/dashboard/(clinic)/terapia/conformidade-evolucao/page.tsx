@@ -246,7 +246,7 @@ export default function ConformidadeEvolucaoPage() {
                     <Button
                         variant="outline"
                         onClick={exportExcel}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                         <span>Excel</span>
@@ -254,7 +254,7 @@ export default function ConformidadeEvolucaoPage() {
                     <Button
                         variant="outline"
                         onClick={exportPDF}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <Download className="w-4 h-4 text-blue-600" />
                         <span>PDF</span>
@@ -328,7 +328,7 @@ export default function ConformidadeEvolucaoPage() {
                                         <AlertDialogTrigger asChild>
                                             <Button
                                                 size="sm"
-                                                className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl h-9 px-4 text-xs font-bold shadow-sm gap-1.5"
+                                                className="bg-amber-600 hover:bg-amber-700 text-white rounded-xs h-9 px-4 text-xs font-bold shadow-sm gap-1.5"
                                                 disabled={cleaningDuplicates}
                                             >
                                                 {cleaningDuplicates ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}

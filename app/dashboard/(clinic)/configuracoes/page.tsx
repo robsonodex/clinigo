@@ -432,7 +432,7 @@ export default function SettingsPage() {
                                                             {opt.label}
                                                         </SelectItem>
                                                     ))}
-                                                    <SelectItem value="CUSTOM">✏️ Cadastrar novo termo</SelectItem>
+                                                    <SelectItem value="CUSTOM">Cadastrar novo termo...</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -480,7 +480,7 @@ export default function SettingsPage() {
                                                             {opt.label}
                                                         </SelectItem>
                                                     ))}
-                                                    <SelectItem value="CUSTOM">✏️ Cadastrar novo termo</SelectItem>
+                                                    <SelectItem value="CUSTOM">Cadastrar novo termo...</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

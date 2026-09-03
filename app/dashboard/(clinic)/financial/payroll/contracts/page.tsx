@@ -129,25 +129,45 @@ export default function ContractsPage() {
     const [editFormData, setEditFormData] = useState(INITIAL_FORM);
 
     // Buscar contratos
-    const { data: contracts, isLoading, refetch } = useQuery({
+    const { data: contractsData, isLoading, refetch } = useQuery({
         queryKey: ['contracts'],
         queryFn: async () => {
-            const res = await fetch('/api/payroll/contracts');
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            return json.data as Contract[];
+            try {
+                const res = await fetch('/api/payroll/contracts');
+                if (!res.ok) return [] as Contract[];
+                const json = await res.json();
+                if (!json?.success || !Array.isArray(json?.data)) return [] as Contract[];
+                return json.data as Contract[];
+            } catch {
+                return [] as Contract[];
+            }
         },
     });
 
     // Buscar profissionais
-    const { data: doctors } = useQuery({
+    const { data: doctorsData } = useQuery({
         queryKey: ['doctors-list'],
         queryFn: async () => {
-            const res = await fetch('/api/doctors');
-            const json = await res.json();
-            return (json.data || json) as Doctor[];
+            try {
+                const res = await fetch('/api/doctors');
+                if (!res.ok) return [] as Doctor[];
+                const json = await res.json();
+                const list = Array.isArray(json?.data)
+                    ? json.data
+                    : Array.isArray(json?.data?.items)
+                        ? json.data.items
+                        : Array.isArray(json)
+                            ? json
+                            : [];
+                return list as Doctor[];
+            } catch {
+                return [] as Doctor[];
+            }
         },
     });
+
+    const doctors = Array.isArray(doctorsData) ? doctorsData : [];
+    const contracts = Array.isArray(contractsData) ? contractsData : [];
 
     // Criar contrato
     const createMutation = useMutation({

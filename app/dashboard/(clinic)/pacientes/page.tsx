@@ -215,32 +215,30 @@ export default function PacientesPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100/80 dark:border-indigo-900/30">
-                        <UserPlus className="w-6 h-6" />
-                    </div>
+            {/* Header Corporativo Enterprise */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    <UserPlus className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div>
-                        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">
                             Pacientes
                         </h1>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                             Gerencie os pacientes de sua clínica
                         </p>
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-10 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm px-5 text-sm">
-                        <Upload className="w-4 h-4 mr-2 text-slate-400" />
+                    <Button variant="outline" className="h-8 rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none">
+                        <Upload className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                         Importar
                     </Button>
-                    <Button variant="outline" className="flex-1 sm:flex-initial justify-center h-10 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm px-5 text-sm">
-                        <Download className="w-4 h-4 mr-2 text-slate-400" />
+                    <Button variant="outline" className="h-8 rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none">
+                        <Download className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                         Exportar
                     </Button>
-                    <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-initial justify-center h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-sm border-0 px-5 text-sm">
-                        <Plus className="w-4 h-4 mr-2" />
+                    <Button onClick={() => setShowCreateModal(true)} className="h-8 rounded-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 text-xs font-medium shadow-none border-0">
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />
                         <span>Novo Paciente</span>
                     </Button>
                 </div>
@@ -319,7 +317,7 @@ export default function PacientesPage() {
             </div>
 
             {/* Patients Grid / Table */}
-            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="p-6 space-y-3">
@@ -373,11 +371,7 @@ export default function PacientesPage() {
                                                 <TableCell className="py-3 px-6">
                                                     <div className="flex items-center gap-3">
                                                         <div 
-                                                            style={{ 
-                                                                background: `linear-gradient(135deg, ${theme.from}, ${theme.to})`,
-                                                                color: theme.text
-                                                            }}
-                                                            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                            className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium"
                                                         >
                                                             {initials}
                                                         </div>
@@ -418,7 +412,7 @@ export default function PacientesPage() {
                                                 <TableCell className="py-3 px-6 text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xs border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850">
                                                                 <MoreHorizontal className="w-4 h-4 text-slate-450" />
                                                             </Button>
                                                         </DropdownMenuTrigger>

@@ -234,7 +234,7 @@ export function ChatLayout({ isSuperAdmin = false, clinicFilter }: ChatLayoutPro
                         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
                             <button
                                 onClick={handleBackToList}
-                                className="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200/30 dark:border-slate-700/30 text-slate-700 dark:text-slate-200 active:scale-95 transition-all"
+                                className="w-11 h-11 flex items-center justify-center rounded-xs bg-white dark:bg-slate-800 shadow-sm border border-slate-200/30 dark:border-slate-700/30 text-slate-700 dark:text-slate-200 active:scale-95 transition-all"
                                 title="Voltar"
                             >
                                 <ArrowLeft className="w-5 h-5" />

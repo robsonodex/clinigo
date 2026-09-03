@@ -164,7 +164,7 @@ export function HeroSection({
                             </div>
                             <Button
                                 size="lg"
-                                className="h-12 md:h-14 px-6 rounded-xl shadow-lg"
+                                className="h-12 md:h-14 px-6 rounded-xs shadow-lg"
                                 style={{ backgroundColor: theme.colors.accent }}
                                 onClick={handleSearch}
                             >
@@ -178,7 +178,7 @@ export function HeroSection({
                         <Link href={`/${clinicSlug}/agendar`}>
                             <Button
                                 size="lg"
-                                className="w-full sm:w-auto h-12 md:h-14 text-base md:text-lg px-8 rounded-xl shadow-lg transition-transform hover:scale-105"
+                                className="w-full sm:w-auto h-12 md:h-14 text-base md:text-lg px-8 rounded-xs shadow-lg transition-transform hover:scale-105"
                                 style={{ backgroundColor: theme.colors.accent }}
                             >
                                 <Calendar className="w-5 h-5 mr-2" />
@@ -189,7 +189,7 @@ export function HeroSection({
                         <Link href={`/${clinicSlug}/agendar?tipo=teleconsulta`}>
                             <Button
                                 size="lg"
-                                className="w-full sm:w-auto h-12 md:h-14 text-base md:text-lg px-8 rounded-xl shadow-lg transition-transform hover:scale-105"
+                                className="w-full sm:w-auto h-12 md:h-14 text-base md:text-lg px-8 rounded-xs shadow-lg transition-transform hover:scale-105"
                                 style={{
                                     backgroundColor: 'white',
                                     color: theme.colors.primary
@@ -209,7 +209,7 @@ export function HeroSection({
             {/* Video Play Button Overlay (if video exists) */}
             {hasVideo && (
                 <button
-                    className="absolute bottom-8 right-8 z-20 bg-white/20 backdrop-blur-sm rounded-full p-3 hover:bg-white/30 transition-colors hidden md:flex items-center gap-2 text-white text-sm"
+                    className="absolute bottom-8 right-8 z-20 bg-white/20 backdrop-blur-sm rounded-xs p-3 hover:bg-white/30 transition-colors hidden md:flex items-center gap-2 text-white text-sm"
                     onClick={() => {
                         if (videoRef.current) {
                             videoRef.current.muted = !videoRef.current.muted

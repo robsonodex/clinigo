@@ -336,17 +336,15 @@ export function QuestionnairesTab({
 
     return (
         <div className="space-y-6">
-            {/* Header de Controle de Abas */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                        <FileSpreadsheet className="w-5 h-5" />
-                    </div>
+            {/* Header de Controle de Abas Enterprise */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    <FileSpreadsheet className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div>
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        <h2 className="text-base font-semibold text-foreground">
                             Folhas de Registro Clínico & Questionários ABA
                         </h2>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                             Padronização de treinos, linha de base, dicas e evolução dos planos terapêuticos
                         </p>
                     </div>
@@ -356,17 +354,17 @@ export function QuestionnairesTab({
                     <Button
                         variant={tab === 'templates' ? 'default' : 'outline'}
                         onClick={() => setTab('templates')}
-                        className="h-10 rounded-xl text-xs font-semibold px-4 gap-2"
+                        className={`h-8 rounded-xs text-xs font-medium px-3 gap-1.5 shadow-none ${tab === 'templates' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border-border text-foreground'}`}
                     >
-                        <Layers className="w-4 h-4" />
+                        <Layers className="w-3.5 h-3.5" />
                         Modelos / Folhas ({templates.length})
                     </Button>
                     <Button
                         variant={tab === 'history' ? 'default' : 'outline'}
                         onClick={() => setTab('history')}
-                        className="h-10 rounded-xl text-xs font-semibold px-4 gap-2"
+                        className={`h-8 rounded-xs text-xs font-medium px-3 gap-1.5 shadow-none ${tab === 'history' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border-border text-foreground'}`}
                     >
-                        <History className="w-4 h-4" />
+                        <History className="w-3.5 h-3.5" />
                         Histórico de Aplicações ({responses.length})
                     </Button>
                 </div>
@@ -389,42 +387,38 @@ export function QuestionnairesTab({
                                 return (
                                     <Card
                                         key={tpl.id}
-                                        className="relative flex flex-col justify-between overflow-hidden border border-slate-200/80 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 transition-all rounded-2xl shadow-sm hover:shadow-md bg-white dark:bg-slate-900"
+                                        className="relative flex flex-col justify-between overflow-hidden border border-border transition-colors rounded-xs shadow-none bg-card hover:bg-muted/10"
                                     >
-                                        <div className="p-5 space-y-3">
+                                        <div className="p-4 space-y-2.5">
                                             <div className="flex items-start justify-between gap-2">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                                                    isAba ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' :
-                                                    isBaseline ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' :
-                                                    'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                                                }`}>
-                                                    {isAba && <Activity className="w-5 h-5" />}
-                                                    {isBaseline && <ClipboardCheck className="w-5 h-5" />}
-                                                    {isNaturalistic && <Sparkles className="w-5 h-5" />}
-                                                    {!isAba && !isBaseline && !isNaturalistic && <FileText className="w-5 h-5" />}
+                                                <div className="flex items-center gap-2">
+                                                    {isAba && <Activity className="w-4 h-4 text-muted-foreground" />}
+                                                    {isBaseline && <ClipboardCheck className="w-4 h-4 text-muted-foreground" />}
+                                                    {isNaturalistic && <Sparkles className="w-4 h-4 text-muted-foreground" />}
+                                                    {!isAba && !isBaseline && !isNaturalistic && <FileText className="w-4 h-4 text-muted-foreground" />}
                                                 </div>
-                                                <Badge variant="outline" className="text-[10px] font-semibold uppercase tracking-wider">
+                                                <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-wider rounded-xs border-border">
                                                     {isAba ? 'Tentativas ABA' : isBaseline ? 'Linha de Base' : isNaturalistic ? 'Naturalista' : 'Personalizado'}
                                                 </Badge>
                                             </div>
 
                                             <div>
-                                                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-tight">
+                                                <h3 className="font-semibold text-foreground text-sm leading-snug">
                                                     {tpl.title}
                                                 </h3>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2">
+                                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                                     {tpl.description}
                                                 </p>
                                             </div>
 
                                             {/* Preview de colunas estruturadas */}
-                                            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                                            <div className="p-2 rounded-xs bg-muted/40 border border-border space-y-1">
+                                                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
                                                     Colunas de Coleta:
                                                 </span>
                                                 <div className="flex flex-wrap gap-1">
                                                     {tpl.structure?.columns?.map((c: any) => (
-                                                        <span key={c.key} className="text-[11px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
+                                                        <span key={c.key} className="text-[10px] px-1.5 py-0.5 rounded-xs bg-background text-foreground border border-border font-mono">
                                                             {c.label}
                                                         </span>
                                                     ))}
@@ -432,13 +426,13 @@ export function QuestionnairesTab({
                                             </div>
                                         </div>
 
-                                        <div className="p-4 pt-0 border-t bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between gap-2">
-                                            <span className="text-[11px] text-slate-400">
+                                        <div className="p-3 border-t border-border bg-muted/20 flex items-center justify-between gap-2">
+                                            <span className="text-[11px] text-muted-foreground">
                                                 {tpl.structure?.defaultRowsCount || 6} linhas padrão
                                             </span>
                                             <Button
                                                 onClick={() => handleStartFill(tpl)}
-                                                className="h-9 px-4 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs gap-1.5"
+                                                className="h-8 px-3 rounded-xs text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-none gap-1.5 border-0"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />
                                                 Preencher Folha
@@ -456,21 +450,21 @@ export function QuestionnairesTab({
             {tab === 'history' && (
                 <div className="space-y-4">
                     {/* Barra de Filtros */}
-                    <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 bg-card p-2.5 rounded-xs border border-border shadow-none">
                         <div className="relative flex-1 w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                             <Input
                                 placeholder="Buscar por paciente ou programa..."
                                 value={historySearch}
                                 onChange={(e) => setHistorySearch(e.target.value)}
-                                className="pl-9 h-10 rounded-xl"
-                                style={{ fontSize: '16px' }}
+                                className="pl-8 h-8 rounded-xs text-xs border-border"
+                                style={{ fontSize: '13px' }}
                             />
                         </div>
 
                         <div className="w-full sm:w-64">
                             <Select value={selectedPatientFilter} onValueChange={setSelectedPatientFilter}>
-                                <SelectTrigger className="h-10 rounded-xl">
+                                <SelectTrigger className="h-8 rounded-xs text-xs border-border">
                                     <SelectValue placeholder="Filtrar por Paciente" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -485,7 +479,7 @@ export function QuestionnairesTab({
                         <Button
                             variant="outline"
                             onClick={fetchResponses}
-                            className="h-10 px-3 rounded-xl gap-1.5 text-xs font-semibold shrink-0"
+                            className="h-8 px-3 rounded-xs gap-1.5 text-xs font-medium shrink-0 border-border shadow-none"
                         >
                             <RefreshCw className="w-3.5 h-3.5" />
                             Atualizar
@@ -675,7 +669,7 @@ export function QuestionnairesTab({
                                     variant="outline"
                                     size="sm"
                                     onClick={addRow}
-                                    className="h-8 px-3 rounded-lg text-xs font-semibold gap-1 text-indigo-600 dark:text-indigo-400"
+                                    className="h-8 px-3 rounded-xs text-xs font-semibold gap-1 text-indigo-600 dark:text-indigo-400"
                                 >
                                     <Plus className="w-3.5 h-3.5" /> Adicionar Linha
                                 </Button>

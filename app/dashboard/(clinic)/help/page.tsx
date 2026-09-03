@@ -614,7 +614,7 @@ export default function HelpPage() {
                     </div>
                 </div>
                 <Link href="/dashboard">
-                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 transition text-slate-600 active:bg-slate-100">
+                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-200 rounded-xs hover:bg-slate-50 transition text-slate-600 active:bg-slate-100">
                         <ArrowLeft className="w-4 h-4" />
                         Voltar ao Painel
                     </button>

@@ -43,17 +43,17 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      {/* Header Premium */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-            <FileSpreadsheet className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Conciliação TISS</h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Selecione um lote TISS para informar os valores pagos em cada guia.</p>
-          </div>
-        </div>
+      {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <FileSpreadsheet className="w-4 h-4 text-foreground/80" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Conciliação TISS</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Selecione um lote TISS para informar os valores pagos em cada guia.</p>
+                    </div>
+                </div>
       </div>
 
       <div className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/20 mb-4 max-w-sm">
@@ -63,7 +63,7 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
             <select 
               name="batchId" 
               defaultValue={batchId || ""} 
-              className="flex h-10 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
                <option value="" disabled>Escolha um lote...</option>
                {batches.map((b) => (
@@ -74,7 +74,7 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
             </select>
             <button 
               type="submit" 
-              className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
+              className="h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
             >
               Carregar
             </button>

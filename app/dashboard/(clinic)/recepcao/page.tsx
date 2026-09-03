@@ -446,7 +446,7 @@ export default function RecepcaoPage() {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="flex gap-1.5 h-8 text-xs bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-3 font-bold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                                        className="flex gap-1.5 h-8 text-xs bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-3 font-bold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                                     >
                                         <SlidersHorizontal className="h-3.5 w-3.5" />
                                         <span>Filtros e Ações</span>
@@ -524,7 +524,7 @@ export default function RecepcaoPage() {
                     }}>
                         <DialogTrigger asChild>
                             <Button 
-                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold gap-1.5 border-0"
+                                className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium gap-1.5 border-0"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>Sem Agendamento</span>
@@ -574,7 +574,7 @@ export default function RecepcaoPage() {
                                             onChange={(e) => setReason(e.target.value)}
                                         />
                                     </div>
-                                    <Button className="w-full hover:shadow-md transition-all duration-300 rounded-xl h-10" onClick={handleCreateWalkIn}>
+                                    <Button className="w-full hover:shadow-md transition-all duration-300 rounded-xs h-10" onClick={handleCreateWalkIn}>
                                         Adicionar à Fila
                                     </Button>
                                 </div>
@@ -585,7 +585,7 @@ export default function RecepcaoPage() {
                     {/* Settings Configurations Button */}
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="h-10 gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all shadow-sm">
+                            <Button variant="outline" className="h-10 gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xs transition-all shadow-sm">
                                 <Settings className="w-4 h-4 text-slate-400" />
                                 Configurações
                             </Button>
@@ -741,7 +741,7 @@ export default function RecepcaoPage() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isEspacoIncluir && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                     <Undo2 className="w-4 h-4" />
                                                 </Button>
                                             )}
@@ -769,7 +769,7 @@ export default function RecepcaoPage() {
                                 {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status)).length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-xs">
                             <MoreVertical className="w-4 h-4" />
                         </Button>
                     </div>
@@ -863,7 +863,7 @@ export default function RecepcaoPage() {
                                             <Button 
                                                 size="sm" 
                                                 variant="ghost" 
-                                                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xl" 
+                                                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xs" 
                                                 onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} 
                                                 title="Documentos"
                                             >
@@ -872,12 +872,12 @@ export default function RecepcaoPage() {
 
                                             {/* Chamar Paciente */}
                                             {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xs px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                     {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                 </Button>
                                             )}
                                             {item.status === 'WAITING' && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xl px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
+                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xs px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
                                                     {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
                                                 </Button>
                                             )}
@@ -887,7 +887,7 @@ export default function RecepcaoPage() {
                                             {/* Iniciar Atendimento */}
                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
                                                 <button 
-                                                    className="h-8 text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
+                                                    className="h-8 text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600 rounded-xs px-3 flex items-center gap-1.5 transition-all shadow-sm" 
                                                     onClick={() => isEspacoIncluir ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
                                                     disabled={actionId === item.id}
                                                 >
@@ -896,7 +896,7 @@ export default function RecepcaoPage() {
                                             )}
                                             {item.status === 'WAITING' && (
                                                 <button 
-                                                    className="h-8 text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-650 rounded-xl px-3 flex items-center gap-1.5 transition-all shadow-sm" 
+                                                    className="h-8 text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-650 rounded-xs px-3 flex items-center gap-1.5 transition-all shadow-sm" 
                                                     onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
                                                     disabled={actionId === item.id}
                                                 >
@@ -906,13 +906,13 @@ export default function RecepcaoPage() {
 
                                             {/* Desfazer */}
                                             {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xl shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xs shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                     <Undo2 className="w-4 h-4" />
                                                 </Button>
                                             )}
 
                                             {/* Não Compareceu */}
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-xl shrink-0" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-xs shrink-0" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
                                                 <UserX className="w-4 h-4" />
                                             </Button>
                                         </div>
@@ -935,7 +935,7 @@ export default function RecepcaoPage() {
                                 {queue.filter(i => i.status === 'IN_PROGRESS').length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-xs">
                             <MoreVertical className="w-4 h-4" />
                         </Button>
                     </div>
@@ -984,13 +984,13 @@ export default function RecepcaoPage() {
 
                                     <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-805">
                                         {isEspacoIncluir && (
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xl" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                 <Undo2 className="w-4 h-4" />
                                             </Button>
                                         )}
                                         
                                         <button 
-                                            className="h-8 w-full text-xs font-extrabold bg-[#007D40] hover:bg-[#006835] text-white rounded-xl px-4 flex items-center justify-center gap-1.5 transition-all shadow-sm ml-auto" 
+                                            className="h-8 w-full text-xs font-extrabold bg-[#007D40] hover:bg-[#006835] text-white rounded-xs px-4 flex items-center justify-center gap-1.5 transition-all shadow-sm ml-auto" 
                                             onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
                                             disabled={actionId === item.id}
                                         >
@@ -1015,7 +1015,7 @@ export default function RecepcaoPage() {
                                 {queue.filter(i => i.status === 'COMPLETED').length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-lg">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-xs">
                             <MoreVertical className="w-4 h-4" />
                         </Button>
                     </div>
@@ -1069,7 +1069,7 @@ export default function RecepcaoPage() {
                                         </div>
                                         
                                         {isEspacoIncluir && (
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xl shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xs shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                 <Undo2 className="w-4 h-4" />
                                             </Button>
                                         )}

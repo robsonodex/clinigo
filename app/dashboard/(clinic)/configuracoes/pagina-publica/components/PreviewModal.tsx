@@ -41,7 +41,7 @@ function GlassmorphismPreview({ theme }: { theme: ClinicTheme }) {
                         {theme.hero.title || 'Nome da Clínica'}
                     </h1>
                     {theme.hero.subtitle && <p className="text-white/90 mb-4">{theme.hero.subtitle}</p>}
-                    <button className="px-6 py-3 rounded-xl font-semibold text-white bg-white/20 backdrop-blur border border-white/30 hover:bg-white/30 transition">
+                    <button className="px-6 py-3 rounded-xs font-semibold text-white bg-white/20 backdrop-blur border border-white/30 hover:bg-white/30 transition">
                         {theme.hero.cta_text || 'Agendar Consulta'}
                     </button>
                 </div>
@@ -112,7 +112,7 @@ function AuroraNeonPreview({ theme }: { theme: ClinicTheme }) {
                         {theme.hero.title || 'Nome da Clínica'}
                     </h1>
                     {theme.hero.subtitle && <p className="text-purple-200 mb-4">{theme.hero.subtitle}</p>}
-                    <button className="px-6 py-3 rounded-full font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/30 transition">
+                    <button className="px-6 py-3 rounded-xs font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/30 transition">
                         {theme.hero.cta_text || 'Agendar Consulta'}
                     </button>
                 </div>

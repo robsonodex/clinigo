@@ -45,9 +45,10 @@ export async function createClient() {
  * CAUTION: This bypasses RLS - use only for admin operations and webhooks
  */
 export function createServiceRoleClient() {
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     return createAdminClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        supabaseKey,
         {
             auth: {
                 autoRefreshToken: false,

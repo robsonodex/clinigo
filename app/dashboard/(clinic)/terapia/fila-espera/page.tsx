@@ -607,37 +607,37 @@ export default function FilaEsperaPage() {
                 </div>
                 <div className="flex gap-2 items-center flex-wrap">
                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                        className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm outline-none cursor-pointer min-h-[44px]" style={{ fontSize: '16px' }}>
+                        className="h-9 rounded-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-none outline-none cursor-pointer min-h-[36px]" style={{ fontSize: '13px' }}>
                         <option value="">Todos</option>
                         <option value="waiting">Aguardando</option>
                         <option value="contacted">Contatado</option>
                         <option value="scheduled">Agendado</option>
                     </select>
                     <Button variant="outline" onClick={openAuditModal}
-                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-emerald-50 border-emerald-200 shadow-sm rounded-xl px-4 font-semibold text-emerald-700 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Auditoria e Histórico Geral de Mensagens Entregues via WhatsApp">
-                        <History className="w-4 h-4 text-emerald-600" /><span className="hidden sm:inline">Auditoria WhatsApp</span>
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-emerald-50 border-emerald-200 shadow-none rounded-xs px-3.5 font-semibold text-emerald-700 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Auditoria e Histórico Geral de Mensagens Entregues via WhatsApp">
+                        <History className="w-3.5 h-3.5 text-emerald-600" /><span className="hidden sm:inline">Auditoria WhatsApp</span>
                     </Button>
                     <Button variant="outline" onClick={handleRemoveDuplicates}
-                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-amber-50 border-amber-200 shadow-sm rounded-xl px-4 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
-                        <Layers className="w-4 h-4 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-amber-50 border-amber-200 shadow-none rounded-xs px-3.5 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
+                        <Layers className="w-3.5 h-3.5 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
                     </Button>
                     <Button variant="outline" onClick={() => setImportModalOpen(true)}
-                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-blue-50 border-blue-200 shadow-sm rounded-xl px-4 font-semibold text-blue-700 dark:text-blue-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-blue-800" title="Importar pacientes para a Fila de Espera via planilha Excel ou CSV">
-                        <Upload className="w-4 h-4 text-blue-600" /><span className="hidden sm:inline">Importar</span>
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-blue-50 border-blue-200 shadow-none rounded-xs px-3.5 font-semibold text-blue-700 dark:text-blue-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-blue-800" title="Importar pacientes para a Fila de Espera via planilha Excel ou CSV">
+                        <Upload className="w-3.5 h-3.5 text-blue-600" /><span className="hidden sm:inline">Importar</span>
                     </Button>
                     <Button variant="outline" onClick={exportExcel}
-                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-slate-50 border-slate-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" /><span className="hidden sm:inline">Excel</span>
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-slate-50 border-slate-200 shadow-none rounded-xs px-3.5 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /><span className="hidden sm:inline">Excel</span>
                     </Button>
                     {data?.items?.length > 0 && (
                         <Button variant="outline" onClick={handleDeleteAll}
-                            className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-red-50 border-red-200 shadow-sm rounded-xl px-4 font-semibold text-red-600 dark:text-red-400 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-red-800" title="Excluir todos os registros da fila de espera">
-                            <Trash2 className="w-4 h-4 text-red-500" /><span className="hidden sm:inline">Excluir Todos</span>
+                            className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-red-50 border-red-200 shadow-none rounded-xs px-3.5 font-semibold text-red-600 dark:text-red-400 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-red-800" title="Excluir todos os registros da fila de espera">
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" /><span className="hidden sm:inline">Excluir Todos</span>
                         </Button>
                     )}
                     <Button onClick={openNew}
-                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0">
-                        <Plus className="w-4 h-4" /><span>Adicionar</span>
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-4 font-semibold border-0">
+                        <Plus className="w-3.5 h-3.5" /><span>Adicionar</span>
                     </Button>
                 </div>
             </div>
@@ -667,7 +667,7 @@ export default function FilaEsperaPage() {
                                         <th className="text-left p-2">Ações</th>
                                     </tr></thead>
                                     <tbody>
-                                        {data?.items?.length === 0 && <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">Fila vazia 🎉</td></tr>}
+                                        {data?.items?.length === 0 && <tr><td colSpan={7} className="text-center p-8 text-muted-foreground text-xs">Fila vazia</td></tr>}
                                         {data?.items?.map((item: any) => {
                                             const therapies = item.therapies && Array.isArray(item.therapies) && item.therapies.length > 0
                                                 ? item.therapies : (item.therapy_type ? [{ name: item.therapy_type, qty: 1 }] : [])
@@ -676,8 +676,8 @@ export default function FilaEsperaPage() {
                                                     <td className="p-2">
                                                         <div className="font-semibold text-gray-800 dark:text-gray-200">{item.patient_name}</div>
                                                         {item.responsible_name && (
-                                                            <span className="text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-1.5 py-0.5 rounded font-semibold border border-indigo-200 dark:border-indigo-800 mt-0.5 inline-block">
-                                                                👤 Resp: {item.responsible_name}
+                                                            <span className="text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-1.5 py-0.5 rounded-xs font-semibold border border-indigo-200 dark:border-indigo-800 mt-0.5 inline-block">
+                                                                Resp: {item.responsible_name}
                                                             </span>
                                                         )}
                                                         {(item.commercial_notes) && (
@@ -773,7 +773,7 @@ export default function FilaEsperaPage() {
                                         )}
                                     </div>
                                 ))}
-                                <Button type="button" variant="outline" size="sm" onClick={addTherapy} className="text-xs gap-1 h-8 rounded-lg">
+                                <Button type="button" variant="outline" size="sm" onClick={addTherapy} className="text-xs gap-1 h-8 rounded-xs">
                                     <Plus className="h-3 w-3" /> Adicionar Terapia
                                 </Button>
                             </div>
@@ -807,7 +807,7 @@ export default function FilaEsperaPage() {
                     )}
 
                     <Button onClick={handleSave}
-                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
+                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
                         <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
                     </Button>
                 </DialogContent>

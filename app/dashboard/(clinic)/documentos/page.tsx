@@ -242,22 +242,20 @@ export default function DocumentsPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #8B5CF6, #D946EF)' }}>
-                        <FileArchive className="w-5 h-5 text-white" />
-                    </div>
+            {/* Header Corporativo Enterprise */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    <FileArchive className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Gestão de Documentos</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Upload e gestão de exames, laudos e documentos médicos</p>
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">Gestão de Documentos</h1>
+                        <p className="text-xs text-muted-foreground mt-0.5">Upload e gestão de exames, laudos e documentos médicos</p>
                     </div>
                 </div>
 
                 <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
                     <DialogTrigger asChild>
-                        <Button className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0">
-                            <Upload className="w-4 h-4" />
+                        <Button className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0">
+                            <Upload className="w-3.5 h-3.5" />
                             <span>Novo Upload</span>
                         </Button>
                     </DialogTrigger>
@@ -337,7 +335,7 @@ export default function DocumentsPage() {
                             <Button
                                 onClick={handleUpload}
                                 disabled={uploading}
-                                className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center"
+                                className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold transition-all duration-200 border-0 justify-center"
                             >
                                 {uploading ? (
                                     <>
@@ -403,17 +401,17 @@ export default function DocumentsPage() {
                     </Card>
                 ) : (
                     documents.map((doc) => (
-                        <Card key={doc.id} className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm bg-white dark:bg-slate-900/40 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 group">
-                            <CardContent className="py-4 px-5">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-11 h-11 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                        <Card key={doc.id} className="rounded-md border border-border shadow-xs bg-card hover:bg-muted/20 transition-colors group">
+                            <CardContent className="py-3 px-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-9 h-9 rounded-md bg-muted/60 border border-border flex items-center justify-center flex-shrink-0 text-muted-foreground">
                                         {getFileIcon(doc.file_type)}
                                     </div>
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate group-hover:text-emerald-600 transition-colors">{doc.name}</h3>
-                                            <Badge variant="outline" className="rounded-full text-[10px] font-semibold border-slate-200 dark:border-slate-700">{getDocTypeLabel(doc.document_type)}</Badge>
+                                            <h3 className="font-medium text-xs text-foreground truncate group-hover:text-primary transition-colors">{doc.name}</h3>
+                                            <Badge variant="outline" className="rounded-xs text-[10px] font-medium border-border">{getDocTypeLabel(doc.document_type)}</Badge>
                                         </div>
 
                                         <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -447,7 +445,7 @@ export default function DocumentsPage() {
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenDocument(doc)} className="rounded-xl h-9 w-9 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
                                             <Eye className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" asChild className="rounded-xl h-9 w-9 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20">
+                                        <Button variant="ghost" size="icon" asChild className="rounded-xs h-9 w-9 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20">
                                             <a href={doc.storage_path || '#'} target="_blank" rel="noopener noreferrer">
                                                 <Download className="h-4 w-4" />
                                             </a>

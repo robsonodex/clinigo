@@ -156,7 +156,7 @@ export default function ReimbursementsPage() {
                 
                 <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
                     <DialogTrigger asChild>
-                        <Button className="flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
+                        <Button className="flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
                             <Plus className="h-4 w-4" />
                             <span>Nova Solicitação</span>
                         </Button>
@@ -228,7 +228,7 @@ export default function ReimbursementsPage() {
                             <Button 
                                 onClick={handleSubmit} 
                                 disabled={saving} 
-                                className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold transition-all duration-200 border-0"
+                                className="w-full h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold transition-all duration-200 border-0"
                             >
                                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} 
                                 <span>Salvar Solicitação</span>
@@ -269,7 +269,7 @@ export default function ReimbursementsPage() {
                                         {r.status === 'PENDING' && userRole === 'CLINIC_ADMIN' && (
                                             <Button 
                                                 size="sm" 
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 rounded-lg font-semibold px-4 transition-all duration-200 shadow-sm border-0" 
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 rounded-xs font-semibold px-4 transition-all duration-200 shadow-sm border-0" 
                                                 disabled={processingId === r.id}
                                                 onClick={() => handleApprove(r.id, r.amount)}
                                             >

@@ -758,7 +758,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             variant="outline"
             size="sm"
             onClick={handleExportExcel}
-            className="gap-1.5 h-11 min-h-[44px] rounded-xl px-3 text-xs font-semibold"
+            className="gap-1.5 h-11 min-h-[44px] rounded-xs px-3 text-xs font-semibold"
             title="Baixar planilha com pacientes e repasses vigentes"
           >
             <Download className="w-4 h-4 text-emerald-600" />
@@ -1132,7 +1132,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             </Button>
             <Button
               onClick={handleApplyBulkValue}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xl"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xs"
             >
               Aplicar a todos
             </Button>
@@ -1285,7 +1285,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               <Button
                 onClick={handleConfirmImport}
                 disabled={isImporting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xl"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xs"
               >
                 {isImporting ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-1" />

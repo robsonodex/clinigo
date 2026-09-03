@@ -525,3 +525,9 @@ vercel --prod
  
 - [2026-05-01] Backend -> WhatsApp -> lib/whatsapp/service.ts -> Adicionado onWhatsApp para formatar/checar nono dÃ­gito (BR) e 1.5s delay no envio para evitar Vercel timeout congelado.
 - [2026-05-01] Frontend -> Marketing -> app/(marketing)/landing-premium/page.tsx -> InserÃ§Ã£o de Cards de Novidades: WhatsApp Integrado e Chat Interno no grid de funcionalidades.
+- [2026-09-03] Visual Enterprise -> Design System -> tailwind.config.ts & app/globals.css -> Padronização global de raios em 2px austero (rounded-xs), remoção de gradientes decorativos de IA e preservação rigorosa de 100% das cores do sistema.
+- [2026-09-03] Componentes UI -> components/ui/button.tsx -> Trava de geometria base com rounded-xs, h-9 e remoção de sombras flutuantes.
+- [2026-09-03] Módulos -> Terapia / NPS / Documentos / Prontuários -> Padronização dos botões de ação (Excel, Registrar NPS, Novo Upload, Novo Prontuário).
+- [2026-09-03] Módulos -> Terapia -> Planos Terapêuticos -> app/dashboard/(clinic)/planos-terapeuticos/page.tsx -> Ajuste de espaçamento responsivo do cabeçalho e abas evitando que o botão Novo Plano vaze da tela.
+- [2026-09-03] Financeiro -> Repasse / Contratos -> app/dashboard/(clinic)/financial/payroll/contracts/page.tsx -> Proteção defensiva para Array em doctors e contracts evitando TypeError (doctors.map is not a function).
+- [2026-09-03] Backend / Supabase -> lib/supabase/server.ts -> Fallback inteligente para NEXT_PUBLIC_SUPABASE_ANON_KEY em createServiceRoleClient() prevenindo erro 500 local.

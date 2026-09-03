@@ -124,7 +124,7 @@ export function PWAInitializer() {
                         {/* Close button */}
                         <button
                             onClick={handleClose}
-                            className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-500 transition-colors"
+                            className="absolute top-4 right-4 p-1.5 rounded-xs bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-500 transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -157,7 +157,7 @@ export function PWAInitializer() {
                         {platform === 'android' ? (
                             <button
                                 onClick={handleInstallClick}
-                                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98]"
+                                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xs bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98]"
                             >
                                 <Download className="w-4 h-4" />
                                 Instalar Aplicativo
@@ -166,7 +166,7 @@ export function PWAInitializer() {
                             <div className="space-y-4 text-left">
                                 <button
                                     onClick={handleShareClick}
-                                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98]"
+                                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xs bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98]"
                                 >
                                     <Share className="w-4 h-4" />
                                     Abrir Compartilhamento

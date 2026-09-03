@@ -93,15 +93,15 @@ export default function InadimplenciaPage() {
 
     return (
         <div className="space-y-6 p-6 max-w-7xl mx-auto">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)' }}>
-                        <AlertTriangle className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <AlertTriangle className="w-4 h-4 text-foreground/80" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Inadimplência</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pacientes com parcelas em atraso</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Inadimplência</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Pacientes com parcelas em atraso</p>
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -109,7 +109,7 @@ export default function InadimplenciaPage() {
                         variant="outline" 
                         onClick={() => { refetch(); toast.success('Atualizado!'); }} 
                         disabled={isLoading}
-                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                        className="h-9 rounded-md px-3 text-xs font-medium border-border shadow-xs hover:bg-muted/50 flex items-center justify-center"
                     >
                         <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Atualizar
                     </Button>
@@ -117,7 +117,7 @@ export default function InadimplenciaPage() {
                         variant="outline" 
                         onClick={handleExportExcel} 
                         disabled={debtors.length === 0 || isExportingExcel}
-                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                        className="h-9 rounded-md px-3 text-xs font-medium border-border shadow-xs hover:bg-muted/50 flex items-center justify-center"
                     >
                         <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
                     </Button>
@@ -125,7 +125,7 @@ export default function InadimplenciaPage() {
                         variant="outline" 
                         onClick={handleExportPDF} 
                         disabled={debtors.length === 0 || isExportingPDF}
-                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                        className="h-9 rounded-md px-3 text-xs font-medium border-border shadow-xs hover:bg-muted/50 flex items-center justify-center"
                     >
                         <Download className="w-4 h-4 mr-2" /> Exportar PDF
                     </Button>
@@ -172,9 +172,9 @@ export default function InadimplenciaPage() {
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os níveis</SelectItem>
-                                <SelectItem value="leve">🟡 Leve (1-15 dias)</SelectItem>
-                                <SelectItem value="moderado">🟠 Moderado (16-30 dias)</SelectItem>
-                                <SelectItem value="grave">🔴 Grave (31+ dias)</SelectItem>
+                                <SelectItem value="leve">Leve (1-15 dias)</SelectItem>
+                                <SelectItem value="moderado">Moderado (16-30 dias)</SelectItem>
+                                <SelectItem value="grave">Grave (31+ dias)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -191,7 +191,7 @@ export default function InadimplenciaPage() {
                     {isLoading ? (
                         <div className="space-y-4">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
                     ) : debtors.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">Nenhum paciente inadimplente encontrado. 🎉</div>
+                        <div className="text-center py-12 text-muted-foreground">Nenhum paciente inadimplente encontrado.</div>
                     ) : (
                         <div className="rounded-md border">
                             <Table>

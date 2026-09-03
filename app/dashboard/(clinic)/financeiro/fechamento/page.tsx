@@ -140,7 +140,7 @@ export default function FechamentoFinanceiroPage() {
                         variant="outline" 
                         size="icon" 
                         onClick={prevMonth}
-                        className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all hover:bg-slate-50"
+                        className="h-10 w-10 rounded-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all hover:bg-slate-50"
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -175,7 +175,7 @@ export default function FechamentoFinanceiroPage() {
                         size="icon" 
                         onClick={nextMonth} 
                         disabled={isCurrentMonth}
-                        className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all hover:bg-slate-50"
+                        className="h-10 w-10 rounded-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all hover:bg-slate-50"
                     >
                         <ChevronRight className="h-4 w-4" />
                     </Button>

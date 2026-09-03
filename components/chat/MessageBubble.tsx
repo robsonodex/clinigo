@@ -224,7 +224,7 @@ export function MessageBubble({
                             {message.message_type === 'text' && (
                                 <button
                                     onClick={onStartEdit}
-                                    className="w-7.5 h-7.5 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150 active:scale-90"
+                                    className="w-7.5 h-7.5 flex items-center justify-center rounded-xs text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-150 active:scale-90"
                                     title="Editar"
                                 >
                                     <Pencil className="w-3.5 h-3.5" />
@@ -243,7 +243,7 @@ export function MessageBubble({
                             </button>
                             <button
                                 onClick={onDelete}
-                                className="w-7.5 h-7.5 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-150 active:scale-90"
+                                className="w-7.5 h-7.5 flex items-center justify-center rounded-xs text-slate-400 hover:text-red-650 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-150 active:scale-90"
                                 title="Deletar"
                             >
                                 <Trash2 className="w-3.5 h-3.5" />

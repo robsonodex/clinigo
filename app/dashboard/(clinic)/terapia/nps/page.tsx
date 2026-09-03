@@ -63,9 +63,9 @@ export default function NpsPage() {
                     <Button
                         variant="outline"
                         onClick={exportExcel}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-9 text-xs bg-white hover:bg-slate-50 border-slate-200 shadow-none rounded-xs px-3.5 font-medium text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Excel</span>
                     </Button>
                     <Button
@@ -73,9 +73,9 @@ export default function NpsPage() {
                             setForm({ patient_id: '', doctor_id: '', score: 8, comment: '', source: 'manual' });
                             setDialogOpen(true);
                         }}
-                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0"
+                        className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3.5 h-3.5" />
                         <span>Registrar NPS</span>
                     </Button>
                 </div>
@@ -132,7 +132,7 @@ export default function NpsPage() {
                         <div><Label>Comentário</Label><textarea value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" placeholder="Feedback do paciente..." /></div>
                         <Button
                             onClick={handleSave}
-                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
                         >
                             <span>Registrar NPS</span>
                         </Button>

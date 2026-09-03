@@ -164,15 +164,15 @@ export default function PaymentsPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #0EA5E9, #2563EB)' }}>
-                        <CreditCard className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <CreditCard className="w-4 h-4 text-foreground/80" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Pagamentos</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gestão financeira e histórico de transações</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Pagamentos</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gestão financeira e histórico de transações</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">

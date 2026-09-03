@@ -61,25 +61,25 @@ export function TrialBanner({ trialEndsAt, approvalStatus }: TrialBannerProps) {
     })
 
     return (
-        <div className={`${colors.bg} ${colors.border} border rounded-lg px-4 py-3 mb-4`}>
+        <div className={`${colors.bg} ${colors.border} border rounded-xs px-4 py-2.5 mb-4 shadow-none`}>
             <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                    <Clock className={`w-5 h-5 ${colors.icon} shrink-0`} />
+                <div className="flex items-center gap-2.5">
+                    <Clock className={`w-4 h-4 ${colors.icon} shrink-0`} />
                     <div>
-                        <p className={`font-semibold text-sm ${colors.title}`}>
+                        <p className={`font-semibold text-xs ${colors.title}`}>
                             Teste grátis: {daysLeft === 0 ? 'último dia!' : `faltam ${daysLeft} dia${daysLeft !== 1 ? 's' : ''}`}
                         </p>
-                        <p className={`text-xs ${colors.text}`}>
+                        <p className={`text-[11px] ${colors.text}`}>
                             Seu acesso expira em {formattedDate}
                         </p>
                     </div>
                 </div>
                 <Link
                     href="/dashboard/configuracoes/plano"
-                    className={`${colors.btn} px-4 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors shrink-0`}
+                    className={`${colors.btn} px-3 py-1.5 rounded-xs text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0 shadow-none`}
                 >
                     Escolher Plano
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
             </div>
         </div>

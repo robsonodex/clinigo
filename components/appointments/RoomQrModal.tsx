@@ -49,7 +49,7 @@ export function RoomQrModal({
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 min-h-[44px] rounded-xl text-xs font-medium border-slate-200 dark:border-slate-800"
+          className="gap-1.5 min-h-[44px] rounded-xs text-xs font-medium border-slate-200 dark:border-slate-800"
           title="QR Code da Sala de Atendimento"
         >
           <QrCode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -90,7 +90,7 @@ export function RoomQrModal({
           <Button
             variant="outline"
             onClick={handleCopyLink}
-            className="min-h-[44px] rounded-xl text-xs gap-1.5"
+            className="min-h-[44px] rounded-xs text-xs gap-1.5"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
             <span>{copied ? 'Copiado!' : 'Copiar Link'}</span>
@@ -98,7 +98,7 @@ export function RoomQrModal({
 
           <Button
             onClick={handlePrint}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl text-xs gap-1.5 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xs text-xs gap-1.5 shadow-sm"
           >
             <Printer className="w-4 h-4" />
             <span>Imprimir QR</span>

@@ -388,15 +388,15 @@ export default function IntegracoesPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' }}>
-                        <Globe className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <Globe className="w-4 h-4 text-foreground/80" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Integrações</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Conecte serviços externos à sua clínica</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Integrações</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Conecte serviços externos à sua clínica</p>
                     </div>
                 </div>
                 {PLANS[planType] && (
@@ -551,7 +551,7 @@ export default function IntegracoesPage() {
                                     {getStatusBadge(status)}
                                     {isLocked ? (
                                         <Link href="/dashboard/planos">
-                                            <Button size="sm" className="rounded-xl h-8 px-3.5 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800">
+                                            <Button size="sm" className="rounded-xs h-8 px-3.5 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800">
                                                 <ArrowRight className="w-3.5 h-3.5 mr-1" />
                                                 Upgrade
                                             </Button>
@@ -642,7 +642,7 @@ export default function IntegracoesPage() {
                                 variant="destructive"
                                 onClick={handleDisconnect}
                                 disabled={saving}
-                                className="rounded-xl h-10 px-4 text-sm font-semibold flex items-center justify-center gap-1.5"
+                                className="rounded-xs h-10 px-4 text-sm font-semibold flex items-center justify-center gap-1.5"
                             >
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                                 Desconectar
@@ -651,7 +651,7 @@ export default function IntegracoesPage() {
                         <Button
                             onClick={handleSave}
                             disabled={saving}
-                            className="rounded-xl h-10 px-5 text-sm font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center justify-center gap-1.5"
+                            className="rounded-xs h-10 px-5 text-sm font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center justify-center gap-1.5"
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                             {selectedIntegration && isConfigured(selectedIntegration) ? 'Atualizar' : 'Ativar'}
@@ -699,7 +699,7 @@ export default function IntegracoesPage() {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" className="rounded-xl h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-355 hover:bg-slate-100 dark:hover:bg-slate-850 flex items-center gap-1.5">
+                            <Button variant="outline" className="rounded-md h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-355 hover:bg-slate-100 dark:hover:bg-slate-850 flex items-center gap-1.5">
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 Ver Documentação da API
                             </Button>
@@ -707,18 +707,18 @@ export default function IntegracoesPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="rounded-2xl border border-slate-150 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40 relative overflow-hidden min-h-[220px]">
-                    <div className="absolute inset-0 bg-white/70 dark:bg-slate-950/65 backdrop-blur-sm z-10 flex items-center justify-center">
+                <Card className="rounded-md border border-border shadow-xs bg-card relative overflow-hidden min-h-[220px]">
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex items-center justify-center">
                         <div className="text-center p-6 max-w-sm">
-                            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mx-auto mb-3 shadow-sm">
-                                <Lock className="w-5 h-5" />
+                            <div className="w-9 h-9 rounded-md bg-muted/60 border border-border flex items-center justify-center text-muted-foreground mx-auto mb-3 shadow-xs">
+                                <Lock className="w-4 h-4" />
                             </div>
-                            <h3 className="font-bold text-slate-805 dark:text-white text-base">API REST Dedicada</h3>
-                            <p className="text-xs text-slate-450 dark:text-slate-500 mt-1 mb-4 leading-relaxed">
+                            <h3 className="font-semibold text-foreground text-sm">API REST Dedicada</h3>
+                            <p className="text-xs text-muted-foreground mt-1 mb-4 leading-relaxed">
                                 Faça integrações customizadas com outros sistemas. Disponível exclusivamente no plano Enterprise.
                             </p>
                             <Link href="/dashboard/planos">
-                                <Button size="sm" className="rounded-xl h-9 px-4 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center gap-1.5">
+                                <Button size="sm" className="rounded-md h-8 px-3 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5">
                                     Fazer Upgrade de Plano
                                     <ArrowRight className="w-3.5 h-3.5" />
                                 </Button>
@@ -760,7 +760,7 @@ export default function IntegracoesPage() {
                                     defaultValue={settings.webhook_url || ''}
                                     className="h-10 bg-white dark:bg-slate-900 border-slate-205 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-350 text-sm font-medium"
                                 />
-                                <Button variant="outline" className="rounded-xl h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                <Button variant="outline" className="rounded-xs h-10 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850">
                                     Testar Envio
                                 </Button>
                             </div>
@@ -791,16 +791,16 @@ export default function IntegracoesPage() {
                             </div>
                         </div>
 
-                        <Button className="rounded-xl h-10 px-5 text-sm font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-850 flex items-center justify-center gap-1.5 mt-2">
+                        <Button className="rounded-md h-10 px-5 text-sm font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-850 flex items-center justify-center gap-1.5 mt-2">
                             Salvar Configurações
                         </Button>
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="rounded-2xl border border-slate-150 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40 relative overflow-hidden min-h-[220px]">
+                <Card className="rounded-md border border-slate-150 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40 relative overflow-hidden min-h-[220px]">
                     <div className="absolute inset-0 bg-white/70 dark:bg-slate-950/65 backdrop-blur-sm z-10 flex items-center justify-center">
                         <div className="text-center p-6 max-w-sm">
-                            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mx-auto mb-3 shadow-sm">
+                            <div className="w-9 h-9 rounded-md bg-muted/60 border border-border flex items-center justify-center text-muted-foreground mx-auto mb-3 shadow-xs">
                                 <Lock className="w-5 h-5" />
                             </div>
                             <h3 className="font-bold text-slate-805 dark:text-white text-base">Webhooks ativos</h3>
@@ -808,7 +808,7 @@ export default function IntegracoesPage() {
                                 Envie notificações em tempo real para seu sistema externo. Disponível a partir do plano Profissional.
                             </p>
                             <Link href="/dashboard/planos">
-                                <Button size="sm" className="rounded-xl h-9 px-4 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center gap-1.5">
+                                <Button size="sm" className="rounded-md h-9 px-4 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 flex items-center gap-1.5">
                                     Fazer Upgrade de Plano
                                     <ArrowRight className="w-3.5 h-3.5" />
                                 </Button>

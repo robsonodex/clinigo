@@ -160,28 +160,23 @@ export default function DoctorsPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #0EA5E9, #2563EB)' }}>
-                        <Stethoscope className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">{profLabel.plural}</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie o corpo clínico e suas informações</p>
-                    </div>
+        <div className="space-y-5 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">{profLabel.plural}</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie o corpo clínico e suas informações</p>
                 </div>
-                <Button onClick={handleCreate} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
-                    <Plus className="w-4 h-4 mr-2" />
+                <Button onClick={handleCreate} className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium min-h-[36px]">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
                     {profLabel.novo}
                 </Button>
             </div>
 
             {selectedIds.length > 0 && (
-                <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="py-3 flex items-center justify-between">
-                        <span className="text-sm font-medium">
+                <Card className="rounded-md bg-muted/40 border border-border">
+                    <CardContent className="py-2.5 px-4 flex items-center justify-between">
+                        <span className="text-xs font-medium text-foreground">
                             {selectedIds.length} selecionados
                         </span>
                         <div className="flex gap-2">
@@ -190,8 +185,9 @@ export default function DoctorsPage() {
                                 size="sm"
                                 onClick={() => bulkUpdateMutation.mutate({ ids: selectedIds, is_accepting_appointments: true })}
                                 disabled={bulkUpdateMutation.isPending}
+                                className="rounded-md h-8 text-xs"
                             >
-                                <ShieldCheck className="h-4 w-4 mr-2" />
+                                <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
                                 Reativar
                             </Button>
                             <Button
@@ -199,9 +195,9 @@ export default function DoctorsPage() {
                                 size="sm"
                                 onClick={() => bulkUpdateMutation.mutate({ ids: selectedIds, is_accepting_appointments: false })}
                                 disabled={bulkUpdateMutation.isPending}
-                                className="text-destructive hover:bg-destructive/10"
+                                className="rounded-md h-8 text-xs text-destructive hover:bg-destructive/10"
                             >
-                                <ShieldAlert className="h-4 w-4 mr-2" />
+                                <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
                                 Indisponibilizar
                             </Button>
                             <Button
@@ -213,8 +209,9 @@ export default function DoctorsPage() {
                                     }
                                 }}
                                 disabled={bulkDeleteMutation.isPending}
+                                className="rounded-md h-8 text-xs"
                             >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                                 Excluir
                             </Button>
                         </div>
@@ -222,13 +219,13 @@ export default function DoctorsPage() {
                 </Card>
             )}
 
-            {/* Barra de Busca Premium */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Barra de Busca e Filtros */}
+            <div className="flex flex-col sm:flex-row gap-2.5">
                 <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                         placeholder="Buscar por nome, CRM ou especialidade..."
-                        className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                        className="pl-9 pr-3 h-9 bg-background border-border rounded-md focus-visible:ring-1 focus-visible:ring-primary text-xs font-normal text-foreground placeholder:text-muted-foreground"
                         value={search}
                         onChange={handleSearch}
                     />
@@ -240,37 +237,37 @@ export default function DoctorsPage() {
                         setPage(1)
                     }}
                 >
-                    <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+                    <SelectTrigger className="w-full sm:w-[170px] h-9 rounded-md border-border bg-background text-xs font-normal">
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Todos os Status</SelectItem>
-                        <SelectItem value="true">Disponíveis</SelectItem>
-                        <SelectItem value="false">Indisponíveis</SelectItem>
+                    <SelectContent className="rounded-md">
+                        <SelectItem value="all" className="text-xs">Todos os Status</SelectItem>
+                        <SelectItem value="true" className="text-xs">Disponíveis</SelectItem>
+                        <SelectItem value="false" className="text-xs">Indisponíveis</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
 
-            {/* Tabela Premium */}
-            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+            {/* Tabela Enterprise */}
+            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <Table>
-                            <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
+                            <TableHeader className="bg-muted/40 border-b border-border">
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="w-[40px] py-3 px-4">
+                                    <TableHead className="w-[40px] py-2.5 px-3">
                                         <Checkbox
                                             checked={doctors.length > 0 && selectedIds.length === doctors.length}
                                             onCheckedChange={toggleSelectAll}
                                         />
                                     </TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nome</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Especialidade</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">CRM</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Valor Consulta</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Status</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Conexão</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Nome</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Especialidade</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Registro</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Valor Consulta</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Status</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Conexão</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider text-right">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -280,24 +277,24 @@ export default function DoctorsPage() {
                                             <TableCell />
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
-                                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                                    <Skeleton className="h-8 w-8 rounded-md" />
                                                     <div className="space-y-1">
-                                                        <Skeleton className="h-4 w-[150px]" />
-                                                        <Skeleton className="h-3 w-[100px]" />
+                                                        <Skeleton className="h-3.5 w-[140px]" />
+                                                        <Skeleton className="h-3 w-[90px]" />
                                                     </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Skeleton className="h-5 w-[80px]" />
+                                                <Skeleton className="h-4 w-[80px]" />
                                             </TableCell>
                                             <TableCell>
-                                                <Skeleton className="h-5 w-[60px]" />
+                                                <Skeleton className="h-4 w-[60px]" />
                                             </TableCell>
                                             <TableCell>
-                                                <Skeleton className="h-4 w-[100px]" />
+                                                <Skeleton className="h-4 w-[90px]" />
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Skeleton className="h-8 w-8 ml-auto" />
+                                                <Skeleton className="h-7 w-7 ml-auto" />
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -307,97 +304,81 @@ export default function DoctorsPage() {
                                             colSpan={8}
                                             className="h-32 text-center"
                                         >
-                                            <div className="flex flex-col items-center gap-2">
-                                                <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                                    <Users className="h-7 w-7 text-slate-400" />
+                                            <div className="flex flex-col items-center gap-1.5">
+                                                <div className="w-10 h-10 rounded-md bg-muted/60 flex items-center justify-center">
+                                                    <Users className="h-5 w-5 text-muted-foreground" />
                                                 </div>
-                                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Nenhum {profLabel.singular.toLowerCase()} encontrado</p>
-                                                <p className="text-xs text-slate-400">Cadastre seu primeiro profissional para começar</p>
+                                                <p className="text-xs font-medium text-foreground">Nenhum {profLabel.singular.toLowerCase()} encontrado</p>
+                                                <p className="text-[11px] text-muted-foreground">Cadastre seu primeiro profissional para começar</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     doctors.map((doctor: Doctor) => {
-                                        const gradients = [
-                                            { from: '#4F46E5', to: '#06B6D4' },
-                                            { from: '#0EA5E9', to: '#2563EB' },
-                                            { from: '#10B981', to: '#059669' },
-                                            { from: '#8B5CF6', to: '#D946EF' },
-                                            { from: '#F59E0B', to: '#EF4444' }
-                                        ]
                                         const name = doctor.user?.full_name || ''
-                                        const charSum = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-                                        const theme = gradients[charSum % gradients.length]
                                         return (
-                                        <TableRow key={doctor.id} className={`group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200 ${selectedIds.includes(doctor.id) ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}>
-                                            <TableCell className="py-3 px-4">
+                                        <TableRow key={doctor.id} className={`hover:bg-muted/30 border-b border-border/60 transition-colors ${selectedIds.includes(doctor.id) ? 'bg-primary/5' : ''}`}>
+                                            <TableCell className="py-2.5 px-3">
                                                 <Checkbox
                                                     checked={selectedIds.includes(doctor.id)}
                                                     onCheckedChange={() => toggleSelect(doctor.id)}
                                                 />
                                             </TableCell>
-                                            <TableCell className="py-3 px-6 font-medium">
+                                            <TableCell className="py-2.5 px-4 font-normal">
                                                 <div className="flex items-center gap-3">
                                                     <div className="relative">
-                                                        <div
-                                                            style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
-                                                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
-                                                        >
+                                                        <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium">
                                                             {getInitials(name)}
                                                         </div>
                                                         {doctor.is_online && (
-                                                            <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" title="Online agora" />
+                                                            <span className="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-background" title="Online" />
                                                         )}
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">{doctor.user?.full_name}</span>
-                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                                        <span className="font-medium text-foreground text-xs">{doctor.user?.full_name}</span>
+                                                        <span className="text-[11px] text-muted-foreground">
                                                             {doctor.user?.email}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="py-3 px-6 text-sm text-slate-600 dark:text-slate-300">{doctor.specialty}</TableCell>
-                                            <TableCell className="py-3 px-6">
-                                                <code className="text-xs bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md text-slate-600 dark:text-slate-400 font-mono tracking-tight">{doctor.crm}/{doctor.crm_state}</code>
+                                            <TableCell className="py-2.5 px-4 text-xs text-muted-foreground">{doctor.specialty || '—'}</TableCell>
+                                            <TableCell className="py-2.5 px-4">
+                                                <code className="text-[11px] bg-muted/60 px-1.5 py-0.5 rounded-xs text-muted-foreground font-mono">
+                                                    {doctor.crm ? `${doctor.crm}/${doctor.crm_state || ''}` : '—'}
+                                                </code>
                                             </TableCell>
-                                            <TableCell className="py-3 px-6 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                            <TableCell className="py-2.5 px-4 text-xs font-medium text-foreground">
                                                 {formatCurrency(doctor.consultation_price)}
                                             </TableCell>
-                                            <TableCell className="py-3 px-6">
+                                            <TableCell className="py-2.5 px-4">
                                                 <Badge
-                                                    variant={
-                                                        doctor.is_accepting_appointments
-                                                            ? 'success'
-                                                            : 'secondary'
+                                                    variant={doctor.is_accepting_appointments ? 'outline' : 'secondary'}
+                                                    className={doctor.is_accepting_appointments
+                                                        ? "rounded-xs text-[10px] font-medium px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300/60"
+                                                        : "rounded-xs text-[10px] font-medium px-2 py-0.5"
                                                     }
-                                                    className="rounded-full text-[10px] font-semibold"
                                                 >
-                                                    {doctor.is_accepting_appointments
-                                                        ? 'Ativo'
-                                                        : 'Indisponível'}
+                                                    {doctor.is_accepting_appointments ? 'Ativo' : 'Indisponível'}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="py-3 px-6">
+                                            <TableCell className="py-2.5 px-4">
                                                 {doctor.is_online ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50">
-                                                        <span className="relative flex h-2 w-2">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                        </span>
+                                                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-normal">
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                                         <span>Online</span>
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
-                                                        <span className="inline-flex rounded-full h-2 w-2 bg-slate-300 dark:bg-slate-700"></span>
+                                                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40"></span>
                                                         <span>Offline</span>
                                                     </span>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="py-2.5 px-4 text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm">
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>

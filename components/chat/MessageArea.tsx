@@ -406,7 +406,7 @@ export function MessageArea({
                             <button
                                 onClick={handleAddParticipants}
                                 disabled={selectedUsers.size === 0 || isAdding}
-                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xl disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xs disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
                             >
                                 {isAdding ? 'Adicionando...' : 'Adicionar Selecionados'}
                             </button>

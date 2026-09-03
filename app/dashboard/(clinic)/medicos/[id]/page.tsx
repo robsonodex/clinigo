@@ -58,14 +58,14 @@ export default function DoctorProfilePage({ params }: PageProps) {
   const phone = doctor?.user?.phone || '';
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto animate-in fade-in duration-300">
+    <div className="space-y-5 p-3 sm:p-5 max-w-7xl mx-auto animate-in fade-in duration-200">
       {/* 1. NAVEGAÇÃO SUPERIOR (VOLTAR) */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => router.push('/dashboard/medicos')}
-          className="gap-2 text-muted-foreground hover:text-foreground h-11 min-h-[44px] rounded-xl px-3"
+          className="gap-2 text-muted-foreground hover:text-foreground h-9 rounded-md px-2.5 text-xs font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Lista de Profissionais</span>
@@ -73,35 +73,35 @@ export default function DoctorProfilePage({ params }: PageProps) {
       </div>
 
       {/* 2. CARD DO PROFISSIONAL */}
-      <Card className="rounded-2xl border border-border shadow-xs bg-card overflow-hidden">
-        <CardContent className="p-6">
+      <Card className="rounded-md border border-border shadow-xs bg-card overflow-hidden">
+        <CardContent className="p-5">
           {isLoading ? (
             <div className="flex items-center gap-4">
-              <Skeleton className="h-16 w-16 rounded-2xl" />
+              <Skeleton className="h-14 w-14 rounded-md" />
               <div className="space-y-2 flex-1">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-72" />
+                <Skeleton className="h-5 w-44" />
+                <Skeleton className="h-4 w-64" />
               </div>
             </div>
           ) : (
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-emerald-500/20">
+                <div className="w-14 h-14 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-lg font-semibold shadow-xs">
                   {doctorName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h1 className="text-2xl font-bold text-foreground">{doctorName}</h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">{doctorName}</h1>
                     <Badge
                       variant="outline"
-                      className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 font-semibold text-xs"
+                      className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300/60 font-medium text-[11px] rounded-xs px-2 py-0.5"
                     >
                       <ShieldCheck className="w-3 h-3 mr-1" />
                       {doctor?.is_accepting_appointments ? 'Ativo na Clínica' : 'Indisponível'}
                     </Badge>
                   </div>
 
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
                     <span className="flex items-center gap-1 font-medium text-foreground/80">
                       <Stethoscope className="w-3.5 h-3.5 text-emerald-600" />
                       {specialty}
@@ -129,10 +129,10 @@ export default function DoctorProfilePage({ params }: PageProps) {
                   variant="outline"
                   size="sm"
                   asChild
-                  className="h-11 min-h-[44px] rounded-xl px-3.5 text-xs font-semibold"
+                  className="h-9 rounded-md px-3 text-xs font-medium"
                 >
                   <Link href={`/dashboard/horarios?doctor_id=${doctorId}`}>
-                    <Calendar className="w-4 h-4 mr-1.5 text-primary" />
+                    <Calendar className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                     <span>Ver Grade de Horários</span>
                   </Link>
                 </Button>
@@ -143,24 +143,21 @@ export default function DoctorProfilePage({ params }: PageProps) {
       </Card>
 
       {/* 3. ABAS DO PERFIL */}
-      <Tabs defaultValue="valores-paciente" className="w-full space-y-6">
-        <TabsList className="bg-muted/60 p-1.5 rounded-2xl h-auto border border-border inline-flex flex-wrap gap-1">
+      <Tabs defaultValue="valores-paciente" className="w-full space-y-4">
+        <TabsList className="bg-muted/40 p-1 rounded-md h-auto border border-border inline-flex flex-wrap gap-1">
           <TabsTrigger
             value="valores-paciente"
-            className="rounded-xl px-4 py-2.5 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-xs min-h-[44px] flex items-center gap-2"
+            className="rounded-sm px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2"
           >
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
             <span>Valores por Paciente</span>
-            <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 h-4">
-              NOVO
-            </Badge>
           </TabsTrigger>
 
           <TabsTrigger
             value="dados-contrato"
-            className="rounded-xl px-4 py-2.5 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-xs min-h-[44px] flex items-center gap-2"
+            className="rounded-sm px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2"
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Contrato Geral</span>
           </TabsTrigger>
         </TabsList>
@@ -172,35 +169,35 @@ export default function DoctorProfilePage({ params }: PageProps) {
 
         {/* CONTEÚDO DA ABA: CONTRATO GERAL */}
         <TabsContent value="dados-contrato" className="m-0 focus-visible:outline-none">
-          <Card className="rounded-2xl border border-border shadow-xs p-6 space-y-4">
-            <h3 className="text-base font-bold text-foreground">Regras do Contrato Padrão</h3>
-            <p className="text-sm text-muted-foreground">
+          <Card className="rounded-md border border-border shadow-xs p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Regras do Contrato Padrão</h3>
+            <p className="text-xs text-muted-foreground">
               Estas são as taxas aplicadas quando o paciente não possui um valor customizado
               definido na aba &quot;Valores por Paciente&quot;.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-              <div className="p-4 rounded-xl bg-muted/40 border border-border">
-                <span className="text-xs text-muted-foreground block uppercase font-semibold">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div className="p-3.5 rounded-md bg-muted/40 border border-border">
+                <span className="text-[11px] text-muted-foreground block uppercase font-medium">
                   Repasse Padrão Particular
                 </span>
-                <span className="text-2xl font-extrabold text-foreground mt-1 block">
+                <span className="text-xl font-bold text-foreground mt-1 block">
                   {doctor?.percentage || 70}%
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-muted/40 border border-border">
-                <span className="text-xs text-muted-foreground block uppercase font-semibold">
+              <div className="p-3.5 rounded-md bg-muted/40 border border-border">
+                <span className="text-[11px] text-muted-foreground block uppercase font-semibold">
                   Valor da Consulta Padrão
                 </span>
-                <span className="text-2xl font-extrabold text-foreground mt-1 block">
+                <span className="text-xl font-bold text-foreground mt-1 block">
                   R$ {Number(doctor?.consultation_price || 200).toFixed(2)}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-muted/40 border border-border">
-                <span className="text-xs text-muted-foreground block uppercase font-semibold">
+              <div className="p-3.5 rounded-md bg-muted/40 border border-border">
+                <span className="text-[11px] text-muted-foreground block uppercase font-semibold">
                   Modalidade de Contrato
                 </span>
-                <span className="text-base font-bold text-foreground mt-2 block">
+                <span className="text-sm font-semibold text-foreground mt-1.5 block">
                   Percentual sobre Produção
                 </span>
               </div>

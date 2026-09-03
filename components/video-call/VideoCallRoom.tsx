@@ -215,7 +215,7 @@ export function VideoCallRoom({
                 <Button
                     size="lg"
                     variant={isAudioEnabled ? 'default' : 'destructive'}
-                    className="rounded-full w-14 h-14"
+                    className="rounded-xs w-14 h-14"
                     onClick={toggleAudio}
                 >
                     {isAudioEnabled ? <Mic /> : <MicOff />}
@@ -224,7 +224,7 @@ export function VideoCallRoom({
                 <Button
                     size="lg"
                     variant={isVideoEnabled ? 'default' : 'destructive'}
-                    className="rounded-full w-14 h-14"
+                    className="rounded-xs w-14 h-14"
                     onClick={toggleVideo}
                 >
                     {isVideoEnabled ? <Video /> : <VideoOff />}
@@ -233,7 +233,7 @@ export function VideoCallRoom({
                 <Button
                     size="lg"
                     variant={isScreenSharing ? 'secondary' : 'ghost'}
-                    className="rounded-full w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white border-0"
+                    className="rounded-xs w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white border-0"
                     onClick={toggleScreenShare}
                 >
                     <Monitor className="w-6 h-6" />
@@ -242,7 +242,7 @@ export function VideoCallRoom({
                 <Button
                     size="lg"
                     variant="ghost"
-                    className="rounded-full w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white border-0 relative"
+                    className="rounded-xs w-14 h-14 bg-gray-700 hover:bg-gray-600 text-white border-0 relative"
                     onClick={() => setShowChat(!showChat)}
                 >
                     <MessageSquare className="w-6 h-6" />
@@ -258,7 +258,7 @@ export function VideoCallRoom({
                 <Button
                     size="lg"
                     variant="destructive"
-                    className="rounded-full w-14 h-14"
+                    className="rounded-xs w-14 h-14"
                     onClick={handleEndCall}
                 >
                     <PhoneOff />

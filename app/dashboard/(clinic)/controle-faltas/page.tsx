@@ -104,63 +104,55 @@ export default function AbsenceControlPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #EF4444, #F97316)' }}>
-                        <AlertTriangle className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <AlertTriangle className="w-4 h-4 text-foreground/80" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Controle de Faltas e Pacotes</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie regras de ausência, reposições e pacotes de sessões</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Controle de Faltas e Pacotes</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie regras de ausência, reposições e pacotes de sessões</p>
                     </div>
                 </div>
             </div>
 
             {/* Dashboard Summary Cards Premium */}
             <div className="grid gap-4 md:grid-cols-4 mb-6">
-                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
+                <Card className="rounded-md border border-border shadow-xs bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Reposições Pendentes</CardTitle>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F59E0B, #F97316)' }}>
-                            <RefreshCcw className="h-4 w-4 text-white" />
-                        </div>
+                        <div className="w-7 h-7 rounded-sm bg-muted/60 border border-border flex items-center justify-center text-muted-foreground"><RefreshCcw className="h-3.5 w-3.5 text-muted-foreground" /></div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{replacements.filter(r => r.status === 'pending').length}</div>
                         <p className="text-[10px] text-slate-400 mt-1">Sessões aguardando agendamento</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
+                <Card className="rounded-md border border-border shadow-xs bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pacotes Ativos</CardTitle>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-                            <CheckCircle className="h-4 w-4 text-white" />
-                        </div>
+                        <div className="w-7 h-7 rounded-sm bg-muted/60 border border-border flex items-center justify-center text-muted-foreground"><CheckCircle className="h-3.5 w-3.5 text-muted-foreground" /></div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{packages.filter(p => p.status === 'active').length}</div>
                         <p className="text-[10px] text-slate-400 mt-1">Pacotes em andamento</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
+                <Card className="rounded-md border border-border shadow-xs bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Regras Ativas</CardTitle>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0EA5E9, #2563EB)' }}>
-                            <Settings className="h-4 w-4 text-white" />
-                        </div>
+                        <div className="w-7 h-7 rounded-sm bg-muted/60 border border-border flex items-center justify-center text-muted-foreground"><Settings className="h-3.5 w-3.5 text-muted-foreground" /></div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{rules.filter(r => r.is_active).length}</div>
                         <p className="text-[10px] text-slate-400 mt-1">Controlando a agenda automaticamente</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
+                <Card className="rounded-md border border-border shadow-xs bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sinal de Alerta</CardTitle>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)' }}>
-                            <XCircle className="h-4 w-4 text-white" />
-                        </div>
+                        <div className="w-7 h-7 rounded-sm bg-muted/60 border border-border flex items-center justify-center text-muted-foreground"><XCircle className="h-3.5 w-3.5 text-muted-foreground" /></div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-extrabold text-slate-800 dark:text-white">{replacements.length > 0 ? 'Monitorando' : 'Saudável'}</div>

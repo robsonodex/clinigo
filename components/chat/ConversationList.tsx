@@ -216,7 +216,7 @@ export function ConversationList({
                     {!isSuperAdmin && (
                         <button
                             onClick={handleNewSupport}
-                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 hover:border-emerald-500/20 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/40 dark:shadow-none"
+                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xs bg-white dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 hover:border-emerald-500/20 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/40 dark:shadow-none"
                         >
                             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                                 <Headphones className="w-5 h-5" />
@@ -469,7 +469,7 @@ export function ConversationList({
                             <button
                                 onClick={handleCreateGroup}
                                 disabled={selectedGroupUsers.size === 0}
-                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xl disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xs disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
                             >
                                 Criar Grupo
                             </button>

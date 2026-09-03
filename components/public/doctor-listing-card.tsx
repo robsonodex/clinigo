@@ -235,7 +235,7 @@ export function DoctorListingCard({ doctor, clinicSlug, primaryColor }: DoctorLi
 
                 <Button
                     onClick={goToProfile}
-                    className="w-full mt-3 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-semibold h-8 rounded-lg"
+                    className="w-full mt-3 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-semibold h-8 rounded-xs"
                     variant="outline"
                 >
                     Ver perfil completo

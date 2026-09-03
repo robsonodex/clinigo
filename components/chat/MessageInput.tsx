@@ -207,7 +207,7 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={cancelRecording}
-                        className="w-9.5 h-9.5 flex items-center justify-center rounded-xl text-red-500 hover:text-red-650 hover:bg-red-500/10 active:scale-90 transition-all duration-150 cursor-pointer"
+                        className="w-9.5 h-9.5 flex items-center justify-center rounded-xs text-red-500 hover:text-red-650 hover:bg-red-500/10 active:scale-90 transition-all duration-150 cursor-pointer"
                         title="Cancelar"
                     >
                         <X className="w-5 h-5" />
@@ -220,7 +220,7 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                     </div>
                     <button
                         onClick={stopRecording}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 transition-all duration-200 shadow-md shadow-emerald-500/15 active:scale-90 cursor-pointer"
+                        className="w-10 h-10 flex items-center justify-center rounded-xs bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 transition-all duration-200 shadow-md shadow-emerald-500/15 active:scale-90 cursor-pointer"
                         title="Enviar áudio"
                     >
                         <StopCircle className="w-5 h-5" />
@@ -287,7 +287,7 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                         <button
                             onClick={handleSend}
                             disabled={isUploading}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 transition-all duration-205 shadow-md shadow-emerald-500/15 disabled:opacity-40 active:scale-90 cursor-pointer shrink-0"
+                            className="w-10 h-10 flex items-center justify-center rounded-xs bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 transition-all duration-205 shadow-md shadow-emerald-500/15 disabled:opacity-40 active:scale-90 cursor-pointer shrink-0"
                             title="Enviar"
                         >
                             <Send className="w-4.5 h-4.5" />
@@ -296,7 +296,7 @@ export function MessageInput({ conversationId, onSend }: MessageInputProps) {
                         <button
                             onClick={startRecording}
                             disabled={isUploading}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-805 transition-all duration-205 disabled:opacity-40 active:scale-90 cursor-pointer border border-transparent hover:border-slate-200/40 dark:hover:border-slate-700/40 shrink-0"
+                            className="w-10 h-10 flex items-center justify-center rounded-xs text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-805 transition-all duration-205 disabled:opacity-40 active:scale-90 cursor-pointer border border-transparent hover:border-slate-200/40 dark:hover:border-slate-700/40 shrink-0"
                             title="Gravar áudio"
                         >
                             <Mic className="w-4.5 h-4.5" />

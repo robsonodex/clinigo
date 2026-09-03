@@ -188,7 +188,7 @@ function OperadorasTab() {
             </div>
 
             {/* Table Premium */}
-            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
@@ -245,7 +245,7 @@ function OperadorasTab() {
                                         <TableCell className="py-3.5 px-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                    <Button variant="ghost" size="icon" className="rounded-xs h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
                                                         <MoreVertical className="w-4 h-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -527,7 +527,7 @@ function PlanosTab() {
             </div>
 
             {/* Table Premium */}
-            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
@@ -595,7 +595,7 @@ function PlanosTab() {
                                         <TableCell className="py-3.5 px-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                    <Button variant="ghost" size="icon" className="rounded-xs h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
                                                         <MoreVertical className="w-4 h-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -847,7 +847,7 @@ function MedicosTab() {
             </div>
 
             {/* Table Premium */}
-            <Card className="rounded-2xl border border-slate-100 dark:border-slate-800/80 shadow-sm overflow-hidden bg-white dark:bg-slate-900/40">
+            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
@@ -895,8 +895,7 @@ function MedicosTab() {
                                             <TableCell className="py-3.5 px-6 font-medium">
                                                 <div className="flex items-center gap-3">
                                                     <div
-                                                        style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                                        className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium"
                                                     >
                                                         {initials}
                                                     </div>
@@ -1192,7 +1191,7 @@ function ElegibilidadeTab() {
                     </div>
 
                     <Button
-                        className="w-full rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2 mt-2"
+                        className="w-full rounded-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2 mt-2"
                         onClick={() => checkMutation.mutate(formData)}
                         disabled={
                             checkMutation.isPending ||
@@ -1309,15 +1308,15 @@ function ElegibilidadeTab() {
 export default function ConveniosPage() {
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-                        <Heart className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <Heart className="w-4 h-4 text-foreground/80" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Convênios</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie operadoras, planos e regras de atendimento</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Convênios</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie operadoras, planos e regras de atendimento</p>
                     </div>
                 </div>
             </div>

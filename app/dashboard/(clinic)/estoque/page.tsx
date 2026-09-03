@@ -333,21 +333,21 @@ export default function InventoryPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            {/* Header Premium Internacional */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
-                        <Package className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
+                        <Package className="w-4 h-4 text-foreground/80" />
                     </div>
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Estoque</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gestão de produtos e materiais</p>
+                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Estoque</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gestão de produtos e materiais</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold"><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
+                        <Button className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium"><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
@@ -549,7 +549,7 @@ export default function InventoryPage() {
             {/* Summary Cards */}
             {summary && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
+                    <Card className="rounded-md border border-border shadow-xs bg-card">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Produtos</CardTitle>
                             <Package className="h-4 w-4 text-slate-400" />
@@ -576,7 +576,7 @@ export default function InventoryPage() {
                             <div className="text-2xl font-extrabold text-red-600">{summary.outOfStock}</div>
                         </CardContent>
                     </Card>
-                    <Card className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900/40">
+                    <Card className="rounded-md border border-border shadow-xs bg-card">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Valor Total</CardTitle>
                             <Box className="h-4 w-4 text-slate-400" />

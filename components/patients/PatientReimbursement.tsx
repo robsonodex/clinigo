@@ -288,7 +288,7 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                     
                     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                         <DialogTrigger asChild>
-                            <Button className="shrink-0 flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
+                            <Button className="shrink-0 flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
                                 <FileDown className="w-4 h-4" />
                                 Gerar Relatório
                             </Button>
@@ -365,7 +365,7 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                                 <Button 
                                     onClick={generatePDF} 
                                     disabled={isGenerating}
-                                    className="flex gap-1.5 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                                    className="flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
                                 >
                                     {isGenerating ? (
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

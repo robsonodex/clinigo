@@ -308,7 +308,7 @@ export default function SMTPConfigPage() {
                             <button
                                 onClick={handleTest}
                                 disabled={isTesting || !testEmail}
-                                className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isTesting ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -326,7 +326,7 @@ export default function SMTPConfigPage() {
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSaving ? (
                             <>
