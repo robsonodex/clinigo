@@ -269,11 +269,11 @@ export function ConsultingRoomsSettings() {
         }
     }
 
-    // Testar voz do anúncio (Prioridade 2)
+    // Testar voz do anúncio
     const previewVoice = (gender: 'feminina' | 'masculina' | 'padrao') => {
         if (typeof window === 'undefined' || !window.speechSynthesis) return
         window.speechSynthesis.cancel()
-        const text = 'Aline Teste, Clínico Geral, Doutor Francisco Robson — dirija-se à Sala 3.'
+        const text = 'Aline Teste, Sala B.'
         const utterance = new SpeechSynthesisUtterance(text)
         utterance.lang = 'pt-BR'
         utterance.rate = 0.88
@@ -696,7 +696,7 @@ export function ConsultingRoomsSettings() {
                                 </SelectContent>
                             </Select>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Exemplo: &ldquo;Aline Teste, Clínico Geral, Dr. Francisco Robson — dirija-se à Sala 3&rdquo;.
+                                Exemplo: &ldquo;Aline Teste, Sala B&rdquo;.
                             </p>
                         </div>
 

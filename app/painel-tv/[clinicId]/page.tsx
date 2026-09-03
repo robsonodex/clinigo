@@ -46,7 +46,6 @@ interface ConsultingRoom {
 
 interface CalledPatient {
     patientName: string
-    doctorName: string
     ticketNumber?: string | null
     roomName: string
     timestamp: number
@@ -244,32 +243,30 @@ export default function PainelTVPage() {
         }
     }, [])
 
-    // Voz neural aprimorada com direção física de destino (Prioridade 2)
+    // Voz neural limpa e objetiva: Nome do Paciente + Sala
     const speakCall = useCallback((
         patientName: string, 
         roomName: string, 
-        doctorName?: string, 
-        specialty?: string, 
         ticketNumber?: string | null
     ) => {
         if (typeof window === 'undefined' || !window.speechSynthesis) return
 
-        // Cancel any active speech to avoid overlapping
+        // Cancelar qualquer fila anterior e retomar caso o navegador tenha pausado
         window.speechSynthesis.cancel()
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume()
+        }
 
-        const docText = doctorName ? `Dr. ${doctorName}` : ''
-        const specText = specialty ? specialty : ''
-        const dirText = roomName.toLowerCase().startsWith('sala') || roomName.toLowerCase().startsWith('consultório')
-            ? `dirija-se à ${roomName}`
-            : `dirija-se ao ${roomName}`
-
+        // Locução enxuta: "[Nome do Paciente], [Sala]" ou "Senha [Número], [Sala]"
         let text = ''
         if (ticketNumber) {
             const spelledTicket = ticketNumber.replace('-', ' ')
-            text = `Senha ${spelledTicket}. ${specText ? specText + ', ' : ''}${docText ? docText + ' — ' : ''}${dirText}.`
+            text = `Senha ${spelledTicket}, ${roomName}.`
         } else {
-            text = `${patientName}, ${specText ? specText + ', ' : ''}${docText ? docText + ' — ' : ''}${dirText}.`
+            text = `${patientName}, ${roomName}.`
         }
+
+        console.log('[TV Panel Anunciando Voz]:', text)
 
         const utterance = new SpeechSynthesisUtterance(text)
         utterance.lang = 'pt-BR'
@@ -381,7 +378,7 @@ export default function PainelTVPage() {
 
         // Realtime subscription for appointments & clinic changes
         const channel = supabase
-            .channel('tv_panel_realtime')
+            .channel(`tv_panel_realtime_${clinicId}`)
             .on(
                 'postgres_changes',
                 {
@@ -390,63 +387,71 @@ export default function PainelTVPage() {
                     table: 'appointments',
                 },
                 async (payload: any) => {
-                    if (payload.eventType === 'UPDATE') {
-                        // Detect patient call
-                        const isFirstCall = payload.new.status === 'WAITING' && payload.old?.status !== 'WAITING'
-                        const isRecall = payload.new.status === 'WAITING' && payload.old?.status === 'WAITING' && payload.new.called_at !== payload.old?.called_at
+                    if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+                        // Se o agendamento foi colocado ou atualizado em WAITING (chamado)
+                        if (payload.new && payload.new.status === 'WAITING') {
+                            try {
+                                // Buscar dados completos imediatamente direto do Supabase por ID
+                                const { data: apptData } = await (supabase as any)
+                                    .from('appointments')
+                                    .select(`
+                                        id,
+                                        clinic_id,
+                                        ticket_number,
+                                        consulting_room_id,
+                                        patient:patients(full_name),
+                                        consulting_room:consulting_rooms(id, name, display_name, room_number)
+                                    `)
+                                    .eq('id', payload.new.id)
+                                    .maybeSingle()
 
-                        if (isFirstCall || isRecall) {
-                            await fetchAppointments()
-                            // Small delay to ensure state lists are synced
-                            setTimeout(() => {
-                                const apt = appointmentsRef.current.find(a => a.id === payload.new.id)
-                                if (apt) {
-                                    // Resolve room name (por ID direto ou por médico da sala)
-                                    const roomId = payload.new.consulting_room_id || apt.consulting_room_id
-                                    let room = roomsRef.current.find(r => r.id === roomId)
-
-                                    if (!room && apt.doctor) {
-                                        room = roomsRef.current.find(r => 
-                                            (apt.doctor?.id && (r.doctor_id === apt.doctor.id || r.doctor?.id === apt.doctor.id)) ||
-                                            (apt.doctor?.user?.full_name && r.doctor?.user?.full_name &&
-                                             r.doctor.user.full_name.toLowerCase().trim() === apt.doctor.user.full_name.toLowerCase().trim())
-                                        )
+                                if (apptData && (!apptData.clinic_id || apptData.clinic_id === clinicId)) {
+                                    // Resolver nome da sala com prioridade absoluta no NOME cadastrado da sala
+                                    let room = apptData.consulting_room
+                                    if (!room && apptData.consulting_room_id) {
+                                        room = roomsRef.current.find(r => r.id === apptData.consulting_room_id)
                                     }
 
-                                    const roomText = room ? room.display_name || room.name || `Consultório ${room.room_number}` : 'Consultório'
-                                    const doctorSpecialty = (room?.doctor?.specialty || (apt.doctor as any)?.specialty || '')
+                                    let roomText = 'Sala'
+                                    if (room) {
+                                        const rName = (room.name || '').trim()
+                                        const rDisp = (room.display_name || '').trim()
+                                        // Priorizar o nome da sala (ex: "Sala 8", "Sala B", "Consultório 1")
+                                        if (rName) {
+                                            roomText = rName
+                                        } else if (rDisp && !/clinico|geral|médic|doutor|especial|pediat|psico/i.test(rDisp)) {
+                                            roomText = rDisp
+                                        } else {
+                                            roomText = `Sala ${room.room_number || 1}`
+                                        }
+                                    }
 
+                                    const patientName = apptData.patient?.full_name?.trim() || 'Paciente'
+
+                                    // Exibir imediatamente na tela da TV
                                     setCalledPatient({
-                                        patientName: apt.patient?.full_name || 'Paciente',
-                                        doctorName: apt.doctor?.user?.full_name || '',
-                                        specialty: doctorSpecialty,
-                                        ticketNumber: apt.ticket_number,
+                                        patientName,
+                                        ticketNumber: apptData.ticket_number,
                                         roomName: roomText,
                                         timestamp: Date.now(),
                                     })
 
-                                    // Tocar som escolhido pela clínica (Prioridade 2)
+                                    // Tocar som configurado
                                     playCallSound(tvSoundTheme)
 
-                                    // Anúncio por voz com direção física 1s após o chime (Prioridade 2)
+                                    // Locução por voz imediata: exclusivamente Nome do Paciente + Sala cadastrada
                                     setTimeout(() => {
-                                        speakCall(
-                                            apt.patient?.full_name || 'Paciente', 
-                                            roomText, 
-                                            apt.doctor?.user?.full_name,
-                                            doctorSpecialty,
-                                            apt.ticket_number
-                                        )
-                                    }, 1000)
+                                        speakCall(patientName, roomText, apptData.ticket_number)
+                                    }, 700)
 
-                                    // Dismiss call overlay after 12 seconds
+                                    // Fechar overlay após 12 segundos
                                     setTimeout(() => setCalledPatient(null), 12000)
                                 }
-                            }, 500)
-                        } else {
-                            fetchAppointments()
+                            } catch (err) {
+                                console.error('[TV Realtime Call Error]:', err)
+                            }
                         }
-                    } else if (payload.eventType === 'INSERT') {
+
                         fetchAppointments()
                     }
                 }
@@ -661,70 +666,58 @@ export default function PainelTVPage() {
                 </div>
             </footer>
 
-            {/* Giant Fullscreen Call Animation Overlay - Acessibilidade Reforçada (Prioridade 3) */}
+            {/* Alerta Discreto de Desbloqueio de Áudio (Políticas de Autoplay do Navegador) */}
+            {!audioReady && (
+                <button
+                    onClick={initAudio}
+                    className="fixed bottom-6 left-6 z-40 flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_40px_rgba(245,158,11,0.5)] cursor-pointer hover:bg-amber-300 transition-all animate-bounce"
+                    title="O navegador exige um clique para permitir o som da TV"
+                >
+                    🔊 Clique na tela para ativar o som da TV
+                </button>
+            )}
+
+            {/* Fullscreen Call Animation Overlay - Limpo, Elegante e Direto */}
             {calledPatient && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-6 border-8 border-amber-400/80 shadow-[inset_0_0_100px_rgba(245,158,11,0.3)]"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-6"
                     style={{
-                        background: 'linear-gradient(165deg, #061528 0%, #02070e 100%)',
+                        background: 'linear-gradient(165deg, #091c33 0%, #050d18 100%)',
                         animation: 'fadeIn 0.2s ease-out',
                     }}
                 >
-                    {/* Decorative ambient glowing grids & accessibility pulse */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15)_0%,transparent_70%)] pointer-events-none" />
+                    {/* Decorative ambient glowing background */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none" />
 
-                    <div className="text-center max-w-7xl mx-auto space-y-6 md:space-y-8 relative z-10">
-                        
-                        {/* Accessibility Header Alert Badge */}
-                        <div style={{ animation: 'slideUp 0.2s ease-out' }}>
-                            <span className="inline-flex items-center gap-3 px-8 py-2.5 rounded-full bg-amber-400 text-slate-950 text-xl md:text-2xl font-black tracking-widest uppercase shadow-[0_0_40px_rgba(245,158,11,0.5)] animate-pulse">
-                                🔔 ATENÇÃO — CHAMADA DE ATENDIMENTO
-                            </span>
-                        </div>
-
-                        {/* Ticket Badge */}
+                    <div className="text-center max-w-6xl mx-auto space-y-8 relative z-10">
+                        {/* Ticket Badge (se houver) */}
                         {calledPatient.ticketNumber && (
                             <div style={{ animation: 'slideUp 0.3s ease-out' }}>
-                                <span className="inline-block px-14 py-4 rounded-3xl bg-amber-400 text-slate-950 text-5xl md:text-6xl font-black font-mono tracking-widest uppercase shadow-[0_0_60px_rgba(245,158,11,0.4)]">
+                                <span className="inline-block px-12 py-4 rounded-3xl bg-amber-400 text-slate-950 text-4xl md:text-5xl font-black font-mono tracking-widest uppercase shadow-[0_0_50px_rgba(245,158,11,0.3)]">
                                     SENHA {calledPatient.ticketNumber}
                                 </span>
                             </div>
                         )}
 
-                        {/* Patient Name - Ultra-high visibility */}
+                        {/* Patient Name */}
                         <h2
-                            className="text-6xl md:text-8xl lg:text-9xl font-black text-white leading-tight tracking-tight uppercase drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)]"
+                            className="text-7xl md:text-8xl lg:text-9xl font-black text-white leading-tight tracking-tight uppercase drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)]"
                             style={{ animation: 'slideUp 0.4s ease-out' }}
                         >
                             {calledPatient.patientName}
                         </h2>
 
-                        {/* Doctor Name & Specialty */}
-                        {(calledPatient.doctorName || calledPatient.specialty) && (
-                            <div className="space-y-1" style={{ animation: 'slideUp 0.5s ease-out' }}>
-                                {calledPatient.doctorName && (
-                                    <p className="text-3xl md:text-5xl text-white font-medium">
-                                        Dr(a). <strong className="text-amber-300 font-bold">{calledPatient.doctorName}</strong>
-                                    </p>
-                                )}
-                                {calledPatient.specialty && (
-                                    <p className="text-xl md:text-3xl text-emerald-400 font-semibold tracking-wide uppercase">
-                                        {calledPatient.specialty}
-                                    </p>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Room Location with Physical Direction */}
-                        <div style={{ animation: 'slideUp 0.6s ease-out' }} className="pt-2">
+                        {/* Consulting Room - Apenas o nome cadastrado da sala */}
+                        <div style={{ animation: 'slideUp 0.5s ease-out' }} className="pt-4">
                             <span
-                                className="inline-block px-14 md:px-20 py-5 md:py-7 rounded-3xl text-4xl md:text-6xl font-black tracking-wider shadow-[0_0_50px_rgba(255,255,255,0.2)]"
+                                className="inline-block px-16 py-6 rounded-3xl text-5xl md:text-7xl font-black tracking-wider uppercase border border-white/15 shadow-2xl"
                                 style={{
-                                    backgroundColor: '#ffffff',
-                                    color: '#091c33',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    backdropFilter: 'blur(20px)',
+                                    color: '#ffffff',
                                 }}
                             >
-                                DIRIJA-SE À: {calledPatient.roomName.toUpperCase()}
+                                {calledPatient.roomName.toUpperCase()}
                             </span>
                         </div>
                     </div>
