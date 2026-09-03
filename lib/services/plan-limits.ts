@@ -129,7 +129,14 @@ export async function checkDoctorLimit(clinicId: string): Promise<void> {
     const { planType, limits, customLimits } = await getClinicPlan(clinicId)
 
     // Get effective limit (custom or default)
-    const maxDoctors = customLimits?.max_doctors ?? limits.max_doctors
+    let maxDoctors = limits.max_doctors
+    if (maxDoctors !== -1) {
+        if (customLimits?.max_doctors === -1) {
+            maxDoctors = -1
+        } else if (customLimits?.max_doctors !== undefined && customLimits?.max_doctors !== null) {
+            maxDoctors = Math.max(customLimits.max_doctors, limits.max_doctors)
+        }
+    }
 
     // Unlimited
     if (maxDoctors === -1) {

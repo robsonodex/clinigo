@@ -259,7 +259,17 @@ export async function POST(request: NextRequest) {
         const planType = (clinic as any).plan_type as PlanType
         const planConfig = PLANS[planType] || PLANS.BASICO
         const dbMaxDoctors = ((clinic as any)?.plan_limits as { max_doctors?: number })?.max_doctors
-        const baseMaxDoctors = dbMaxDoctors !== undefined && dbMaxDoctors !== null ? dbMaxDoctors : planConfig.limits.max_doctors
+
+        // Garante que o limite base seja no mínimo o limite concedido pelo plano ativo
+        let baseMaxDoctors = planConfig.limits.max_doctors
+        if (baseMaxDoctors !== -1) {
+            if (dbMaxDoctors === -1) {
+                baseMaxDoctors = -1
+            } else if (dbMaxDoctors !== undefined && dbMaxDoctors !== null) {
+                baseMaxDoctors = Math.max(dbMaxDoctors, planConfig.limits.max_doctors)
+            }
+        }
+
         const extraDoctors = ((clinic as any)?.addons as { extra_doctors?: number })?.extra_doctors || 0
         const totalMaxDoctors = baseMaxDoctors === -1 ? -1 : baseMaxDoctors + extraDoctors
 
@@ -267,7 +277,7 @@ export async function POST(request: NextRequest) {
         if (totalMaxDoctors !== -1 && (doctorCount || 0) >= totalMaxDoctors) {
             const planName = planConfig.name
             throw new BadRequestError(
-                `Limite de médicos atingido (${baseMaxDoctors === -1 ? 'ilimitado' : baseMaxDoctors} médicos no plano ${planName}). Faça upgrade ou adicione médicos extras.`
+                `Limite de médicos atingido (${totalMaxDoctors === -1 ? 'ilimitado' : totalMaxDoctors} médicos no plano ${planName}). Faça upgrade ou adicione médicos extras.`
             )
         }
 

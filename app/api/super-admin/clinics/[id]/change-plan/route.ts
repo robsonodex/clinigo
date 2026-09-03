@@ -7,10 +7,11 @@ import { successResponse, handleApiError, BadRequestError, ForbiddenError } from
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { BillingProrationService } from '@/lib/services/billing-proration'
 import { FeatureGateService } from '@/lib/services/feature-gate'
+import { PLANS, type PlanType } from '@/lib/constants/plans'
 import { z } from 'zod'
 
 const changeSchema = z.object({
-    new_plan: z.enum(['STARTER', 'BASICO', 'AVANCADO', 'ENTERPRISE']),
+    new_plan: z.enum(['STARTER', 'BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE']),
     reason: z.string().min(10, 'Motivo deve ter no mínimo 10 caracteres'),
     billing_action: z.enum(['CHARGE_DIFFERENCE', 'COURTESY', 'ADJUST_NEXT_BILLING']),
     effective_date: z.enum(['IMMEDIATE', 'NEXT_BILLING_CYCLE']).default('IMMEDIATE'),
@@ -77,6 +78,7 @@ export async function POST(
             .from('clinics')
             .update({
                 plan_type: validatedData.new_plan,
+                plan_limits: PLANS[validatedData.new_plan as PlanType]?.limits || PLANS.BASICO.limits,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', clinicId)

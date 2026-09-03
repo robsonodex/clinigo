@@ -1996,6 +1996,201 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - **Abertura Automática de Prontuário**: Redirecionamento instantâneo para `/dashboard/prontuarios/[appointmentId]`, eliminando busca manual e acelerando o atendimento.
    - **Trilha de Auditoria com Timestamp e Responsável**: Registro em `doctor_checked_in_at` e `doctor_checked_in_by`.
    - **Dupla Comprovação para Convênio (TISS)**: Cruzamento com `checked_in_at` da recepção/totem, gerando `DOUBLE_VERIFIED` para blindar faturamento TISS contra glosas. Caso seja apenas o médico, registra `DOCTOR_ONLY`.
+- **Novos campos no PUT**: Mesmos campos adicionados ao update condicional.
+
+- Módulo → Terapia → Conformidade Evoluções → `app/api/reports/evolution-compliance/route.ts` → GET
+  - **Detecção de duplicatas**: Novo algoritmo que identifica evoluções com mesmo `doctor_id + patient_id + evolution_date`. Retorna array `duplicates` com nome do paciente, data, terapeuta e contagem.
+  - **Campo `total_duplicates`** adicionado ao summary.
+
+- Módulo → Terapia → Conformidade Evoluções → `app/dashboard/(clinic)/terapia/conformidade-evolucao/page.tsx` → UI
+  - **Card de alerta de duplicatas**: Painel visual âmbar listando possíveis evoluções duplicadas com paciente, terapeuta, data e contagem.
+
+- Módulo → Prontuário → Documentos → `components/documents/DocumentUpload.tsx` → [REWRITE]
+  - **Categorias agrupadas**: Select com grupos visuais "🏥 Saúde" (Exame, Receita, Laudo, Encaminhamento, Atestado) e "📋 Administrativo" (Carteirinha, Termo, Outro, Pessoal/ADM).
+  - **Campo `doc_group`**: Salva automaticamente `health` ou `admin` baseado no tipo selecionado.
+
+- Módulo → Prontuário → Documentos → `components/patients/PatientDocuments.tsx` → [REWRITE]
+  - **Duas seções visuais**: "Documentos de Saúde" (ícone estetoscópio, borda verde) e "Documentos Administrativos" (ícone pasta, borda padrão).
+  - **Modal de edição** com grupos de categorias idênticos ao upload.
+
+- Módulo → Prontuário → Documentos → `app/api/documents/route.ts` → GET
+  - **Filtro por role DOCTOR**: Terapeutas não-coordenadores agora só veem documentos de saúde (`doc_group = 'health'`).
+
+- Módulo → Prontuário → Documentos → `app/api/documents/[id]/route.ts` → PATCH
+  - **Salvamento de `doc_group`**: Adicionado suporte para salvar/atualizar o grupo do documento na edição.
+
+- Módulo → UI → Select → `components/ui/select.tsx`
+  - **Novo componente `SelectLabel`**: Adicionado para permitir labels visuais em grupos de select.
+  - **Novo componente `SelectSeparator`**: Adicionado para separação visual entre grupos.
+
+**Migrations SQL:**
+- `supabase/migrations/20260622000000_waiting_list_financial_and_therapies.sql`
+- `supabase/migrations/20260622000001_document_categories_health_admin.sql`
+- `supabase/migrations/EXECUTAR_MANUAL_20260622.sql` (consolidado para execução no Dashboard)
+
+### 22/06/2026 - WhatsApp Multi-Sessão por Setor
+
+**Solicitado por:** Espaço Incluir (Jeferson)
+**Escopo:** Todas as clínicas (retrocompatível)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+- Módulo → Comunicação → WhatsApp → `lib/whatsapp/service.ts` → [MULTI-SECTOR SUPPORT]
+  - **Chave composta do Map**: Sessões agora indexadas por `clinicId__sector` ao invés de `clinicId`.
+  - **Todas as funções exportadas** (`createInstanceAndGetQR`, `checkInstanceStatus`, `sendWhatsAppMessage`, `disconnectInstance`) recebem parâmetro opcional `sector` (default: `'default'`).
+  - **Nova função `getAllClinicSessions`**: Retorna todas as sessões de uma clínica.
+  - **Retrocompatível**: Chamadores existentes sem `sector` continuam funcionando (default = `'default'`).
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/connect/route.ts` → POST
+  - Aceita `{ sector }` no body para conectar um setor específico.
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/disconnect/route.ts` → POST
+  - Aceita `{ sector }` no body para desconectar setor específico.
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/status/route.ts` → GET
+  - Aceita `?sector=` como query param. `?sector=all` retorna array de todas as sessões.
+
+- Módulo → Comunicação → WhatsApp → `app/api/whatsapp/send/route.ts` → POST
+  - Aceita `{ sector }` no body para enviar por um número específico.
+
+- Módulo → Comunicação → WhatsApp → `app/dashboard/(clinic)/whatsapp/page.tsx` → [REWRITE]
+  - **Interface multi-sessão**: Cards de sessões conectadas/desconectadas por setor.
+  - **Modal QR Code**: Dialog com QR + polling automático por setor.
+  - **Dialog "Adicionar Setor"**: Input com sugestões pré-definidas (Recepção, Financeiro, Comercial, Clínico, Suporte).
+  - **Badges coloridos por setor** para identificação visual.
+
+**Migrations SQL:**
+- `supabase/migrations/20260622000002_whatsapp_multi_session.sql`
+- `supabase/migrations/EXECUTAR_MANUAL_20260622_WHATSAPP.sql` (consolidado para execução no Dashboard)
+
+### 17/08/2026 - Ajuste na Tela de Conta Bloqueada (Textos e Suporte)
+
+**Escopo:** Global (Tela pública/sistema de conta bloqueada)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+- Módulo → Autenticação / Segurança → Conta Bloqueada → `app/conta-bloqueada/page.tsx` → `ContaBloqueadaPage`
+  - **Atualização de WhatsApp de Suporte**: Atualizado o link do WhatsApp para o número oficial `5521975129005` (21 97512-9005).
+  - **Ajuste dos textos explicativos**:
+    - "Por que a conta foi bloqueada? O bloqueio ocorre quando a conta da clínica está inativa por pendência administrativa."
+    - "Como solicitar o desbloqueio? O gestor responsável deve entrar em contato diretamente com o suporte para que o administrador realize a ativação."
+
+### 25/08/2026 - Agenda Multi-Terapeuta, Horários Livres Simultâneos & Módulo de Questionários Clínicos ABA
+
+**Solicitado por:** Espaço Incluir (Jeferson)  
+**Escopo:** Global (Todas as clínicas multi-tenant com isolamento RLS por `clinic_id`)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+1. **Recepção → Agenda → Permissões de Compromisso & Reunião Multi-Terapeuta**
+   - Arquivo: `app/api/appointments/manual/route.ts` → `POST`
+     - **Permissão de Bloqueio/Compromisso para Gestores**: Liberada a permissão para `CLINIC_ADMIN`, `RECEPTIONIST`, `SUPER_ADMIN` e coordenadores criarem compromissos/bloqueios na agenda de qualquer profissional da equipe, eliminando a restrição indevida de "só é possível incluir compromisso na própria agenda".
+     - **Suporte a Múltiplos Profissionais**: Suporte ao array `doctor_ids?: string[]` no payload, persistindo o compromisso principal e gerando registros espelhados para todas as terapeutas selecionadas simultaneamente com nota descritiva de equipe.
+
+2. **Recepção → Agenda → Modal de Bloqueio/Reunião de Equipe**
+   - Arquivo: `components/appointments/BlockScheduleModal.tsx` → `BlockScheduleModal`
+     - **Seleção Múltipla com Checkboxes**: Interface PWA/Mobile com busca rápida, badges de terapeutas selecionadas e botão de ação em massa *"Selecionar Todos da Clínica"*.
+     - **Acessibilidade Touch**: Botões e áreas de toque com dimensões ≥ 44×44px e inputs com 16px para evitar zoom automático no iOS Safari.
+
+3. **Recepção → Agenda → Filtro e Destaque de Horários Livres Simultâneos**
+   - Arquivo: `components/ui/agenda-view.tsx` → `AgendaView`
+     - **Multi-Seleção no Filtro de Profissionais**: Dropdown com checkboxes permitindo filtrar a agenda de várias terapeutas simultaneamente.
+     - **Cálculo de Disponibilidade Concomitante**: Lógica de `getSlotFreeStatus` atualizada com `isAllSelectedFree` e tag visual **`⭐ Todas Livres`** nas células da grade semanal onde todas as terapeutas marcadas estão desocupadas no mesmo horário.
+
+4. **Terapia → Planos Terapêuticos → Módulo de Questionários e Folhas de Registro ABA**
+   - Arquivo: `app/dashboard/(clinic)/planos-terapeuticos/page.tsx` → `TherapeuticPlansPage`
+     - **Navegação em Abas no Cabeçalho**: Alternância fluida entre *"Planos & Metas"* e *"Folhas de Registro & ABA"*.
+   - Arquivo: `components/therapeutic-plans/QuestionnairesTab.tsx` → `QuestionnairesTab` [NOVO]
+     - **Modelos Padronizados Disponíveis**:
+       - 🎯 *Registro de Tentativas ABA*: Antecedente / Estímulo, Resposta Alvo, Dica (`I`, `AFT`, `AFL`, `AG`, `AV`, `M`), Resultado rápido (`+`, `d+`, `d-`, `-`) e Legenda de Esvanecimento de Dicas.
+       - 📊 *Folha de Registro — Linha de Base*: Coleta inicial de estímulos sem dica com 1ªT, 2ªT, 3ªT, taxa de acerto e critérios de aquisição.
+       - 🌿 *Folha de Registro — Ensino Naturalista / Incidental*: Coleta ecológica com tentativas com dica vs. independentes e % de aproveitamento.
+     - **Histórico Clínico Imutável**: Armazenamento com snapshot da estrutura da folha no momento da aplicação, métricas consolidadas, filtros por paciente e visualizador/impressão.
+   - Arquivo: `app/api/therapeutic-plans/questionnaires/templates/route.ts` → [NOVO]
+     - CRUD de templates de questionários clínicos com os 3 modelos padrão pré-carregados.
+   - Arquivo: `app/api/therapeutic-plans/questionnaires/responses/route.ts` → [NOVO]
+     - CRUD de respostas e histórico de aplicações com auditoria e isolamento por `clinic_id`.
+   - Migration: `supabase/migrations/20260825000000_create_therapeutic_questionnaires.sql` [NOVO]
+     - Tabelas `therapeutic_plan_questionnaire_templates` e `therapeutic_plan_questionnaire_responses` com índices e RLS.
+
+5. **DevOps / Infraestrutura → Repositório & Projeto Oficial: `clinigo`**
+   - Arquivo: `docs/deploy.md`
+     - **Padronização Oficial**: Documentado que o repositório oficial no GitHub é **`clinigo`** (`https://github.com/robsonodex/clinigo`, branch `master`) e o projeto oficial na Vercel é **`clinigo`** (e **NÃO** `clinigo-saas`). Todo push na branch `master` do repositório `clinigo` dispara a esteira de CI/CD automática.
+
+### 26/08/2026 - Ícones Oficiais, Favicon PWA e SEO Técnico Completo (Landing Page)
+
+**Solicitado por:** CliniGO / Robson Oliveira  
+**Escopo:** Global (Landing Page pública `clinigo.app` e Metadados Globais do Sistema)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+1. **SEO / Frontend → Favicon e Ícones da Marca (PWA & App Router)**
+   - Arquivo: `app/layout.tsx` → `metadata` / `<head>`
+     - Configuração completa do objeto `metadata.icons` com ícones multi-resolução (`favicon.ico` 16x16/32x32/48x48, `favicon.png` 32x32, `icon-192x192.png`, `icon-512x512.png` e `apple-touch-icon.png` 180x180).
+     - Referência oficial para o manifest em `/site.webmanifest`.
+   - Arquivos: `public/site.webmanifest`, `public/manifest.json` [NOVO / ATUALIZADO]
+     - Manifest PWA padronizado com nome *"CliniGO - Sistema para Gestão de Clínicas e Consultórios"*, suporte maskable em alta resolução e tema visual `#16a34a`.
+   - Arquivos: `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`, `public/favicon.ico`, `public/favicon.png`, `public/apple-touch-icon.png` [NOVOS]
+     - Geração e distribuição de ícones nos tamanhos corretos exigidos pelas diretrizes de busca do Google e navegadores móveis (Safari iOS / Chrome Android).
+
+2. **SEO Técnico → Metadados, OpenGraph & Twitter Cards**
+   - Arquivo: `app/layout.tsx` → `metadata`
+     - Palavra-chave principal otimizada: *"sistema para gestão de clínicas"*.
+     - Variações secundárias: *"software para clínica médica"*, *"sistema de agendamento para clínicas"*, *"prontuário eletrônico para clínicas"*, *"gestão de clínicas online"*, *"faturamento TISS"*.
+     - OpenGraph e Twitter Card com imagem promocional 1200x630 (`/dashboard-preview.png`), título e descrição comercial.
+
+3. **SEO Técnico → Dados Estruturados (JSON-LD) & Hierarquia Semântica**
+   - Arquivo: `app/(marketing)/landing-premium/page.tsx` → `LandingPremium`
+     - Inserção de JSON-LD Schema.org (`SoftwareApplication` e `Organization`) com preço a partir de R$ 99/mês, rating 4.9/5 e categoria `HealthApplication`.
+     - Ajuste semântico da tag `<h1>` para conter a palavra-chave primária exata.
+
+4. **SEO Técnico → Controle de Robôs e Sitemap Dinâmico**
+   - Arquivo: `app/robots.ts` [NOVO]
+     - Permite crawling das páginas públicas (`/`, `/planos`, `/blog`, `/contato`, `/sobre`) e bloqueia áreas privadas (`/dashboard`, `/api`, `/paciente`, `/partners`, `/admin`, `/totem`, `/system-master-hub`).
+   - Arquivo: `app/sitemap.ts` [NOVO]
+     - Sitemap XML dinâmico gerando todas as páginas públicas com prioridades e frequências de atualização para o Google Search Console.
+
+### 01/09/2026 - Pente Fino e Estabilização para Apresentação: Agendamento Manual, Painel TV & Reconhecimento Facial
+
+**Solicitado por:** Robson (Demonstração / Apresentação Geral do Sistema)  
+**Escopo:** Global (Conta Demo e Todas as Clínicas Multi-Tenant)
+
+**Módulo → Submódulo → Arquivo → Função/Componente alterado**
+
+1. **Recepção → Agendamento Manual → Correção de Erro 500 no Cadastro de Consultas**
+   - Arquivo: `app/api/appointments/manual/route.ts` → `POST`
+     - **Correção da Coluna de Observações**: Substituído o campo `notes` por `waiting_room_notes` na inserção de agendamentos e registros espelhados de equipe, corrigindo o erro `PGRST204 (column notes does not exist)` retornado pelo PostgREST.
+     - **Estabilização do Lançamento Financeiro**: Ajustada a inserção em `financial_entries` com `type: 'INCOME'`, `entry_type: 'INCOME'`, `status: 'PAID'`, `due_date: appointmentDate`, garantindo conformidade com as constraints do banco de dados.
+     - **Alinhamento do Botão de Ação no Rodapé**: Inserido `mt-auto pt-1` com área de toque mínima de 44px (`min-h-[44px]`), garantindo conformidade com padrões PWA/Mobile e alinhamento milimétrico de todos os botões na mesma linha de base.
+     - **Grid Responsivo Adaptativo**: Atualizado para `grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3`, permitindo visualização fluida em dispositivos móveis, tablets e telas widescreen.
+     - **Consistência de Título**: Padronizado o título da etapa 3 para *"Cadastrar Paciente"* (mantendo *"Registre o primeiro paciente no sistema"* na descrição), alinhando a nomenclatura com os demais passos do onboarding.
+
+2. **Financeiro → Repasses e Folha de Pagamento → Extrato de Repasse Interativo via WhatsApp (Prioridade 1)**
+   - Arquivos:
+     - `supabase/migrations/20260902000001_whatsapp_repasse_extract.sql` [NOVO]
+     - `lib/services/whatsapp-repasse.ts` [NOVO]
+     - `app/api/whatsapp/repasse-extract/route.ts` [NOVO]
+     - `lib/whatsapp/service.ts` → `startBaileysSession` (listener `messages.upsert`)
+     - `app/dashboard/(clinic)/financial/payroll/components/WhatsAppExtratoModal.tsx` [NOVO]
+     - `app/dashboard/(clinic)/financial/payroll/page.tsx` → `PayrollPage`
+     - `__tests__/api/payroll/whatsapp-repasse.test.ts` [NOVO]
+   - **Comandos Interativos via WhatsApp**: Qualquer profissional cadastrado e ativo pode enviar comandos como *"extrato"*, *"repasse"*, *"quanto já ganhei"* ou *"saldo"* para o WhatsApp conectado da clínica.
+   - **Autenticação Segura por Telefone (LGPD)**: O sistema normaliza e valida o número remetente contra a base de usuários (`users.phone`) e profissionais da clínica (`doctors`). Números desconhecidos recebem aviso de bloqueio por sigilo financeiro e LGPD.
+   - **Cálculo em Tempo Real**: Totaliza atendimentos concluídos no mês (`status = 'COMPLETED'`), faturamento bruto gerado, percentuais e valores fixos de contratos ativos (`doctor_contracts`), valor acumulado a receber e projeção de consultas futuras até o fim do mês.
+   - **Preview e Teste no Painel**: Adicionado modal interativo com prévia fiel da mensagem WhatsApp e botão para disparo de teste direto para o celular do profissional.
+
+3. **Atendimento / Agenda → Check-in do Profissional como Evento-Gatilho Central (Prioridade 1)**
+   - Arquivos:
+     - `supabase/migrations/20260902000002_doctor_checkin_trigger.sql` [NOVO]
+     - `app/api/appointments/[id]/doctor-checkin/route.ts` [NOVO]
+     - `components/appointments/DoctorCheckinButton.tsx` [NOVO]
+     - `components/appointments/RoomQrModal.tsx` [NOVO]
+     - `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer`
+     - `components/ui/agenda-view.tsx` → `AgendaPage`
+     - `__tests__/api/appointments/doctor-checkin.test.ts` [NOVO]
+   - **Evento-Gatilho Central**: A confirmação de presença pelo médico na sala de atendimento (`status = 'IN_PROGRESS'`) dispara em cascata a abertura do prontuário, o repasse financeiro e a auditoria.
+   - **Abertura Automática de Prontuário**: Redirecionamento instantâneo para `/dashboard/prontuarios/[appointmentId]`, eliminando busca manual e acelerando o atendimento.
+   - **Trilha de Auditoria com Timestamp e Responsável**: Registro em `doctor_checked_in_at` e `doctor_checked_in_by`.
+   - **Dupla Comprovação para Convênio (TISS)**: Cruzamento com `checked_in_at` da recepção/totem, gerando `DOUBLE_VERIFIED` para blindar faturamento TISS contra glosas. Caso seja apenas o médico, registra `DOCTOR_ONLY`.
    - **Snapshot de Repasse Financeiro**: Cálculo instantâneo do valor líquido (`repasse_amount`) e alíquota (`repasse_rate_applied`) gravados no registro do agendamento com base nos contratos ativos (`doctor_contracts`), blindando o histórico financeiro contra alterações retroativas de contrato.
    - **QR Code do Consultório**: Modal e gerador de QR Code permanente para salas de atendimento, permitindo leitura e check-in via smartphone/tablet.
 
@@ -2053,3 +2248,14 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - **[P5] Persistência Definitiva de Áudio na TV**:
      - Eliminação de pedidos repetidos de permissão a cada reload via persistência no localStorage.
      - Keep-alive sutil periódico para evitar que o navegador suspenda o AudioContext por inatividade.
+
+6. **Planos & Gestão de Equipe — Correção de Limite de Profissionais (Plano Professional)**
+   - Arquivos:
+     - app/api/doctors/route.ts → POST
+     - lib/services/plan-limits.ts → checkDoctorLimit
+     - app/api/super-admin/clinics/[id]/route.ts → PATCH (activate_plan)
+     - app/api/super-admin/clinics/[id]/change-plan/route.ts → POST (changeSchema + update)
+     - scripts/saneamento/2026-09-03_fix_worldsensory_plan_limits.mjs [NOVO]
+   - **Garantia de Limite do Plano Ativo**: O limite concedido pelo plano contratado (PLANS[plan_type].limits.max_doctors, ex: 30 no plano Professional) agora é assegurado como piso mínimo, impedindo que limites defasados gravados na coluna plan_limits do banco (ex: padrão de 1 médico do trial inicial) restrinjam o cadastro da equipe.
+   - **Sincronização em Ativações e Troca de Plano**: As rotas de ativação e de troca manual de planos no Super Admin passam a sincronizar a coluna plan_limits com os limites oficiais do plano selecionado.
+   - **Saneamento da Clínica WorldSensory**: Registro da clínica atualizado no Supabase para max_doctors: 30 (Plano Professional), permitindo o cadastro imediato de todos os 30 profissionais da equipe.

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { PLANS, type PlanType } from '@/lib/constants/plans'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -81,6 +82,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                     trial_ends_at: null,
                     is_active: true,
                     plan_type: planType,
+                    plan_limits: PLANS[planType as PlanType]?.limits || PLANS.BASICO.limits,
                 })
                 .eq('id', clinicId)
 
