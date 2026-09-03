@@ -66,6 +66,19 @@ interface Stats {
     no_show_count: number
 }
 
+const getTimeWaiting = (arrivalTime: string | Date) => {
+    const start = new Date(arrivalTime).getTime()
+    const now = new Date().getTime()
+    const diffInMinutes = Math.floor((now - start) / 60000)
+    
+    if (diffInMinutes < 60) {
+        return `${diffInMinutes} min`
+    }
+    const hours = Math.floor(diffInMinutes / 60)
+    const mins = diffInMinutes % 60
+    return `${hours}h${mins > 0 ? ` ${mins}m` : ''}`
+}
+
 export default function RecepcaoPage() {
     const { toast } = useToast()
     const { user: currentUser } = useUser()
