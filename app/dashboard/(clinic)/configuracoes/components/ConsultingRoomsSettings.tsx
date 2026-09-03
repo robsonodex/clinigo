@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 import { 
     Building, 
     Tv, 
@@ -19,7 +20,9 @@ import {
     Check, 
     AlertTriangle,
     Eye,
-    EyeOff
+    EyeOff,
+    MessageSquare,
+    ExternalLink
 } from 'lucide-react'
 
 // Plan definitions mapping
@@ -57,6 +60,12 @@ export function ConsultingRoomsSettings() {
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
+
+    const router = useRouter()
+    const [whatsappCallEnabled, setWhatsappCallEnabled] = useState(false)
+    const [whatsappConnected, setWhatsappConnected] = useState(false)
+    const [whatsappPhone, setWhatsappPhone] = useState<string | null>(null)
+    const [savingWhatsappToggle, setSavingWhatsappToggle] = useState(false)
 
     // Form states
     const [isEditing, setIsEditing] = useState(false)
@@ -112,6 +121,19 @@ export function ConsultingRoomsSettings() {
                 setDoctors(data.data || [])
             }
 
+            // 6. Fetch TV WhatsApp settings & live status
+            try {
+                const tvSettingsRes = await fetch('/api/clinics/tv-settings')
+                if (tvSettingsRes.ok) {
+                    const tvData = await tvSettingsRes.json()
+                    setWhatsappCallEnabled(Boolean(tvData.whatsappCallEnabled))
+                    setWhatsappConnected(Boolean(tvData.whatsappConnected))
+                    setWhatsappPhone(tvData.whatsappPhone || null)
+                }
+            } catch (tvErr) {
+                console.warn('Erro ao carregar status do WhatsApp da TV:', tvErr)
+            }
+
         } catch (error) {
             console.error('Error loading consulting rooms data:', error)
             toast.error('Erro ao carregar configurações.')
@@ -140,6 +162,47 @@ export function ConsultingRoomsSettings() {
         } catch (e) {
             console.error('Error saving TV layout:', e)
             toast.error('Erro ao atualizar layout da TV.')
+        }
+    }
+
+    // Toggle WhatsApp call notification with active connection validation
+    const handleToggleWhatsappCall = async (checked: boolean) => {
+        if (checked && !whatsappConnected) {
+            toast.error('WhatsApp não está conectado', {
+                description: 'Para habilitar o envio de chamada, o WhatsApp da clínica precisa estar conectado.',
+                action: {
+                    label: 'Conectar WhatsApp',
+                    onClick: () => router.push('/dashboard/integracoes/whatsapp')
+                }
+            })
+            return
+        }
+
+        try {
+            setSavingWhatsappToggle(true)
+            const res = await fetch('/api/clinics/tv-settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ whatsappCallEnabled: checked })
+            })
+
+            if (res.ok) {
+                setWhatsappCallEnabled(checked)
+                toast.success(checked 
+                    ? 'Notificação de chamada via WhatsApp ativada!' 
+                    : 'Notificação de chamada via WhatsApp desativada!'
+                )
+            } else {
+                const err = await res.json()
+                toast.error(err.error || 'Erro ao atualizar configuração.')
+                if (err.action === 'connect_whatsapp') {
+                    router.push('/dashboard/integracoes/whatsapp')
+                }
+            }
+        } catch (e) {
+            toast.error('Erro de conexão ao salvar configuração.')
+        } finally {
+            setSavingWhatsappToggle(false)
         }
     }
 
@@ -348,6 +411,78 @@ export function ConsultingRoomsSettings() {
                             </p>
                         </div>
 
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Chamada Multicanal via WhatsApp (Prioridade 1) */}
+            <Card className="border-border/80 shadow-xs">
+                <CardHeader className="pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start sm:items-center gap-3">
+                            <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                <MessageSquare className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    Chamada Multicanal via WhatsApp
+                                </CardTitle>
+                                <CardDescription className="text-xs mt-0.5 leading-relaxed">
+                                    Notifique o paciente automaticamente por WhatsApp no momento exato em que ele for chamado no Painel de TV.
+                                </CardDescription>
+                            </div>
+                        </div>
+
+                        {/* Badge de Status da Conexão WhatsApp */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            {whatsappConnected ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Conectado {whatsappPhone ? `(${whatsappPhone})` : ''}
+                                </span>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                        Não conectado
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs font-medium rounded-md px-2.5 border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 min-h-[32px]"
+                                        onClick={() => router.push('/dashboard/integracoes/whatsapp')}
+                                        title="Conectar WhatsApp da Clínica"
+                                    >
+                                        Conectar
+                                        <ExternalLink className="w-3 h-3 ml-1" />
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-muted/40 border border-border/60">
+                        <div className="space-y-1 pr-2">
+                            <Label htmlFor="whatsapp-call-toggle" className="text-sm font-semibold cursor-pointer">
+                                Enviar notificação de chamada também por WhatsApp
+                            </Label>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                {whatsappConnected 
+                                    ? "Ao chamar o paciente na recepção, uma mensagem será enviada com o nome do profissional, especialidade e o consultório."
+                                    : "Para habilitar, o WhatsApp da clínica precisa estar conectado. Conecte o WhatsApp nas configurações de integrações."}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            {savingWhatsappToggle && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                            <Switch
+                                id="whatsapp-call-toggle"
+                                checked={whatsappCallEnabled}
+                                onCheckedChange={handleToggleWhatsappCall}
+                                disabled={savingWhatsappToggle}
+                                className="data-[state=checked]:bg-emerald-600 min-w-[44px] min-h-[24px]"
+                            />
+                        </div>
                     </div>
                 </CardContent>
             </Card>
