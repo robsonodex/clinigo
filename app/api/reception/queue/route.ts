@@ -159,20 +159,18 @@ export async function GET(request: Request) {
             if (a.isPriority && !b.isPriority) return -1
             if (!a.isPriority && b.isPriority) return 1
 
-            // Se a clínica não usa Painel de TV, ordena estritamente por horário agendado
-            if (!chamadaPainelTvHabilitada) {
-                const timeA = a.scheduledTime ? new Date(a.scheduledTime).getTime() : (a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0)
-                const timeB = b.scheduledTime ? new Date(b.scheduledTime).getTime() : (b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0)
-                if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) return timeA - timeB
-            }
-
             // Then by status: WAITING (called) before CONFIRMED (not yet called)
             const statusOrder: Record<string, number> = { 'WAITING': 0, 'CHECKED_IN': 0.5, 'CONFIRMED': 1, 'PENDING_PAYMENT': 1.5, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
             const aOrder = statusOrder[a.status] ?? 5
             const bOrder = statusOrder[b.status] ?? 5
             if (aOrder !== bOrder) return aOrder - bOrder
             
-            // Then by arrival time (default)
+            // Within same status, sort by scheduled time (appointment time)
+            const timeA = a.scheduledTime ? new Date(a.scheduledTime).getTime() : 0
+            const timeB = b.scheduledTime ? new Date(b.scheduledTime).getTime() : 0
+            if (timeA && timeB && timeA !== timeB) return timeA - timeB
+
+            // Fallback: by arrival time (check-in timestamp)
             const timeArrA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0
             const timeArrB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0
             return timeArrA - timeArrB
