@@ -65,16 +65,18 @@ export async function GET() {
             .select('*', { count: 'exact', head: true })
             .eq('clinic_id', clinicId)
 
-        // Verificar SMTP, plano e data de criação da clínica
+        // Verificar SMTP, plano, data de criação da clínica e configuração do Painel de TV
         const { data: clinic } = await supabase
             .from('clinics')
-            .select('smtp_enabled, plan_type, created_at')
+            .select('smtp_enabled, plan_type, created_at, chamada_painel_tv_habilitada')
             .eq('id', clinicId)
             .single()
 
         const hasSmtp = !!(clinic?.smtp_enabled)
         const planType = clinic?.plan_type ?? 'BASIC'
         const clinicCreatedAt = clinic?.created_at ?? null
+        // Default é TRUE caso a coluna seja null/undefined
+        const chamadaPainelTvHabilitada = clinic?.chamada_painel_tv_habilitada !== false
 
         return NextResponse.json({
             hasDoctor: (doctorCount || 0) > 0,
@@ -85,6 +87,7 @@ export async function GET() {
             hasSmtp,
             planType,
             clinicCreatedAt,
+            chamadaPainelTvHabilitada,
         })
     } catch (error) {
         console.error('Error checking setup status:', error)
@@ -97,6 +100,7 @@ export async function GET() {
             hasSmtp: false,
             planType: 'BASIC',
             clinicCreatedAt: null,
+            chamadaPainelTvHabilitada: true,
         })
     }
 }

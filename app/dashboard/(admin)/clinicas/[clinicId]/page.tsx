@@ -21,7 +21,8 @@ import {
     CreditCard,
     Video,
     Users,
-    ExternalLink
+    ExternalLink,
+    Tv
 } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -38,6 +39,7 @@ interface Clinic {
     is_active: boolean
     custom_price: number | null
     custom_price_note: string | null
+    chamada_painel_tv_habilitada?: boolean
     addons?: {
         whatsapp: boolean
         prepaid_booking: boolean
@@ -86,6 +88,13 @@ export default function ClinicDetailsPage() {
                 ...clinicAddons,
                 [addon]: value
             }
+        })
+    }
+
+    const handleToggleChamadaPainelTv = (value: boolean) => {
+        if (!clinic) return
+        updateMutation.mutate({
+            chamada_painel_tv_habilitada: value
         })
     }
 
@@ -264,6 +273,28 @@ export default function ClinicDetailsPage() {
                             </CardHeader>
                             <CardFooter>
                                 <p className="text-xs text-muted-foreground">Preço: R$ 29,00/mês por médico extra</p>
+                            </CardFooter>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Tv className="h-5 w-5 text-blue-600" />
+                                        <CardTitle>Chamada no Painel de TV</CardTitle>
+                                    </div>
+                                    <Switch
+                                        checked={clinic.chamada_painel_tv_habilitada !== false}
+                                        onCheckedChange={(v) => handleToggleChamadaPainelTv(v)}
+                                        disabled={updateMutation.isPending}
+                                    />
+                                </div>
+                                <CardDescription>
+                                    Exibe o botão "Chamar" na fila de Recepção para chamar o paciente sonoro e visualmente na TV.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardFooter>
+                                <p className="text-xs text-muted-foreground">Padrão do sistema: Ativado (desative para clínicas com fluxo sem TV)</p>
                             </CardFooter>
                         </Card>
                     </div>

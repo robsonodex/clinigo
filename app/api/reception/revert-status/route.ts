@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const ESPACO_INCLUIR_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
-
 /**
  * POST /api/reception/revert-status
  * Reverts an appointment to its previous status (Espaço Incluir only)
@@ -26,22 +24,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clinic not found' }, { status: 403 })
         }
 
-        // Only available for Espaço Incluir
-        if (currentUser.clinic_id !== ESPACO_INCLUIR_ID) {
-            return NextResponse.json({ error: 'Feature not available' }, { status: 403 })
-        }
-
         const { appointmentId } = await request.json()
         if (!appointmentId) {
             return NextResponse.json({ error: 'appointmentId is required' }, { status: 400 })
         }
 
-        // Fetch current appointment
+        // Fetch current appointment ensuring clinic isolation
         const { data: appointment, error: fetchError } = await (supabase as any)
             .from('appointments')
             .select('id, status, checked_in_at, clinic_id')
             .eq('id', appointmentId)
-            .eq('clinic_id', ESPACO_INCLUIR_ID)
+            .eq('clinic_id', currentUser.clinic_id)
             .single()
 
         if (fetchError || !appointment) {
@@ -81,17 +74,17 @@ export async function POST(request: NextRequest) {
                 break
 
             case 'IN_PROGRESS':
-                // Em Atendimento → volta para Confirmado
-                updateData.status = 'CONFIRMED'
+                // Em Atendimento → volta para Aguardando (WAITING ou CONFIRMED)
+                updateData.status = appointment.checked_in_at ? 'WAITING' : 'CONFIRMED'
                 updateData.started_at = null
-                revertedTo = 'CONFIRMED'
+                revertedTo = 'Aguardando'
                 break
 
             case 'COMPLETED':
-                // Concluído → volta para Confirmado
-                updateData.status = 'CONFIRMED'
+                // Concluído → volta uma casa para Em Atendimento
+                updateData.status = 'IN_PROGRESS'
                 updateData.completed_at = null
-                revertedTo = 'CONFIRMED'
+                revertedTo = 'Em Atendimento'
                 break
 
             case 'NO_SHOW':

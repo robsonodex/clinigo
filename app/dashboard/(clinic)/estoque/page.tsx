@@ -335,19 +335,17 @@ export default function InventoryPage() {
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header Premium Internacional */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
-                        <Package className="w-4 h-4 text-foreground/80" />
-                    </div>
+                <div className="flex items-center gap-2.5">
+                    <Package className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Estoque</h1>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gestão de produtos e materiais</p>
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">Estoque</h1>
+                        <p className="text-xs text-muted-foreground mt-0.5">Gestão de produtos e materiais</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium"><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
+                        <Button className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium"><Plus className="h-3.5 w-3.5 mr-1.5" />Novo Produto</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
@@ -452,11 +450,11 @@ export default function InventoryPage() {
                     </DialogContent>
                 </Dialog>
                 {/* Botão importar e Histórico Premium */}
-                <Button variant="outline" onClick={() => setShowImport(true)} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 px-4 text-sm font-medium">
-                    <Upload className="h-4 w-4 mr-2" />Importar Planilha
+                <Button variant="outline" onClick={() => setShowImport(true)} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />Importar Planilha
                 </Button>
-                <Button variant="outline" onClick={() => { fetchImports() }} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 px-4 text-sm font-medium">
-                    <History className="h-4 w-4 mr-2" />Importações
+                <Button variant="outline" onClick={() => { fetchImports() }} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                    <History className="h-3.5 w-3.5 mr-1.5" />Importações
                 </Button>
             </div>
         </div>

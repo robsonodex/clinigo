@@ -164,10 +164,10 @@ export default function DoctorsPage() {
             {/* Header Premium Internacional */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div>
-                    <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">{profLabel.plural}</h1>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie o corpo clínico e suas informações</p>
+                    <h1 className="text-xl font-semibold text-foreground tracking-tight">{profLabel.plural}</h1>
+                    <p className="text-xs text-muted-foreground mt-0.5">Gerencie o corpo clínico e suas informações</p>
                 </div>
-                <Button onClick={handleCreate} className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium min-h-[36px]">
+                <Button onClick={handleCreate} className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[36px]">
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     {profLabel.novo}
                 </Button>

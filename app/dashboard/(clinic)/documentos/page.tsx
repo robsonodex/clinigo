@@ -442,7 +442,7 @@ export default function DocumentsPage() {
                                     </div>
 
                                     <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDocument(doc)} className="rounded-xl h-9 w-9 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDocument(doc)} className="rounded-xs h-9 w-9 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
                                             <Eye className="h-4 w-4" />
                                         </Button>
                                         <Button variant="ghost" size="icon" asChild className="rounded-xs h-9 w-9 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20">
@@ -450,7 +450,7 @@ export default function DocumentsPage() {
                                                 <Download className="h-4 w-4" />
                                             </a>
                                         </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)} className="rounded-xl h-9 w-9 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
+                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(doc.id)} className="rounded-xs h-9 w-9 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>

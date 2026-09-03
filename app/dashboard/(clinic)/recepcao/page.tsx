@@ -101,8 +101,8 @@ export default function RecepcaoPage() {
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
 
-    // Espaço Incluir
-    const isEspacoIncluir = currentUser?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+    // Configuração do Painel de TV (default true para todas as clínicas; exceções configuradas no banco)
+    const [chamadaPainelTvHabilitada, setChamadaPainelTvHabilitada] = useState(true)
     const [checkInModal, setCheckInModal] = useState<{ open: boolean, appointmentId: string | null, notes: string }>({ open: false, appointmentId: null, notes: '' })
     const [noShowModal, setNoShowModal] = useState<{ open: boolean, appointmentId: string | null, patientName: string, notes: string }>({ open: false, appointmentId: null, patientName: '', notes: '' })
 
@@ -119,6 +119,9 @@ export default function RecepcaoPage() {
                 if (res.ok) {
                     const data = await res.json()
                     if (data.planType) setClinicPlanType(data.planType as PlanType)
+                    if (data.chamadaPainelTvHabilitada !== undefined) {
+                        setChamadaPainelTvHabilitada(Boolean(data.chamadaPainelTvHabilitada))
+                    }
                 }
             } catch { /* silent */ } finally {
                 setIsPlanLoading(false)
@@ -178,6 +181,9 @@ export default function RecepcaoPage() {
                 const data = await queueRes.json()
                 const q: QueueItem[] = data.queue || []
                 setQueue(q)
+                if (data.chamadaPainelTvHabilitada !== undefined) {
+                    setChamadaPainelTvHabilitada(Boolean(data.chamadaPainelTvHabilitada))
+                }
 
                 setStats({
                     waiting_count: q.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status)).length,
@@ -414,8 +420,6 @@ export default function RecepcaoPage() {
             setIsCreatingPatient(false)
         } catch (error) {
             toast({
-                variant: 'destructive',
-                title: 'Erro',
                 description: error instanceof Error ? error.message : 'Erro ao criar paciente'
             })
         } finally {
@@ -424,96 +428,91 @@ export default function RecepcaoPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
+        <div className="space-y-5 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100/80 dark:border-indigo-900/30">
-                        <Users className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
+                <div>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">
                             Recepção
                         </h1>
-                        <div className="flex items-center gap-3 mt-1.5">
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold">
-                                Gestão de fila e check-in de pacientes
-                            </p>
-                            
-                            {/* Filtros e Ações Dropdown Button */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="flex gap-1.5 h-8 text-xs bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-3 font-bold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
-                                    >
-                                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                                        <span>Filtros e Ações</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
-                                    {currentUser?.clinic_id && (
-                                        <>
-                                            <DropdownMenuItem
-                                                className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                                onSelect={() => {
-                                                    const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
-                                                    window.open(url, '_blank')
-                                                }}
-                                            >
-                                                <Tv className="w-4 h-4 text-blue-600" />
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Painel TV</p>
-                                                    <p className="text-[10px] text-muted-foreground">Exibir na recepção</p>
-                                                </div>
-                                            </DropdownMenuItem>
-
-                                            <DropdownMenuItem
-                                                className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                                onSelect={() => {
-                                                    const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
-                                                    window.open(url, '_blank')
-                                                }}
-                                            >
-                                                <Monitor className="w-4 h-4 text-cyan-600" />
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Auto Atendimento</p>
-                                                    <p className="text-[10px] text-muted-foreground">Totem e cadastro</p>
-                                                </div>
-                                            </DropdownMenuItem>
-                                        </>
-                                    )}
-
-                                    <DropdownMenuItem
-                                        asChild
-                                        className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                    >
-                                        <Link href="/dashboard/recepcao/face-checkin">
-                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Check-in Fácil</p>
-                                                <p className="text-[10px] text-muted-foreground">Iniciar atendimento</p>
-                                            </div>
-                                        </Link>
-                                    </DropdownMenuItem>
-
-                                    <QRScannerDialog onCheckIn={loadData}>
+                        
+                        {/* Filtros e Ações Dropdown Button */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-7 text-xs gap-1.5 border-border/70 hover:bg-muted font-medium text-muted-foreground hover:text-foreground rounded-xs px-2.5 shadow-xs"
+                                >
+                                    <SlidersHorizontal className="h-3 w-3" />
+                                    <span>Filtros e Ações</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56 p-1 rounded-xs bg-popover border border-border shadow-md">
+                                {currentUser?.clinic_id && (
+                                    <>
                                         <DropdownMenuItem
-                                            onSelect={(e) => e.preventDefault()}
-                                            className="cursor-pointer gap-2.5 p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="cursor-pointer gap-2 p-2 rounded-xs hover:bg-muted transition-colors text-xs"
+                                            onSelect={() => {
+                                                const url = `${window.location.origin}/painel-tv/${currentUser.clinic_id}`
+                                                window.open(url, '_blank')
+                                            }}
                                         >
-                                            <QrCode className="w-4 h-4 text-sky-600" />
+                                            <Tv className="w-3.5 h-3.5 text-blue-600" />
                                             <div>
-                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Escanear QR Code</p>
-                                                <p className="text-[10px] text-muted-foreground">Buscar paciente</p>
+                                                <p className="font-medium text-foreground">Painel TV</p>
+                                                <p className="text-[10px] text-muted-foreground">Exibir na recepção</p>
                                             </div>
                                         </DropdownMenuItem>
-                                    </QRScannerDialog>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+
+                                        <DropdownMenuItem
+                                            className="cursor-pointer gap-2 p-2 rounded-xs hover:bg-muted transition-colors text-xs"
+                                            onSelect={() => {
+                                                const url = `${window.location.origin}/totem/${currentUser.clinic_id}`
+                                                window.open(url, '_blank')
+                                            }}
+                                        >
+                                            <Monitor className="w-3.5 h-3.5 text-cyan-600" />
+                                            <div>
+                                                <p className="font-medium text-foreground">Auto Atendimento</p>
+                                                <p className="text-[10px] text-muted-foreground">Totem e cadastro</p>
+                                            </div>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+
+                                <DropdownMenuItem
+                                    asChild
+                                    className="cursor-pointer gap-2 p-2 rounded-xs hover:bg-muted transition-colors text-xs"
+                                >
+                                    <Link href="/dashboard/recepcao/face-checkin">
+                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                        <div>
+                                            <p className="font-medium text-foreground">Check-in Fácil</p>
+                                            <p className="text-[10px] text-muted-foreground">Iniciar atendimento</p>
+                                        </div>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                <QRScannerDialog onCheckIn={loadData}>
+                                    <DropdownMenuItem
+                                        onSelect={(e) => e.preventDefault()}
+                                        className="cursor-pointer gap-2 p-2 rounded-xs hover:bg-muted transition-colors text-xs"
+                                    >
+                                        <QrCode className="w-3.5 h-3.5 text-sky-600" />
+                                        <div>
+                                            <p className="font-medium text-foreground">Escanear QR Code</p>
+                                            <p className="text-[10px] text-muted-foreground">Buscar paciente</p>
+                                        </div>
+                                    </DropdownMenuItem>
+                                </QRScannerDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Gestão de fila e check-in de pacientes
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -524,13 +523,13 @@ export default function RecepcaoPage() {
                     }}>
                         <DialogTrigger asChild>
                             <Button 
-                                className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium gap-1.5 border-0"
+                                className="h-8 px-3.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs shadow-xs gap-1.5"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5" />
                                 <span>Sem Agendamento</span>
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="rounded-xs">
                             <DialogHeader>
                                 <DialogTitle>
                                     {isCreatingPatient ? 'Novo Paciente' : 'Novo Atendimento (Walk-in)'}
@@ -556,10 +555,10 @@ export default function RecepcaoPage() {
                                     <div className="space-y-2">
                                         <Label>Urgência</Label>
                                         <Select value={urgency} onValueChange={setUrgency}>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="rounded-xs">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="rounded-xs">
                                                 <SelectItem value="normal">Normal</SelectItem>
                                                 <SelectItem value="priority">Prioridade</SelectItem>
                                                 <SelectItem value="urgent">Urgente</SelectItem>
@@ -569,12 +568,13 @@ export default function RecepcaoPage() {
                                     <div className="space-y-2">
                                         <Label>Motivo</Label>
                                         <Input
+                                            className="rounded-xs"
                                             placeholder="Motivo da consulta..."
                                             value={reason}
                                             onChange={(e) => setReason(e.target.value)}
                                         />
                                     </div>
-                                    <Button className="w-full hover:shadow-md transition-all duration-300 rounded-xs h-10" onClick={handleCreateWalkIn}>
+                                    <Button className="w-full rounded-xs h-8 text-xs font-medium" onClick={handleCreateWalkIn}>
                                         Adicionar à Fila
                                     </Button>
                                 </div>
@@ -585,12 +585,12 @@ export default function RecepcaoPage() {
                     {/* Settings Configurations Button */}
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="h-10 gap-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xs transition-all shadow-sm">
-                                <Settings className="w-4 h-4 text-slate-400" />
+                            <Button variant="outline" className="h-8 gap-1.5 border-border/70 text-muted-foreground hover:text-foreground font-medium rounded-xs px-3 shadow-xs text-xs">
+                                <Settings className="w-3.5 h-3.5" />
                                 Configurações
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="rounded-xs">
                             <DialogHeader>
                                 <DialogTitle>Configurações de Atualização</DialogTitle>
                             </DialogHeader>
@@ -605,10 +605,10 @@ export default function RecepcaoPage() {
                                             localStorage.setItem('reception-refresh-interval', interval.toString())
                                         }}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="rounded-xs">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="rounded-xs">
                                             <SelectItem value="30">30 segundos</SelectItem>
                                             <SelectItem value="60">1 minuto (recomendado)</SelectItem>
                                             <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
@@ -630,49 +630,54 @@ export default function RecepcaoPage() {
                 </div>
             </div>
 
-            {/* Horizontal Stats Capsules (compact inline indicators styled as premium buttons) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* Horizontal Stats Capsules (SaaS Premium Internacional: neutros, limpos, cores suaves) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* 1. Aguardando */}
-                <div className="flex items-center justify-between h-10 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
+                <div className="flex items-center justify-between h-9 px-3.5 bg-card hover:bg-muted/40 text-card-foreground rounded-xs border border-border/60 shadow-xs hover:border-border transition-all duration-150 cursor-default select-none">
                     <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 shrink-0" />
-                        <span className="text-sm font-extrabold">{stats.waiting_count}</span>
-                        <span className="text-sm font-semibold">Aguardando</span>
+                        <div className="w-2 h-2 rounded-full bg-amber-500" />
+                        <span className="text-xs font-medium text-muted-foreground">Aguardando</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                        {stats.waiting_count}
+                    </span>
                 </div>
 
                 {/* 2. Em Atendimento */}
-                <div className="flex items-center justify-between h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
+                <div className="flex items-center justify-between h-9 px-3.5 bg-card hover:bg-muted/40 text-card-foreground rounded-xs border border-border/60 shadow-xs hover:border-border transition-all duration-150 cursor-default select-none">
                     <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 shrink-0" />
-                        <span className="text-sm font-extrabold">{stats.in_service_count}</span>
-                        <span className="text-sm font-semibold">Em Atendimento</span>
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-xs font-medium text-muted-foreground">Em Atendimento</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">
+                        {stats.in_service_count}
+                    </span>
                 </div>
 
                 {/* 3. Atendidos Hoje */}
-                <div className="flex items-center justify-between h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
+                <div className="flex items-center justify-between h-9 px-3.5 bg-card hover:bg-muted/40 text-card-foreground rounded-xs border border-border/60 shadow-xs hover:border-border transition-all duration-150 cursor-default select-none">
                     <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span className="text-sm font-extrabold">{stats.completed_count}</span>
-                        <span className="text-sm font-semibold">Atendidos</span>
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-xs font-medium text-muted-foreground">Atendidos</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                        {stats.completed_count}
+                    </span>
                 </div>
 
                 {/* 4. Não Compareceram */}
                 <div 
                     onClick={() => setShowNoShowList(true)}
-                    className="flex items-center justify-between h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                    className="flex items-center justify-between h-9 px-3.5 bg-card hover:bg-muted/40 text-card-foreground rounded-xs border border-border/60 shadow-xs hover:border-border transition-all duration-150 cursor-pointer select-none"
+                    title="Clique para ver lista de ausentes"
                 >
                     <div className="flex items-center gap-2">
-                        <UserX className="w-4 h-4 shrink-0" />
-                        <span className="text-sm font-extrabold">{stats.no_show_count}</span>
-                        <span className="text-sm font-semibold">Ausentes</span>
+                        <div className="w-2 h-2 rounded-full bg-rose-500" />
+                        <span className="text-xs font-medium text-muted-foreground">Ausentes</span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-80" />
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-xs bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
+                        {stats.no_show_count}
+                    </span>
                 </div>
             </div>
 
@@ -740,11 +745,9 @@ export default function RecepcaoPage() {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {isEspacoIncluir && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                    <Undo2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Undo2 className="w-4 h-4" />
+                                            </Button>
                                             <Badge variant="outline" className="text-red-650 dark:text-red-400 border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 font-bold text-[10px]">Ausente</Badge>
                                         </div>
                                     </div>
@@ -755,167 +758,161 @@ export default function RecepcaoPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* 3-Panel Kanban Queue Layout (Highly premium, 100% matched design) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 3-Panel Kanban Queue Layout (SaaS Premium Internacional: neutro, limpo, cantos austeros 2px) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Column 1: Aguardando */}
-                <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col min-h-[500px]">
-                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800/60">
-                        <div className="flex items-center gap-2.5">
-                            <Clock className="w-5 h-5 text-amber-500" />
-                            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm tracking-wide">
+                <div className="bg-muted/30 dark:bg-slate-900/30 rounded-xs p-3.5 border border-border/60 shadow-xs flex flex-col min-h-[500px]">
+                    <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500" />
+                            <h3 className="font-semibold text-foreground text-xs uppercase tracking-wider">
                                 Aguardando
                             </h3>
-                            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.2 rounded-xs border border-border/50 shrink-0">
                                 {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status)).length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-xs">
-                            <MoreVertical className="w-4 h-4" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-xs">
+                            <MoreVertical className="w-3.5 h-3.5" />
                         </Button>
                     </div>
 
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-400 text-sm">
-                            <Loader2 className="w-6 h-6 animate-spin text-slate-400 mb-2" />
-                            Carregando...
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-muted-foreground text-xs">
+                            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground mb-2" />
+                            Carregando fila...
                         </div>
                     ) : queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status)).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-400/80 dark:text-slate-500 text-center">
-                            <div className="p-3 bg-amber-50/50 dark:bg-amber-950/10 rounded-full text-amber-500 mb-3">
-                                <Clock className="w-6 h-6" />
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-muted-foreground text-center">
+                            <div className="p-2.5 bg-amber-500/10 rounded-xs text-amber-600 dark:text-amber-400 mb-2.5 border border-amber-500/20">
+                                <Clock className="w-5 h-5" />
                             </div>
-                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Nenhum paciente aguardando</p>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 px-4">Os pacientes que chegarem na clínica serão listados aqui.</p>
+                            <p className="font-medium text-xs text-foreground">Nenhum paciente aguardando</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 px-4">Os pacientes que chegarem na clínica serão listados aqui.</p>
                         </div>
                     ) : (
-                        <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
+                        <div className="space-y-2.5 overflow-y-auto max-h-[600px] pr-1">
                             {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status)).map((item, index) => (
                                 <div 
                                     key={item.id} 
-                                    className={`p-4 rounded-2xl border ${
-                                        item.isPriority 
-                                            ? 'border-rose-200 dark:border-rose-900/40 bg-rose-50/80 dark:bg-rose-950/30' 
-                                            : 'border-amber-200 dark:border-amber-900/40 bg-amber-50/85 dark:bg-amber-950/30'
-                                    } shadow-sm hover:shadow-md transition-all duration-300 relative group`}
+                                    className="p-3.5 rounded-xs border border-border/70 bg-card hover:border-border/90 hover:shadow-xs transition-all duration-150 relative group"
                                 >
-                                    <div className="flex items-start gap-3">
-                                        {/* Golden Circular Numbering */}
-                                        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-extrabold text-xs shrink-0 border border-amber-200/60 dark:border-amber-800/40 shadow-sm">
-                                            {index + 1}
-                                        </div>
-
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                                <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate max-w-[180px]" title={item.patient?.full_name}>
-                                                    {item.patient?.full_name || 'Paciente'}
-                                                </h4>
-                                                
-                                                {/* Labels/Badges para deixar o card mais completo */}
-                                                {item.isPriority && (
-                                                    <Badge variant="destructive" className="text-[8px] px-1 py-0 font-extrabold uppercase shrink-0 bg-red-600 dark:bg-red-800">
-                                                        Prioridade
-                                                    </Badge>
-                                                )}
-                                                {item.type === 'walk-in' && (
-                                                    <Badge className="text-[8px] bg-sky-100 dark:bg-sky-950/60 text-sky-850 dark:text-sky-305 border border-sky-200 dark:border-sky-850 px-1 py-0 font-extrabold shrink-0 shadow-sm">
-                                                        Encaixe
-                                                    </Badge>
-                                                )}
+                                    {/* Card Header: Ordem, Nome, Badges e Ações Secundárias */}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                            {/* Order Number */}
+                                            <div className="flex items-center justify-center w-5 h-5 rounded-xs bg-muted text-muted-foreground font-semibold text-[11px] shrink-0 border border-border/50">
+                                                {index + 1}
                                             </div>
+
+                                            <h4 className="font-semibold text-foreground text-sm truncate" title={item.patient?.full_name}>
+                                                {item.patient?.full_name || 'Paciente'}
+                                            </h4>
                                             
-                                            {item.doctor && (
-                                                <p className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 mt-1">
-                                                    <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-450 shrink-0" />
-                                                    <span className="truncate">
-                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
-                                                    </span>
-                                                </p>
+                                            {item.isPriority && (
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 rounded-xs shrink-0">
+                                                    Prioridade
+                                                </Badge>
                                             )}
-
-                                            <div className="flex items-center gap-3 mt-1 font-semibold text-[10.5px] text-slate-600 dark:text-slate-400">
-                                                <span className="flex items-center gap-1.5">
-                                                    <Clock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-450 shrink-0" />
-                                                    {item.arrivalTime 
-                                                        ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
-                                                        : item.scheduledTime 
-                                                            ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
-                                                            : 'Sem horário'
-                                                    }
-                                                </span>
-                                                {item.status === 'WAITING' && (
-                                                    <Badge className="text-[8px] bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0 font-extrabold shadow-sm">Chamado</Badge>
-                                                )}
-                                            </div>
-
-                                            {/* Observações legíveis se existirem */}
-                                            {item.notes && (
-                                                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 bg-white/40 dark:bg-slate-950/20 p-1.5 rounded-lg border border-amber-200/40 dark:border-amber-900/10 italic leading-relaxed text-xs">
-                                                    <span className="font-bold not-italic text-slate-700 dark:text-slate-350">Obs:</span> {item.notes}
-                                                </p>
+                                            {item.type === 'walk-in' && (
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-medium bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/20 rounded-xs shrink-0">
+                                                    Encaixe
+                                                </Badge>
                                             )}
                                         </div>
-                                    </div>
 
-                                    {/* Action Footbar */}
-                                    <div className="flex items-center justify-between gap-1.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-800/80">
-                                        <div className="flex items-center gap-1.5">
-                                            {/* Prontuário / Documentos */}
+                                        {/* Ações de Suporte (Documentos, Desfazer, Ausente) no topo direito */}
+                                        <div className="flex items-center gap-0.5 shrink-0">
                                             <Button 
                                                 size="sm" 
                                                 variant="ghost" 
-                                                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xs" 
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xs" 
                                                 onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} 
                                                 title="Documentos"
                                             >
-                                                <FileText className="w-4 h-4" />
+                                                <FileText className="w-3.5 h-3.5" />
                                             </Button>
 
-                                            {/* Chamar Paciente */}
-                                            {item.type === 'appointment' && item.checkedInAt && item.status === 'CONFIRMED' && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xs px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
-                                                    {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
+                                            {(item.checkedInAt || item.status === 'WAITING') && (
+                                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                    <Undo2 className="w-3.5 h-3.5" />
                                                 </Button>
                                             )}
+
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-xs" onClick={() => !chamadaPainelTvHabilitada ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                                <UserX className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Informações do Paciente */}
+                                    <div className="mt-1 pl-7">
+                                        {item.doctor && (
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                                                <span className="truncate">
+                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                </span>
+                                            </p>
+                                        )}
+
+                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                                                {item.arrivalTime 
+                                                    ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
+                                                    : item.scheduledTime 
+                                                        ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+                                                        : 'Sem horário'
+                                                }
+                                            </span>
                                             {item.status === 'WAITING' && (
-                                                <Button size="sm" variant="ghost" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-xs px-2.5" onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} disabled={callingId === item.id}>
-                                                    {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5 mr-1" />Chamar</>}
-                                                </Button>
+                                                <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0 font-medium rounded-xs">Chamado</Badge>
                                             )}
                                         </div>
 
-                                        <div className="flex items-center gap-1">
-                                            {/* Iniciar Atendimento */}
-                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                                <button 
-                                                    className="h-8 text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600 rounded-xs px-3 flex items-center gap-1.5 transition-all shadow-sm" 
-                                                    onClick={() => isEspacoIncluir ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
-                                                    disabled={actionId === item.id}
-                                                >
-                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-white" />{isEspacoIncluir ? 'Em Atendimento' : 'Check-in'}</>}
-                                                </button>
-                                            )}
-                                            {item.status === 'WAITING' && (
-                                                <button 
-                                                    className="h-8 text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-650 rounded-xs px-3 flex items-center gap-1.5 transition-all shadow-sm" 
-                                                    onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
-                                                    disabled={actionId === item.id}
-                                                >
-                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-white" />Em Atendimento</>}
-                                                </button>
-                                            )}
+                                        {item.notes && (
+                                            <p className="text-[11px] text-muted-foreground mt-1.5 bg-muted/40 p-1.5 rounded-xs border border-border/50 italic leading-relaxed">
+                                                <span className="font-semibold not-italic text-foreground">Obs:</span> {item.notes}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                            {/* Desfazer */}
-                                            {isEspacoIncluir && (item.checkedInAt || item.status === 'WAITING') && (
-                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xs shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                    <Undo2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
-
-                                            {/* Não Compareceu */}
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-xs shrink-0" onClick={() => isEspacoIncluir ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
-                                                <UserX className="w-4 h-4" />
+                                    {/* Action Footbar: Botões amplos e sem quebra de texto */}
+                                    <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
+                                        {/* Chamar Paciente no Painel de TV */}
+                                        {chamadaPainelTvHabilitada && (
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                className="h-8 flex-1 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10 rounded-xs flex items-center justify-center gap-1.5 whitespace-nowrap" 
+                                                onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} 
+                                                disabled={callingId === item.id}
+                                                title="Chamar paciente no Painel de TV"
+                                            >
+                                                {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5" /><span>Chamar</span></>}
                                             </Button>
-                                        </div>
+                                        )}
+
+                                        {/* Iniciar Atendimento / Check-in */}
+                                        {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
+                                            <button 
+                                                className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                onClick={() => !chamadaPainelTvHabilitada ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
+                                                disabled={actionId === item.id}
+                                            >
+                                                {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>{!chamadaPainelTvHabilitada ? 'Em Atendimento' : 'Check-in'}</span></>}
+                                            </button>
+                                        )}
+                                        {item.status === 'WAITING' && (
+                                            <button 
+                                                className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
+                                                disabled={actionId === item.id}
+                                            >
+                                                {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>Em Atendimento</span></>}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -924,77 +921,81 @@ export default function RecepcaoPage() {
                 </div>
 
                 {/* Column 2: Em Atendimento */}
-                <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col min-h-[500px]">
-                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800/60">
-                        <div className="flex items-center gap-2.5">
-                            <Users className="w-5 h-5 text-blue-500" />
-                            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm tracking-wide">
+                <div className="bg-muted/30 dark:bg-slate-900/30 rounded-xs p-3.5 border border-border/60 shadow-xs flex flex-col min-h-[500px]">
+                    <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            <h3 className="font-semibold text-foreground text-xs uppercase tracking-wider">
                                 Em Atendimento
                             </h3>
-                            <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.2 rounded-xs border border-border/50 shrink-0">
                                 {queue.filter(i => i.status === 'IN_PROGRESS').length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-xs">
-                            <MoreVertical className="w-4 h-4" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-xs">
+                            <MoreVertical className="w-3.5 h-3.5" />
                         </Button>
                     </div>
 
                     {queue.filter(i => i.status === 'IN_PROGRESS').length === 0 ? (
-                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-450 dark:text-slate-500 text-center">
-                            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/20 text-blue-500 rounded-full flex items-center justify-center mb-3">
-                                <Users className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-muted-foreground text-center">
+                            <div className="p-2.5 bg-blue-500/10 rounded-xs text-blue-600 dark:text-blue-400 mb-2.5 border border-blue-500/20">
+                                <Users className="w-5 h-5" />
                             </div>
-                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Nenhum paciente em atendimento</p>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 px-4">Os pacientes em atendimento aparecerão aqui.</p>
+                            <p className="font-medium text-xs text-foreground">Nenhum paciente em atendimento</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 px-4">Os pacientes em atendimento aparecerão aqui.</p>
                         </div>
                     ) : (
-                        <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
+                        <div className="space-y-2.5 overflow-y-auto max-h-[600px] pr-1">
                             {queue.filter(i => i.status === 'IN_PROGRESS').map((item) => (
-                                <div key={item.id} className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 shadow-sm hover:shadow-md transition-all duration-300">
+                                <div key={item.id} className="p-3.5 rounded-xs border border-border/70 bg-card hover:border-border/90 hover:shadow-xs transition-all duration-150">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
                                             <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                                <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate max-w-[180px]" title={item.patient?.full_name}>
+                                                <h4 className="font-semibold text-foreground text-sm truncate max-w-[200px]" title={item.patient?.full_name}>
                                                     {item.patient?.full_name || 'Paciente'}
                                                 </h4>
                                                 {item.type === 'walk-in' && (
-                                                    <Badge className="text-[8px] bg-sky-100 dark:bg-sky-950/60 text-sky-850 dark:text-sky-305 border border-sky-200 dark:border-sky-850 px-1 py-0 font-extrabold shrink-0 shadow-sm">
+                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-medium bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/20 rounded-xs">
                                                         Encaixe
                                                     </Badge>
                                                 )}
                                             </div>
                                             {item.doctor && (
-                                                <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 mt-1">
-                                                    <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-450 shrink-0" />
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                                    <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
                                                     <span className="truncate">
                                                         {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
                                                     </span>
                                                 </p>
                                             )}
 
-                                            {/* Observações legíveis se existirem */}
                                             {item.notes && (
-                                                <p className="text-[11px] text-slate-650 dark:text-slate-355 mt-1.5 bg-white/40 dark:bg-slate-950/20 p-1.5 rounded-lg border border-blue-200/40 dark:border-blue-900/10 italic leading-relaxed text-xs">
-                                                    <span className="font-bold not-italic text-slate-700 dark:text-slate-350">Obs:</span> {item.notes}
+                                                <p className="text-[11px] text-muted-foreground mt-1.5 bg-muted/40 p-1.5 rounded-xs border border-border/50 italic leading-relaxed">
+                                                    <span className="font-semibold not-italic text-foreground">Obs:</span> {item.notes}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-805">
-                                        {isEspacoIncluir && (
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                <Undo2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
+                                    <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/50">
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-xs px-2.5 flex items-center gap-1 shrink-0" 
+                                            onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} 
+                                            disabled={actionId === item.id} 
+                                            title="Voltar para Aguardando"
+                                        >
+                                            {actionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Undo2 className="w-3 h-3" /> Voltar</>}
+                                        </Button>
                                         
                                         <button 
-                                            className="h-8 w-full text-xs font-extrabold bg-[#007D40] hover:bg-[#006835] text-white rounded-xs px-4 flex items-center justify-center gap-1.5 transition-all shadow-sm ml-auto" 
+                                            className="h-7 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-xs px-3 flex items-center justify-center gap-1.5 transition-all shadow-xs" 
                                             onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
                                             disabled={actionId === item.id}
                                         >
-                                            {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-100" />Concluir</>}
+                                            {actionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><CheckCircle2 className="w-3 h-3 text-emerald-100" />Concluir</>}
                                         </button>
                                     </div>
                                 </div>
@@ -1004,75 +1005,79 @@ export default function RecepcaoPage() {
                 </div>
 
                 {/* Column 3: Concluídos */}
-                <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col min-h-[500px]">
-                    <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800/60">
-                        <div className="flex items-center gap-2.5">
-                            <CheckCircle className="w-5 h-5 text-emerald-500" />
-                            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm tracking-wide">
+                <div className="bg-muted/30 dark:bg-slate-900/30 rounded-xs p-3.5 border border-border/60 shadow-xs flex flex-col min-h-[500px]">
+                    <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <h3 className="font-semibold text-foreground text-xs uppercase tracking-wider">
                                 Concluídos
                             </h3>
-                            <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.2 rounded-xs border border-border/50 shrink-0">
                                 {queue.filter(i => i.status === 'COMPLETED').length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-slate-600 rounded-xs">
-                            <MoreVertical className="w-4 h-4" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-xs">
+                            <MoreVertical className="w-3.5 h-3.5" />
                         </Button>
                     </div>
 
                     {queue.filter(i => i.status === 'COMPLETED').length === 0 ? (
-                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-450 dark:text-slate-500 text-center">
-                            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center mb-3">
-                                <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-500" />
+                        <div className="flex flex-col items-center justify-center flex-1 py-12 text-muted-foreground text-center">
+                            <div className="p-2.5 bg-emerald-500/10 rounded-xs text-emerald-600 dark:text-emerald-400 mb-2.5 border border-emerald-500/20">
+                                <CheckCircle className="w-5 h-5" />
                             </div>
-                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">Nenhum atendimento concluído</p>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 px-4">Os atendimentos concluídos aparecerão aqui.</p>
+                            <p className="font-medium text-xs text-foreground">Nenhum atendimento concluído</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 px-4">Os atendimentos concluídos aparecerão aqui.</p>
                         </div>
                     ) : (
-                        <div className="space-y-3.5 overflow-y-auto max-h-[600px] pr-1">
+                        <div className="space-y-2.5 overflow-y-auto max-h-[600px] pr-1">
                             {queue.filter(i => i.status === 'COMPLETED').map((item) => (
-                                <div key={item.id} className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-250/70 dark:border-emerald-900/40 shadow-sm hover:shadow-md transition-all duration-300">
+                                <div key={item.id} className="p-3.5 rounded-xs border border-border/70 bg-card hover:border-border/90 hover:shadow-xs transition-all duration-150">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
                                             <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                                <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate max-w-[180px]" title={item.patient?.full_name}>
+                                                <h4 className="font-semibold text-foreground text-sm truncate max-w-[200px]" title={item.patient?.full_name}>
                                                     {item.patient?.full_name || 'Paciente'}
                                                 </h4>
                                                 {item.type === 'walk-in' && (
-                                                    <Badge className="text-[8px] bg-sky-100 dark:bg-sky-950/60 text-sky-850 dark:text-sky-305 border border-sky-200 dark:border-sky-850 px-1 py-0 font-extrabold shrink-0 shadow-sm">
+                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-medium bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/20 rounded-xs">
                                                         Encaixe
                                                     </Badge>
                                                 )}
                                             </div>
                                             {item.doctor && (
-                                                <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 mt-1">
-                                                    <User className="w-3.5 h-3.5 text-slate-550 dark:text-slate-455 shrink-0" />
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                                    <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
                                                     <span className="truncate">
                                                         {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
                                                     </span>
                                                 </p>
                                             )}
 
-                                            {/* Observações legíveis se existirem */}
                                             {item.notes && (
-                                                <p className="text-[11px] text-slate-650 dark:text-slate-350 mt-1.5 bg-white/40 dark:bg-slate-950/20 p-1.5 rounded-lg border border-emerald-200/45 dark:border-emerald-900/10 italic leading-relaxed text-xs">
-                                                    <span className="font-bold not-italic text-slate-700 dark:text-slate-350">Obs:</span> {item.notes}
+                                                <p className="text-[11px] text-muted-foreground mt-1.5 bg-muted/40 p-1.5 rounded-xs border border-border/50 italic leading-relaxed">
+                                                    <span className="font-semibold not-italic text-foreground">Obs:</span> {item.notes}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-2.5 mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-805">
-                                        <div className="h-8 w-full text-xs font-extrabold bg-[#007D40] text-white rounded-xl px-4 flex items-center justify-center gap-1.5 transition-all shadow-sm select-none opacity-90 cursor-default">
-                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-105" />
+                                    <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/50">
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-xs px-2.5 flex items-center gap-1 shrink-0" 
+                                            onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} 
+                                            disabled={actionId === item.id} 
+                                            title="Voltar para Em Atendimento"
+                                        >
+                                            {actionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Undo2 className="w-3 h-3" /> Voltar</>}
+                                        </Button>
+
+                                        <div className="h-7 flex-1 text-xs font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 rounded-xs px-3 flex items-center justify-center gap-1.5 transition-all select-none">
+                                            <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                                             <span>Atendido</span>
                                         </div>
-                                        
-                                        {isEspacoIncluir && (
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-650 hover:text-amber-750 hover:bg-amber-100 rounded-xs shrink-0" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
-                                                <Undo2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
                                     </div>
                                 </div>
                             ))}

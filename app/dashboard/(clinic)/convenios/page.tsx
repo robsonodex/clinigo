@@ -178,11 +178,11 @@ function OperadorasTab() {
                         placeholder="Buscar operadora..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-11 pr-4 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
+                        className="pl-11 pr-4 h-9 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-xs"
                     />
                 </div>
-                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2">
-                    <Plus className="w-4 h-4" />
+                <Button onClick={() => openDialog()} className="rounded-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-9 px-4 text-xs font-medium hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5">
+                    <Plus className="w-3.5 h-3.5" />
                     Nova Operadora
                 </Button>
             </div>
@@ -520,8 +520,8 @@ function PlanosTab() {
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2">
-                    <Plus className="w-4 h-4" />
+                <Button onClick={() => openDialog()} className="rounded-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-9 px-4 text-xs font-medium hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5">
+                    <Plus className="w-3.5 h-3.5" />
                     Novo Plano
                 </Button>
             </div>

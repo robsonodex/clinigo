@@ -207,21 +207,19 @@ export default function TemplatesProntuarioPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <FileText className="h-6 w-6 text-primary" />
-                        Templates de Prontuário
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Crie modelos de prontuário padronizados por especialidade
-                    </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div>
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">Templates de Prontuário</h1>
+                        <p className="text-xs text-muted-foreground mt-0.5">Crie modelos de prontuário padronizados por especialidade</p>
+                    </div>
                 </div>
                 <Button
                     onClick={handleOpenNew}
-                    className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold transition-all duration-200 border-0"
+                    className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0"
                 >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
                     <span>Novo Template</span>
                 </Button>
             </div>

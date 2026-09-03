@@ -216,20 +216,18 @@ export default function ProntuariosPage() {
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
-            {/* Header Premium */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-                        <FileText className="w-5 h-5 text-white" />
-                    </div>
+            {/* Header Corporativo Enterprise */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Prontuários</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie prontuários e históricos de pacientes</p>
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">Prontuários</h1>
+                        <p className="text-xs text-muted-foreground mt-0.5">Gerencie prontuários e históricos de pacientes</p>
                     </div>
                 </div>
-                <Button onClick={() => setShowNewRecordModal(true)} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-5 text-sm font-semibold">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Novo Prontuário
+                <Button onClick={() => setShowNewRecordModal(true)} className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0">
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Novo Prontuário</span>
                 </Button>
             </div>
 
@@ -238,7 +236,7 @@ export default function ProntuariosPage() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                 <Input
                     placeholder="Buscar por paciente..."
-                    className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                    className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => {
@@ -313,7 +311,7 @@ export default function ProntuariosPage() {
                                             {record.chief_complaint || '-'}
                                         </TableCell>
                                         <TableCell className="py-3 px-6 text-right">
-                                            <Button variant="ghost" size="sm" className="rounded-xl text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={(e) => {
+                                            <Button variant="ghost" size="sm" className="rounded-xs text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={(e) => {
                                                 e.stopPropagation()
                                                 router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)
                                             }}>

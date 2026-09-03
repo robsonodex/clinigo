@@ -135,13 +135,28 @@ export async function GET(request: Request) {
             }
         }
 
+        // Buscar configuração do Painel de TV para a clínica (default TRUE)
+        let chamadaPainelTvHabilitada = true
+        try {
+            const { data: clinicConfig } = await (supabase as any)
+                .from('clinics')
+                .select('chamada_painel_tv_habilitada')
+                .eq('id', clinicId)
+                .single()
+            if (clinicConfig && clinicConfig.chamada_painel_tv_habilitada === false) {
+                chamadaPainelTvHabilitada = false
+            }
+        } catch (configErr) {
+            console.warn('[Queue] Could not read clinic setting, defaulting to true', configErr)
+        }
+
         const queue = Array.from(uniqueQueueValues.values()).sort((a, b) => {
             // Sort by priority first
             if (a.isPriority && !b.isPriority) return -1
             if (!a.isPriority && b.isPriority) return 1
 
-            // For Espaço Incluir, sort strictly by scheduled appointment time ignoring standard statusOrder
-            if (clinicId === '5163c916-8b82-4d80-8a71-01726836ee46') {
+            // Se a clínica não usa Painel de TV, ordena estritamente por horário agendado
+            if (!chamadaPainelTvHabilitada) {
                 const timeA = a.scheduledTime ? new Date(a.scheduledTime).getTime() : (a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0)
                 const timeB = b.scheduledTime ? new Date(b.scheduledTime).getTime() : (b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0)
                 if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) return timeA - timeB
@@ -159,7 +174,7 @@ export async function GET(request: Request) {
             return timeArrA - timeArrB
         })
 
-        return NextResponse.json({ queue })
+        return NextResponse.json({ queue, chamadaPainelTvHabilitada })
     } catch (error) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }

@@ -519,15 +519,29 @@ vercel --prod
 ---
 
 *Gerado automaticamente por auditoria t√©cnica ‚Äî CliniGo v5.0*
-\ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   R e c e Á „ o   - >   A g e n d a   - >   M a n u a l A p p o i n t m e n t M o d a l . t s x   - >   C o r r e Á „ o   d e   c a c h e   ( q u e r y K e y )   q u e   i m p e d i a   n o v o s   m È d i c o s   d e   a p a r e c e r e m   n o   a g e n d a m e n t o   m a n u a l .  
- \ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   B a c k e n d   - >   l i b / w h a t s a p p / s e r v i c e . t s   - >   C o r r e Á „ o   d o   e s t a d o   d e   s e s s „ o   ' L a z y   R e c o n n e c t i o n '   i n - p r o c e s s   p a r a   n „ o   d e s l o g a r   a   U I   v i s u a l m e n t e   d u r a n t e   d e v .   A u m e n t a d o   o   t e m p o   d e   r e c o n n e c t _ t i m e o u t   n o   s e n d W h a t s A p p M e s s a g e   d e   5 s   p a r a   1 0 s   g a r a n t i n d o   q u e   e n v i o s   a s s Ì n c r o n o s   n „ o   f a l h e m .  
- \ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   F r o n t e n d / B a c k e n d   - >   R e s e n d   W h a t s A p p   - >   A d i c i o n a d o   b o t „ o   n o   A p p o i n t m e n t D e t a i l s M o d a l   e   r o t a   / a p i / a p p o i n t m e n t s / [ i d ] / r e s e n d   p a r a   r e e n v i o   a v u l s o   d e   n o t i f i c a Á ı e s   v i a   W h a t s A p p   s e m   p r e c i s a r   r e c r i a r   a g e n d a m e n t o s .  
+\ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   R e c e ÔøΩ ÔøΩ o   - >   A g e n d a   - >   M a n u a l A p p o i n t m e n t M o d a l . t s x   - >   C o r r e ÔøΩ ÔøΩ o   d e   c a c h e   ( q u e r y K e y )   q u e   i m p e d i a   n o v o s   m ÔøΩ d i c o s   d e   a p a r e c e r e m   n o   a g e n d a m e n t o   m a n u a l .  
+ \ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   B a c k e n d   - >   l i b / w h a t s a p p / s e r v i c e . t s   - >   C o r r e ÔøΩ ÔøΩ o   d o   e s t a d o   d e   s e s s ÔøΩ o   ' L a z y   R e c o n n e c t i o n '   i n - p r o c e s s   p a r a   n ÔøΩ o   d e s l o g a r   a   U I   v i s u a l m e n t e   d u r a n t e   d e v .   A u m e n t a d o   o   t e m p o   d e   r e c o n n e c t _ t i m e o u t   n o   s e n d W h a t s A p p M e s s a g e   d e   5 s   p a r a   1 0 s   g a r a n t i n d o   q u e   e n v i o s   a s s ÔøΩ n c r o n o s   n ÔøΩ o   f a l h e m .  
+ \ n -   [ 2 0 2 6 - 0 5 - 0 1 ]   F r o n t e n d / B a c k e n d   - >   R e s e n d   W h a t s A p p   - >   A d i c i o n a d o   b o t ÔøΩ o   n o   A p p o i n t m e n t D e t a i l s M o d a l   e   r o t a   / a p i / a p p o i n t m e n t s / [ i d ] / r e s e n d   p a r a   r e e n v i o   a v u l s o   d e   n o t i f i c a ÔøΩ ÔøΩ e s   v i a   W h a t s A p p   s e m   p r e c i s a r   r e c r i a r   a g e n d a m e n t o s .  
  
 - [2026-05-01] Backend -> WhatsApp -> lib/whatsapp/service.ts -> Adicionado onWhatsApp para formatar/checar nono d√≠gito (BR) e 1.5s delay no envio para evitar Vercel timeout congelado.
 - [2026-05-01] Frontend -> Marketing -> app/(marketing)/landing-premium/page.tsx -> Inser√ß√£o de Cards de Novidades: WhatsApp Integrado e Chat Interno no grid de funcionalidades.
-- [2026-09-03] Visual Enterprise -> Design System -> tailwind.config.ts & app/globals.css -> PadronizaÁ„o global de raios em 2px austero (rounded-xs), remoÁ„o de gradientes decorativos de IA e preservaÁ„o rigorosa de 100% das cores do sistema.
-- [2026-09-03] Componentes UI -> components/ui/button.tsx -> Trava de geometria base com rounded-xs, h-9 e remoÁ„o de sombras flutuantes.
-- [2026-09-03] MÛdulos -> Terapia / NPS / Documentos / Prontu·rios -> PadronizaÁ„o dos botıes de aÁ„o (Excel, Registrar NPS, Novo Upload, Novo Prontu·rio).
-- [2026-09-03] MÛdulos -> Terapia -> Planos TerapÍuticos -> app/dashboard/(clinic)/planos-terapeuticos/page.tsx -> Ajuste de espaÁamento responsivo do cabeÁalho e abas evitando que o bot„o Novo Plano vaze da tela.
-- [2026-09-03] Financeiro -> Repasse / Contratos -> app/dashboard/(clinic)/financial/payroll/contracts/page.tsx -> ProteÁ„o defensiva para Array em doctors e contracts evitando TypeError (doctors.map is not a function).
+- [2026-09-03] Visual Enterprise -> Design System -> tailwind.config.ts & app/globals.css -> PadronizaÔøΩÔøΩo global de raios em 2px austero (rounded-xs), remoÔøΩÔøΩo de gradientes decorativos de IA e preservaÔøΩÔøΩo rigorosa de 100% das cores do sistema.
+- [2026-09-03] Componentes UI -> components/ui/button.tsx -> Trava de geometria base com rounded-xs, h-9 e remoÔøΩÔøΩo de sombras flutuantes.
+- [2026-09-03] MÔøΩdulos -> Terapia / NPS / Documentos / ProntuÔøΩrios -> PadronizaÔøΩÔøΩo dos botÔøΩes de aÔøΩÔøΩo (Excel, Registrar NPS, Novo Upload, Novo ProntuÔøΩrio).
+- [2026-09-03] MÔøΩdulos -> Terapia -> Planos TerapÔøΩuticos -> app/dashboard/(clinic)/planos-terapeuticos/page.tsx -> Ajuste de espaÔøΩamento responsivo do cabeÔøΩalho e abas evitando que o botÔøΩo Novo Plano vaze da tela.
+- [2026-09-03] Financeiro -> Repasse / Contratos -> app/dashboard/(clinic)/financial/payroll/contracts/page.tsx -> ProteÔøΩÔøΩo defensiva para Array em doctors e contracts evitando TypeError (doctors.map is not a function).
 - [2026-09-03] Backend / Supabase -> lib/supabase/server.ts -> Fallback inteligente para NEXT_PUBLIC_SUPABASE_ANON_KEY em createServiceRoleClient() prevenindo erro 500 local.
+
+---
+
+### [03/09/2026] Recep√ß√£o ‚Üí Painel de TV: Restaura√ß√£o do Bot√£o 'Chamar' por Padr√£o & Isolamento Orientado a Dados
+- **M√≥dulo**: Recep√ß√£o (`app/dashboard/(clinic)/recepcao/page.tsx`) & Painel de TV
+- **API**: `app/api/setup/status/route.ts`, `app/api/reception/queue/route.ts`, `app/api/reception/revert-status/route.ts`, `app/api/clinics-detail/route.ts`
+- **Super Admin**: `app/dashboard/(admin)/clinicas/[clinicId]/page.tsx`
+- **Migration**: `supabase/migrations/20260903000000_chamada_painel_tv_setting.sql`
+- **Altera√ß√£o Cir√∫rgica**:
+  1. Adicionada a coluna `chamada_painel_tv_habilitada BOOLEAN NOT NULL DEFAULT TRUE` na tabela `clinics` e `clinic_settings`.
+  2. Bot√£o 'Chamar' restaurado na coluna 'Aguardando' da Recep√ß√£o como padr√£o ativo do sistema para todas as cl√≠nicas (incluindo Worldsensory e novas cl√≠nicas).
+  3. Exce√ß√£o da cl√≠nica 'Espa√ßo Incluir' isolada no banco de dados com valor `FALSE` e justificativa hist√≥rica registrada em migration/seed.
+  4. Removida qualquer depend√™ncia de nome ou UUID hardcoded no c√≥digo frontend/APIs, em cumprimento rigoroso √† Regra 5.2.1 de Seguran√ßa e LGPD.
+  5. Adicionado toggle de 'Chamada no Painel de TV' na gest√£o de cl√≠nicas do Super Admin.

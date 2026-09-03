@@ -74,6 +74,11 @@
   textarea {
     border-radius: 2px !important;
   }
+
+  /* Excecao cirurgica exclusiva: Botoes da barra da Agenda que usam arredondamento discreto premium */
+  .agenda-premium-btn {
+    border-radius: 12px !important;
+  }
 }
 
 @layer components {

@@ -42,6 +42,7 @@ export interface Database {
           mercadopago_subscription_id?: string | null
           payment_expiration_date?: string | null
           is_demo?: boolean | null
+          chamada_painel_tv_habilitada?: boolean
         }
         Insert: {
           id?: string
@@ -69,6 +70,7 @@ export interface Database {
           mercadopago_payment_id?: string | null
           mercadopago_subscription_id?: string | null
           payment_expiration_date?: string | null
+          chamada_painel_tv_habilitada?: boolean
         }
         Update: Partial<Database['public']['Tables']['clinics']['Insert']>
       }

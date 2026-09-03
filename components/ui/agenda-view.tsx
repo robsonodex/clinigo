@@ -725,7 +725,7 @@ export default function AgendaPage() {
                         </div>
 
                         {/* Botão Hoje */}
-                        <Button variant="outline" onClick={goToToday} className="bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-3.5 rounded-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0">
+                        <Button variant="outline" onClick={goToToday} className="agenda-premium-btn bg-white border-slate-200 dark:border-slate-800 shadow-sm h-10 text-sm font-semibold px-3.5 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0">
                             Hoje
                         </Button>
                         
@@ -765,7 +765,7 @@ export default function AgendaPage() {
                                         variant="outline"
                                         size="icon"
                                         onClick={handleOpenMural}
-                                        className="bg-white dark:bg-slate-900 shadow-sm h-10 w-10 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative rounded-xs shrink-0"
+                                        className="agenda-premium-btn bg-white dark:bg-slate-900 shadow-sm h-10 w-10 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:border-slate-800 transition-all duration-300 relative shrink-0"
                                     >
                                         <Megaphone className={cn("h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0", unreadBulletinsCount > 0 && "animate-bounce")} />
                                         {unreadBulletinsCount > 0 && (
@@ -830,7 +830,7 @@ export default function AgendaPage() {
                         <div className="flex items-center gap-2 shrink-0 ml-auto">
                             <Button
                                 variant="outline"
-                                className="rounded-xs border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
+                                className="agenda-premium-btn border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
                                 onClick={() => {
                                     setPreselectedSlot(null)
                                     setBlockModalOpen(true)
@@ -844,7 +844,7 @@ export default function AgendaPage() {
                             <RoomQrModal />
 
                             <Button
-                                className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-3.5 sm:px-4 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
+                                className="agenda-premium-btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10 px-3.5 sm:px-4 text-sm font-semibold gap-1.5 border-0 whitespace-nowrap shrink-0"
                                 onClick={() => {
                                     setPreselectedSlot(null)
                                     setManualAppointmentOpen(true)
@@ -865,7 +865,7 @@ export default function AgendaPage() {
                 )}>
                     <Button
                         variant="outline"
-                        className="gap-2 h-10 text-sm rounded-xs px-4 font-semibold"
+                        className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold"
                         onClick={() => setRecurringAppointmentOpen(true)}
                     >
                         <Repeat className="h-4 w-4" />
@@ -889,7 +889,7 @@ export default function AgendaPage() {
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 h-10 text-sm border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xs px-4 font-semibold"
+                        className="gap-2 h-10 text-sm border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl px-4 font-semibold"
                         onClick={() => {
                             setPreselectedSlot(null)
                             setIsEncaixeMode(true)
@@ -917,7 +917,7 @@ export default function AgendaPage() {
                         <DropdownMenuTrigger asChild disabled={isDoctor && !isCoordinator}>
                             <Button
                                 variant="outline"
-                                className="w-full md:w-[240px] lg:w-[300px] h-10 text-sm rounded-xs border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 justify-between px-3"
+                                className="w-full md:w-[240px] lg:w-[300px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 justify-between px-3"
                             >
                                 <div className="flex items-center gap-2 truncate text-left">
                                     <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0" />

@@ -201,19 +201,17 @@ export default function ReportsPage() {
         <div id="report-content" className="space-y-6 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
             {/* Header Premium Internacional */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
-                        <BarChart3 className="w-4 h-4 text-foreground/80" />
-                    </div>
+                <div className="flex items-center gap-2.5">
+                    <BarChart3 className="w-5 h-5 text-muted-foreground shrink-0" />
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Relatórios e Analytics</h1>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Visão geral de performance da clínica</p>
+                        <h1 className="text-xl font-semibold text-foreground tracking-tight">Relatórios e Analytics</h1>
+                        <p className="text-xs text-muted-foreground mt-0.5">Visão geral de performance da clínica</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
                     <Select value={dateRange} onValueChange={setDateRange}>
-                        <SelectTrigger className="w-40 h-10 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/30">
+                        <SelectTrigger className="w-40 h-9 text-xs rounded-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/30">
                             <SelectValue placeholder="Período" />
                         </SelectTrigger>
                         <SelectContent>
@@ -224,17 +222,17 @@ export default function ReportsPage() {
                         </SelectContent>
                     </Select>
 
-                    <Button variant="outline" size="icon" onClick={fetchData} className="rounded-xs h-10 w-10 border-slate-200 dark:border-slate-800">
-                        <RefreshCcw className="h-4 w-4" />
+                    <Button variant="outline" size="icon" onClick={fetchData} className="rounded-xs h-9 w-9 border-slate-200 dark:border-slate-800">
+                        <RefreshCcw className="h-3.5 w-3.5" />
                     </Button>
 
-                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 text-sm font-medium">
-                        <Download className="h-4 w-4 mr-2" />
+                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
                         CSV
                     </Button>
 
-                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting} className="rounded-xl border-slate-200 dark:border-slate-800 h-10 text-sm font-medium">
-                        <Download className="h-4 w-4 mr-2" />
+                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
                         PDF
                     </Button>
                 </div>
