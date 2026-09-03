@@ -35,6 +35,7 @@ interface QueueItem {
         gender?: string
     }
     doctor?: {
+        id?: string
         user: {
             name?: string
             full_name?: string
@@ -204,19 +205,19 @@ export default function RecepcaoPage() {
         }
     }
 
-    async function handleCallPatient(appointmentId: string, patientName: string) {
+    async function handleCallPatient(appointmentId: string, patientName: string, consultingRoomId?: string | null, roomName?: string) {
         setCallingId(appointmentId)
         try {
             const res = await fetch('/api/reception/call-patient', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ appointmentId })
+                body: JSON.stringify({ appointmentId, consultingRoomId })
             })
 
             if (res.ok) {
                 toast({
                     title: '📢 Paciente Chamado!',
-                    description: `${patientName} foi chamado(a) para atendimento.`,
+                    description: `${patientName} chamado(a) ${roomName ? `para ${roomName}` : 'no Painel de TV'}.`,
                 })
                 loadData()
             } else {
@@ -846,53 +847,72 @@ export default function RecepcaoPage() {
                                     </div>
 
                                     {/* Informações do Paciente */}
-                                    <div className="mt-1 pl-7">
-                                        {item.doctor && (
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                                <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
-                                                <span className="truncate">
-                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
-                                                </span>
-                                            </p>
-                                        )}
+                                    {/* Informações do Paciente */}
+                                    {(() => {
+                                        const itemRoom = consultingRooms.find(r => 
+                                            (item.consulting_room_id && r.id === item.consulting_room_id) ||
+                                            (item.doctor?.id && (r.doctor_id === item.doctor.id || r.doctor?.id === item.doctor.id)) ||
+                                            (item.doctor?.user?.full_name && r.doctor?.user?.full_name && 
+                                             r.doctor.user.full_name.toLowerCase().trim() === item.doctor.user.full_name.toLowerCase().trim())
+                                        )
+                                        const roomDisplayName = itemRoom ? itemRoom.display_name || itemRoom.name || `Sala ${itemRoom.room_number}` : null
 
-                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3 text-muted-foreground/70 shrink-0" />
-                                                {item.arrivalTime 
-                                                    ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
-                                                    : item.scheduledTime 
-                                                        ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
-                                                        : 'Sem horário'
-                                                }
-                                            </span>
-                                            {item.status === 'WAITING' && (
-                                                <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0 font-medium rounded-xs">Chamado</Badge>
-                                            )}
-                                        </div>
+                                        return (
+                                            <>
+                                                <div className="mt-1 pl-7">
+                                                    {item.doctor && (
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                                <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                                                                <span className="truncate">
+                                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                                </span>
+                                                            </p>
+                                                            {roomDisplayName && (
+                                                                <Badge variant="outline" className="text-[10px] font-medium bg-muted/60 text-foreground border-border/60 px-1.5 py-0 rounded-xs shrink-0">
+                                                                    {roomDisplayName}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    )}
 
-                                        {item.notes && (
-                                            <p className="text-[11px] text-muted-foreground mt-1.5 bg-muted/40 p-1.5 rounded-xs border border-border/50 italic leading-relaxed">
-                                                <span className="font-semibold not-italic text-foreground">Obs:</span> {item.notes}
-                                            </p>
-                                        )}
-                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                                                            {item.arrivalTime 
+                                                                ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
+                                                                : item.scheduledTime 
+                                                                    ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+                                                                    : 'Sem horário'
+                                                            }
+                                                        </span>
+                                                        {item.status === 'WAITING' && (
+                                                            <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0 font-medium rounded-xs">Chamado</Badge>
+                                                        )}
+                                                    </div>
 
-                                    {/* Action Footbar: Botões amplos e sem quebra de texto */}
-                                    <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
-                                        {/* Chamar Paciente no Painel de TV */}
-                                        {chamadaPainelTvHabilitada && (
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                className="h-8 flex-1 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10 rounded-xs flex items-center justify-center gap-1.5 whitespace-nowrap" 
-                                                onClick={() => handleCallPatient(item.id, item.patient?.full_name || '')} 
-                                                disabled={callingId === item.id}
-                                                title="Chamar paciente no Painel de TV"
-                                            >
-                                                {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5" /><span>Chamar</span></>}
-                                            </Button>
-                                        )}
+                                                    {item.notes && (
+                                                        <p className="text-[11px] text-muted-foreground mt-1.5 bg-muted/40 p-1.5 rounded-xs border border-border/50 italic leading-relaxed">
+                                                            <span className="font-semibold not-italic text-foreground">Obs:</span> {item.notes}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Action Footbar: Botões amplos e sem quebra de texto */}
+                                                <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
+                                                    {/* Chamar Paciente no Painel de TV */}
+                                                    {chamadaPainelTvHabilitada && (
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="outline" 
+                                                            className="h-8 flex-1 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10 rounded-xs flex items-center justify-center gap-1.5 whitespace-nowrap" 
+                                                            onClick={() => handleCallPatient(item.id, item.patient?.full_name || '', itemRoom?.id, roomDisplayName || undefined)} 
+                                                            disabled={callingId === item.id}
+                                                            title="Chamar paciente no Painel de TV"
+                                                        >
+                                                            {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5" /><span>Chamar</span></>}
+                                                        </Button>
+                                                    )}
 
                                         {/* Iniciar Atendimento / Check-in */}
                                         {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
@@ -914,6 +934,9 @@ export default function RecepcaoPage() {
                                             </button>
                                         )}
                                     </div>
+                                            </>
+                                        )
+                                    })()}
                                 </div>
                             ))}
                         </div>

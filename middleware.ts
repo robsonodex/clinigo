@@ -74,6 +74,8 @@ const PUBLIC_ROUTES = [
     '/api/chatbot', // Chatbot API - chamado pelo bot Railway sem auth cookies (tem rate limiting próprio)
     '/api/cron/', // Cron jobs - chamados pelo pg_cron do Supabase sem auth cookies (processamento automático de fila)
     '/api/totem/', // Totem public APIs - gate de plano feito internamente na rota
+    '/api/consulting-rooms', // Public TV panel access (controlled by clinicId param)
+    '/api/reception/queue', // Public TV panel access (controlled by clinicId param)
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)

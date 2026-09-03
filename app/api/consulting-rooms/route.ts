@@ -19,12 +19,11 @@ export async function GET(request: NextRequest) {
             const { data: rooms, error } = await (supabase as any)
                 .from('consulting_rooms')
                 .select(`
-                    id, name, display_name, room_number, show_on_tv,
+                    id, name, display_name, room_number, show_on_tv, doctor_id,
                     doctor:doctors(id, user:users(full_name), specialty)
                 `)
                 .eq('clinic_id', publicClinicId)
                 .eq('is_active', true)
-                .eq('show_on_tv', true)
                 .order('room_number', { ascending: true })
 
             if (error) throw error

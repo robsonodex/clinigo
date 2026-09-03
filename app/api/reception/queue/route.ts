@@ -106,7 +106,9 @@ export async function GET(request: Request) {
                 isPriority: a.priority_level > 0,
                 status: a.status,
                 notes: a.waiting_room_notes,
-                checkedInAt: a.checked_in_at // 🔥 Add this field
+                checkedInAt: a.checked_in_at,
+                consulting_room_id: a.consulting_room_id,
+                ticket_number: a.ticket_number
             })),
             ...walkIns.map(w => ({
                 id: w.id,
@@ -117,7 +119,9 @@ export async function GET(request: Request) {
                 scheduledTime: w.arrival_time,
                 isPriority: w.urgency_level !== 'normal',
                 status: w.status,
-                notes: w.reason
+                notes: w.reason,
+                consulting_room_id: null,
+                ticket_number: null
             }))
         ]) {
             const timeKey = item.scheduledTime ? item.scheduledTime.toString().substring(0, 16) : ''

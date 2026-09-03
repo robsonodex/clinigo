@@ -35,6 +35,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clinic not found' }, { status: 403 })
         }
 
+        // Auto-resolve consulting room from doctor if not explicitly provided
+        let finalRoomId = consultingRoomId || null
+
+        if (!finalRoomId) {
+            const { data: currentAppt } = await (supabase as any)
+                .from('appointments')
+                .select('doctor_id, consulting_room_id')
+                .eq('id', appointmentId)
+                .single()
+
+            if (currentAppt?.consulting_room_id) {
+                finalRoomId = currentAppt.consulting_room_id
+            } else if (currentAppt?.doctor_id) {
+                const { data: doctorRoom } = await (supabase as any)
+                    .from('consulting_rooms')
+                    .select('id')
+                    .eq('clinic_id', currentUser.clinic_id)
+                    .eq('doctor_id', currentAppt.doctor_id)
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+
+                if (doctorRoom?.id) {
+                    finalRoomId = doctorRoom.id
+                }
+            }
+        }
+
         // Update appointment status to WAITING (TV panel listens for this)
         const { data: appointment, error } = await (supabase as any)
             .from('appointments')
@@ -42,13 +71,14 @@ export async function POST(request: NextRequest) {
                 status: 'WAITING',
                 called_at: new Date().toISOString(),
                 called_by: user.id,
-                ...(consultingRoomId && { consulting_room_id: consultingRoomId }),
+                ...(finalRoomId && { consulting_room_id: finalRoomId }),
             })
             .eq('id', appointmentId)
             .eq('clinic_id', currentUser.clinic_id)
             .select(`
                 id,
                 status,
+                consulting_room_id,
                 patient:patients(full_name),
                 doctor:doctors(user:users(full_name))
             `)

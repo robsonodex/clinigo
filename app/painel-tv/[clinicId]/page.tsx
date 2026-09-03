@@ -27,6 +27,7 @@ interface Appointment {
         full_name: string
     }
     doctor: {
+        id?: string
         user: {
             full_name: string
         }
@@ -38,6 +39,8 @@ interface ConsultingRoom {
     name: string
     display_name: string | null
     room_number: number
+    doctor_id?: string | null
+    show_on_tv?: boolean
     doctor?: { id: string; user: { full_name: string }; specialty: string }
 }
 
@@ -200,10 +203,12 @@ export default function PainelTVPage() {
                         full_name: q.patient?.full_name || 'Paciente'
                     },
                     doctor: q.doctor ? {
+                        id: q.doctor.id,
                         user: {
                             full_name: q.doctor.user?.full_name || q.doctor.user?.name || ''
                         }
                     } : {
+                        id: undefined,
                         user: {
                             full_name: ''
                         }
@@ -276,9 +281,18 @@ export default function PainelTVPage() {
                             setTimeout(() => {
                                 const apt = appointmentsRef.current.find(a => a.id === payload.new.id)
                                 if (apt) {
-                                    // Resolve room name
-                                    const roomId = payload.new.consulting_room_id
-                                    const room = roomsRef.current.find(r => r.id === roomId)
+                                    // Resolve room name (por ID direto ou por médico da sala)
+                                    const roomId = payload.new.consulting_room_id || apt.consulting_room_id
+                                    let room = roomsRef.current.find(r => r.id === roomId)
+
+                                    if (!room && apt.doctor) {
+                                        room = roomsRef.current.find(r => 
+                                            (apt.doctor?.id && (r.doctor_id === apt.doctor.id || r.doctor?.id === apt.doctor.id)) ||
+                                            (apt.doctor?.user?.full_name && r.doctor?.user?.full_name &&
+                                             r.doctor.user.full_name.toLowerCase().trim() === apt.doctor.user.full_name.toLowerCase().trim())
+                                        )
+                                    }
+
                                     const roomText = room ? room.display_name || room.name || `Consultório ${room.room_number}` : 'Consultório'
 
                                     setCalledPatient({
@@ -350,9 +364,14 @@ export default function PainelTVPage() {
     // Find the most recently called or in-progress patient to display on main screen
     const activePatient = appointments.find(a => a.status === 'WAITING' || a.status === 'IN_PROGRESS')
 
-    // Find the consulting room for the active patient
-    const activeRoom = activePatient?.consulting_room_id
-        ? rooms.find(r => r.id === activePatient.consulting_room_id)
+    // Find the consulting room for the active patient (por ID direto ou por médico associado)
+    const activeRoom = activePatient
+        ? rooms.find(r => 
+            (activePatient.consulting_room_id && r.id === activePatient.consulting_room_id) ||
+            (activePatient.doctor?.id && (r.doctor_id === activePatient.doctor.id || r.doctor?.id === activePatient.doctor.id)) ||
+            (activePatient.doctor?.user?.full_name && r.doctor?.user?.full_name && 
+             r.doctor.user.full_name.toLowerCase().trim() === activePatient.doctor.user.full_name.toLowerCase().trim())
+          ) || null
         : null
 
     return (
@@ -447,7 +466,7 @@ export default function PainelTVPage() {
                         
                         <div className="space-y-4 flex-1">
                             {rooms.filter(r => r.doctor).map((room) => {
-                                const isRoomActive = activePatient?.consulting_room_id === room.id
+                                const isRoomActive = activeRoom?.id === room.id || activePatient?.consulting_room_id === room.id
                                 return (
                                     <div 
                                         key={room.id}
