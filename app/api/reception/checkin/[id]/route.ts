@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+const ESPACO_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+
 // POST /api/reception/checkin/:appointmentId
 export async function POST(
     request: NextRequest,
@@ -27,10 +29,23 @@ export async function POST(
             // body pode vir vazio nos check-ins antigos
         }
 
+        // Buscar agendamento para checar escopo da clínica
+        const { data: currentAppt } = await (supabase as any)
+            .from('appointments')
+            .select('id, clinic_id, status')
+            .eq('id', appointmentId)
+            .maybeSingle()
+
+        const isEspacoIncluir = currentAppt?.clinic_id === ESPACO_INCLUIR_CLINIC_ID
+
         const updateData: any = {
             checked_in_at: new Date().toISOString(),
             checked_in_by: user.id,
-            status: 'CHECKED_IN'
+        }
+
+        // Para Espaço Incluir, não sobrescreve o enum status com CHECKED_IN para não violar o constraint
+        if (!isEspacoIncluir) {
+            updateData.status = 'CHECKED_IN'
         }
         
         if (notes) {
@@ -38,12 +53,31 @@ export async function POST(
         }
 
         // Update appointment with check-in timestamp
-        const { data: appointment, error } = await (supabase
+        let { data: appointment, error } = await (supabase
             .from('appointments') as any)
             .update(updateData)
             .eq('id', appointmentId)
             .select()
             .single()
+
+        // Fallback de segurança se o enum do banco rejeitar CHECKED_IN (código 22P02)
+        if (error && error.code === '22P02') {
+            const fallbackData: any = {
+                checked_in_at: updateData.checked_in_at,
+                checked_in_by: updateData.checked_in_by,
+            }
+            if (notes) fallbackData.waiting_room_notes = notes
+
+            const retry = await (supabase
+                .from('appointments') as any)
+                .update(fallbackData)
+                .eq('id', appointmentId)
+                .select()
+                .single()
+
+            appointment = retry.data
+            error = retry.error
+        }
 
         if (error) {
             console.error('Error checking in:', error)
