@@ -34,9 +34,13 @@ export const metadata: Metadata = {
     icons: {
         icon: [
             { url: '/favicon.ico', sizes: '48x48 32x32 16x16', type: 'image/x-icon' },
-            { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+            { url: '/favicon.png', sizes: '48x48', type: 'image/png' },
+            { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+            { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+            { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
             { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
             { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+            { url: '/icon.png', sizes: '512x512', type: 'image/png' },
         ],
         shortcut: '/favicon.ico',
         apple: [
@@ -121,6 +125,14 @@ export default function RootLayout({
                         gtag('config', 'AW-18137890436');
                     `}
                 </Script>
+
+                {/* Favicons explícitos para Google Search Crawler e navegadores */}
+                <link rel="icon" href="/favicon.ico" sizes="48x48 32x32 16x16" type="image/x-icon" />
+                <link rel="icon" href="/favicon.png" type="image/png" sizes="48x48" />
+                <link rel="icon" href="/favicon-48x48.png" type="image/png" sizes="48x48" />
+                <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />
+                <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+                <link rel="manifest" href="/site.webmanifest" />
 
                 {/* PWA - Apple specific tags */}
                 <meta name="apple-mobile-web-app-capable" content="yes" />
