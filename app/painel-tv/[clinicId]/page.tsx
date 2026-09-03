@@ -70,33 +70,68 @@ export default function PainelTVPage() {
     const audioCtxRef = useRef<AudioContext | null>(null)
 
     const supabase = createClient()
+    const [tvSoundTheme, setTvSoundTheme] = useState<'classico' | 'moderno' | 'harmonico' | 'bip'>('classico')
+    const [tvVoiceGender, setTvVoiceGender] = useState<'feminina' | 'masculina' | 'padrao'>('feminina')
 
-    // Initialize AudioContext & SpeechSynthesis on first user interaction
+    // Initialize AudioContext & SpeechSynthesis on first user interaction with permanent localStorage persistence (P5)
     const initAudio = useCallback(() => {
-        if (!audioCtxRef.current) {
-            audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+        try {
+            if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+            }
+            if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+                audioCtxRef.current.resume()
+            }
             setAudioReady(true)
-            localStorage.setItem('tv_audio_ready', 'true')
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(`tv_audio_enabled_${clinicId}`, 'true')
+                localStorage.setItem('tv_audio_ready', 'true')
 
-            // Unlock SpeechSynthesis
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-                const utterance = new SpeechSynthesisUtterance('')
-                window.speechSynthesis.speak(utterance)
+                // Unlock SpeechSynthesis
+                if (window.speechSynthesis) {
+                    const utterance = new SpeechSynthesisUtterance('')
+                    window.speechSynthesis.speak(utterance)
+                }
+            }
+        } catch (e) {
+            console.warn('[TV Panel] Audio init error:', e)
+        }
+    }, [clinicId])
+
+    // Autoplay keep-alive: tenta restaurar áudio se já foi habilitado anteriormente (P5)
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const wasEnabled = localStorage.getItem(`tv_audio_enabled_${clinicId}`) === 'true' || localStorage.getItem('tv_audio_ready') === 'true'
+            if (wasEnabled) {
+                initAudio()
             }
         }
-    }, [])
 
-    useEffect(() => {
         const handleInteraction = () => {
             initAudio()
-            document.removeEventListener('click', handleInteraction)
         }
-        document.addEventListener('click', handleInteraction)
-        return () => document.removeEventListener('click', handleInteraction)
-    }, [initAudio])
 
-    // Professional chime sound using Web Audio API
-    const playCallSound = useCallback(async () => {
+        window.addEventListener('click', handleInteraction, { passive: true })
+        window.addEventListener('keydown', handleInteraction, { passive: true })
+        window.addEventListener('touchstart', handleInteraction, { passive: true })
+
+        // Keep-alive a cada 20 segundos para evitar que o navegador suspenda o AudioContext
+        const keepAliveInterval = setInterval(() => {
+            if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+                audioCtxRef.current.resume().catch(() => {})
+            }
+        }, 20000)
+
+        return () => {
+            window.removeEventListener('click', handleInteraction)
+            window.removeEventListener('keydown', handleInteraction)
+            window.removeEventListener('touchstart', handleInteraction)
+            clearInterval(keepAliveInterval)
+        }
+    }, [clinicId, initAudio])
+
+    // Som de chamada configurável por clínica (Identidade sonora - P2)
+    const playCallSound = useCallback(async (soundType: 'classico' | 'moderno' | 'harmonico' | 'bip' = 'classico') => {
         if (!audioCtxRef.current) {
             try {
                 audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -114,76 +149,159 @@ export default function PainelTVPage() {
 
         const now = ctx.currentTime
 
-        // First tone — C5 (523 Hz)
-        const osc1 = ctx.createOscillator()
-        const gain1 = ctx.createGain()
-        osc1.type = 'sine'
-        osc1.frequency.setValueAtTime(523.25, now)
-        gain1.gain.setValueAtTime(0, now)
-        gain1.gain.linearRampToValueAtTime(0.4, now + 0.05)
-        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
-        osc1.connect(gain1)
-        gain1.connect(ctx.destination)
-        osc1.start(now)
-        osc1.stop(now + 0.6)
+        if (soundType === 'moderno') {
+            // Ding-Dong de aeroporto / Dois tons: F5 (698.46 Hz) -> C5 (523.25 Hz)
+            const osc1 = ctx.createOscillator()
+            const gain1 = ctx.createGain()
+            osc1.type = 'sine'
+            osc1.frequency.setValueAtTime(698.46, now)
+            gain1.gain.setValueAtTime(0, now)
+            gain1.gain.linearRampToValueAtTime(0.45, now + 0.05)
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.7)
+            osc1.connect(gain1)
+            gain1.connect(ctx.destination)
+            osc1.start(now)
+            osc1.stop(now + 0.7)
 
-        // Second tone — E5 (659 Hz) — 200ms after first
-        const osc2 = ctx.createOscillator()
-        const gain2 = ctx.createGain()
-        osc2.type = 'sine'
-        osc2.frequency.setValueAtTime(659.25, now + 0.2)
-        gain2.gain.setValueAtTime(0, now + 0.2)
-        gain2.gain.linearRampToValueAtTime(0.4, now + 0.25)
-        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.9)
-        osc2.connect(gain2)
-        gain2.connect(ctx.destination)
-        osc2.start(now + 0.2)
-        osc2.stop(now + 0.9)
+            const osc2 = ctx.createOscillator()
+            const gain2 = ctx.createGain()
+            osc2.type = 'sine'
+            osc2.frequency.setValueAtTime(523.25, now + 0.35)
+            gain2.gain.setValueAtTime(0, now + 0.35)
+            gain2.gain.linearRampToValueAtTime(0.45, now + 0.4)
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 1.2)
+            osc2.connect(gain2)
+            gain2.connect(ctx.destination)
+            osc2.start(now + 0.35)
+            osc2.stop(now + 1.2)
+        } else if (soundType === 'harmonico') {
+            // Acorde harmônico simultâneo suave C5 + G5 + C6
+            ;[523.25, 783.99, 1046.50].forEach((freq) => {
+                const osc = ctx.createOscillator()
+                const gain = ctx.createGain()
+                osc.type = 'triangle'
+                osc.frequency.setValueAtTime(freq, now)
+                gain.gain.setValueAtTime(0, now)
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.06)
+                gain.gain.exponentialRampToValueAtTime(0.005, now + 1.4)
+                osc.connect(gain)
+                gain.connect(ctx.destination)
+                osc.start(now)
+                osc.stop(now + 1.4)
+            })
+        } else if (soundType === 'bip') {
+            // Bip duplo rápido e claro (880 Hz)
+            ;[0, 0.22].forEach((offset) => {
+                const osc = ctx.createOscillator()
+                const gain = ctx.createGain()
+                osc.type = 'sine'
+                osc.frequency.setValueAtTime(880, now + offset)
+                gain.gain.setValueAtTime(0, now + offset)
+                gain.gain.linearRampToValueAtTime(0.4, now + offset + 0.02)
+                gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15)
+                osc.connect(gain)
+                gain.connect(ctx.destination)
+                osc.start(now + offset)
+                osc.stop(now + offset + 0.15)
+            })
+        } else {
+            // Chime clássico CliniGO: C5 -> E5 -> G5
+            const osc1 = ctx.createOscillator()
+            const gain1 = ctx.createGain()
+            osc1.type = 'sine'
+            osc1.frequency.setValueAtTime(523.25, now)
+            gain1.gain.setValueAtTime(0, now)
+            gain1.gain.linearRampToValueAtTime(0.4, now + 0.05)
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
+            osc1.connect(gain1)
+            gain1.connect(ctx.destination)
+            osc1.start(now)
+            osc1.stop(now + 0.6)
 
-        // Third tone — G5 (784 Hz) — 400ms after first
-        const osc3 = ctx.createOscillator()
-        const gain3 = ctx.createGain()
-        osc3.type = 'sine'
-        osc3.frequency.setValueAtTime(783.99, now + 0.4)
-        gain3.gain.setValueAtTime(0, now + 0.4)
-        gain3.gain.linearRampToValueAtTime(0.35, now + 0.45)
-        gain3.gain.exponentialRampToValueAtTime(0.01, now + 1.2)
-        osc3.connect(gain3)
-        gain3.connect(ctx.destination)
-        osc3.start(now + 0.4)
-        osc3.stop(now + 1.2)
+            const osc2 = ctx.createOscillator()
+            const gain2 = ctx.createGain()
+            osc2.type = 'sine'
+            osc2.frequency.setValueAtTime(659.25, now + 0.2)
+            gain2.gain.setValueAtTime(0, now + 0.2)
+            gain2.gain.linearRampToValueAtTime(0.4, now + 0.25)
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.9)
+            osc2.connect(gain2)
+            gain2.connect(ctx.destination)
+            osc2.start(now + 0.2)
+            osc2.stop(now + 0.9)
+
+            const osc3 = ctx.createOscillator()
+            const gain3 = ctx.createGain()
+            osc3.type = 'sine'
+            osc3.frequency.setValueAtTime(783.99, now + 0.4)
+            gain3.gain.setValueAtTime(0, now + 0.4)
+            gain3.gain.linearRampToValueAtTime(0.35, now + 0.45)
+            gain3.gain.exponentialRampToValueAtTime(0.01, now + 1.2)
+            osc3.connect(gain3)
+            gain3.connect(ctx.destination)
+            osc3.start(now + 0.4)
+            osc3.stop(now + 1.2)
+        }
     }, [])
 
-    // Speech synthesis vocalization of called patient - ENXUTA
-    const speakCall = useCallback((patientName: string, roomName: string, ticketNumber?: string | null) => {
+    // Voz neural aprimorada com direção física de destino (Prioridade 2)
+    const speakCall = useCallback((
+        patientName: string, 
+        roomName: string, 
+        doctorName?: string, 
+        specialty?: string, 
+        ticketNumber?: string | null
+    ) => {
         if (typeof window === 'undefined' || !window.speechSynthesis) return
 
         // Cancel any active speech to avoid overlapping
         window.speechSynthesis.cancel()
 
-        // Speak sequence: "Senha [Número], [Sala/Consultório]"
+        const docText = doctorName ? `Dr. ${doctorName}` : ''
+        const specText = specialty ? specialty : ''
+        const dirText = roomName.toLowerCase().startsWith('sala') || roomName.toLowerCase().startsWith('consultório')
+            ? `dirija-se à ${roomName}`
+            : `dirija-se ao ${roomName}`
+
         let text = ''
         if (ticketNumber) {
             const spelledTicket = ticketNumber.replace('-', ' ')
-            text = `Senha ${spelledTicket}, ${roomName}.`
+            text = `Senha ${spelledTicket}. ${specText ? specText + ', ' : ''}${docText ? docText + ' — ' : ''}${dirText}.`
         } else {
-            text = `${patientName}, ${roomName}.`
+            text = `${patientName}, ${specText ? specText + ', ' : ''}${docText ? docText + ' — ' : ''}${dirText}.`
         }
 
         const utterance = new SpeechSynthesisUtterance(text)
         utterance.lang = 'pt-BR'
-        utterance.rate = 0.85 // Calm natural speaking rate
+        utterance.rate = 0.88
         utterance.pitch = 1.0
 
-        // Find PT-BR voice
+        // Localizar melhor voz pt-BR conforme preferência configurada (Feminina / Masculina)
         const voices = window.speechSynthesis.getVoices()
-        const ptVoice = voices.find(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR'))
-        if (ptVoice) {
-            utterance.voice = ptVoice
+        const ptVoices = voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
+        
+        let chosenVoice: SpeechSynthesisVoice | undefined
+
+        if (tvVoiceGender === 'masculina') {
+            chosenVoice = ptVoices.find(v => 
+                /antonio|felipe|daniel|helio|male|masculin|ricardo/i.test(v.name)
+            )
+        } else if (tvVoiceGender === 'feminina') {
+            chosenVoice = ptVoices.find(v => 
+                /francisca|luciana|maria|female|feminin|leticia|google português/i.test(v.name)
+            )
+        }
+
+        if (!chosenVoice && ptVoices.length > 0) {
+            chosenVoice = ptVoices[0]
+        }
+
+        if (chosenVoice) {
+            utterance.voice = chosenVoice
         }
 
         window.speechSynthesis.speak(utterance)
-    }, [])
+    }, [tvVoiceGender])
 
     const fetchAppointments = useCallback(async () => {
         try {
@@ -248,6 +366,8 @@ export default function PainelTVPage() {
                 setClinicName(data.name)
                 const savedLayout = data.theme?.tv_layout || 'classico'
                 setTvLayout(savedLayout)
+                setTvSoundTheme(data.theme?.tv_sound_theme || 'classico')
+                setTvVoiceGender(data.theme?.tv_voice_gender || 'feminina')
             }
         } catch (e) {
             console.error('[TV Panel] Error loading clinic info:', e)
@@ -294,21 +414,29 @@ export default function PainelTVPage() {
                                     }
 
                                     const roomText = room ? room.display_name || room.name || `Consultório ${room.room_number}` : 'Consultório'
+                                    const doctorSpecialty = (room?.doctor?.specialty || (apt.doctor as any)?.specialty || '')
 
                                     setCalledPatient({
                                         patientName: apt.patient?.full_name || 'Paciente',
                                         doctorName: apt.doctor?.user?.full_name || '',
+                                        specialty: doctorSpecialty,
                                         ticketNumber: apt.ticket_number,
                                         roomName: roomText,
                                         timestamp: Date.now(),
                                     })
 
-                                    // Play sound
-                                    playCallSound()
+                                    // Tocar som escolhido pela clínica (Prioridade 2)
+                                    playCallSound(tvSoundTheme)
 
-                                    // Speak name and room 1 second after chime starts
+                                    // Anúncio por voz com direção física 1s após o chime (Prioridade 2)
                                     setTimeout(() => {
-                                        speakCall(apt.patient?.full_name || 'Paciente', roomText, apt.ticket_number)
+                                        speakCall(
+                                            apt.patient?.full_name || 'Paciente', 
+                                            roomText, 
+                                            apt.doctor?.user?.full_name,
+                                            doctorSpecialty,
+                                            apt.ticket_number
+                                        )
                                     }, 1000)
 
                                     // Dismiss call overlay after 12 seconds
@@ -335,6 +463,12 @@ export default function PainelTVPage() {
                     if (payload.new && payload.new.theme) {
                         const savedLayout = payload.new.theme.tv_layout || 'classico'
                         setTvLayout(savedLayout)
+                        if (payload.new.theme.tv_sound_theme) {
+                            setTvSoundTheme(payload.new.theme.tv_sound_theme)
+                        }
+                        if (payload.new.theme.tv_voice_gender) {
+                            setTvVoiceGender(payload.new.theme.tv_voice_gender)
+                        }
                         if (payload.new.name) {
                             setClinicName(payload.new.name)
                         }
@@ -527,54 +661,70 @@ export default function PainelTVPage() {
                 </div>
             </footer>
 
-            {/* Giant Fullscreen Call Animation Overlay */}
+            {/* Giant Fullscreen Call Animation Overlay - Acessibilidade Reforçada (Prioridade 3) */}
             {calledPatient && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-6"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-6 border-8 border-amber-400/80 shadow-[inset_0_0_100px_rgba(245,158,11,0.3)]"
                     style={{
-                        background: 'linear-gradient(165deg, #091c33 0%, #050d18 100%)',
+                        background: 'linear-gradient(165deg, #061528 0%, #02070e 100%)',
                         animation: 'fadeIn 0.2s ease-out',
                     }}
                 >
-                    {/* Decorative ambient glowing grids */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.08)_0%,transparent_60%)] pointer-events-none" />
+                    {/* Decorative ambient glowing grids & accessibility pulse */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15)_0%,transparent_70%)] pointer-events-none" />
 
-                    <div className="text-center max-w-6xl mx-auto space-y-8 relative z-10">
+                    <div className="text-center max-w-7xl mx-auto space-y-6 md:space-y-8 relative z-10">
+                        
+                        {/* Accessibility Header Alert Badge */}
+                        <div style={{ animation: 'slideUp 0.2s ease-out' }}>
+                            <span className="inline-flex items-center gap-3 px-8 py-2.5 rounded-full bg-amber-400 text-slate-950 text-xl md:text-2xl font-black tracking-widest uppercase shadow-[0_0_40px_rgba(245,158,11,0.5)] animate-pulse">
+                                🔔 ATENÇÃO — CHAMADA DE ATENDIMENTO
+                            </span>
+                        </div>
+
                         {/* Ticket Badge */}
                         {calledPatient.ticketNumber && (
                             <div style={{ animation: 'slideUp 0.3s ease-out' }}>
-                                <span className="inline-block px-12 py-5 rounded-3xl bg-amber-400 text-slate-950 text-4xl md:text-5xl font-black font-mono tracking-widest uppercase shadow-[0_0_60px_rgba(245,158,11,0.25)]">
+                                <span className="inline-block px-14 py-4 rounded-3xl bg-amber-400 text-slate-950 text-5xl md:text-6xl font-black font-mono tracking-widest uppercase shadow-[0_0_60px_rgba(245,158,11,0.4)]">
                                     SENHA {calledPatient.ticketNumber}
                                 </span>
                             </div>
                         )}
 
-                        {/* Patient Name */}
+                        {/* Patient Name - Ultra-high visibility */}
                         <h2
-                            className="text-7xl md:text-8xl lg:text-9xl font-black text-white leading-none tracking-tight uppercase"
+                            className="text-6xl md:text-8xl lg:text-9xl font-black text-white leading-tight tracking-tight uppercase drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)]"
                             style={{ animation: 'slideUp 0.4s ease-out' }}
                         >
                             {calledPatient.patientName}
                         </h2>
 
-                        {/* Doctor Name */}
-                        {calledPatient.doctorName && (
-                            <p className="text-3xl md:text-4xl text-white/60 font-light" style={{ animation: 'slideUp 0.5s ease-out' }}>
-                                Dr(a). <strong className="text-white/90 font-medium">{calledPatient.doctorName}</strong>
-                            </p>
+                        {/* Doctor Name & Specialty */}
+                        {(calledPatient.doctorName || calledPatient.specialty) && (
+                            <div className="space-y-1" style={{ animation: 'slideUp 0.5s ease-out' }}>
+                                {calledPatient.doctorName && (
+                                    <p className="text-3xl md:text-5xl text-white font-medium">
+                                        Dr(a). <strong className="text-amber-300 font-bold">{calledPatient.doctorName}</strong>
+                                    </p>
+                                )}
+                                {calledPatient.specialty && (
+                                    <p className="text-xl md:text-3xl text-emerald-400 font-semibold tracking-wide uppercase">
+                                        {calledPatient.specialty}
+                                    </p>
+                                )}
+                            </div>
                         )}
 
-                        {/* Room Location */}
-                        <div style={{ animation: 'slideUp 0.6s ease-out' }}>
+                        {/* Room Location with Physical Direction */}
+                        <div style={{ animation: 'slideUp 0.6s ease-out' }} className="pt-2">
                             <span
-                                className="inline-block px-16 py-6 rounded-3xl text-4xl md:text-5xl font-extrabold tracking-wider border border-white/10 shadow-2xl"
+                                className="inline-block px-14 md:px-20 py-5 md:py-7 rounded-3xl text-4xl md:text-6xl font-black tracking-wider shadow-[0_0_50px_rgba(255,255,255,0.2)]"
                                 style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                    backdropFilter: 'blur(20px)',
-                                    color: '#ffffff',
+                                    backgroundColor: '#ffffff',
+                                    color: '#091c33',
                                 }}
                             >
-                                {calledPatient.roomName}
+                                DIRIJA-SE À: {calledPatient.roomName.toUpperCase()}
                             </span>
                         </div>
                     </div>

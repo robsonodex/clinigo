@@ -2025,3 +2025,31 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
    - **Timeline de Auditoria**: Drawer lateral com histórico completo de alterações (quem mudou, quando e valor anterior).
    - **Atalho no Drawer de Agendamento**: Link e mini-modal direto em `AppointmentDetailsDrawer.tsx` para ajustar o valor permanente do paciente sem sair da agenda.
    - **Notificação WhatsApp Opcional**: Disparo automático de aviso via WhatsApp ao médico quando um novo valor individual for cadastrado.
+
+5. **Painel de Chamada de Pacientes (TV) — Padrão Internacional & Multicanal (Prioridades 1 a 5)**
+   - Arquivos:
+     - supabase/migrations/20260903173000_add_chamada_whatsapp_habilitada.sql [NOVO]
+     - pp/api/clinics/tv-settings/route.ts [NOVO]
+     - pp/api/reception/call-patient/route.ts → POST
+     - pp/api/reception/queue/route.ts → GET
+     - pp/dashboard/(clinic)/configuracoes/components/ConsultingRoomsSettings.tsx
+     - pp/dashboard/(clinic)/recepcao/page.tsx
+     - pp/painel-tv/[clinicId]/page.tsx
+   - **[P1] Chamada Multicanal via WhatsApp**:
+     - Toggle sob controle de cada clínica em *Configurações → Consultórios & TV*.
+     - Validação de status em tempo real com bloqueio prévio caso o WhatsApp esteja desconectado.
+     - Disparo assíncrono e tolerante a falhas no momento da chamada de recepção: mensagem personalizada com nome do profissional, especialidade e sala de destino.
+   - **[P2] Voz com Direção Física & Sons Configuráveis**:
+     - Anúncio falado completo: [Paciente], [Especialidade], Dr(a). [Médico] — dirija-se à [Sala].
+     - 4 temas sonoros gerados via Web Audio API: *Chime Clássico (Hospitalar)*, *Ding-Dong Moderno (Aeroporto)*, *Acorde Harmônico (Zen)* e *Bip Clínico (Dinâmico)*.
+     - Seleção de Voz Neural (Feminina / Masculina) com botões de preview de áudio e voz em tempo real no painel de configurações.
+   - **[P3] Acessibilidade Reforçada na TV**:
+     - Borda pulsante e overlay com glow de alto contraste para pacientes com deficiência auditiva.
+     - Badge superior de alerta: 🔔 ATENÇÃO — CHAMADA DE ATENDIMENTO.
+     - Nome do paciente ampliado com legibilidade máxima à distância (	ext-6xl md:text-8xl lg:text-9xl font-black), especialidade destacada e caixa de sala em alto contraste.
+   - **[P4] Escalonamento por Ausência de Check-in / Atendimento**:
+     - Tempo de tolerância configurável por clínica (3m, 5m, 10m, 15m ou desativado).
+     - Se o paciente chamado não comparecer no consultório dentro do tempo limite, a recepção re-chama automaticamente na TV/voz e exibe alerta em tempo real (⚠️ Escalonamento por Ausência) com badge e botão rápido de Re-chamar.
+   - **[P5] Persistência Definitiva de Áudio na TV**:
+     - Eliminação de pedidos repetidos de permissão a cada reload via persistência no localStorage.
+     - Keep-alive sutil periódico para evitar que o navegador suspenda o AudioContext por inatividade.

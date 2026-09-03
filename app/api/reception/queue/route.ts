@@ -48,6 +48,7 @@ export async function GET(request: Request) {
         waiting_room_notes,
         ticket_number,
         consulting_room_id,
+        called_at,
         patient:patients(id, full_name, date_of_birth, gender),
         doctor:doctors(id, user:users(full_name))
       `)
@@ -107,6 +108,7 @@ export async function GET(request: Request) {
                 status: a.status,
                 notes: a.waiting_room_notes,
                 checkedInAt: a.checked_in_at,
+                calledAt: a.called_at,
                 consulting_room_id: a.consulting_room_id,
                 ticket_number: a.ticket_number
             })),

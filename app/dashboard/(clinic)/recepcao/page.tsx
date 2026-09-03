@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,6 +47,7 @@ interface QueueItem {
     status: string
     notes?: string
     checkedInAt?: string
+    calledAt?: string
     consulting_room_id?: string
 }
 
@@ -117,8 +118,11 @@ export default function RecepcaoPage() {
 
     // Configuração do Painel de TV (default true para todas as clínicas; exceções configuradas no banco)
     const [chamadaPainelTvHabilitada, setChamadaPainelTvHabilitada] = useState(true)
+    const [tvRecallMinutes, setTvRecallMinutes] = useState<number>(5)
     const [checkInModal, setCheckInModal] = useState<{ open: boolean, appointmentId: string | null, notes: string }>({ open: false, appointmentId: null, notes: '' })
     const [noShowModal, setNoShowModal] = useState<{ open: boolean, appointmentId: string | null, patientName: string, notes: string }>({ open: false, appointmentId: null, patientName: '', notes: '' })
+
+    const autoRecalledIdsRef = useRef<Set<string>>(new Set())
 
     useEffect(() => {
         loadData()
@@ -140,9 +144,58 @@ export default function RecepcaoPage() {
             } catch { /* silent */ } finally {
                 setIsPlanLoading(false)
             }
+
+            try {
+                const tvRes = await fetch('/api/clinics/tv-settings')
+                if (tvRes.ok) {
+                    const tvData = await tvRes.json()
+                    if (tvData.tvRecallMinutes !== undefined) {
+                        setTvRecallMinutes(Number(tvData.tvRecallMinutes))
+                    }
+                }
+            } catch { /* silent */ }
         }
         fetchPlanType()
     }, [])
+
+    // Escalonamento por ausência de check-in / início de atendimento (Prioridade 4)
+    useEffect(() => {
+        if (!tvRecallMinutes || tvRecallMinutes <= 0) return
+
+        const checkEscalation = () => {
+            const now = Date.now()
+            const thresholdMs = tvRecallMinutes * 60 * 1000
+
+            queue.forEach(item => {
+                if (item.status === 'WAITING' && (item.calledAt || item.arrivalTime)) {
+                    const callTimeStr = item.calledAt || item.arrivalTime
+                    const calledTime = new Date(callTimeStr).getTime()
+                    const elapsed = now - calledTime
+
+                    // Se passou do tempo de tolerância e ainda não foi re-chamado automaticamente
+                    if (elapsed >= thresholdMs && !autoRecalledIdsRef.current.has(item.id)) {
+                        autoRecalledIdsRef.current.add(item.id)
+
+                        // Repetir chamada automaticamente na TV/Voz
+                        handleCallPatient(
+                            item.id,
+                            item.patient?.full_name || 'Paciente',
+                            item.consulting_room_id,
+                            undefined
+                        )
+
+                        toast({
+                            title: '⚠️ Alerta de Escalonamento (Ausência)',
+                            description: `Paciente ${item.patient?.full_name || 'Paciente'} chamado(a) há mais de ${tvRecallMinutes} min sem atendimento. Chamada repetida automaticamente no Painel de TV!`,
+                        })
+                    }
+                }
+            })
+        }
+
+        const escalationTimer = setInterval(checkEscalation, 15000)
+        return () => clearInterval(escalationTimer)
+    }, [queue, tvRecallMinutes])
 
     useEffect(() => {
         const supabase = createClient()
@@ -900,7 +953,23 @@ export default function RecepcaoPage() {
                                                             }
                                                         </span>
                                                         {item.status === 'WAITING' && (
-                                                            <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0 font-medium rounded-xs">Chamado</Badge>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0 font-medium rounded-xs">Chamado</Badge>
+                                                                {(() => {
+                                                                    const callTimeStr = item.calledAt || item.arrivalTime
+                                                                    if (tvRecallMinutes > 0 && callTimeStr) {
+                                                                        const elapsedMin = Math.floor((Date.now() - new Date(callTimeStr).getTime()) / 60000)
+                                                                        if (elapsedMin >= tvRecallMinutes) {
+                                                                            return (
+                                                                                <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0 font-bold animate-pulse rounded-xs">
+                                                                                    Não compareceu (+{elapsedMin}m)
+                                                                                </Badge>
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                    return null
+                                                                })()}
+                                                            </div>
                                                         )}
                                                     </div>
 
@@ -913,17 +982,28 @@ export default function RecepcaoPage() {
 
                                                 {/* Action Footbar: Botões amplos e sem quebra de texto */}
                                                 <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
-                                                    {/* Chamar Paciente no Painel de TV */}
+                                                    {/* Chamar / Re-chamar Paciente no Painel de TV */}
                                                     {chamadaPainelTvHabilitada && (
                                                         <Button 
                                                             size="sm" 
                                                             variant="outline" 
-                                                            className="h-8 flex-1 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10 rounded-xs flex items-center justify-center gap-1.5 whitespace-nowrap" 
+                                                            className={`h-8 flex-1 text-xs font-medium rounded-xs flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                                                                item.status === 'WAITING' 
+                                                                    ? 'text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10' 
+                                                                    : 'text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10'
+                                                            }`}
                                                             onClick={() => handleCallPatient(item.id, item.patient?.full_name || '', itemRoom?.id, roomDisplayName || undefined)} 
                                                             disabled={callingId === item.id}
-                                                            title="Chamar paciente no Painel de TV"
+                                                            title={item.status === 'WAITING' ? "Re-chamar paciente no Painel de TV" : "Chamar paciente no Painel de TV"}
                                                         >
-                                                            {callingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Megaphone className="w-3.5 h-3.5" /><span>Chamar</span></>}
+                                                            {callingId === item.id ? (
+                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                            ) : (
+                                                                <>
+                                                                    <Megaphone className={`w-3.5 h-3.5 ${item.status === 'WAITING' ? 'text-amber-500' : ''}`} />
+                                                                    <span>{item.status === 'WAITING' ? 'Re-chamar' : 'Chamar'}</span>
+                                                                </>
+                                                            )}
                                                         </Button>
                                                     )}
 

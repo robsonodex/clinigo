@@ -22,7 +22,11 @@ import {
     Eye,
     EyeOff,
     MessageSquare,
-    ExternalLink
+    ExternalLink,
+    Volume2,
+    Music,
+    Play,
+    Clock
 } from 'lucide-react'
 
 // Plan definitions mapping
@@ -66,6 +70,11 @@ export function ConsultingRoomsSettings() {
     const [whatsappConnected, setWhatsappConnected] = useState(false)
     const [whatsappPhone, setWhatsappPhone] = useState<string | null>(null)
     const [savingWhatsappToggle, setSavingWhatsappToggle] = useState(false)
+
+    const [tvSoundTheme, setTvSoundTheme] = useState<'classico' | 'moderno' | 'harmonico' | 'bip'>('classico')
+    const [tvVoiceGender, setTvVoiceGender] = useState<'feminina' | 'masculina' | 'padrao'>('feminina')
+    const [tvRecallMinutes, setTvRecallMinutes] = useState<number>(5)
+    const [savingAudioSettings, setSavingAudioSettings] = useState(false)
 
     // Form states
     const [isEditing, setIsEditing] = useState(false)
@@ -129,6 +138,9 @@ export function ConsultingRoomsSettings() {
                     setWhatsappCallEnabled(Boolean(tvData.whatsappCallEnabled))
                     setWhatsappConnected(Boolean(tvData.whatsappConnected))
                     setWhatsappPhone(tvData.whatsappPhone || null)
+                    if (tvData.tvSoundTheme) setTvSoundTheme(tvData.tvSoundTheme)
+                    if (tvData.tvVoiceGender) setTvVoiceGender(tvData.tvVoiceGender)
+                    if (tvData.tvRecallMinutes !== undefined) setTvRecallMinutes(Number(tvData.tvRecallMinutes))
                 }
             } catch (tvErr) {
                 console.warn('Erro ao carregar status do WhatsApp da TV:', tvErr)
@@ -203,6 +215,112 @@ export function ConsultingRoomsSettings() {
             toast.error('Erro de conexão ao salvar configuração.')
         } finally {
             setSavingWhatsappToggle(false)
+        }
+    }
+
+    // Pré-escutar som de chamada (Prioridade 2)
+    const previewSound = (type: 'classico' | 'moderno' | 'harmonico' | 'bip') => {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+            const now = ctx.currentTime
+
+            if (type === 'moderno') {
+                const o1 = ctx.createOscillator(); const g1 = ctx.createGain()
+                o1.type = 'sine'; o1.frequency.setValueAtTime(698.46, now)
+                g1.gain.setValueAtTime(0, now); g1.gain.linearRampToValueAtTime(0.4, now + 0.05); g1.gain.exponentialRampToValueAtTime(0.01, now + 0.7)
+                o1.connect(g1); g1.connect(ctx.destination); o1.start(now); o1.stop(now + 0.7)
+
+                const o2 = ctx.createOscillator(); const g2 = ctx.createGain()
+                o2.type = 'sine'; o2.frequency.setValueAtTime(523.25, now + 0.35)
+                g2.gain.setValueAtTime(0, now + 0.35); g2.gain.linearRampToValueAtTime(0.4, now + 0.4); g2.gain.exponentialRampToValueAtTime(0.01, now + 1.2)
+                o2.connect(g2); g2.connect(ctx.destination); o2.start(now + 0.35); o2.stop(now + 1.2)
+            } else if (type === 'harmonico') {
+                ;[523.25, 783.99, 1046.50].forEach(f => {
+                    const o = ctx.createOscillator(); const g = ctx.createGain()
+                    o.type = 'triangle'; o.frequency.setValueAtTime(f, now)
+                    g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.2, now + 0.05); g.gain.exponentialRampToValueAtTime(0.005, now + 1.4)
+                    o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 1.4)
+                })
+            } else if (type === 'bip') {
+                ;[0, 0.22].forEach(offset => {
+                    const o = ctx.createOscillator(); const g = ctx.createGain()
+                    o.type = 'sine'; o.frequency.setValueAtTime(880, now + offset)
+                    g.gain.setValueAtTime(0, now + offset); g.gain.linearRampToValueAtTime(0.4, now + offset + 0.02); g.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15)
+                    o.connect(g); g.connect(ctx.destination); o.start(now + offset); o.stop(now + offset + 0.15)
+                })
+            } else {
+                const o1 = ctx.createOscillator(); const g1 = ctx.createGain()
+                o1.type = 'sine'; o1.frequency.setValueAtTime(523.25, now)
+                g1.gain.setValueAtTime(0, now); g1.gain.linearRampToValueAtTime(0.4, now + 0.05); g1.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
+                o1.connect(g1); g1.connect(ctx.destination); o1.start(now); o1.stop(now + 0.6)
+
+                const o2 = ctx.createOscillator(); const g2 = ctx.createGain()
+                o2.type = 'sine'; o2.frequency.setValueAtTime(659.25, now + 0.2)
+                g2.gain.setValueAtTime(0, now + 0.2); g2.gain.linearRampToValueAtTime(0.4, now + 0.25); g2.gain.exponentialRampToValueAtTime(0.01, now + 0.9)
+                o2.connect(g2); g2.connect(ctx.destination); o2.start(now + 0.2); o2.stop(now + 0.9)
+
+                const o3 = ctx.createOscillator(); const g3 = ctx.createGain()
+                o3.type = 'sine'; o3.frequency.setValueAtTime(783.99, now + 0.4)
+                g3.gain.setValueAtTime(0, now + 0.4); g3.gain.linearRampToValueAtTime(0.35, now + 0.45); g3.gain.exponentialRampToValueAtTime(0.01, now + 1.2)
+                o3.connect(g3); g3.connect(ctx.destination); o3.start(now + 0.4); o3.stop(now + 1.2)
+            }
+        } catch (e) {
+            console.error('Audio preview error:', e)
+        }
+    }
+
+    // Testar voz do anúncio (Prioridade 2)
+    const previewVoice = (gender: 'feminina' | 'masculina' | 'padrao') => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return
+        window.speechSynthesis.cancel()
+        const text = 'Aline Teste, Clínico Geral, Doutor Francisco Robson — dirija-se à Sala 3.'
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = 'pt-BR'
+        utterance.rate = 0.88
+        const voices = window.speechSynthesis.getVoices()
+        const ptVoices = voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
+        
+        let chosenVoice: SpeechSynthesisVoice | undefined
+        if (gender === 'masculina') {
+            chosenVoice = ptVoices.find(v => /antonio|felipe|daniel|helio|male|masculin|ricardo/i.test(v.name))
+        } else if (gender === 'feminina') {
+            chosenVoice = ptVoices.find(v => /francisca|luciana|maria|female|feminin|leticia|google português/i.test(v.name))
+        }
+        if (!chosenVoice && ptVoices.length > 0) chosenVoice = ptVoices[0]
+        if (chosenVoice) utterance.voice = chosenVoice
+        window.speechSynthesis.speak(utterance)
+    }
+
+    // Salvar preferências sonoras, voz e escalonamento
+    const handleSaveAudioSettings = async (
+        sound: 'classico' | 'moderno' | 'harmonico' | 'bip', 
+        voice: 'feminina' | 'masculina' | 'padrao',
+        recallMinutes: number
+    ) => {
+        try {
+            setSavingAudioSettings(true)
+            const res = await fetch('/api/clinics/tv-settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    tvSoundTheme: sound,
+                    tvVoiceGender: voice,
+                    tvRecallMinutes: recallMinutes
+                })
+            })
+
+            if (res.ok) {
+                setTvSoundTheme(sound)
+                setTvVoiceGender(voice)
+                setTvRecallMinutes(recallMinutes)
+                toast.success('Configurações de som, voz e re-chamada salvas com sucesso!')
+            } else {
+                toast.error('Erro ao salvar preferências de áudio.')
+            }
+        } catch (e) {
+            toast.error('Erro de conexão ao salvar áudio.')
+        } finally {
+            setSavingAudioSettings(false)
         }
     }
 
@@ -483,6 +601,150 @@ export function ConsultingRoomsSettings() {
                                 className="data-[state=checked]:bg-emerald-600 min-w-[44px] min-h-[24px]"
                             />
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Identidade Sonora e Voz do Painel de TV (Prioridade 2) */}
+            <Card className="border-border/80 shadow-xs">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
+                            <Volume2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-base">Identidade Sonora e Voz da TV</CardTitle>
+                            <CardDescription className="text-xs mt-0.5">
+                                Personalize o som do alerta e o tipo de voz que anuncia os pacientes na sala de espera.
+                            </CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-0">
+                    <div className="grid sm:grid-cols-2 gap-6">
+                        
+                        {/* Seletor de Som */}
+                        <div className="space-y-3 p-4 rounded-xl border bg-card/60">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                    <Music className="w-3.5 h-3.5 text-primary" />
+                                    Som do Alerta (Chime)
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs font-semibold gap-1.5 min-h-[36px]"
+                                    onClick={() => previewSound(tvSoundTheme)}
+                                    title="Ouvir demonstração do som"
+                                >
+                                    <Volume2 className="w-3.5 h-3.5 text-primary" />
+                                    Ouvir Som
+                                </Button>
+                            </div>
+
+                            <Select
+                                value={tvSoundTheme}
+                                onValueChange={(val: any) => setTvSoundTheme(val)}
+                            >
+                                <SelectTrigger className="w-full h-11 bg-background">
+                                    <SelectValue placeholder="Escolha um som" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="classico">Chime Clássico (Hospitalar - 3 Notas)</SelectItem>
+                                    <SelectItem value="moderno">Ding-Dong Moderno (Aeroporto - 2 Tons)</SelectItem>
+                                    <SelectItem value="harmonico">Acorde Harmônico (Zen & Suave)</SelectItem>
+                                    <SelectItem value="bip">Bip Clínico (Alerta Rápido Dinâmico)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Tocado 1 segundo antes do anúncio por voz para chamar a atenção da sala de espera.
+                            </p>
+                        </div>
+
+                        {/* Seletor de Voz Neural */}
+                        <div className="space-y-3 p-4 rounded-xl border bg-card/60">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                    <Volume2 className="w-3.5 h-3.5 text-primary" />
+                                    Voz do Anúncio (TTS)
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs font-semibold gap-1.5 min-h-[36px]"
+                                    onClick={() => previewVoice(tvVoiceGender)}
+                                    title="Ouvir exemplo da voz"
+                                >
+                                    <Play className="w-3.5 h-3.5 text-primary" />
+                                    Testar Voz
+                                </Button>
+                            </div>
+
+                            <Select
+                                value={tvVoiceGender}
+                                onValueChange={(val: any) => setTvVoiceGender(val)}
+                            >
+                                <SelectTrigger className="w-full h-11 bg-background">
+                                    <SelectValue placeholder="Escolha a voz" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="feminina">Voz Feminina (Recomendada / Suave)</SelectItem>
+                                    <SelectItem value="masculina">Voz Masculina (Firme / Profissional)</SelectItem>
+                                    <SelectItem value="padrao">Padrão do Sistema</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Exemplo: &ldquo;Aline Teste, Clínico Geral, Dr. Francisco Robson — dirija-se à Sala 3&rdquo;.
+                            </p>
+                        </div>
+
+                        {/* Escalonamento por Ausência de Atendimento (Prioridade 4) */}
+                        <div className="space-y-3 p-4 rounded-xl border bg-card/60 sm:col-span-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-primary" />
+                                    Escalonamento por Ausência de Atendimento (Re-chamada)
+                                </Label>
+                            </div>
+
+                            <div className="grid sm:grid-cols-3 gap-4 items-center">
+                                <div className="sm:col-span-1">
+                                    <Select
+                                        value={String(tvRecallMinutes)}
+                                        onValueChange={(val) => setTvRecallMinutes(Number(val))}
+                                    >
+                                        <SelectTrigger className="w-full h-11 bg-background">
+                                            <SelectValue placeholder="Tempo de espera" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="3">Após 3 minutos</SelectItem>
+                                            <SelectItem value="5">Após 5 minutos (Recomendado)</SelectItem>
+                                            <SelectItem value="10">Após 10 minutos</SelectItem>
+                                            <SelectItem value="15">Após 15 minutos</SelectItem>
+                                            <SelectItem value="0">Desativado (Sem re-chamada automática)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="sm:col-span-2 text-[11px] text-muted-foreground leading-relaxed">
+                                    Se o paciente chamado não iniciar atendimento dentro do tempo estipulado, a TV repetirá o anúncio por som e voz e a recepção será alertada.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div className="flex justify-end pt-2 border-t">
+                        <Button
+                            type="button"
+                            onClick={() => handleSaveAudioSettings(tvSoundTheme, tvVoiceGender, tvRecallMinutes)}
+                            disabled={savingAudioSettings}
+                            className="gap-2 min-h-[44px] px-6 font-semibold"
+                        >
+                            {savingAudioSettings && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Salvar Configurações da TV
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

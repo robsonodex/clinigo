@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/clinics/tv-settings
- * Retorna as configurações de chamada e status do WhatsApp da clínica
+ * Retorna as configurações de chamada, som, voz e status do WhatsApp da clínica
  */
 export async function GET(request: NextRequest) {
     try {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         // Buscar dados da clínica
         const { data: clinic, error } = await (supabase as any)
             .from('clinics')
-            .select('id, chamada_whatsapp_habilitada, notification_settings')
+            .select('id, chamada_whatsapp_habilitada, notification_settings, theme')
             .eq('id', profile.clinic_id)
             .single()
 
@@ -55,10 +55,19 @@ export async function GET(request: NextRequest) {
             clinic.notification_settings?.whatsapp_call_notification
         )
 
+        const tvSoundTheme = clinic.theme?.tv_sound_theme || 'classico'
+        const tvVoiceGender = clinic.theme?.tv_voice_gender || 'feminina'
+        const tvLayout = clinic.theme?.tv_layout || 'classico'
+        const tvRecallMinutes = clinic.theme?.tv_recall_minutes !== undefined ? clinic.theme.tv_recall_minutes : 5
+
         return NextResponse.json({
             whatsappCallEnabled,
             whatsappConnected,
-            whatsappPhone
+            whatsappPhone,
+            tvSoundTheme,
+            tvVoiceGender,
+            tvLayout,
+            tvRecallMinutes
         })
     } catch (error: any) {
         console.error('[TV Settings GET Error]:', error)
@@ -68,8 +77,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/clinics/tv-settings
- * Body: { whatsappCallEnabled: boolean }
- * Atualiza o toggle de notificação por WhatsApp validando conexão ativa
+ * Body: { 
+ *   whatsappCallEnabled?: boolean,
+ *   tvSoundTheme?: 'classico' | 'moderno' | 'harmonico' | 'bip',
+ *   tvVoiceGender?: 'feminina' | 'masculina' | 'padrao'
+ * }
  */
 export async function PATCH(request: NextRequest) {
     try {
@@ -91,13 +103,9 @@ export async function PATCH(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { whatsappCallEnabled } = body
+        const { whatsappCallEnabled, tvSoundTheme, tvVoiceGender, tvRecallMinutes } = body
 
-        if (typeof whatsappCallEnabled !== 'boolean') {
-            return NextResponse.json({ error: 'whatsappCallEnabled deve ser booleano' }, { status: 400 })
-        }
-
-        // Se estiver tentando habilitar, validar se o WhatsApp está conectado
+        // Se estiver tentando habilitar WhatsApp, validar se está conectado
         if (whatsappCallEnabled === true) {
             const liveStatus = await checkInstanceStatus(profile.clinic_id, 'default')
             if (!liveStatus?.connected) {
@@ -109,55 +117,61 @@ export async function PATCH(request: NextRequest) {
             }
         }
 
-        // Buscar notification_settings atual para merge
+        // Buscar clinic atual para merge de theme e notification_settings
         const { data: currentClinic } = await (supabase as any)
             .from('clinics')
-            .select('notification_settings')
+            .select('theme, notification_settings')
             .eq('id', profile.clinic_id)
             .single()
 
-        const updatedNotificationSettings = {
-            ...(currentClinic?.notification_settings || {}),
-            whatsapp_call_notification: whatsappCallEnabled
+        const updatedTheme = {
+            ...(currentClinic?.theme || {}),
+            ...(tvSoundTheme && { tv_sound_theme: tvSoundTheme }),
+            ...(tvVoiceGender && { tv_voice_gender: tvVoiceGender }),
+            ...(typeof tvRecallMinutes === 'number' && { tv_recall_minutes: tvRecallMinutes }),
         }
 
-        // Tentar atualizar tanto na coluna chamada_whatsapp_habilitada quanto em notification_settings
-        let updateError: any = null
-        try {
-            const { error } = await (supabase as any)
-                .from('clinics')
-                .update({
-                    chamada_whatsapp_habilitada: whatsappCallEnabled,
-                    notification_settings: updatedNotificationSettings
-                })
-                .eq('id', profile.clinic_id)
-
-            updateError = error
-        } catch (colErr) {
-            updateError = colErr
+        const updatePayload: any = {
+            theme: updatedTheme
         }
 
-        // Fallback caso a coluna ainda não exista na réplica do banco
-        if (updateError) {
-            const { error: fallbackError } = await (supabase as any)
-                .from('clinics')
-                .update({
-                    notification_settings: updatedNotificationSettings
-                })
-                .eq('id', profile.clinic_id)
-
-            if (fallbackError) {
-                console.error('[TV Settings Update Fallback Error]:', fallbackError)
-                return NextResponse.json({ error: 'Erro ao salvar configuração' }, { status: 500 })
+        if (typeof whatsappCallEnabled === 'boolean') {
+            const updatedNotificationSettings = {
+                ...(currentClinic?.notification_settings || {}),
+                whatsapp_call_notification: whatsappCallEnabled
             }
+            updatePayload.notification_settings = updatedNotificationSettings
+            updatePayload.chamada_whatsapp_habilitada = whatsappCallEnabled
+        }
+
+        // Atualizar no Supabase
+        let { error } = await (supabase as any)
+            .from('clinics')
+            .update(updatePayload)
+            .eq('id', profile.clinic_id)
+
+        // Fallback caso a coluna chamada_whatsapp_habilitada não exista na réplica
+        if (error && error.message?.includes('chamada_whatsapp_habilitada')) {
+            delete updatePayload.chamada_whatsapp_habilitada
+            const retry = await (supabase as any)
+                .from('clinics')
+                .update(updatePayload)
+                .eq('id', profile.clinic_id)
+            error = retry.error
+        }
+
+        if (error) {
+            console.error('[TV Settings PATCH Error]:', error)
+            return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
         return NextResponse.json({
             success: true,
+            theme: updatedTheme,
             whatsappCallEnabled
         })
     } catch (error: any) {
-        console.error('[TV Settings PATCH Error]:', error)
+        console.error('[TV Settings PATCH Internal Error]:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
