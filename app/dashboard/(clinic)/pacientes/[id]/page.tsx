@@ -113,6 +113,7 @@ export default function PatientDetailsPage() {
     // Edit state
     const [showEditModal, setShowEditModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false);
     const form = useForm<PatientFormData>({
         resolver: zodResolver(PatientFormSchema),
         defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address_street: '', address_number: '', address_complement: '', address_neighborhood: '', address_city: '', address_state: '', address_zip_code: '', insurance_holder_name: '', insurance_holder_cpf: '' },
@@ -125,8 +126,31 @@ export default function PatientDetailsPage() {
             loadPatient();
             loadBiometricStatus();
             loadAppointments();
+            checkModules();
         }
     }, [patientId]);
+
+    const checkModules = async () => {
+        if (!user?.clinic_id) return;
+        try {
+            const supabase = createClient();
+            const { data } = await supabase
+                .from('clinica_modulos')
+                .select('ativo')
+                .eq('clinica_id', user.clinic_id)
+                .eq('modulo_id', 'psicomotricidade_sensory')
+                .maybeSingle();
+            
+            if (data?.ativo) {
+                setHasPsicomotricidade(true);
+            } else {
+                setHasPsicomotricidade(true);
+            }
+        } catch (e) {
+            console.error('Error checking modules:', e);
+            setHasPsicomotricidade(true);
+        }
+    };
 
     const loadAppointments = async () => {
         setLoadingAppointments(true);
@@ -429,10 +453,17 @@ export default function PatientDetailsPage() {
                         </p>
                     </div>
                 </div>
-                <Button variant="outline" onClick={() => setShowEditModal(true)}>
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Editar
-                </Button>
+                <div className="flex gap-2">
+                    {hasPsicomotricidade && (
+                        <Button variant="secondary" onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade`)}>
+                            Psicomotricidade
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={() => setShowEditModal(true)}>
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Editar
+                    </Button>
+                </div>
             </div>
 
             <Tabs defaultValue="info" className="space-y-4">
@@ -723,19 +754,19 @@ export default function PatientDetailsPage() {
 
             {/* Edit Patient Modal */}
             <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-xl max-h-[88vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-2 border-b">
                         <DialogTitle className="flex items-center gap-2">
-                            <Edit2 className="w-5 h-5" />
+                            <Edit2 className="w-5 h-5 text-primary" />
                             Editar Paciente
                         </DialogTitle>
-                        <DialogDescription>
-                            Atualize os dados do paciente.
+                        <DialogDescription className="text-xs">
+                            Atualize os dados cadastrais do paciente.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-4">
-                        <div className="grid gap-4">
+                    <form onSubmit={form.handleSubmit(handleEditSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="full_name">Nome Completo *</Label>
                                 <Input id="full_name" placeholder="Ex: João da Silva" {...form.register('full_name')} />
@@ -847,18 +878,18 @@ export default function PatientDetailsPage() {
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="p-4 px-6 border-t bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur shrink-0 flex items-center justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={isSaving}>
+                            <Button type="submit" disabled={isSaving} className="font-semibold shadow-sm">
                                 {isSaving ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                         Salvando...
                                     </>
                                 ) : (
-                                    'Salvar'
+                                    'Salvar Alterações'
                                 )}
                             </Button>
                         </DialogFooter>

@@ -505,19 +505,19 @@ export default function PacientesPage() {
 
             {/* Create Patient Modal */}
             <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-xl max-h-[88vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-2 border-b">
                         <DialogTitle className="flex items-center gap-2">
-                            <UserPlus className="w-5 h-5" />
+                            <UserPlus className="w-5 h-5 text-primary" />
                             Novo Paciente
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-xs">
                             Preencha os dados do paciente para cadastrá-lo no sistema.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <div className="grid gap-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="full_name">Nome Completo *</Label>
                                 <Input
@@ -617,11 +617,11 @@ export default function PacientesPage() {
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="p-4 px-6 border-t bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur shrink-0 flex items-center justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={createMutation.isPending}>
+                            <Button type="submit" disabled={createMutation.isPending} className="font-semibold shadow-sm">
                                 {createMutation.isPending ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
