@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DollarSign,
@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Loader2,
   ChevronDown,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,6 +142,91 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
   const [selectedNewPatient, setSelectedNewPatient] = useState<any>(null);
   const [newPatientRateType, setNewPatientRateType] = useState<'FIXED' | 'PERCENTAGE'>('PERCENTAGE');
   const [newPatientValue, setNewPatientValue] = useState<number>(70);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSavingNewPatient, setIsSavingNewPatient] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Busca debounced de pacientes para o modal de adicionar
+  const handlePatientSearch = useCallback((searchValue: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!searchValue || searchValue.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/patients/search?q=${encodeURIComponent(searchValue.trim())}`);
+        const json = await res.json();
+        if (json.data) {
+          // Filtrar pacientes que já estão na lista de rates
+          const existingIds = new Set(patientRates.map((p) => p.patient_id));
+          const filtered = json.data.filter((p: any) => !existingIds.has(p.id));
+          setSearchResults(filtered);
+        } else {
+          setSearchResults([]);
+        }
+      } catch {
+        setSearchResults([]);
+        toast.error('Erro ao buscar pacientes');
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+  }, [patientRates]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
+
+  // Handler para salvar novo paciente com override
+  const handleSaveNewPatient = async () => {
+    if (!selectedNewPatient) {
+      toast.error('Selecione um paciente primeiro');
+      return;
+    }
+    setIsSavingNewPatient(true);
+    try {
+      const res = await fetch('/api/doctor-patient-rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doctor_id: doctorId,
+          patient_id: selectedNewPatient.id,
+          rate_type: newPatientRateType,
+          fixed_value: newPatientRateType === 'FIXED' ? newPatientValue : null,
+          percentage: newPatientRateType === 'PERCENTAGE' ? newPatientValue : null,
+          notify_whatsapp: notifyWhatsApp,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Erro ao associar paciente');
+      }
+      toast.success(`Valor de repasse definido para ${selectedNewPatient.full_name}!`);
+      // Reset modal state
+      setAddPatientModalOpen(false);
+      setNewPatientSearch('');
+      setSelectedNewPatient(null);
+      setSearchResults([]);
+      setNewPatientRateType('PERCENTAGE');
+      setNewPatientValue(70);
+      queryClient.invalidateQueries({ queryKey: ['doctor-patient-rates', doctorId] });
+    } catch (err: any) {
+      toast.error(err.message || 'Falha ao salvar');
+    } finally {
+      setIsSavingNewPatient(false);
+    }
+  };
 
   // 1. Consulta principal de dados
   const { data: responseData, isLoading, refetch } = useQuery<PatientRatesResponse>({
@@ -752,8 +838,24 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
           </div>
         </div>
 
-        {/* Ações: Exportar Excel, Importar Excel e Seleção */}
+        {/* Ações: Adicionar Paciente, Exportar Excel, Importar Excel e Seleção */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Button
+            size="sm"
+            onClick={() => {
+              setAddPatientModalOpen(true);
+              setNewPatientSearch('');
+              setSelectedNewPatient(null);
+              setSearchResults([]);
+              setNewPatientRateType('PERCENTAGE');
+              setNewPatientValue(70);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-11 min-h-[44px] rounded-xl px-3 text-xs font-semibold"
+            title="Adicionar paciente com valor personalizado de repasse"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Adicionar Paciente</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -1295,6 +1397,206 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                 <span>Confirmar Importação</span>
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 9. MODAL DE ADICIONAR PACIENTE COM BUSCA */}
+      <Dialog
+        open={addPatientModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddPatientModalOpen(false);
+            setNewPatientSearch('');
+            setSelectedNewPatient(null);
+            setSearchResults([]);
+          }
+        }}
+      >
+        <DialogContent className="rounded-2xl max-w-lg max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-emerald-600" />
+              <span>Adicionar Paciente</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Busque um paciente da clínica e defina o valor personalizado de repasse para este profissional.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 flex-1 overflow-y-auto">
+            {/* Campo de Busca */}
+            {!selectedNewPatient ? (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={newPatientSearch}
+                    onChange={(e) => {
+                      setNewPatientSearch(e.target.value);
+                      handlePatientSearch(e.target.value);
+                    }}
+                    placeholder="Digite o nome, CPF, telefone ou e-mail..."
+                    className="pl-9 h-12 text-base rounded-xl min-h-[44px]"
+                    autoFocus
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+
+                {/* Resultados da Busca */}
+                {newPatientSearch.trim().length >= 2 && (
+                  <div className="border border-border rounded-xl overflow-hidden max-h-[280px] overflow-y-auto">
+                    {isSearching ? (
+                      <div className="py-8 text-center text-muted-foreground">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
+                        <span className="text-sm">Buscando pacientes...</span>
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <div className="py-8 text-center text-muted-foreground">
+                        <Users className="w-6 h-6 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm font-medium text-foreground">Nenhum paciente encontrado</p>
+                        <p className="text-xs mt-1">Tente buscar com outro termo ou verifique se o paciente já está na lista.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {searchResults.map((patient) => (
+                          <button
+                            key={patient.id}
+                            type="button"
+                            onClick={() => setSelectedNewPatient(patient)}
+                            className="w-full text-left px-4 py-3 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors flex items-center gap-3 min-h-[44px] cursor-pointer"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                              {patient.full_name?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm text-foreground truncate">
+                                {patient.full_name}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                                {patient.cpf && <span>CPF: {patient.cpf}</span>}
+                                {patient.phone && <span>Tel: {patient.phone}</span>}
+                                {patient.email && !patient.cpf && !patient.phone && (
+                                  <span className="truncate">{patient.email}</span>
+                                )}
+                              </div>
+                            </div>
+                            <Plus className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {newPatientSearch.trim().length < 2 && newPatientSearch.trim().length > 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    Digite pelo menos 2 caracteres para buscar...
+                  </p>
+                )}
+              </>
+            ) : (
+              /* Paciente Selecionado — Configurar valor */
+              <>
+                {/* Card do paciente selecionado */}
+                <div className="flex items-center gap-3 p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                  <div className="w-10 h-10 rounded-full bg-emerald-200 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-base font-bold flex-shrink-0">
+                    {selectedNewPatient.full_name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm text-foreground truncate">
+                      {selectedNewPatient.full_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {selectedNewPatient.cpf && `CPF: ${selectedNewPatient.cpf}`}
+                      {selectedNewPatient.cpf && selectedNewPatient.phone && ' • '}
+                      {selectedNewPatient.phone && `Tel: ${selectedNewPatient.phone}`}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedNewPatient(null);
+                      setSearchResults([]);
+                    }}
+                    className="h-9 w-9 p-0 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 min-h-[44px] min-w-[44px]"
+                    title="Trocar paciente"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Tipo de Repasse */}
+                <div>
+                  <Label className="text-xs font-semibold">Tipo de Repasse</Label>
+                  <Select
+                    value={newPatientRateType}
+                    onValueChange={(val: 'FIXED' | 'PERCENTAGE') => setNewPatientRateType(val)}
+                  >
+                    <SelectTrigger className="mt-1.5 h-11 min-h-[44px] rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PERCENTAGE">Percentual (%)</SelectItem>
+                      <SelectItem value="FIXED">Valor Fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Valor */}
+                <div>
+                  <Label className="text-xs font-semibold">
+                    {newPatientRateType === 'PERCENTAGE' ? 'Percentual (%)' : 'Valor Fixo (R$)'}
+                  </Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      type="number"
+                      step={newPatientRateType === 'PERCENTAGE' ? '0.5' : '1.00'}
+                      min={0}
+                      max={newPatientRateType === 'PERCENTAGE' ? 100 : 99999}
+                      value={newPatientValue}
+                      onChange={(e) => setNewPatientValue(Number(e.target.value))}
+                      className="h-11 text-base font-bold pr-8 rounded-xl min-h-[44px]"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                      {newPatientRateType === 'PERCENTAGE' ? '%' : 'R$'}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="pt-3 border-t border-border">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddPatientModalOpen(false);
+                setNewPatientSearch('');
+                setSelectedNewPatient(null);
+                setSearchResults([]);
+              }}
+              className="min-h-[44px] rounded-xl"
+            >
+              Cancelar
+            </Button>
+            {selectedNewPatient && (
+              <Button
+                onClick={handleSaveNewPatient}
+                disabled={isSavingNewPatient}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xl gap-1.5"
+              >
+                {isSavingNewPatient ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>Salvar Repasse</span>
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
