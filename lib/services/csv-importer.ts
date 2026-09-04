@@ -28,7 +28,7 @@ const patientRowSchema = z.object({
 const doctorRowSchema = z.object({
     email: z.string().email('Email inválido'),
     full_name: z.string().min(3, 'Nome muito curto'),
-    crm: z.string().min(4, 'CRM inválido'),
+    crm: z.string().min(3, 'Registro profissional inválido'),
     crm_state: z.string().length(2, 'UF inválida'),
     specialty: z.string().min(3, 'Especialidade inválida'),
     consultation_price: z.string().or(z.number()),

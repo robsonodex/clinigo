@@ -29,11 +29,11 @@ export const createDoctorSchema = z.object({
         .max(100, 'Nome muito longo'),
     crm: z
         .string()
-        .min(4, 'CRM deve ter pelo menos 4 caracteres')
-        .max(15, 'CRM muito longo'),
+        .min(3, 'Registro profissional deve ter pelo menos 3 caracteres')
+        .max(30, 'Registro profissional muito longo'),
     crm_state: z
         .enum(BRAZILIAN_STATES, {
-            errorMap: () => ({ message: 'Estado do CRM inválido' }),
+            errorMap: () => ({ message: 'Estado do registro profissional inválido' }),
         }),
     specialty: z
         .string()

@@ -105,7 +105,7 @@ export const doctorFormSchema = z.object({
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
             'Senha deve conter letras maiúsculas, minúsculas e números'
         ),
-    crm: z.string().min(4, 'CRM inválido').max(10, 'CRM muito longo'),
+    crm: z.string().min(3, 'Registro profissional inválido').max(30, 'Registro profissional muito longo'),
     crm_state: z.string().length(2, 'Estado inválido'),
     specialty: z.string().min(2, 'Especialidade principal é obrigatória'),
     specialties_additional: z.array(z.string()).optional().default([]),
