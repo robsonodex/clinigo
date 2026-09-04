@@ -1,6 +1,7 @@
 // app/api/doctor-patient-rates/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,11 +34,16 @@ export async function DELETE(
       .eq('id', user.id)
       .single();
 
-    if (!profile?.clinic_id) {
+    const { clinicId: resolvedClinicId } = await resolveClinicId({
+      profileClinicId: profile?.clinic_id,
+      profileRole: profile?.role || '',
+    });
+
+    if (!resolvedClinicId) {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
-    const canManage = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile.role);
+    const canManage = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile?.role || '');
     if (!canManage) {
       return NextResponse.json(
         { success: false, error: 'Sem permissão — apenas administradores podem alterar repasses' },
@@ -50,7 +56,7 @@ export async function DELETE(
       .from('doctor_patient_rates')
       .select('*')
       .eq('id', rateId)
-      .eq('clinic_id', profile.clinic_id)
+      .eq('clinic_id', resolvedClinicId)
       .single();
 
     if (findError || !rate) {
@@ -82,7 +88,7 @@ export async function DELETE(
 
     await supabaseAdmin.from('doctor_patient_rate_history').insert({
       rate_id: rate.id,
-      clinic_id: profile.clinic_id,
+      clinic_id: resolvedClinicId,
       doctor_id: rate.doctor_id,
       patient_id: rate.patient_id,
       previous_rate_type: rate.rate_type,

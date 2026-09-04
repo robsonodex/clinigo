@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { sendDoctorPatientRateNotification } from '@/lib/services/whatsapp-repasse';
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,11 +45,20 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!profile?.clinic_id) {
+    if (!profile?.clinic_id && profile?.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
-    const canManageRates = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile.role);
+    const { clinicId: resolvedClinicId } = await resolveClinicId({
+      profileClinicId: profile?.clinic_id,
+      profileRole: profile?.role || '',
+    });
+
+    if (!resolvedClinicId) {
+      return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
+    }
+
+    const canManageRates = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile?.role || '');
     if (!canManageRates) {
       return NextResponse.json(
         { success: false, error: 'Sem permissão — apenas administradores podem configurar repasses' },
@@ -68,7 +78,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRates } = await supabaseAdmin
       .from('doctor_patient_rates')
       .select('*')
-      .eq('clinic_id', profile.clinic_id)
+      .eq('clinic_id', resolvedClinicId)
       .eq('doctor_id', validated.doctor_id)
       .eq('active', true);
 
@@ -112,7 +122,7 @@ export async function POST(request: NextRequest) {
           const { data: inserted, error: iErr } = await supabaseAdmin
             .from('doctor_patient_rates')
             .insert({
-              clinic_id: profile.clinic_id,
+              clinic_id: resolvedClinicId,
               doctor_id: validated.doctor_id,
               patient_id: item.patient_id,
               rate_type: item.rate_type,
@@ -136,7 +146,7 @@ export async function POST(request: NextRequest) {
         // Gravar histórico
         await supabaseAdmin.from('doctor_patient_rate_history').insert({
           rate_id: rateId,
-          clinic_id: profile.clinic_id,
+          clinic_id: resolvedClinicId,
           doctor_id: validated.doctor_id,
           patient_id: item.patient_id,
           previous_rate_type: previousRateType,
@@ -156,7 +166,7 @@ export async function POST(request: NextRequest) {
     if (validated.notify_whatsapp && (updatedCount > 0 || insertedCount > 0)) {
       try {
         const notifRes = await sendDoctorPatientRateNotification({
-          clinicId: profile.clinic_id,
+          clinicId: resolvedClinicId,
           doctorId: validated.doctor_id,
           patientName: `${validated.rates.length} pacientes atualizados`,
           rateType: 'FIXED',

@@ -1,6 +1,7 @@
 // app/api/doctor-patient-rates/[id]/history/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,12 @@ export async function GET(
       .eq('id', user.id)
       .single();
 
-    if (!profile?.clinic_id) {
+    const { clinicId: resolvedClinicId } = await resolveClinicId({
+      profileClinicId: profile?.clinic_id,
+      profileRole: profile?.role || '',
+    });
+
+    if (!resolvedClinicId) {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
@@ -41,7 +47,7 @@ export async function GET(
       .from('doctor_patient_rates')
       .select('id, doctor_id, patient_id')
       .eq('id', rateOrPatientId)
-      .eq('clinic_id', profile.clinic_id)
+      .eq('clinic_id', resolvedClinicId)
       .maybeSingle();
 
     let query = supabaseAdmin
@@ -53,7 +59,7 @@ export async function GET(
         changed_at,
         user:users!changed_by(id, full_name, email)
       `)
-      .eq('clinic_id', profile.clinic_id)
+      .eq('clinic_id', resolvedClinicId)
       .order('changed_at', { ascending: false });
 
     if (rateRecord) {

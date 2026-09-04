@@ -6,6 +6,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 
 const DEFAULT_THERAPY_TYPES = [
     'Psicologia ABA',
@@ -30,18 +31,23 @@ export async function GET() {
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', user.id)
             .single()
 
-        if (!(profile as any)?.clinic_id) {
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: (profile as any)?.clinic_id,
+            profileRole: (profile as any)?.role || '',
+        })
+
+        if (!resolvedClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
         const { data: settings } = await (supabase as any)
             .from('clinic_settings')
             .select('therapy_types')
-            .eq('clinic_id', (profile as any).clinic_id)
+            .eq('clinic_id', resolvedClinicId)
             .single()
 
         const therapyTypes = settings?.therapy_types || DEFAULT_THERAPY_TYPES
@@ -65,11 +71,16 @@ export async function PUT(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!(profile as any)?.clinic_id) {
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: (profile as any)?.clinic_id,
+            profileRole: (profile as any)?.role || '',
+        })
+
+        if (!resolvedClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes((profile as any).role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes((profile as any)?.role || '')) {
             return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
         }
 
@@ -85,7 +96,7 @@ export async function PUT(request: NextRequest) {
             .from('clinic_settings')
             .upsert(
                 {
-                    clinic_id: (profile as any).clinic_id,
+                    clinic_id: resolvedClinicId,
                     therapy_types,
                     updated_at: new Date().toISOString(),
                 },
