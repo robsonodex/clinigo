@@ -22,8 +22,7 @@ import { ConsultingRoomsSettings } from './components/ConsultingRoomsSettings'
 import { createClient } from '@/lib/supabase/client'
 import { PROFESSIONAL_LABEL_OPTIONS } from '@/lib/hooks/use-professional-label'
 import { COUNCIL_LABEL_OPTIONS } from '@/lib/hooks/use-council-label'
-
-// ... existing code ...
+import { useRole } from '@/lib/hooks/use-auth'
 
 const clinicSettingsSchema = z.object({
     name: z.string().min(3, 'Nome muito curto'),
@@ -56,6 +55,7 @@ export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState('general')
     const [uploadingLogo, setUploadingLogo] = useState(false)
     const [previewLogo, setPreviewLogo] = useState<string | null>(null)
+    const { clinicId: roleClinicId } = useRole()
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [professionalLabel, setProfessionalLabel] = useState('Médico(a)')
@@ -95,35 +95,18 @@ export default function SettingsPage() {
     // Load clinic data from database
     useEffect(() => {
         async function loadClinicData() {
+            if (!roleClinicId) return
+
             try {
                 const supabase = createClient()
-
-                // Get current user
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) {
-                    toast.error('Usuário não autenticado')
-                    return
-                }
-
-                // Get user's clinic
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('clinic_id')
-                    .eq('id', user.id)
-                    .single()
-
-                if (!userData?.clinic_id) {
-                    toast.error('Clínica não encontrada')
-                    return
-                }
-
-                setClinicId(userData.clinic_id)
+                
+                setClinicId(roleClinicId)
 
                 // Fetch clinic data
                 const { data: clinicData, error } = await supabase
                     .from('clinics')
                     .select('name, slug, email, phone, address, primary_color, logo_url, cnpj, whatsapp_number, professional_label')
-                    .eq('id', userData.clinic_id)
+                    .eq('id', roleClinicId)
                     .single()
 
                 if (error) {
@@ -202,15 +185,15 @@ export default function SettingsPage() {
                     }
                 }
             } catch (error) {
-                console.error('Error:', error)
-                toast.error('Erro ao carregar configurações')
+                console.error('Error loading clinic:', error)
+                toast.error('Erro ao carregar dados da clínica')
             } finally {
                 setLoading(false)
             }
         }
 
         loadClinicData()
-    }, [reset])
+    }, [reset, roleClinicId])
 
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
