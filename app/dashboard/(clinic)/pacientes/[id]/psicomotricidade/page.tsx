@@ -34,6 +34,20 @@ export default function PsicomotricidadeCapaPage() {
         setIsLoading(true);
         try {
             const supabase = createClient();
+
+            // Verify if module is active for this clinic
+            const { data: moduleCheck } = await supabase
+                .from('clinica_modulos')
+                .select('ativo')
+                .eq('clinica_id', user.clinic_id)
+                .eq('modulo_id', 'psicomotricidade_sensory')
+                .maybeSingle();
+
+            if (!moduleCheck?.ativo) {
+                toast.error('O módulo de Psicomotricidade não está habilitado para esta clínica.');
+                router.push(`/dashboard/pacientes/${patientId}`);
+                return;
+            }
             
             // Fetch Patient
             const { data: patientData, error: patientError } = await supabase

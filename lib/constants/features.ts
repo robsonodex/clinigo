@@ -51,6 +51,9 @@ export const FEATURE_KEYS = {
     ASSINATURA: 'assinatura',
     SEGURANCA: 'seguranca',
     INTEGRACOES: 'integracoes',
+
+    // Terapias & Especialidades
+    PSICOMOTRICIDADE: 'psicomotricidade',
 } as const
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS]
@@ -71,6 +74,7 @@ export type FeatureCategory =
     | 'COMUNICACAO'
     | 'GESTAO'
     | 'CONFIGURACOES'
+    | 'TERAPIA'
 
 export interface FeatureMetadata {
     label: string
@@ -256,6 +260,14 @@ export const FEATURE_METADATA: Record<FeatureKey, FeatureMetadata> = {
         category: 'CONFIGURACOES',
         defaultPlans: ['AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
     },
+
+    // Terapias & Especialidades
+    [FEATURE_KEYS.PSICOMOTRICIDADE]: {
+        label: 'Psicomotricidade (World Sensory)',
+        category: 'TERAPIA',
+        defaultPlans: [],
+        description: 'Módulo de Ficha Capa, Biblioteca dos 55 Objetivos e Planos de Sessão de Psicomotricidade',
+    },
 }
 
 // Category labels for UI
@@ -264,6 +276,7 @@ export const CATEGORY_LABELS: Record<FeatureCategory, string> = {
     AGENDAMENTO: 'Agendamento',
     EQUIPE: 'Equipe',
     PRONTUARIO: 'Prontuário',
+    TERAPIA: 'Terapia & Desenvolvimento',
     FINANCEIRO: 'Financeiro',
     COMUNICACAO: 'Comunicação',
     GESTAO: 'Gestão',

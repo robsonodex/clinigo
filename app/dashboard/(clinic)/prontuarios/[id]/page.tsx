@@ -80,6 +80,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
     const [recordId, setRecordId] = useState<string | null>(null)
     const [professionType, setProfessionType] = useState('MEDICO')
+    const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false)
 
     // Open sign modal after save completes and recordId is set
     React.useEffect(() => {
@@ -167,13 +168,34 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 2. Fetch Patient, Clinic, Doctor
             const [patientRes, clinicRes, doctorRes] = await Promise.all([
                 supabase.from('patients').select('*').eq('id', appt.patient_id).single(),
-                supabase.from('clinics').select('id, name, logo_url').eq('id', appt.clinic_id).single(),
+                supabase.from('clinics').select('id, name, logo_url, professional_label, council_label').eq('id', appt.clinic_id).single(),
                 supabase.from('doctors').select('id, user:user_id(full_name), specialty').eq('id', appt.doctor_id).single()
             ])
 
             if (patientRes.data) setPatient(patientRes.data)
             if (clinicRes.data) setClinic(clinicRes.data)
             if (doctorRes.data) setDoctor(doctorRes.data)
+
+            // Verifica se módulo Psicomotricidade está ativo na clínica
+            try {
+                const { data: modData } = await supabase
+                    .from('clinica_modulos')
+                    .select('ativo')
+                    .eq('clinica_id', appt.clinic_id)
+                    .eq('modulo_id', 'psicomotricidade_sensory')
+                    .maybeSingle()
+                if (modData?.ativo) {
+                    setHasPsicomotricidade(true)
+                }
+            } catch (e) {
+                console.error('Error checking psicomotricidade module:', e)
+            }
+
+            // Detecta se perfil ou clínica é de Terapia
+            const clinicInfo = clinicRes.data
+            const doctorInfo = doctorRes.data
+            const isTherapist = clinicInfo?.professional_label === 'Terapeuta' ||
+                /terap|ocupacional|fono|psicomotr|fisiot/i.test(doctorInfo?.specialty || '')
 
             // 3. Fetch Last Record (Historico)
             const { data: previousRecord } = await supabase
@@ -206,6 +228,8 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 
                 if (customData.professionType) {
                     setProfessionType(customData.professionType)
+                } else if (isTherapist) {
+                    setProfessionType('TERAPEUTA')
                 }
 
                 if (customData.escala_dor !== undefined) {
@@ -467,6 +491,17 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                         </Sheet>
                     )}
 
+                    {hasPsicomotricidade && patient?.id && (
+                        <Button
+                            variant="outline"
+                            className="flex items-center gap-1.5 text-xs font-semibold border-emerald-600/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/80 mr-2 h-9 min-h-[44px]"
+                            onClick={() => router.push(`/dashboard/pacientes/${patient.id}/psicomotricidade`)}
+                        >
+                            <ActivitySquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            Psicomotricidade
+                        </Button>
+                    )}
+
                     <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md border">
                         <Label htmlFor="prof-selector" className="text-sm font-medium whitespace-nowrap">Área:</Label>
                         <Select value={professionType} onValueChange={setProfessionType}>
@@ -474,7 +509,11 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                                 <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
-                                {PROFESSIONS.map(p => (
+                                {[
+                                    { id: 'MEDICO', label: clinic?.professional_label === 'Terapeuta' ? 'Médico' : (clinic?.professional_label || 'Médico'), icon: Stethoscope },
+                                    { id: 'PSICOLOGO', label: 'Psicologia', icon: Brain },
+                                    { id: 'TERAPEUTA', label: clinic?.professional_label === 'Terapeuta' ? 'Terapeuta' : 'Terapia / Funcional', icon: ActivitySquare },
+                                ].map(p => (
                                     <SelectItem key={p.id} value={p.id}>
                                         <div className="flex items-center gap-2">
                                             <p.icon className="w-4 h-4" />
@@ -515,7 +554,11 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                         <div>
                             <h2 className="font-bold text-xl text-slate-900">{clinic?.name || 'Sistema Integrado'}</h2>
                             <p className="text-sm text-slate-500">
-                                {PROFESSIONS.find(p => p.id === professionType)?.label} - Evolução Clínica
+                                {professionType === 'TERAPEUTA' 
+                                    ? (clinic?.professional_label || 'Terapeuta') 
+                                    : (professionType === 'PSICOLOGO' 
+                                        ? 'Psicologia' 
+                                        : (clinic?.professional_label || 'Médico'))} - Evolução Clínica {doctor?.specialty ? `· ${doctor.specialty}` : ''}
                             </p>
                         </div>
                     </div>
@@ -897,6 +940,9 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     open={showSignModal}
                     onOpenChange={setShowSignModal}
                     recordId={recordId}
+                    professionalLabel={clinic?.professional_label || (professionType === 'TERAPEUTA' ? 'Terapeuta' : 'Médico')}
+                    councilLabel={clinic?.council_label || 'Conselho de Classe'}
+                    specialty={doctor?.specialty || ''}
                     onSuccess={(data) => {
                         setSignatureData({
                             signerName: data.signer_name,

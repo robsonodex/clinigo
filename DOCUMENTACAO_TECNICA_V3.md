@@ -51,3 +51,21 @@
   - Limitada a altura máxima da janela para max-h-[88vh] com overflow-hidden.
   - Formulário estruturado com lex flex-col e container de campos com scroll suave interno (overflow-y-auto).
   - Rodapé com os botões  Salvar Alterações e Cancelar fixado na base com order-t e fundo opaco (g-slate-50/80 dark:bg-slate-900/80 backdrop-blur), garantindo visibilidade total e imediata dos botões sem necessidade de tela cheia ou F11.
+
+### Psicomotricidade & Terminologia Multidisciplinar - Ativacao e Prontuarios (World Sensory & Geral)
+- **Modulo**: Prontuarios & Gestao de Modulos (Master Hub)
+- **Caminho**:
+  - app/system-master-hub/clinics/[id]/permissions/page.tsx
+  - lib/constants/features.ts & lib/services/permissions-service.ts
+  - app/dashboard/(clinic)/prontuarios/page.tsx
+  - app/dashboard/(clinic)/prontuarios/[id]/page.tsx
+  - app/dashboard/(clinic)/pacientes/[id]/page.tsx
+  - components/pep/SignDocumentModal.tsx
+  - app/api/session-evolutions/sign/route.ts & app/api/pep/sign/route.ts
+  - lib/services/pep/pdf-generator.ts
+- **Funcao / Componentes alterados**:
+  - ProntuariosPage: Adicionado botao 'Psicomotricidade' posicionado diretamente ao lado do botao 'Novo Prontuario' no cabecalho, com dialogo rapido de busca e redirecionamento para o paciente. Atualizada coluna do profissional para utilizar profLabel.singular.
+  - ProntuarioPage ([id]): Inicializacao inteligente do tipo de profissional (inferindo 'TERAPEUTA' para clinicas de terapia ocupacional/terapeuta), botao direto de psicomotricidade no topo, e envio de professionalLabel, councilLabel e specialty ao modal de assinatura.
+  - SignDocumentModal: Exibicao visual de cargo/funcao ('Terapeuta'), especialidade ('Terapia Ocupacional') e numero de registro com conselho dinamico ('Conselho de Classe') em vez de CRM generico.
+  - generatePEPPdf & APIs de Assinatura: Inclusao de clinicProfessionalLabel e clinicCouncilLabel, evitando que evolucoes de terapeutas sejam marcadas como 'Medico' ou utilizem cabecalhos e carimbos incorretos.
+  - permissions-service.ts: Sincronizacao direta e bidirecional do toggle de ativacao do modulo 'Psicomotricidade' via clinica_modulos (psicomotricidade_sensory), garantindo persistencia e permissao no Master Hub.

@@ -90,7 +90,7 @@ export async function POST(request: Request) {
             .select(`
                 *,
                 patient:patients(full_name, cpf),
-                clinic:clinics(name),
+                clinic:clinics(name, professional_label, council_label),
                 doctor_profile:doctors!doctor_id(
                     crm, crm_state, specialty,
                     user:users!user_id(full_name)
@@ -145,18 +145,31 @@ export async function POST(request: Request) {
 
             const doctorProfile = record.doctor_profile as any
             const doctorUser = doctorProfile?.user as any
+            const clinicInfo = record.clinic as any
+
+            const isTherapist = clinicInfo?.professional_label === 'Terapeuta' ||
+                /terap|ocupacional|fono|psicomotr|fisiot/i.test(doctorProfile?.specialty || '')
+            const isPsychologist = clinicInfo?.professional_label === 'Psicólogo' ||
+                /psicolog/i.test(doctorProfile?.specialty || '')
+            
+            const professionTypeToUse: 'MEDICO' | 'PSICOLOGO' | 'TERAPEUTA' = 
+                customData.professionType && customData.professionType !== 'MEDICO'
+                    ? customData.professionType
+                    : (isPsychologist ? 'PSICOLOGO' : (isTherapist ? 'TERAPEUTA' : (customData.professionType || 'MEDICO')))
 
             // 8. Generate PDF
             const pdfData: PEPDocumentData = {
-                clinicName: (record.clinic as any)?.name || 'CliniGo',
-                doctorName: doctorUser?.full_name || certificate.owner_name || 'Médico',
-                doctorSpecialty: doctorProfile?.specialty || '',
+                clinicName: clinicInfo?.name || 'CliniGo',
+                clinicProfessionalLabel: clinicInfo?.professional_label,
+                clinicCouncilLabel: clinicInfo?.council_label,
+                doctorName: doctorUser?.full_name || certificate.owner_name || (isTherapist ? 'Terapeuta' : 'Profissional'),
+                doctorSpecialty: doctorProfile?.specialty || (isTherapist ? 'Terapia Ocupacional' : ''),
                 doctorCRM: certificate.crm || doctorProfile?.crm || '',
                 doctorCRMState: certificate.crm_state || doctorProfile?.crm_state || '',
                 patientName: (record.patient as any)?.full_name || 'Paciente',
                 patientCPF: (record.patient as any)?.cpf || '',
                 appointmentDate: new Date(record.created_at).toLocaleDateString('pt-BR'),
-                professionType: customData.professionType || 'MEDICO',
+                professionType: professionTypeToUse,
                 chiefComplaint: record.chief_complaint,
                 historyPresentIllness: record.history_present_illness,
                 physicalExam: record.physical_exam,

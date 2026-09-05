@@ -502,16 +502,18 @@ export default function ClinicPermissionsPage() {
                                                     <Badge
                                                         variant="outline"
                                                         className={
-                                                            metadata.defaultPlans.includes('BASICO')
-                                                                ? 'border-blue-200 text-blue-700 bg-blue-50'
-                                                                : metadata.defaultPlans.includes('AVANCADO')
-                                                                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
-                                                                    : metadata.defaultPlans.includes('PROFESSIONAL')
-                                                                        ? 'border-purple-200 text-purple-700 bg-purple-50'
-                                                                        : 'border-amber-200 text-amber-700 bg-amber-50'
+                                                            metadata.defaultPlans.length === 0
+                                                                ? 'border-blue-200 text-blue-700 bg-blue-50 font-semibold'
+                                                                : metadata.defaultPlans.includes('BASICO')
+                                                                    ? 'border-blue-200 text-blue-700 bg-blue-50'
+                                                                    : metadata.defaultPlans.includes('AVANCADO')
+                                                                        ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                                                                        : metadata.defaultPlans.includes('PROFESSIONAL')
+                                                                            ? 'border-purple-200 text-purple-700 bg-purple-50'
+                                                                            : 'border-amber-200 text-amber-700 bg-amber-50'
                                                         }
                                                     >
-                                                        {getPlanBadge(metadata.defaultPlans)}+
+                                                        {metadata.defaultPlans.length === 0 ? 'SOB DEMANDA' : `${getPlanBadge(metadata.defaultPlans)}+`}
                                                     </Badge>
                                                     {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                                                 </div>

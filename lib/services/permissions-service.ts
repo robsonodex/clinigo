@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import {
     type FeatureKey,
+    FEATURE_KEYS,
     FEATURE_METADATA,
     PROTECTED_FEATURES,
     isFeatureInDefaultPlan,
@@ -127,7 +128,26 @@ export async function enableFeature(
 
     const supabase = createServiceRoleClient()
 
-    await supabase
+    // Sync with clinica_modulos if it's Psicomotricidade
+    if (featureKey === FEATURE_KEYS.PSICOMOTRICIDADE) {
+        const { error: modError } = await supabase
+            .from('clinica_modulos')
+            .upsert(
+                {
+                    clinica_id: clinicId,
+                    modulo_id: 'psicomotricidade_sensory',
+                    ativo: true,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'clinica_id,modulo_id' }
+            )
+        if (modError) {
+            console.error('Erro ao atualizar clinica_modulos:', modError)
+            throw new Error(`Erro ao atualizar módulo de psicomotricidade: ${modError.message}`)
+        }
+    }
+
+    const { error: permError } = await supabase
         .from('clinic_custom_permissions')
         .upsert(
             {
@@ -141,6 +161,10 @@ export async function enableFeature(
             },
             { onConflict: 'clinic_id,feature_key' }
         )
+
+    if (permError && featureKey !== FEATURE_KEYS.PSICOMOTRICIDADE) {
+        throw new Error(permError.message)
+    }
 }
 
 /**
@@ -158,7 +182,26 @@ export async function disableFeature(
 
     const supabase = createServiceRoleClient()
 
-    await supabase
+    // Sync with clinica_modulos if it's Psicomotricidade
+    if (featureKey === FEATURE_KEYS.PSICOMOTRICIDADE) {
+        const { error: modError } = await supabase
+            .from('clinica_modulos')
+            .upsert(
+                {
+                    clinica_id: clinicId,
+                    modulo_id: 'psicomotricidade_sensory',
+                    ativo: false,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'clinica_id,modulo_id' }
+            )
+        if (modError) {
+            console.error('Erro ao atualizar clinica_modulos:', modError)
+            throw new Error(`Erro ao desativar módulo de psicomotricidade: ${modError.message}`)
+        }
+    }
+
+    const { error: permError } = await supabase
         .from('clinic_custom_permissions')
         .upsert(
             {
@@ -172,6 +215,10 @@ export async function disableFeature(
             },
             { onConflict: 'clinic_id,feature_key' }
         )
+
+    if (permError && featureKey !== FEATURE_KEYS.PSICOMOTRICIDADE) {
+        throw new Error(permError.message)
+    }
 }
 
 /**
@@ -180,7 +227,7 @@ export async function disableFeature(
 export async function getClinicPermissions(
     clinicId: string
 ): Promise<Record<FeatureKey, { enabled: boolean; isCustom: boolean }>> {
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
 
     // Get clinic plan
     const { data: clinic } = await supabase
@@ -199,9 +246,22 @@ export async function getClinicPermissions(
         .select('feature_key, is_enabled')
         .eq('clinic_id', clinicId)
 
+    // Check clinica_modulos for psicomotricidade_sensory
+    const { data: moduloPsico } = await supabase
+        .from('clinica_modulos')
+        .select('ativo')
+        .eq('clinica_id', clinicId)
+        .eq('modulo_id', 'psicomotricidade_sensory')
+        .maybeSingle()
+
     const customMap = new Map(
         customPermissions?.map((p) => [p.feature_key, p.is_enabled]) || []
     )
+
+    // If custom permissions didn't have psicomotricidade set yet, use clinica_modulos state if present
+    if (!customMap.has(FEATURE_KEYS.PSICOMOTRICIDADE) && moduloPsico !== null) {
+        customMap.set(FEATURE_KEYS.PSICOMOTRICIDADE, !!moduloPsico.ativo)
+    }
 
     // Build result
     const result = {} as Record<FeatureKey, { enabled: boolean; isCustom: boolean }>
@@ -229,6 +289,18 @@ export async function resetClinicPermissions(clinicId: string): Promise<void> {
         .from('clinic_custom_permissions')
         .delete()
         .eq('clinic_id', clinicId)
+
+    await supabase
+        .from('clinica_modulos')
+        .upsert(
+            {
+                clinica_id: clinicId,
+                modulo_id: 'psicomotricidade_sensory',
+                ativo: false,
+                updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'clinica_id,modulo_id' }
+        )
 }
 
 /**

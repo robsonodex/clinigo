@@ -79,10 +79,10 @@ export async function POST(request: Request) {
                 *,
                 patients!patient_id(full_name, cpf),
                 doctors!doctor_id(
-                    crm, crm_state, specialty, profession_type,
+                    crm, crm_state, specialty,
                     users!user_id(full_name)
                 ),
-                clinics!clinic_id(name)
+                clinics!clinic_id(name, professional_label, council_label)
             `)
             .eq('id', evolution_id)
             .eq('clinic_id', user.clinic_id)
@@ -129,17 +129,26 @@ export async function POST(request: Request) {
             const clinicData = Array.isArray(record.clinics) ? record.clinics[0] : record.clinics
             const userData = doctorData?.users
 
+            const isTherapist = clinicData?.professional_label === 'Terapeuta' ||
+                /terap|ocupacional|fono|psicomotr|fisiot/i.test(doctorData?.specialty || '')
+            const isPsychologist = clinicData?.professional_label === 'Psicólogo' ||
+                /psicolog/i.test(doctorData?.specialty || '')
+            const mappedProfessionType: 'MEDICO' | 'PSICOLOGO' | 'TERAPEUTA' = 
+                isPsychologist ? 'PSICOLOGO' : (isTherapist ? 'TERAPEUTA' : 'MEDICO')
+
             // Map Evolution data to PDF Generator Data
             const pdfData: PEPDocumentData = {
                 clinicName: clinicData?.name || 'CliniGo',
+                clinicProfessionalLabel: clinicData?.professional_label,
+                clinicCouncilLabel: clinicData?.council_label,
                 doctorName: userData?.full_name || certificate.owner_name || 'Profissional',
-                doctorSpecialty: doctorData?.specialty || 'Clínico',
+                doctorSpecialty: doctorData?.specialty || (isTherapist ? 'Terapia Ocupacional' : 'Clínico'),
                 doctorCRM: certificate.crm || doctorData?.crm || '',
                 doctorCRMState: certificate.crm_state || doctorData?.crm_state || '',
                 patientName: patientData?.full_name || 'Paciente',
                 patientCPF: patientData?.cpf || '',
                 appointmentDate: new Date(record.evolution_date).toLocaleDateString('pt-BR'),
-                professionType: doctorData?.profession_type === 'psicologo' ? 'PSICOLOGO' : doctorData?.profession_type === 'terapeuta' ? 'TERAPEUTA' : 'MEDICO',
+                professionType: mappedProfessionType,
                 
                 isMultidisciplinar: record.template_type === 'multidisciplinar',
                 multidisciplinarData: record.template_type === 'multidisciplinar' ? {

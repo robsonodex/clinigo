@@ -15,6 +15,8 @@ export interface PEPDocumentData {
     // Context
     clinicName: string
     clinicLogo?: string
+    clinicProfessionalLabel?: string
+    clinicCouncilLabel?: string
     doctorName: string
     doctorSpecialty: string
     doctorCRM: string
@@ -93,11 +95,13 @@ export function generatePEPPdf(data: PEPDocumentData): Buffer {
     doc.text(data.clinicName || 'CliniGo', 105, y, { align: 'center' })
     y += 7
 
-    const professionLabel = {
-        MEDICO: 'Evolução Médica',
-        PSICOLOGO: 'Evolução Psicológica',
-        TERAPEUTA: 'Evolução Terapêutica',
-    }[data.professionType] || 'Prontuário Clínico'
+    const professionLabel = data.clinicProfessionalLabel
+        ? `Evolução (${data.clinicProfessionalLabel})`
+        : ({
+            MEDICO: 'Evolução Médica',
+            PSICOLOGO: 'Evolução Psicológica',
+            TERAPEUTA: 'Evolução Terapêutica',
+        }[data.professionType] || 'Prontuário Clínico')
 
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
@@ -124,14 +128,18 @@ export function generatePEPPdf(data: PEPDocumentData): Buffer {
         return currentY
     }
 
+    const councilName = data.clinicCouncilLabel || (data.professionType === 'TERAPEUTA' ? 'Registro' : 'CRM')
     addField('Paciente', data.patientName, 15, y)
     addField('Data', data.appointmentDate, 120, y)
     y += 5
     addField('CPF', data.patientCPF, 15, y)
-    addField('Profissional', `${data.doctorName} - CRM ${data.doctorCRM}-${data.doctorCRMState}`, 120, y)
+    const docReg = data.doctorCRM ? ` - ${councilName} ${data.doctorCRM}${data.doctorCRMState ? `-${data.doctorCRMState}` : ''}` : ''
+    addField('Profissional', `${data.doctorName}${docReg}`, 120, y)
     y += 5
-    addField('Especialidade', data.doctorSpecialty, 120, y)
-    y += 3
+    if (data.doctorSpecialty) {
+        addField('Especialidade', data.doctorSpecialty, 120, y)
+        y += 3
+    }
 
     // Separator
     doc.setLineWidth(0.3)
@@ -233,8 +241,13 @@ export function generatePEPPdf(data: PEPDocumentData): Buffer {
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
+    const profRole = data.clinicProfessionalLabel || (data.professionType === 'TERAPEUTA' ? 'Terapeuta' : data.professionType === 'PSICOLOGO' ? 'Psicólogo' : 'Médico')
+    const councilText = data.clinicCouncilLabel || (data.professionType === 'TERAPEUTA' ? 'Registro' : 'CRM')
+    const specialtyText = data.doctorSpecialty ? `${data.doctorSpecialty} · ` : ''
+    const regText = data.doctorCRM ? ` - ${councilText} ${data.doctorCRM}${data.doctorCRMState ? `-${data.doctorCRMState}` : ''}` : ''
+
     doc.text(
-        `${professionLabel} - CRM ${data.doctorCRM}-${data.doctorCRMState}`,
+        `${specialtyText}${profRole}${regText}`,
         105, y, { align: 'center' }
     )
     y += 5

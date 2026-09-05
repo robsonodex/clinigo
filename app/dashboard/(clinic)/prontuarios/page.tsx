@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Loader2, Plus, User, Stethoscope, Search, FileText, Calendar, Clock, ChevronRight } from "lucide-react"
+import { Loader2, Plus, User, Stethoscope, Search, FileText, Calendar, Clock, ChevronRight, Activity } from "lucide-react"
 import PatientSelector from "@/components/prontuarios/patient-selector"
 import PatientHistory from "@/components/prontuarios/patient-history"
 import { MedicalRecord } from "@/lib/types/database"
@@ -43,6 +43,9 @@ export default function ProntuariosPage() {
     const [isRegisteringPatient, setIsRegisteringPatient] = useState(false)
     const { user, profile, supabase } = useAuth()
     const [doctorId, setDoctorId] = useState<string | null>(null)
+    const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false)
+    const [showPsicoModal, setShowPsicoModal] = useState(false)
+    const [psicoPatientId, setPsicoPatientId] = useState<string | null>(null)
     const [clinicDoctors, setClinicDoctors] = useState<any[]>([])
     
     // Initialize doctorId from profile
@@ -53,6 +56,28 @@ export default function ProntuariosPage() {
             fetchClinicDoctors()
         }
     }, [profile, user])
+
+    // Verifica módulo de Psicomotricidade da clínica
+    useEffect(() => {
+        async function checkPsico() {
+            const clinicId = profile?.clinic_id || user?.user_metadata?.clinic_id
+            if (!clinicId) return
+            try {
+                const { data } = await supabase
+                    .from('clinica_modulos')
+                    .select('ativo')
+                    .eq('clinica_id', clinicId)
+                    .eq('modulo_id', 'psicomotricidade_sensory')
+                    .maybeSingle()
+                if (data?.ativo) {
+                    setHasPsicomotricidade(true)
+                }
+            } catch (e) {
+                console.error('Error checking psicomotricidade module:', e)
+            }
+        }
+        checkPsico()
+    }, [profile?.clinic_id, user])
 
     async function fetchClinicDoctors() {
         try {
@@ -225,10 +250,22 @@ export default function ProntuariosPage() {
                         <p className="text-xs text-muted-foreground mt-0.5">Gerencie prontuários e históricos de pacientes</p>
                     </div>
                 </div>
-                <Button onClick={() => setShowNewRecordModal(true)} className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0">
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Novo Prontuário</span>
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    {hasPsicomotricidade && (
+                        <Button
+                            onClick={() => setShowPsicoModal(true)}
+                            variant="outline"
+                            className="flex items-center gap-2 min-h-[44px] h-10 sm:h-9 text-xs font-semibold border-emerald-600/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 shadow-none px-3.5 rounded-lg sm:rounded-xs transition-colors"
+                        >
+                            <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Psicomotricidade</span>
+                        </Button>
+                    )}
+                    <Button onClick={() => setShowNewRecordModal(true)} className="flex items-center gap-1.5 min-h-[44px] h-10 sm:h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-lg sm:rounded-xs px-3.5 font-medium border-0">
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Novo Prontuário</span>
+                    </Button>
+                </div>
             </div>
 
             {/* Barra de Busca Premium */}
@@ -267,7 +304,7 @@ export default function ProntuariosPage() {
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Paciente</TableHead>
                                     <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</TableHead>
-                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Médico</TableHead>
+                                    <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{profLabel.singular || 'Profissional'}</TableHead>
                                     <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Queixa</TableHead>
                                     <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações</TableHead>
                                 </TableRow>
@@ -311,13 +348,24 @@ export default function ProntuariosPage() {
                                             {record.chief_complaint || '-'}
                                         </TableCell>
                                         <TableCell className="py-3 px-6 text-right">
-                                            <Button variant="ghost" size="sm" className="rounded-xs text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={(e) => {
-                                                e.stopPropagation()
-                                                router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)
-                                            }}>
-                                                <FileText className="h-4 w-4 mr-1.5" />
-                                                Abrir
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                                {hasPsicomotricidade && record.patient_id && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 px-2 text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                                        title="Abrir Ficha de Psicomotricidade deste paciente"
+                                                        onClick={() => router.push(`/dashboard/pacientes/${record.patient_id}/psicomotricidade`)}
+                                                    >
+                                                        <Activity className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+                                                        Psicomotricidade
+                                                    </Button>
+                                                )}
+                                                <Button variant="ghost" size="sm" className="rounded-xs text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={() => router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)}>
+                                                    <FileText className="h-4 w-4 mr-1.5" />
+                                                    Abrir
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                     )
@@ -328,6 +376,59 @@ export default function ProntuariosPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Modal de Psicomotricidade Rápido */}
+            <Dialog open={showPsicoModal} onOpenChange={setShowPsicoModal}>
+                <DialogContent className="max-w-md w-[95vw] sm:w-full p-6">
+                    <DialogHeader>
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
+                            <Activity className="w-5 h-5" />
+                        </div>
+                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                            Prontuário de Psicomotricidade
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Selecione o paciente para abrir diretamente a Ficha de Avaliação e Evolução Psicomotora.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-3">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                            Buscar Paciente
+                        </label>
+                        <PatientSelector
+                            value={psicoPatientId || ''}
+                            onChange={(id) => setPsicoPatientId(id)}
+                        />
+                    </div>
+
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
+                        <Button
+                            variant="outline"
+                            className="w-full sm:w-auto h-10 min-h-[44px]"
+                            onClick={() => {
+                                setShowPsicoModal(false)
+                                setPsicoPatientId(null)
+                            }}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            disabled={!psicoPatientId}
+                            className="w-full sm:w-auto h-10 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                            onClick={() => {
+                                if (psicoPatientId) {
+                                    setShowPsicoModal(false)
+                                    router.push(`/dashboard/pacientes/${psicoPatientId}/psicomotricidade`)
+                                }
+                            }}
+                        >
+                            <Activity className="w-4 h-4 mr-1.5" />
+                            Acessar Psicomotricidade
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={showNewRecordModal} onOpenChange={(open) => {
                 if (!open) handleCloseModal()

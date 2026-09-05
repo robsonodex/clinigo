@@ -33,7 +33,8 @@ import {
     Square,
     FileText,
     History,
-    Receipt
+    Receipt,
+    Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -144,11 +145,11 @@ export default function PatientDetailsPage() {
             if (data?.ativo) {
                 setHasPsicomotricidade(true);
             } else {
-                setHasPsicomotricidade(true);
+                setHasPsicomotricidade(false);
             }
         } catch (e) {
             console.error('Error checking modules:', e);
-            setHasPsicomotricidade(true);
+            setHasPsicomotricidade(false);
         }
     };
 
@@ -455,8 +456,13 @@ export default function PatientDetailsPage() {
                 </div>
                 <div className="flex gap-2">
                     {hasPsicomotricidade && (
-                        <Button variant="secondary" onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade`)}>
-                            Psicomotricidade
+                        <Button
+                            variant="secondary"
+                            className="min-h-[44px] px-4 font-medium flex items-center gap-2 border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-sm"
+                            onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade`)}
+                        >
+                            <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Psicomotricidade</span>
                         </Button>
                     )}
                     <Button variant="outline" onClick={() => setShowEditModal(true)}>
@@ -484,6 +490,16 @@ export default function PatientDetailsPage() {
                         <History className="w-4 h-4" />
                         Evoluções
                     </TabsTrigger>
+                    {hasPsicomotricidade && (
+                        <TabsTrigger 
+                            value="psicomotricidade" 
+                            className="gap-2 text-emerald-700 dark:text-emerald-400 data-[state=active]:bg-emerald-50 dark:data-[state=active]:bg-emerald-950/40"
+                            onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade`)}
+                        >
+                            <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            Psicomotricidade
+                        </TabsTrigger>
+                    )}
                     {user?.role !== 'DOCTOR' && (
                     <TabsTrigger value="reimbursement" className="gap-2">
                         <Receipt className="w-4 h-4" />

@@ -34,6 +34,9 @@ interface SignDocumentModalProps {
     documentType?: string
     apiEndpoint?: string
     payloadKey?: string
+    professionalLabel?: string
+    councilLabel?: string
+    specialty?: string
     onSuccess?: (signatureData: any) => void
 }
 
@@ -56,6 +59,9 @@ export function SignDocumentModal({
     documentType = 'prontuario',
     apiEndpoint = '/api/pep/sign',
     payloadKey = 'record_id',
+    professionalLabel,
+    councilLabel,
+    specialty,
     onSuccess,
 }: SignDocumentModalProps) {
     const [state, setState] = useState<ModalState>('loading')
@@ -198,7 +204,17 @@ export function SignDocumentModal({
                                         <span className="text-muted-foreground">Titular:</span>
                                         <span className="font-medium">{certificate.owner_name}</span>
 
-                                        <span className="text-muted-foreground">CRM:</span>
+                                        <span className="text-muted-foreground">Cargo / Função:</span>
+                                        <span className="font-medium text-emerald-700 dark:text-emerald-400 font-semibold">{professionalLabel || 'Profissional'}</span>
+
+                                        {specialty && (
+                                            <>
+                                                <span className="text-muted-foreground">Especialidade:</span>
+                                                <span className="font-medium">{specialty}</span>
+                                            </>
+                                        )}
+
+                                        <span className="text-muted-foreground">{councilLabel || 'Registro / CRM'}:</span>
                                         <span className="font-medium">{certificate.crm}-{certificate.crm_state}</span>
 
                                         <span className="text-muted-foreground">Válido até:</span>
