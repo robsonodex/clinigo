@@ -342,6 +342,7 @@ export async function POST(request: NextRequest) {
                 clinic_id: clinicId,
                 crm: validatedData.crm,
                 crm_state: validatedData.crm_state,
+                council_name: (validatedData as any).council_name || null,
                 specialty: validatedData.specialty,
                 specialties_additional: (validatedData as any).specialties_additional || [],
                 consultation_price: validatedData.consultation_price,

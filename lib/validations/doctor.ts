@@ -66,6 +66,14 @@ export const createDoctorSchema = z.object({
         .max(18, 'CNPJ inválido')
         .optional()
         .nullable(),
+    council_name: z
+        .string()
+        .max(50)
+        .optional()
+        .nullable(),
+    specialties_additional: z
+        .array(z.string())
+        .optional(),
 })
 
 /**
@@ -77,10 +85,24 @@ export const updateDoctorSchema = z.object({
         .min(3)
         .max(100)
         .optional(),
+    crm: z
+        .string()
+        .optional(),
+    crm_state: z
+        .string()
+        .optional(),
+    council_name: z
+        .string()
+        .max(50)
+        .optional()
+        .nullable(),
     specialty: z
         .string()
         .min(3)
         .max(50)
+        .optional(),
+    specialties_additional: z
+        .array(z.string())
         .optional(),
     consultation_price: z
         .number()

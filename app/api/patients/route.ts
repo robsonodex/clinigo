@@ -148,7 +148,7 @@ const createPatientSchema = z.object({
     address_zip_code: z.string().optional().or(z.literal('')),
     insurance_holder_name: z.string().optional().or(z.literal('')),
     insurance_holder_cpf: z.string().optional().or(z.literal('')),
-    billing_type: z.enum(['particular', 'convenio']).optional().default('particular'),
+    billing_type: z.enum(['particular', 'convenio', 'ambos']).optional().default('particular'),
     health_insurance_id: z.string().uuid().optional().nullable().or(z.literal('')),
     insurance_card_number: z.string().optional().or(z.literal('')),
     insurance_validity: z.string().optional().or(z.literal('')),
@@ -215,11 +215,14 @@ export async function POST(request: NextRequest) {
         const state = addressObj?.state || data.address_state || null
         const zipCode = addressObj?.zip_code || (data.address_zip_code ? data.address_zip_code.replace(/\D/g, '') : null)
 
-        const billingType = data.billing_type === 'convenio' ? 'convenio' : 'particular'
-        const healthInsuranceId = billingType === 'convenio' && data.health_insurance_id ? data.health_insurance_id : null
-        const insuranceCardNumber = billingType === 'convenio' ? (data.insurance_card_number?.trim() || null) : null
-        const insuranceValidity = billingType === 'convenio' && data.insurance_validity ? data.insurance_validity : null
-        const insurancePlanName = billingType === 'convenio' ? (data.insurance_plan_name?.trim() || null) : null
+        const isConvenioOrBoth = data.billing_type === 'convenio' || data.billing_type === 'ambos'
+        const billingType = ['particular', 'convenio', 'ambos'].includes(data.billing_type as string)
+            ? data.billing_type
+            : 'particular'
+        const healthInsuranceId = isConvenioOrBoth && data.health_insurance_id ? data.health_insurance_id : null
+        const insuranceCardNumber = isConvenioOrBoth ? (data.insurance_card_number?.trim() || null) : null
+        const insuranceValidity = isConvenioOrBoth && data.insurance_validity ? data.insurance_validity : null
+        const insurancePlanName = isConvenioOrBoth ? (data.insurance_plan_name?.trim() || null) : null
 
         const insertData = {
             full_name: data.full_name,

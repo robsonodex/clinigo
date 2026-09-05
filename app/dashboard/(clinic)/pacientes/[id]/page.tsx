@@ -38,6 +38,7 @@ import {
     Activity,
     ShieldCheck,
     Plus,
+    Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -64,7 +65,7 @@ interface Patient {
     birth_date?: string;
     address?: string;
     created_at: string;
-    billing_type?: 'particular' | 'convenio';
+    billing_type?: 'particular' | 'convenio' | 'ambos';
     health_insurance_id?: string;
     insurance_card_number?: string;
     insurance_validity?: string;
@@ -104,7 +105,7 @@ const PatientFormSchema = z.object({
     address_zip_code: z.string().optional(),
     insurance_holder_name: z.string().optional(),
     insurance_holder_cpf: z.string().optional(),
-    billing_type: z.enum(['particular', 'convenio']).default('particular'),
+    billing_type: z.enum(['particular', 'convenio', 'ambos']).default('particular'),
     health_insurance_id: z.string().optional(),
     insurance_card_number: z.string().optional(),
     insurance_validity: z.string().optional(),
@@ -401,12 +402,12 @@ export default function PatientDetailsPage() {
                     }
                     if (addr.complement && addr.complement !== 'N/A') parts.push(addr.complement);
                     if (addr.neighborhood) parts.push(addr.neighborhood);
-                    if (addr.city) parts.push(`${addr.city} - ${addr.state}`);
+                    if (addr.city) parts.push(addr.state ? `${addr.city} - ${addr.state}` : addr.city);
                     if (addr.zip_code) {
-                       const zip = addr.zip_code.replace(/\D/g, '');
+                       const zip = String(addr.zip_code).replace(/\D/g, '');
                        if (zip.length === 8) {
                            parts.push(`CEP: ${zip.slice(0, 5)}-${zip.slice(5)}`);
-                       } else {
+                       } else if (zip) {
                            parts.push(`CEP: ${zip}`);
                        }
                     }
@@ -415,10 +416,47 @@ export default function PatientDetailsPage() {
                 return String(addr);
             };
 
-            const formattedAddress = formatAddress(d.address);
+            // Extração resiliente de endereço: suporta objeto JSONB, string de texto ou colunas raízes
+            let rawAddress = d.address;
+            if (!rawAddress && (d.address_street || d.city || d.neighborhood || d.address_number)) {
+                rawAddress = {
+                    street: d.address_street || '',
+                    number: d.address_number || '',
+                    complement: d.address_complement || '',
+                    neighborhood: d.neighborhood || '',
+                    city: d.city || '',
+                    state: d.state || '',
+                    zip_code: d.zip_code || '',
+                };
+            }
 
-            // Extract address fields from JSONB or separate columns
-            const addr = d.address && typeof d.address === 'object' ? d.address : {};
+            let addr: any = {};
+            if (rawAddress && typeof rawAddress === 'object') {
+                addr = rawAddress;
+            } else if (typeof rawAddress === 'string' && rawAddress.trim()) {
+                addr = {
+                    street: rawAddress.trim(),
+                    number: d.address_number || '',
+                    complement: d.address_complement || '',
+                    neighborhood: d.neighborhood || '',
+                    city: d.city || '',
+                    state: d.state || '',
+                    zip_code: d.zip_code || '',
+                };
+            } else {
+                addr = {
+                    street: d.address_street || '',
+                    number: d.address_number || '',
+                    complement: d.address_complement || '',
+                    neighborhood: d.neighborhood || '',
+                    city: d.city || '',
+                    state: d.state || '',
+                    zip_code: d.zip_code || '',
+                };
+            }
+
+            const formattedAddress = formatAddress(rawAddress || addr);
+
             setIsHolder(!d.insurance_holder_name && !d.insurance_holder_cpf);
             form.reset({
                 full_name: d.full_name || '',
@@ -442,12 +480,9 @@ export default function PatientDetailsPage() {
                 insurance_validity: d.insurance_validity || '',
                 insurance_plan_name: d.insurance_plan_name || '',
             });
-            // Update the display address so the tab also shows the formatted version
-            if (d.address && typeof d.address === 'object') {
-                d.addressText = formattedAddress;
-            } else {
-                d.addressText = d.address;
-            }
+
+            // Exibir o endereço de forma consistente
+            d.addressText = formattedAddress || (typeof d.address === 'string' ? d.address : '');
         }
         setIsLoading(false);
     };
@@ -457,13 +492,20 @@ export default function PatientDetailsPage() {
         try {
             // Build address JSONB object from separate fields
             const addressObj: any = {};
-            if (data.address_street) addressObj.street = data.address_street;
-            if (data.address_number) addressObj.number = data.address_number;
-            if (data.address_complement) addressObj.complement = data.address_complement;
-            if (data.address_neighborhood) addressObj.neighborhood = data.address_neighborhood;
-            if (data.address_city) addressObj.city = data.address_city;
-            if (data.address_state) addressObj.state = data.address_state;
-            if (data.address_zip_code) addressObj.zip_code = data.address_zip_code.replace(/\D/g, '');
+            if (data.address_street?.trim()) addressObj.street = data.address_street.trim();
+            if (data.address_number?.trim()) addressObj.number = data.address_number.trim();
+            if (data.address_complement?.trim()) addressObj.complement = data.address_complement.trim();
+            if (data.address_neighborhood?.trim()) addressObj.neighborhood = data.address_neighborhood.trim();
+            if (data.address_city?.trim()) addressObj.city = data.address_city.trim();
+            if (data.address_state?.trim()) addressObj.state = data.address_state.trim();
+            if (data.address_zip_code?.trim()) addressObj.zip_code = data.address_zip_code.replace(/\D/g, '');
+
+            // NUNCA apagar o endereço existente por acidente
+            const finalAddress = Object.keys(addressObj).length > 0 
+                ? addressObj 
+                : (patient?.address || null);
+
+            const isConvenioOrBoth = data.billing_type === 'convenio' || data.billing_type === 'ambos';
 
             const mappedData: any = {
                 full_name: data.full_name,
@@ -472,14 +514,20 @@ export default function PatientDetailsPage() {
                 phone: data.phone,
                 date_of_birth: data.date_of_birth || null,
                 gender: data.gender,
-                address: Object.keys(addressObj).length > 0 ? addressObj : null,
+                address: finalAddress,
+                address_number: addressObj.number || (patient as any)?.address_number || null,
+                address_complement: addressObj.complement || (patient as any)?.address_complement || null,
+                neighborhood: addressObj.neighborhood || (patient as any)?.neighborhood || null,
+                city: addressObj.city || (patient as any)?.city || null,
+                state: addressObj.state || (patient as any)?.state || null,
+                zip_code: addressObj.zip_code || (patient as any)?.zip_code || null,
                 insurance_holder_name: data.insurance_holder_name || null,
                 insurance_holder_cpf: data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null,
                 billing_type: data.billing_type,
-                health_insurance_id: data.billing_type === 'convenio' ? (data.health_insurance_id || null) : null,
-                insurance_card_number: data.billing_type === 'convenio' ? (data.insurance_card_number?.trim() || null) : null,
-                insurance_validity: data.billing_type === 'convenio' ? (data.insurance_validity || null) : null,
-                insurance_plan_name: data.billing_type === 'convenio' ? (data.insurance_plan_name?.trim() || null) : null,
+                health_insurance_id: isConvenioOrBoth ? (data.health_insurance_id || null) : null,
+                insurance_card_number: isConvenioOrBoth ? (data.insurance_card_number?.trim() || null) : null,
+                insurance_validity: isConvenioOrBoth ? (data.insurance_validity || null) : null,
+                insurance_plan_name: isConvenioOrBoth ? (data.insurance_plan_name?.trim() || null) : null,
             };
 
             const response = await fetch(`/api/patients/${patientId}`, {
@@ -601,6 +649,12 @@ export default function PatientDetailsPage() {
                                 <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200">
                                     <Shield className="w-3.5 h-3.5 mr-1" />
                                     Convênio: {patient.health_insurances?.name || 'Convênio'}
+                                    {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
+                                </Badge>
+                            ) : patient.billing_type === 'ambos' ? (
+                                <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border-sky-200">
+                                    <Sparkles className="w-3.5 h-3.5 mr-1" />
+                                    Particular & {patient.health_insurances?.name || 'Convênio'}
                                     {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
                                 </Badge>
                             ) : (
@@ -746,7 +800,12 @@ export default function PatientDetailsPage() {
                                         <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
                                             Modalidade
                                         </span>
-                                        {patient.billing_type === 'convenio' ? (
+                                        {patient.billing_type === 'ambos' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                                                Particular & Convênio: {patient.health_insurances?.name || 'Convênio'}
+                                            </span>
+                                        ) : patient.billing_type === 'convenio' ? (
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
                                                 <Shield className="w-3.5 h-3.5" />
                                                 Convênio: {patient.health_insurances?.name || 'Não informado'}
@@ -758,7 +817,7 @@ export default function PatientDetailsPage() {
                                             </span>
                                         )}
                                     </div>
-                                    {patient.billing_type === 'convenio' && (
+                                    {(patient.billing_type === 'convenio' || patient.billing_type === 'ambos') && (
                                         <>
                                             <div>
                                                 <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
@@ -1107,36 +1166,56 @@ export default function PatientDetailsPage() {
                                 <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                     Tipo de Atendimento *
                                 </Label>
-                                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
+                                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
                                     <button
                                         type="button"
                                         onClick={() => form.setValue('billing_type', 'particular')}
                                         className={cn(
-                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 min-h-[44px]",
+                                            "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                             form.watch('billing_type') === 'particular'
                                                 ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                                 : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                                         )}
                                     >
-                                        <User className="w-4 h-4" />
-                                        Particular
+                                        <User className="w-4 h-4 shrink-0" />
+                                        <span>Particular</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => form.setValue('billing_type', 'convenio')}
                                         className={cn(
-                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 min-h-[44px]",
+                                            "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                             form.watch('billing_type') === 'convenio'
                                                 ? "bg-emerald-600 text-white shadow-xs"
                                                 : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                                         )}
                                     >
-                                        <Shield className="w-4 h-4" />
-                                        Convênio
+                                        <Shield className="w-4 h-4 shrink-0" />
+                                        <span>Convênio</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('billing_type', 'ambos')}
+                                        className={cn(
+                                            "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                            form.watch('billing_type') === 'ambos'
+                                                ? "bg-blue-600 text-white shadow-xs"
+                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                        )}
+                                    >
+                                        <ShieldCheck className="w-4 h-4 shrink-0 text-blue-200" />
+                                        <span>Ambos</span>
                                     </button>
                                 </div>
 
-                                {form.watch('billing_type') === 'convenio' && (
+                                {form.watch('billing_type') === 'ambos' && (
+                                    <div className="p-3 bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/40 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                                        <span><strong>Modalidade Híbrida:</strong> O paciente realiza atendimentos particulares e também via convênio. Cadastre os dados do plano abaixo.</span>
+                                    </div>
+                                )}
+
+                                {(form.watch('billing_type') === 'convenio' || form.watch('billing_type') === 'ambos') && (
                                     <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-3.5">
                                         <div className="space-y-1.5">
                                             <div className="flex items-center justify-between">
@@ -1255,7 +1334,7 @@ export default function PatientDetailsPage() {
                                 )}
                             </div>
 
-                            {form.watch('billing_type') === 'particular' && (
+                            {(form.watch('billing_type') === 'particular' || form.watch('billing_type') === 'ambos') && (
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                                     <div className="space-y-2">
                                         <Label htmlFor="insurance_holder_name">Nome Completo dos Responsáveis</Label>

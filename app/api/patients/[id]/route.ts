@@ -58,23 +58,53 @@ export async function PATCH(
         const body = await request.json()
 
         const updatePayload: any = { ...body }
+
+        // Suporte à modalidade híbrida 'ambos' (Particular e Convênio)
         if (body.billing_type !== undefined) {
-            const isConvenio = body.billing_type === 'convenio'
-            updatePayload.billing_type = isConvenio ? 'convenio' : 'particular'
-            if (!isConvenio) {
+            const hasInsurance = body.billing_type === 'convenio' || body.billing_type === 'ambos'
+            updatePayload.billing_type = ['particular', 'convenio', 'ambos'].includes(body.billing_type)
+                ? body.billing_type
+                : 'particular'
+
+            if (!hasInsurance) {
                 updatePayload.health_insurance_id = null
                 updatePayload.insurance_card_number = null
                 updatePayload.insurance_validity = null
                 updatePayload.insurance_plan_name = null
+            } else {
+                if (body.health_insurance_id !== undefined) updatePayload.health_insurance_id = body.health_insurance_id || null
+                if (body.insurance_card_number !== undefined) updatePayload.insurance_card_number = body.insurance_card_number?.trim() || null
+                if (body.insurance_validity !== undefined) updatePayload.insurance_validity = body.insurance_validity || null
+                if (body.insurance_plan_name !== undefined) updatePayload.insurance_plan_name = body.insurance_plan_name?.trim() || null
             }
+
             updatePayload.health_insurance = {
                 billing_type: updatePayload.billing_type,
-                health_insurance_id: isConvenio ? (body.health_insurance_id || null) : null,
-                insurance_card_number: isConvenio ? (body.insurance_card_number || null) : null,
-                insurance_validity: isConvenio ? (body.insurance_validity || null) : null,
-                insurance_plan_name: isConvenio ? (body.insurance_plan_name || null) : null,
+                health_insurance_id: hasInsurance ? (body.health_insurance_id || null) : null,
+                insurance_card_number: hasInsurance ? (body.insurance_card_number || null) : null,
+                insurance_validity: hasInsurance ? (body.insurance_validity || null) : null,
+                insurance_plan_name: hasInsurance ? (body.insurance_plan_name || null) : null,
                 insurance_holder_name: body.insurance_holder_name || null,
                 insurance_holder_cpf: body.insurance_holder_cpf || null,
+            }
+        }
+
+        // Tratamento seguro do endereço para nunca perder dados ao editar
+        if (body.address !== undefined) {
+            if (body.address && typeof body.address === 'object' && Object.keys(body.address).length > 0) {
+                const addr = body.address
+                updatePayload.address = addr
+                if (addr.number) updatePayload.address_number = String(addr.number)
+                if (addr.complement) updatePayload.address_complement = String(addr.complement)
+                if (addr.neighborhood) updatePayload.neighborhood = String(addr.neighborhood)
+                if (addr.city) updatePayload.city = String(addr.city)
+                if (addr.state) updatePayload.state = String(addr.state).toUpperCase()
+                if (addr.zip_code) updatePayload.zip_code = String(addr.zip_code).replace(/\D/g, '')
+            } else if (typeof body.address === 'string' && body.address.trim()) {
+                updatePayload.address = body.address.trim()
+            } else if (body.address === null) {
+                // Se mandou null mas não limpou explicitamente os dados, não anular o endereço existente
+                delete updatePayload.address
             }
         }
 

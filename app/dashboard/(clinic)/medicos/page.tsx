@@ -345,7 +345,13 @@ export default function DoctorsPage() {
                                             <TableCell className="py-2.5 px-4 text-xs text-muted-foreground">{doctor.specialty || '—'}</TableCell>
                                             <TableCell className="py-2.5 px-4">
                                                 <code className="text-[11px] bg-muted/60 px-1.5 py-0.5 rounded-xs text-muted-foreground font-mono">
-                                                    {doctor.crm ? `${doctor.crm}/${doctor.crm_state || ''}` : '—'}
+                                                    {(() => {
+                                                        if (!doctor.crm) return '—'
+                                                        const councilPrefix = (doctor as any).council_name ? `${(doctor as any).council_name} ` : ''
+                                                        const hasPrefix = /^[a-zA-Z]{3,7}/.test(doctor.crm.trim())
+                                                        const displayStr = hasPrefix ? doctor.crm : `${councilPrefix}${doctor.crm}`
+                                                        return `${displayStr}${doctor.crm_state ? `/${doctor.crm_state}` : ''}`
+                                                    })()}
                                                 </code>
                                             </TableCell>
                                             <TableCell className="py-2.5 px-4 text-xs font-medium text-foreground">

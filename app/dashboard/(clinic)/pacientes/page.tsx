@@ -96,7 +96,7 @@ const PatientFormSchema = z.object({
     insurance_holder_name: z.string().optional(),
     insurance_holder_cpf: z.string().optional(),
     address: z.string().optional(),
-    billing_type: z.enum(['particular', 'convenio']).default('particular'),
+    billing_type: z.enum(['particular', 'convenio', 'ambos']).default('particular'),
     health_insurance_id: z.string().optional(),
     insurance_card_number: z.string().optional(),
     insurance_validity: z.string().optional(),
@@ -114,7 +114,7 @@ interface Patient {
     date_of_birth?: string
     gender?: string
     created_at: string
-    billing_type?: 'particular' | 'convenio'
+    billing_type?: 'particular' | 'convenio' | 'ambos'
     health_insurance_id?: string
     insurance_card_number?: string
     insurance_validity?: string
@@ -131,7 +131,7 @@ export default function PacientesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState('')
-    const [billingFilter, setBillingFilter] = useState<'ALL' | 'particular' | 'convenio'>('ALL')
+    const [billingFilter, setBillingFilter] = useState<'ALL' | 'particular' | 'convenio' | 'ambos'>('ALL')
     const [selectedLetter, setSelectedLetter] = useState<string>('ALL')
     const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
     const [pageSize, setPageSize] = useState<number>(25)
@@ -388,8 +388,9 @@ export default function PacientesPage() {
         if (!patients) return []
         return patients.filter(patient => {
             // Filtro por tipo de faturamento
-            if (billingFilter === 'convenio' && patient.billing_type !== 'convenio') return false
-            if (billingFilter === 'particular' && patient.billing_type === 'convenio') return false
+            if (billingFilter === 'convenio' && patient.billing_type !== 'convenio' && patient.billing_type !== 'ambos') return false
+            if (billingFilter === 'particular' && patient.billing_type !== 'particular' && patient.billing_type !== 'ambos') return false
+            if (billingFilter === 'ambos' && patient.billing_type !== 'ambos') return false
 
             // Filtro por letra inicial
             if (selectedLetter !== 'ALL') {
@@ -420,8 +421,8 @@ export default function PacientesPage() {
             const created = new Date(p.created_at)
             return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
         }).length || 0
-        const particular = patients?.filter(p => p.billing_type !== 'convenio').length || 0
-        const convenio = patients?.filter(p => p.billing_type === 'convenio').length || 0
+        const particular = patients?.filter(p => p.billing_type === 'particular' || p.billing_type === 'ambos').length || 0
+        const convenio = patients?.filter(p => p.billing_type === 'convenio' || p.billing_type === 'ambos').length || 0
         return { total, thisMonth, particular, convenio }
     }, [patients])
 
@@ -585,6 +586,19 @@ export default function PacientesPage() {
                     >
                         <Shield className="w-3.5 h-3.5" />
                         Convênio
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setBillingFilter('ambos')}
+                        className={cn(
+                            "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[36px] flex items-center gap-1.5",
+                            billingFilter === 'ambos'
+                                ? "bg-blue-600 text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        )}
+                    >
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-200" />
+                        Ambos
                     </button>
                 </div>
             </div>
@@ -759,6 +773,11 @@ export default function PacientesPage() {
                                                                     <Shield className="w-2.5 h-2.5" />
                                                                     {patient.health_insurances?.name || 'Convênio'}
                                                                 </span>
+                                                            ) : patient.billing_type === 'ambos' ? (
+                                                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/40 px-1.5 py-0.2 rounded">
+                                                                    <Sparkles className="w-2.5 h-2.5" />
+                                                                    Particular & {patient.health_insurances?.name || 'Convênio'}
+                                                                </span>
                                                             ) : (
                                                                 <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">
                                                                     Particular
@@ -926,6 +945,12 @@ export default function PacientesPage() {
                                                                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 px-1.5 py-0.5 rounded-md">
                                                                             <Shield className="w-3 h-3 text-emerald-600" />
                                                                             {patient.health_insurances?.name || 'Convênio'}
+                                                                            {patient.insurance_card_number && ` • ${patient.insurance_card_number}`}
+                                                                        </span>
+                                                                    ) : patient.billing_type === 'ambos' ? (
+                                                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/40 px-1.5 py-0.5 rounded-md">
+                                                                            <Sparkles className="w-3 h-3 text-sky-600" />
+                                                                            Particular & {patient.health_insurances?.name || 'Convênio'}
                                                                             {patient.insurance_card_number && ` • ${patient.insurance_card_number}`}
                                                                         </span>
                                                                     ) : (
@@ -1275,12 +1300,12 @@ export default function PacientesPage() {
                                 <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                     Tipo de Atendimento *
                                 </Label>
-                                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
+                                <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
                                     <button
                                         type="button"
                                         onClick={() => form.setValue('billing_type', 'particular')}
                                         className={cn(
-                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 min-h-[44px]",
+                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                             form.watch('billing_type') === 'particular'
                                                 ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                                 : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1293,7 +1318,7 @@ export default function PacientesPage() {
                                         type="button"
                                         onClick={() => form.setValue('billing_type', 'convenio')}
                                         className={cn(
-                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 min-h-[44px]",
+                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                             form.watch('billing_type') === 'convenio'
                                                 ? "bg-emerald-600 text-white shadow-xs"
                                                 : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1302,9 +1327,22 @@ export default function PacientesPage() {
                                         <Shield className="w-4 h-4" />
                                         Convênio
                                     </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('billing_type', 'ambos')}
+                                        className={cn(
+                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                            form.watch('billing_type') === 'ambos'
+                                                ? "bg-sky-600 text-white shadow-xs"
+                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                        )}
+                                    >
+                                        <Sparkles className="w-4 h-4" />
+                                        Ambos
+                                    </button>
                                 </div>
 
-                                {form.watch('billing_type') === 'convenio' && (
+                                {(form.watch('billing_type') === 'convenio' || form.watch('billing_type') === 'ambos') && (
                                     <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-3.5">
                                         <div className="space-y-1.5">
                                             <div className="flex items-center justify-between flex-wrap gap-1">
@@ -1433,7 +1471,7 @@ export default function PacientesPage() {
                                 )}
                             </div>
 
-                            {form.watch('billing_type') === 'particular' && (
+                            {(form.watch('billing_type') === 'particular' || form.watch('billing_type') === 'ambos') && (
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                                     <div className="space-y-2">
                                         <Label htmlFor="insurance_holder_name">Nome dos Responsáveis (se menor)</Label>
@@ -1595,6 +1633,12 @@ export default function PacientesPage() {
                                             <span className="text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1">
                                                 <Shield className="w-3.5 h-3.5 text-emerald-600" />
                                                 {selectedPatient.health_insurances?.name || 'Convênio'}
+                                                {selectedPatient.insurance_card_number ? ` • ${selectedPatient.insurance_card_number}` : ''}
+                                            </span>
+                                        ) : selectedPatient.billing_type === 'ambos' ? (
+                                            <span className="text-sky-700 dark:text-sky-300 font-semibold flex items-center gap-1">
+                                                <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                                                Particular & {selectedPatient.health_insurances?.name || 'Convênio'}
                                                 {selectedPatient.insurance_card_number ? ` • ${selectedPatient.insurance_card_number}` : ''}
                                             </span>
                                         ) : (

@@ -58,6 +58,19 @@ const STATES = [
     'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ]
 
+const COUNCIL_OPTIONS = [
+    { value: 'CRFa', label: 'CRFa (Fonoaudiologia)' },
+    { value: 'CRP', label: 'CRP (Psicologia)' },
+    { value: 'CREFITO', label: 'CREFITO (Fisioterapia e Terapia Ocupacional)' },
+    { value: 'CRM', label: 'CRM (Medicina)' },
+    { value: 'CRN', label: 'CRN (Nutrição)' },
+    { value: 'CRO', label: 'CRO (Odontologia)' },
+    { value: 'CRESS', label: 'CRESS (Serviço Social)' },
+    { value: 'CBO', label: 'CBO (Ocupação / Sem Conselho)' },
+    { value: 'Conselho de Classe', label: 'Conselho de Classe (Genérico)' },
+    { value: 'CUSTOM', label: 'Outro (Personalizado)...' },
+]
+
 // Extended schema with display settings
 const extendedDoctorFormSchema = doctorFormSchema.extend({
     is_accepting_appointments: z.boolean().default(true),
@@ -83,6 +96,9 @@ export function DoctorFormDialog({
     const [showDisplaySettings, setShowDisplaySettings] = useState(false)
     const profLabel = useProfessionalLabel()
     const { councilLabel } = useCouncilLabel()
+
+    const [selectedCouncil, setSelectedCouncil] = useState<string>('CRM')
+    const [customCouncil, setCustomCouncil] = useState<string>('')
 
     const extendedSchema = useMemo(() => {
         return extendedDoctorFormSchema.extend({
@@ -140,8 +156,6 @@ export function DoctorFormDialog({
         const pass = watch('password')
         if (pass) {
             navigator.clipboard.writeText(pass)
-            // toast is not imported directly in this file, wait, is it?
-            // Actually, we can just use the navigator
         }
     }
 
@@ -166,6 +180,33 @@ export function DoctorFormDialog({
         if (open) {
             setAdditionalSpecialties((doctorToEdit as any)?.specialties_additional || [])
             setNewAdditionalSpecialty('')
+
+            const existingCouncil = (doctorToEdit as any)?.council_name || ''
+            const crmVal = doctorToEdit?.crm || ''
+            const specVal = doctorToEdit?.specialty || ''
+
+            let detectedCouncil = existingCouncil
+            if (!detectedCouncil) {
+                if (specVal.toLowerCase().includes('fono') || crmVal.toUpperCase().startsWith('CRFA')) detectedCouncil = 'CRFa'
+                else if (specVal.toLowerCase().includes('psico') || crmVal.toUpperCase().startsWith('CRP')) detectedCouncil = 'CRP'
+                else if (specVal.toLowerCase().includes('terapia ocupacional') || specVal.toLowerCase().includes('fisio') || crmVal.toUpperCase().startsWith('CREFI')) detectedCouncil = 'CREFITO'
+                else if (specVal.toLowerCase().includes('nutri') || crmVal.toUpperCase().startsWith('CRN')) detectedCouncil = 'CRN'
+                else if (specVal.toLowerCase().includes('aba') || crmVal.toUpperCase().includes('NÃO TEM')) detectedCouncil = 'CBO'
+                else detectedCouncil = councilLabel || 'CRM'
+            }
+
+            const isKnown = COUNCIL_OPTIONS.some(c => c.value === detectedCouncil)
+            if (isKnown) {
+                setSelectedCouncil(detectedCouncil)
+                setCustomCouncil('')
+            } else if (detectedCouncil) {
+                setSelectedCouncil('CUSTOM')
+                setCustomCouncil(detectedCouncil)
+            } else {
+                setSelectedCouncil(councilLabel || 'CRM')
+                setCustomCouncil('')
+            }
+
             reset({
                 full_name: doctorToEdit?.user.full_name || '',
                 email: doctorToEdit?.user.email || '',
@@ -185,7 +226,7 @@ export function DoctorFormDialog({
                 cnpj: (doctorToEdit as any)?.cnpj || '',
             })
         }
-    }, [open, doctorToEdit, reset])
+    }, [open, doctorToEdit, reset, councilLabel])
 
     const onSubmit = (data: ExtendedDoctorFormData) => {
         // Build display settings object
@@ -197,6 +238,8 @@ export function DoctorFormDialog({
             show_convenio: data.show_convenio_badge,
         }
 
+        const finalCouncil = selectedCouncil === 'CUSTOM' ? (customCouncil.trim() || 'Conselho') : selectedCouncil
+
         if (isEditing) {
             updateDoctor.mutate(
                 {
@@ -204,6 +247,7 @@ export function DoctorFormDialog({
                     data: {
                         crm: data.crm,
                         crm_state: data.crm_state,
+                        council_name: finalCouncil,
                         specialty: data.specialty,
                         specialties_additional: additionalSpecialties,
                         consultation_price: data.consultation_price,
@@ -224,6 +268,7 @@ export function DoctorFormDialog({
         } else {
             createDoctor.mutate({
                 ...data,
+                council_name: finalCouncil,
                 specialties_additional: additionalSpecialties,
                 consultation_duration: data.consultation_duration as any,
                 display_settings: displaySettings as any,
@@ -332,36 +377,81 @@ export function DoctorFormDialog({
                         )}
 
                         {/* Professional Info */}
-                        <div className="space-y-2">
-                            <Label htmlFor="crm">{councilLabel}</Label>
-                            <Input id="crm" {...register('crm')} error={!!errors.crm} />
-                            {errors.crm && (
-                                <p className="text-xs text-destructive">{errors.crm.message}</p>
-                            )}
-                        </div>
+                        <div className="grid md:grid-cols-3 gap-3 md:col-span-2 p-3 bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    Conselho de Classe
+                                </Label>
+                                <Select
+                                    value={selectedCouncil}
+                                    onValueChange={(val) => {
+                                        setSelectedCouncil(val)
+                                        if (val !== 'CUSTOM') setCustomCouncil('')
+                                    }}
+                                >
+                                    <SelectTrigger className="min-h-[44px]">
+                                        <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {COUNCIL_OPTIONS.map((c) => (
+                                            <SelectItem key={c.value} value={c.value}>
+                                                {c.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedCouncil === 'CUSTOM' && (
+                                    <Input
+                                        placeholder="Ex: CFF, CRBio, etc."
+                                        value={customCouncil}
+                                        onChange={(e) => setCustomCouncil(e.target.value)}
+                                        className="mt-1 min-h-[44px]"
+                                    />
+                                )}
+                            </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="crm_state">Estado do {councilLabel} (UF)</Label>
-                            <Select
-                                value={watch('crm_state')}
-                                onValueChange={(val) => setValue('crm_state', val)}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="UF" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {STATES.map((uf) => (
-                                        <SelectItem key={uf} value={uf}>
-                                            {uf}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {errors.crm_state && (
-                                <p className="text-xs text-destructive">
-                                    {errors.crm_state.message}
-                                </p>
-                            )}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="crm" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    Nº do Registro ({selectedCouncil === 'CUSTOM' ? (customCouncil || 'Conselho') : selectedCouncil})
+                                </Label>
+                                <Input
+                                    id="crm"
+                                    {...register('crm')}
+                                    error={!!errors.crm}
+                                    placeholder="Ex: 24300"
+                                    className="min-h-[44px]"
+                                    style={{ fontSize: '16px' }}
+                                />
+                                {errors.crm && (
+                                    <p className="text-xs text-destructive">{errors.crm.message}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="crm_state" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    UF do Registro
+                                </Label>
+                                <Select
+                                    value={watch('crm_state')}
+                                    onValueChange={(val) => setValue('crm_state', val)}
+                                >
+                                    <SelectTrigger className="min-h-[44px]">
+                                        <SelectValue placeholder="UF" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {STATES.map((uf) => (
+                                            <SelectItem key={uf} value={uf}>
+                                                {uf}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.crm_state && (
+                                    <p className="text-xs text-destructive">
+                                        {errors.crm_state.message}
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         <div className="space-y-2">

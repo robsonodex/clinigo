@@ -105,7 +105,7 @@ export default function SettingsPage() {
                 // Fetch clinic data
                 const { data: clinicData, error } = await supabase
                     .from('clinics')
-                    .select('name, slug, email, phone, address, primary_color, logo_url, cnpj, whatsapp_number, professional_label')
+                    .select('name, slug, email, phone, address, primary_color, logo_url, cnpj, whatsapp_number, professional_label, council_label')
                     .eq('id', roleClinicId)
                     .single()
 

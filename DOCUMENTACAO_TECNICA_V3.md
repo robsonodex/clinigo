@@ -342,3 +342,33 @@
     - Atalho explicativo no rodapé do modal de criação rápida: *"Cadastrou convênio com erro? Gerenciar / Excluir Convênios"*, conduzindo a usuária Patrícia diretamente ao local de exclusão.
 - **Descrição Técnica**:
   - Resolve integralmente a dúvida e necessidade de Patrícia (World Sensory): quando um convênio ou plano for cadastrado incorretamente, a usuária pode excluí-lo diretamente na aba de Operadoras (mesmo que pacientes já tenham sido vinculados por engano, através da opção segura de desvinculação em massa) ou simplesmente inativá-lo para que não apareça mais nas opções de novos cadastros.
+
+---
+
+### Atualização 05/09/2026 — Tipo/Nomenclatura de Conselho Profissional, Blindagem de Endereço e Modalidade Híbrida ("Ambos")
+
+- **Módulo**: Cadastros → Profissionais (Médicos/Terapeutas) & Pacientes
+- **Caminho**:
+  - `supabase/migrations/20260905193000_add_council_name_and_patient_billing_both.sql` → Migration versionada adicionando `council_name TEXT` na tabela `doctors` e constraint `CHECK (billing_type IN ('particular', 'convenio', 'ambos'))` na tabela `patients`.
+  - `lib/validations/doctor.ts` → Inclusão dos campos `crm`, `crm_state`, `council_name` e `specialties_additional` nos schemas `createDoctorSchema` e `updateDoctorSchema`.
+  - `app/api/doctors/route.ts` → Suporte à gravação do `council_name` na criação de novos profissionais.
+  - `app/api/doctors/detail/route.ts` → Correção crítica no endpoint `PATCH`: adicionados `crm`, `crm_state` e `council_name` ao payload de atualização de `doctors` (antes eram ignorados pela API, dando a impressão de salvar sem persistir).
+  - `components/forms/doctor-form-dialog.tsx` → Suporte completo a Conselhos Profissionais Multidisciplinares (`CRFa - Fonoaudiologia`, `CRP - Psicologia`, `CREFITO - Fisioterapia/TO`, `CRM - Medicina`, `CRN - Nutrição`, `CRO - Odontologia`, `CRESS - Serviço Social`, `CBO`, e `Outro`), com detecção automática pela especialidade e seleção explícita.
+  - `app/dashboard/(clinic)/medicos/page.tsx` → Exibição dinâmica do prefixo correto do conselho profissional (`CRFa/SP`, `CRP/SP`, etc.) nas listagens e cards de profissionais.
+  - `app/dashboard/(clinic)/configuracoes/page.tsx` → Adição de `council_label` na query de carregamento dos dados da clínica, evitando reset para CRM padrão.
+  - `app/dashboard/(clinic)/pacientes/[id]/page.tsx` →
+    - **Blindagem do Endereço**: `loadPatient` agora trata resilientemente endereços legados gravados como string única, objetos JSONB ou colunas soltas (`address_street`, `address_number`, etc.), impedindo que o formulário de edição abra com campos em branco.
+    - `handleEditSubmit` agora protege contra nulificação acidental e sincroniza tanto o objeto JSONB `address` quanto as colunas raízes.
+    - **Modalidade Híbrida ("Ambos")**: Suporte a `billing_type = 'ambos'`, permitindo que o mesmo paciente seja atendido Particular E por Convênio simultaneamente, preservando e exibindo os dados da operadora e carteirinha.
+  - `app/api/patients/[id]/route.ts` & `app/api/patients/route.ts` →
+    - Suporte a `billing_type = 'ambos'`.
+    - Blindagem contra limpeza indevida dos dados de convênio quando o paciente estiver na modalidade `ambos`.
+    - Proteção estrita do campo `address`: só atualiza ou remove se expressamente enviado pelo cliente.
+  - `app/dashboard/(clinic)/pacientes/page.tsx` →
+    - Suporte a `billing_type = 'ambos'` no formulário de criação rápida, tabela desktop, cards mobile e visualização rápida.
+    - Filtro e estatísticas atualizados para computar pacientes da modalidade mista em ambos os relatórios.
+- **Descrição Técnica**:
+  - Elimina o bug que impedia fonoaudiólogas (CRFa) e psicólogas (CRP) de terem seus conselhos salvos no banco.
+  - Elimina o bug que apagava o endereço cadastrado do paciente ao submeter uma alteração cadastral.
+  - Permite o cadastro e gerenciamento flexível de pacientes que realizam terapias particulares e também procedimentos cobertos por convênio de saúde.
+
