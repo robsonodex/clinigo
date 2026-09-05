@@ -4,13 +4,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDropdown';
 import {
     ArrowLeft,
     User,
@@ -34,7 +35,8 @@ import {
     FileText,
     History,
     Receipt,
-    Activity
+    Activity,
+    ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -49,6 +51,7 @@ import { useUser } from '@/hooks/use-user';
 import { PatientDocuments } from '@/components/patients/PatientDocuments';
 import { PatientEvolutions } from '@/components/patients/PatientEvolutions';
 import { PatientReimbursement } from '@/components/patients/PatientReimbursement';
+import { PatientSignaturesTab } from '@/components/patients/PatientSignaturesTab';
 
 interface Patient {
     id: string;
@@ -95,8 +98,18 @@ type PatientFormData = z.infer<typeof PatientFormSchema>;
 export default function PatientDetailsPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = useUser();
     const patientId = params.id as string;
+
+    const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'info');
+
+    useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
 
     const [patient, setPatient] = useState<Patient | null>(null);
     const [biometricStatus, setBiometricStatus] = useState<BiometricStatus | null>(null);
@@ -375,6 +388,27 @@ export default function PatientDetailsPage() {
         }
     };
 
+    const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+        const cep = e.target.value.replace(/\D/g, '');
+        if (cep.length !== 8) return;
+
+        try {
+            const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            if (res.ok) {
+                const data = await res.json();
+                if (!data.erro) {
+                    if (data.logradouro) form.setValue('address_street', data.logradouro);
+                    if (data.bairro) form.setValue('address_neighborhood', data.bairro);
+                    if (data.localidade) form.setValue('address_city', data.localidade);
+                    if (data.uf) form.setValue('address_state', data.uf);
+                    toast.success('Endereço preenchido via CEP!');
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao consultar CEP:', err);
+        }
+    };
+
     const loadBiometricStatus = async () => {
         const response = await fetch(`/api/patients/${patientId}/biometrics`);
         if (response.ok) {
@@ -454,17 +488,18 @@ export default function PatientDetailsPage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    {hasPsicomotricidade && (
-                        <Button
-                            variant="secondary"
-                            className="min-h-[44px] px-4 font-medium flex items-center gap-2 border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-sm"
-                            onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade`)}
-                        >
-                            <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>Psicomotricidade</span>
-                        </Button>
-                    )}
+                <div className="flex flex-wrap items-center gap-2">
+                    <SessionPlansDropdown patientId={patientId} />
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setActiveTab('signatures')}
+                        className={activeTab === 'signatures' 
+                            ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 font-semibold gap-2 shadow-xs border-transparent' 
+                            : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 font-medium gap-2'}
+                    >
+                        <ShieldCheck className={`w-4 h-4 ${activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                        <span>Contratos & Termos</span>
+                    </Button>
                     <Button variant="outline" onClick={() => setShowEditModal(true)}>
                         <Edit2 className="w-4 h-4 mr-2" />
                         Editar
@@ -472,7 +507,7 @@ export default function PatientDetailsPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="info" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="info" className="gap-2">
                         <User className="w-4 h-4" />
@@ -485,6 +520,13 @@ export default function PatientDetailsPage() {
                     <TabsTrigger value="documents" className="gap-2">
                         <FileText className="w-4 h-4" />
                         Documentos
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="signatures" 
+                        className="gap-2 font-medium"
+                    >
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Contratos & Termos</span>
                     </TabsTrigger>
                     <TabsTrigger value="evolutions" className="gap-2">
                         <History className="w-4 h-4" />
@@ -748,6 +790,11 @@ export default function PatientDetailsPage() {
                     {clinicId && <PatientDocuments patientId={patientId} clinicId={clinicId} userRole={user?.role} />}
                 </TabsContent>
 
+                {/* Tab: Contratos & Termos com Assinatura Digital dos Pais */}
+                <TabsContent value="signatures">
+                    <PatientSignaturesTab patient={patient} />
+                </TabsContent>
+
                 {/* Tab: Evoluções */}
                 <TabsContent value="evolutions">
                     <PatientEvolutions patientId={patientId} />
@@ -869,7 +916,13 @@ export default function PatientDetailsPage() {
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="address_zip_code" className="text-xs text-muted-foreground">CEP</Label>
-                                        <Input id="address_zip_code" placeholder="00000-000" {...form.register('address_zip_code')} />
+                                        <Input
+                                            id="address_zip_code"
+                                            placeholder="00000-000"
+                                            maxLength={9}
+                                            {...form.register('address_zip_code')}
+                                            onBlur={handleCepBlur}
+                                        />
                                     </div>
                                 </div>
                             </div>

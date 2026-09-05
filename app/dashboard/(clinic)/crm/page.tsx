@@ -317,7 +317,7 @@ export default function CRMPage() {
                                             <Textarea
                                                 value={automationForm.action_template}
                                                 onChange={(e) => setAutomationForm(f => ({ ...f, action_template: e.target.value }))}
-                                                placeholder="Olá {{patient_name}}, feliz aniversário! 🎂 De toda equipe da {{clinic_name}}."
+                                                placeholder="Olá {{patient_name}}, feliz aniversário! Desejamos muitas felicidades e saúde. Equipe {{clinic_name}}."
                                                 rows={3}
                                             />
                                             <p className="text-xs text-muted-foreground">

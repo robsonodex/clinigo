@@ -116,7 +116,14 @@ const createPatientSchema = z.object({
     phone: z.string().optional(),
     date_of_birth: z.string().optional(),
     gender: z.string().optional(),
-    address: z.string().optional().or(z.literal('')),
+    address: z.any().optional(),
+    address_street: z.string().optional().or(z.literal('')),
+    address_number: z.string().optional().or(z.literal('')),
+    address_complement: z.string().optional().or(z.literal('')),
+    address_neighborhood: z.string().optional().or(z.literal('')),
+    address_city: z.string().optional().or(z.literal('')),
+    address_state: z.string().optional().or(z.literal('')),
+    address_zip_code: z.string().optional().or(z.literal('')),
     insurance_holder_name: z.string().optional().or(z.literal('')),
     insurance_holder_cpf: z.string().optional().or(z.literal('')),
     clinic_id: z.string().optional()
@@ -152,10 +159,52 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
         }
 
+        // Montar objeto de endereço JSONB estruturado (compatível com a tela de edição)
+        let addressObj: any = null
+        if (data.address && typeof data.address === 'object') {
+            addressObj = data.address
+        } else {
+            const obj: any = {}
+            if (data.address_street?.trim()) obj.street = data.address_street.trim()
+            if (data.address_number?.trim()) obj.number = data.address_number.trim()
+            if (data.address_complement?.trim()) obj.complement = data.address_complement.trim()
+            if (data.address_neighborhood?.trim()) obj.neighborhood = data.address_neighborhood.trim()
+            if (data.address_city?.trim()) obj.city = data.address_city.trim()
+            if (data.address_state?.trim()) obj.state = data.address_state.trim().toUpperCase()
+            if (data.address_zip_code?.trim()) obj.zip_code = data.address_zip_code.replace(/\D/g, '')
+
+            if (Object.keys(obj).length > 0) {
+                addressObj = obj
+            } else if (typeof data.address === 'string' && data.address.trim()) {
+                addressObj = { street: data.address.trim() }
+            }
+        }
+
+        // Mapear também para colunas separadas para consistência total
+        const addressNumber = addressObj?.number || data.address_number || null
+        const addressComplement = addressObj?.complement || data.address_complement || null
+        const neighborhood = addressObj?.neighborhood || data.address_neighborhood || null
+        const city = addressObj?.city || data.address_city || null
+        const state = addressObj?.state || data.address_state || null
+        const zipCode = addressObj?.zip_code || (data.address_zip_code ? data.address_zip_code.replace(/\D/g, '') : null)
+
         const insertData = {
-            ...data,
+            full_name: data.full_name,
             cpf: cleanCPF,
+            email: data.email || null,
+            phone: data.phone || null,
+            date_of_birth: data.date_of_birth || null,
+            gender: data.gender || null,
+            insurance_holder_name: data.insurance_holder_name || null,
+            insurance_holder_cpf: data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null,
             clinic_id: clinicId,
+            address: addressObj,
+            address_number: addressNumber,
+            address_complement: addressComplement,
+            neighborhood: neighborhood,
+            city: city,
+            state: state,
+            zip_code: zipCode,
             updated_at: new Date().toISOString()
         } as any
 

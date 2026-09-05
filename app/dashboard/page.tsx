@@ -8,6 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog'
 import { useAuth, useRole } from '@/lib/hooks/use-auth'
 import { api, type Appointment } from '@/lib/api-client'
 import { formatDate, formatCurrency } from '@/lib/utils'
@@ -46,9 +53,11 @@ import {
     Loader2,
     X,
     AlertCircle,
+    Cake,
 } from 'lucide-react'
 import Link from 'next/link'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
+import { BirthdayWidget } from '@/components/dashboard/BirthdayWidget'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 const statusColors: Record<string, string> = {
@@ -215,6 +224,22 @@ export default function DashboardPage() {
         enabled: !!profile?.clinic_id && (isClinicAdmin || isDoctor || isReceptionist),
     })
     const bulletins = bulletinsData?.bulletins || []
+
+    // Estados de Aniversariantes do Mês
+    const [showMonthBirthdaysModal, setShowMonthBirthdaysModal] = useState(false)
+    const { data: birthdayData, isLoading: birthdaysLoading } = useQuery({
+        queryKey: ['patients-birthdays'],
+        queryFn: async () => {
+            const res = await fetch('/api/patients/birthdays')
+            if (!res.ok) return null
+            return res.json()
+        },
+        enabled: !!profile?.clinic_id && (isClinicAdmin || isDoctor || isReceptionist),
+        staleTime: 1000 * 60 * 5,
+    })
+    const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date())
+    const capitalizedMonthName = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
+    const monthBirthdaysCount = birthdayData?.this_month?.length ?? 0
 
     // Estados do Mural de Recados
     const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -437,9 +462,9 @@ export default function DashboardPage() {
              {/* Stats Cards - Clinic Admin & Doctor */}
             {
                 (isClinicAdmin || isDoctor) && (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-4 md:grid-cols-3">
                         <Link href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
-                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group">
+                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium text-blue-900">
                                         Consultas Hoje
@@ -452,12 +477,13 @@ export default function DashboardPage() {
                                     ) : (
                                         <div className="text-2xl font-bold text-blue-900">{stats?.todayCount || 0}</div>
                                     )}
+                                    <p className="text-xs text-blue-700/80 mt-1 font-medium">Agendadas para a data de hoje</p>
                                 </CardContent>
                             </Card>
                         </Link>
 
-                        <Link href={isDoctor ? '/dashboard/minha-agenda?status=CONFIRMED' : '/dashboard/agenda'}>
-                            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all cursor-pointer group">
+                        <Link href={isDoctor ? '/dashboard/minha-agenda?status=CONFIRMED' : '/dashboard/agenda?status=CONFIRMED'}>
+                            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all cursor-pointer group h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium text-green-900">Confirmadas</CardTitle>
                                     <TrendingUp className="h-4 w-4 text-green-600 group-hover:scale-110 transition-transform" />
@@ -470,44 +496,142 @@ export default function DashboardPage() {
                                             {stats?.confirmedCount || 0}
                                         </div>
                                     )}
+                                    <p className="text-xs text-green-700/80 mt-1 font-medium">Pacientes com presença confirmada</p>
                                 </CardContent>
                             </Card>
                         </Link>
 
-                        <Link href="/dashboard/pagamentos?status=PENDING">
-                            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all cursor-pointer group">
+                        {/* Card Clicável: Aniversariantes do Mês */}
+                        <div onClick={() => setShowMonthBirthdaysModal(true)} className="cursor-pointer">
+                            <Card className="bg-gradient-to-br from-amber-50 to-amber-100/90 border-amber-200 hover:shadow-lg transition-all group h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium text-amber-900">
-                                        Aguardando Pagamento
+                                        Aniversariantes do Mês
                                     </CardTitle>
-                                    <Clock className="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform" />
+                                    <Cake className="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform" />
                                 </CardHeader>
                                 <CardContent>
-                                    {statsLoading ? (
+                                    {birthdaysLoading ? (
                                         <Skeleton className="h-8 w-16" />
                                     ) : (
-                                        <div className="text-2xl font-bold text-amber-900">
-                                            {stats?.pendingCount || 0}
+                                        <div className="flex items-baseline justify-between">
+                                            <div className="text-2xl font-bold text-amber-900">
+                                                {monthBirthdaysCount}
+                                            </div>
+                                            <span className="text-xs text-amber-700 font-medium group-hover:underline">
+                                                Ver lista →
+                                            </span>
                                         </div>
                                     )}
+                                    <p className="text-xs text-amber-700/80 mt-1 font-medium">
+                                        {capitalizedMonthName} • Clique para ver todos
+                                    </p>
                                 </CardContent>
                             </Card>
-                        </Link>
-
-                        <Link href="/dashboard/pagamentos">
-                            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all cursor-pointer group">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium text-purple-900">Faturamento</CardTitle>
-                                    <DollarSign className="h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-purple-900">R$ 0</div>
-                                </CardContent>
-                            </Card>
-                        </Link>
+                        </div>
                     </div>
                 )
             }
+
+            {/* Modal Detalhado de Aniversariantes do Mês */}
+            <Dialog open={showMonthBirthdaysModal} onOpenChange={setShowMonthBirthdaysModal}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader className="pb-3 border-b border-border">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                <Cake className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-base font-bold text-foreground">
+                                    Aniversariantes de {capitalizedMonthName}
+                                </DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    {monthBirthdaysCount > 0
+                                        ? `${monthBirthdaysCount} paciente${monthBirthdaysCount > 1 ? 's fazem' : ' faz'} aniversário neste mês`
+                                        : `Nenhum paciente cadastrado faz aniversário em ${capitalizedMonthName}`}
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="py-3 space-y-2">
+                        {(!birthdayData?.this_month || birthdayData.this_month.length === 0) ? (
+                            <div className="text-center py-8 text-muted-foreground text-xs">
+                                <Cake className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+                                <p>Nenhum aniversariante registrado para o mês de {capitalizedMonthName}.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {birthdayData.this_month.map((p: any) => {
+                                    const cleanPhone = p.phone ? p.phone.replace(/\D/g, '') : ''
+                                    const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+                                    const firstName = p.full_name.split(' ')[0]
+                                    const ageText = p.turning_age > 0 ? ` pelos seus ${p.turning_age} anos` : ''
+                                    const whatsappMsg = `Olá ${firstName}! Toda a equipe da clínica te deseja um Feliz Aniversário${ageText}! Muita saúde, realizações e momentos especiais!`
+
+                                    return (
+                                        <div
+                                            key={p.id}
+                                            className={`p-3 rounded-lg border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                                p.is_today
+                                                    ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 shadow-xs'
+                                                    : 'bg-card border-border/70 hover:border-border'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 flex items-center justify-center font-bold text-xs shrink-0">
+                                                    {String(p.birth_day).padStart(2, '0')}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Link
+                                                            href={`/dashboard/pacientes/${p.id}`}
+                                                            className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary hover:underline transition-colors"
+                                                        >
+                                                            {p.full_name}
+                                                        </Link>
+                                                        {p.is_today && (
+                                                            <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[9px] px-1.5 py-0 h-4">
+                                                                Hoje
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                        Dia {String(p.birth_day).padStart(2, '0')}/{String(p.birth_month).padStart(2, '0')}
+                                                        {p.turning_age > 0 && ` • Completa ${p.turning_age} anos`}
+                                                        {!p.is_today && p.days_until > 0 && ` • em ${p.days_until} dia${p.days_until > 1 ? 's' : ''}`}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                                {p.phone ? (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(whatsappMsg)}`, '_blank')}
+                                                        className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                                                        title="Enviar mensagem de Parabéns pelo WhatsApp"
+                                                    >
+                                                        <MessageCircle className="w-3.5 h-3.5" />
+                                                        <span>Parabenizar</span>
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-[10px] text-muted-foreground italic">Sem telefone</span>
+                                                )}
+                                                <Button variant="outline" size="sm" asChild className="h-8 text-xs font-medium">
+                                                    <Link href={`/dashboard/pacientes/${p.id}`}>
+                                                        Ver Ficha
+                                                    </Link>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Stats Cards - Super Admin (only when NOT impersonating) */}
             {
@@ -515,6 +639,11 @@ export default function DashboardPage() {
                     <SuperAdminStats />
                 )
             }
+
+            {/* Aniversariantes de Hoje e Próximos */}
+            {(isClinicAdmin || isDoctor || isReceptionist) && (
+                <BirthdayWidget />
+            )}
 
             {/* Upcoming Appointments - Compact Table with Day Grouping */}
             {

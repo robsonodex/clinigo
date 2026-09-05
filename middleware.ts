@@ -562,6 +562,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/entrar') ||
         pathname.startsWith('/paciente/registro') ||
         pathname.startsWith('/video/') || // Patient video room via token link
+        pathname.startsWith('/assinar/') || // Public digital signature for parents/guardians
         pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
         pathname.startsWith('/totem/') || // Public totem for clinics (gate de plano feito nas APIs)
         pathname.match(/^\/[^/]+\/agendar/)

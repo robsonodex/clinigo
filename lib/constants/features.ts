@@ -54,6 +54,7 @@ export const FEATURE_KEYS = {
 
     // Terapias & Especialidades
     PSICOMOTRICIDADE: 'psicomotricidade',
+    PLANO_FISIOTERAPIA: 'plano_fisioterapia',
 } as const
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS]
@@ -267,6 +268,12 @@ export const FEATURE_METADATA: Record<FeatureKey, FeatureMetadata> = {
         category: 'TERAPIA',
         defaultPlans: [],
         description: 'Módulo de Ficha Capa, Biblioteca dos 55 Objetivos e Planos de Sessão de Psicomotricidade',
+    },
+    [FEATURE_KEYS.PLANO_FISIOTERAPIA]: {
+        label: 'Plano de Sessão — Fisioterapia',
+        category: 'TERAPIA',
+        defaultPlans: [],
+        description: 'Ficha de Acompanhamento Clínico, 14 Categorias Motoras (MOB, POS, EQU, MAR...) e Gráfico de Desempenho',
     },
 }
 

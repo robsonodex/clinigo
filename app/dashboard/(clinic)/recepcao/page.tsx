@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle2, QrCode, User, UserX, Settings, FileText,
-    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle, SlidersHorizontal
+    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle, SlidersHorizontal, Cake
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -20,6 +20,7 @@ import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { QRCodeSVG } from 'qrcode.react'
 import { QRScannerDialog } from '@/components/reception/qr-scanner-dialog'
 import { CheckinDocumentsModal } from './components/checkin-documents-modal'
+import { BirthdayWidget } from '@/components/dashboard/BirthdayWidget'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { hasFeature } from '@/lib/constants/plan-features'
@@ -92,6 +93,7 @@ export default function RecepcaoPage() {
     })
     const [loading, setLoading] = useState(true)
     const [showWalkInDialog, setShowWalkInDialog] = useState(false)
+    const [showBirthdaysModal, setShowBirthdaysModal] = useState(false)
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
     const [urgency, setUrgency] = useState<string>('normal')
     const [reason, setReason] = useState('')
@@ -698,7 +700,7 @@ export default function RecepcaoPage() {
             </div>
 
             {/* Horizontal Stats Capsules (SaaS Premium Internacional: neutros, limpos, cores suaves) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {/* 1. Aguardando */}
                 <div className="flex items-center justify-between h-9 px-3.5 bg-card hover:bg-muted/40 text-card-foreground rounded-xs border border-border/60 shadow-xs hover:border-border transition-all duration-150 cursor-default select-none">
                     <div className="flex items-center gap-2">
@@ -746,9 +748,30 @@ export default function RecepcaoPage() {
                         {stats.no_show_count}
                     </span>
                 </div>
+
+                {/* 5. Aniversários */}
+                <div 
+                    onClick={() => setShowBirthdaysModal(true)}
+                    className="flex items-center justify-between h-9 px-3.5 bg-card hover:bg-muted/40 text-card-foreground rounded-xs border border-border/60 shadow-xs hover:border-border transition-all duration-150 cursor-pointer select-none"
+                    title="Clique para ver aniversariantes"
+                >
+                    <div className="flex items-center gap-2">
+                        <Cake className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="text-xs font-medium text-muted-foreground">Aniversários</span>
+                    </div>
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold rounded-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                        Ver
+                    </span>
+                </div>
             </div>
 
             {/* Modals & Dialogs */}
+            <Dialog open={showBirthdaysModal} onOpenChange={setShowBirthdaysModal}>
+                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border/80">
+                    <BirthdayWidget />
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={checkInModal.open} onOpenChange={(open) => setCheckInModal({ ...checkInModal, open })}>
                 <DialogContent>
                     <DialogHeader>

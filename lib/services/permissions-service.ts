@@ -12,6 +12,7 @@ import {
     PROTECTED_FEATURES,
     isFeatureInDefaultPlan,
 } from '@/lib/constants/features'
+import { isClinicInSessionPlansAllowlist } from '@/lib/constants/session-plans-beta-clinics'
 import type { PlanType } from '@/lib/constants/plans'
 
 // Standard plan prices
@@ -126,6 +127,13 @@ export async function enableFeature(
         throw new Error('Cannot modify protected feature')
     }
 
+    // Camada A: Bloqueio estrito de features de Terapia fora da Allowlist
+    if (FEATURE_METADATA[featureKey]?.category === 'TERAPIA') {
+        if (!isClinicInSessionPlansAllowlist(clinicId)) {
+            throw new Error('Feature restrita e não autorizada para esta clínica (Camada A)')
+        }
+    }
+
     const supabase = createServiceRoleClient()
 
     // Sync with clinica_modulos if it's Psicomotricidade
@@ -147,6 +155,36 @@ export async function enableFeature(
         }
     }
 
+    // Sync with clinica_modulos if it's Plano de Fisioterapia
+    if (featureKey === FEATURE_KEYS.PLANO_FISIOTERAPIA) {
+        const { data: modRow } = await supabase
+            .from('clinica_modulos')
+            .select('modulos_planos_sessao_habilitados')
+            .eq('clinica_id', clinicId)
+            .eq('modulo_id', 'psicomotricidade_sensory')
+            .maybeSingle()
+
+        const currentList: string[] = Array.isArray(modRow?.modulos_planos_sessao_habilitados)
+            ? modRow.modulos_planos_sessao_habilitados
+            : []
+
+        if (!currentList.includes('fisioterapia')) {
+            currentList.push('fisioterapia')
+        }
+
+        await supabase
+            .from('clinica_modulos')
+            .upsert(
+                {
+                    clinica_id: clinicId,
+                    modulo_id: 'psicomotricidade_sensory',
+                    modulos_planos_sessao_habilitados: currentList,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'clinica_id,modulo_id' }
+            )
+    }
+
     const { error: permError } = await supabase
         .from('clinic_custom_permissions')
         .upsert(
@@ -162,7 +200,7 @@ export async function enableFeature(
             { onConflict: 'clinic_id,feature_key' }
         )
 
-    if (permError && featureKey !== FEATURE_KEYS.PSICOMOTRICIDADE) {
+    if (permError && featureKey !== FEATURE_KEYS.PSICOMOTRICIDADE && featureKey !== FEATURE_KEYS.PLANO_FISIOTERAPIA) {
         throw new Error(permError.message)
     }
 }
@@ -178,6 +216,13 @@ export async function disableFeature(
 ): Promise<void> {
     if (PROTECTED_FEATURES.includes(featureKey)) {
         throw new Error('Cannot modify protected feature')
+    }
+
+    // Camada A: Bloqueio estrito de features de Terapia fora da Allowlist
+    if (FEATURE_METADATA[featureKey]?.category === 'TERAPIA') {
+        if (!isClinicInSessionPlansAllowlist(clinicId)) {
+            throw new Error('Feature restrita e não autorizada para esta clínica (Camada A)')
+        }
     }
 
     const supabase = createServiceRoleClient()
@@ -201,6 +246,32 @@ export async function disableFeature(
         }
     }
 
+    // Sync with clinica_modulos if it's Plano de Fisioterapia
+    if (featureKey === FEATURE_KEYS.PLANO_FISIOTERAPIA) {
+        const { data: modRow } = await supabase
+            .from('clinica_modulos')
+            .select('modulos_planos_sessao_habilitados')
+            .eq('clinica_id', clinicId)
+            .eq('modulo_id', 'psicomotricidade_sensory')
+            .maybeSingle()
+
+        const currentList: string[] = Array.isArray(modRow?.modulos_planos_sessao_habilitados)
+            ? modRow.modulos_planos_sessao_habilitados.filter((s: string) => s !== 'fisioterapia')
+            : []
+
+        await supabase
+            .from('clinica_modulos')
+            .upsert(
+                {
+                    clinica_id: clinicId,
+                    modulo_id: 'psicomotricidade_sensory',
+                    modulos_planos_sessao_habilitados: currentList,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'clinica_id,modulo_id' }
+            )
+    }
+
     const { error: permError } = await supabase
         .from('clinic_custom_permissions')
         .upsert(
@@ -216,7 +287,7 @@ export async function disableFeature(
             { onConflict: 'clinic_id,feature_key' }
         )
 
-    if (permError && featureKey !== FEATURE_KEYS.PSICOMOTRICIDADE) {
+    if (permError && featureKey !== FEATURE_KEYS.PSICOMOTRICIDADE && featureKey !== FEATURE_KEYS.PLANO_FISIOTERAPIA) {
         throw new Error(permError.message)
     }
 }
@@ -249,18 +320,28 @@ export async function getClinicPermissions(
     // Check clinica_modulos for psicomotricidade_sensory
     const { data: moduloPsico } = await supabase
         .from('clinica_modulos')
-        .select('ativo')
+        .select('ativo, modulos_planos_sessao_habilitados')
         .eq('clinica_id', clinicId)
         .eq('modulo_id', 'psicomotricidade_sensory')
         .maybeSingle()
+
+    const isAllowlisted = isClinicInSessionPlansAllowlist(clinicId)
 
     const customMap = new Map(
         customPermissions?.map((p) => [p.feature_key, p.is_enabled]) || []
     )
 
     // If custom permissions didn't have psicomotricidade set yet, use clinica_modulos state if present
-    if (!customMap.has(FEATURE_KEYS.PSICOMOTRICIDADE) && moduloPsico !== null) {
+    if (isAllowlisted && !customMap.has(FEATURE_KEYS.PSICOMOTRICIDADE) && moduloPsico !== null) {
         customMap.set(FEATURE_KEYS.PSICOMOTRICIDADE, !!moduloPsico.ativo)
+    }
+
+    // Se estiver na allowlist e tiver fisioterapia habilitada em clinica_modulos
+    if (isAllowlisted && moduloPsico?.modulos_planos_sessao_habilitados) {
+        const specs = moduloPsico.modulos_planos_sessao_habilitados as string[]
+        if (specs.includes('fisioterapia') && !customMap.has(FEATURE_KEYS.PLANO_FISIOTERAPIA)) {
+            customMap.set(FEATURE_KEYS.PLANO_FISIOTERAPIA, true)
+        }
     }
 
     // Build result
@@ -268,6 +349,13 @@ export async function getClinicPermissions(
 
     for (const [featureKey, metadata] of Object.entries(FEATURE_METADATA)) {
         const key = featureKey as FeatureKey
+
+        // Se a feature for de Terapia e a clínica NÃO estiver na allowlist, fica 100% desabilitada
+        if (metadata.category === 'TERAPIA' && !isAllowlisted) {
+            result[key] = { enabled: false, isCustom: false }
+            continue
+        }
+
         const isCustom = customMap.has(key)
         const enabled = isCustom
             ? customMap.get(key)!

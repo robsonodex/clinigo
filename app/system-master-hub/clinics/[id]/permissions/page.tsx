@@ -26,6 +26,7 @@ import {
     PROTECTED_FEATURES,
     type FeatureCategory,
 } from '@/lib/constants/features'
+import { isClinicInSessionPlansAllowlist } from '@/lib/constants/session-plans-beta-clinics'
 
 interface ClinicInfo {
     id: string
@@ -287,16 +288,23 @@ export default function ClinicPermissionsPage() {
         }
     }
 
-    // Filter features by search
+    // Filter features by search and clinic allowlist (Camada A)
+    const isAllowlisted = isClinicInSessionPlansAllowlist(clinicId)
     const featuresByCategory = getFeaturesByCategory()
-    const filteredCategories = Object.entries(featuresByCategory).filter(([category, features]) => {
-        if (!searchQuery) return true
-        return features.some(
-            (f) =>
-                f.metadata.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                f.key.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    })
+    const filteredCategories = Object.entries(featuresByCategory)
+        .filter(([category]) => {
+            // Se a clínica NÃO estiver na allowlist da Camada A, a categoria TERAPIA nem aparece na tela
+            if (category === 'TERAPIA' && !isAllowlisted) return false
+            return true
+        })
+        .filter(([category, features]) => {
+            if (!searchQuery) return true
+            return features.some(
+                (f) =>
+                    f.metadata.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    f.key.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        })
 
     if (loading) {
         return (

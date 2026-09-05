@@ -58,6 +58,7 @@ import {
     TrendingUp,
     ChevronRight,
     Sparkles,
+    Cake,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -77,6 +78,13 @@ const PatientFormSchema = z.object({
     phone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
     date_of_birth: z.string().optional(),
     gender: z.enum(['M', 'F', 'O']).optional(),
+    address_street: z.string().optional(),
+    address_number: z.string().optional(),
+    address_complement: z.string().optional(),
+    address_neighborhood: z.string().optional(),
+    address_city: z.string().optional(),
+    address_state: z.string().max(2).optional(),
+    address_zip_code: z.string().optional(),
     insurance_holder_name: z.string().optional(),
     insurance_holder_cpf: z.string().optional(),
     address: z.string().optional(),
@@ -104,6 +112,7 @@ export default function PacientesPage() {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [showDetailsDialog, setShowDetailsDialog] = useState(false)
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const [isLoadingCep, setIsLoadingCep] = useState(false)
 
     // Form
     const form = useForm<PatientFormData>({
@@ -114,8 +123,45 @@ export default function PacientesPage() {
             email: '',
             phone: '',
             date_of_birth: '',
+            gender: 'M',
+            address_street: '',
+            address_number: '',
+            address_complement: '',
+            address_neighborhood: '',
+            address_city: '',
+            address_state: '',
+            address_zip_code: '',
+            insurance_holder_name: '',
+            insurance_holder_cpf: '',
         },
     })
+
+    const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+        const cep = e.target.value.replace(/\D/g, '')
+        if (cep.length !== 8) return
+
+        setIsLoadingCep(true)
+        try {
+            const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            if (res.ok) {
+                const data = await res.json()
+                if (!data.erro) {
+                    if (data.logradouro) form.setValue('address_street', data.logradouro)
+                    if (data.bairro) form.setValue('address_neighborhood', data.bairro)
+                    if (data.localidade) form.setValue('address_city', data.localidade)
+                    if (data.uf) form.setValue('address_state', data.uf)
+                    toast({
+                        title: 'Endereço encontrado!',
+                        description: `${data.logradouro || ''}, ${data.bairro || ''} - ${data.localidade}/${data.uf}`,
+                    })
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao consultar CEP:', err)
+        } finally {
+            setIsLoadingCep(false)
+        }
+    }
 
     // Fetch patients from real API
     const { data: patients, isLoading } = useQuery<Patient[]>({
@@ -376,9 +422,28 @@ export default function PacientesPage() {
                                                             {initials}
                                                         </div>
                                                         <div>
-                                                            <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">
-                                                                {cleanName}
-                                                            </p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors">
+                                                                    {cleanName}
+                                                                </p>
+                                                                {(() => {
+                                                                    if (!patient.date_of_birth) return null
+                                                                    const parts = patient.date_of_birth.split('-')
+                                                                    if (parts.length < 3) return null
+                                                                    const birthMonth = parseInt(parts[1], 10)
+                                                                    const birthDay = parseInt(parts[2], 10)
+                                                                    const today = new Date()
+                                                                    if (birthDay === today.getDate() && birthMonth === (today.getMonth() + 1)) {
+                                                                        return (
+                                                                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-xs" title="Aniversariante hoje">
+                                                                                <Cake className="w-3 h-3" />
+                                                                                Aniversariante hoje
+                                                                            </span>
+                                                                        )
+                                                                    }
+                                                                    return null
+                                                                })()}
+                                                            </div>
                                                             {patient.gender && (
                                                                 <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-none mt-0.5">
                                                                     {patient.gender === 'M' ? 'Masculino' : patient.gender === 'F' ? 'Feminino' : 'Outro'}
@@ -420,6 +485,10 @@ export default function PacientesPage() {
                                                             <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)} className="rounded-lg py-1.5">
                                                                 <Eye className="w-4 h-4 mr-2 text-slate-450" />
                                                                 Ver detalhes
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)} className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                                                                <ShieldCheck className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                Contratos & Termos
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)} className="rounded-lg py-1.5">
                                                                 <FileText className="w-4 h-4 mr-2 text-slate-450" />
@@ -588,13 +657,56 @@ export default function PacientesPage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="address">Endereço (opcional)</Label>
-                                <Input
-                                    id="address"
-                                    placeholder="Rua, Número, Complemento, Bairro - Cidade/UF"
-                                    {...form.register('address')}
-                                />
+                            {/* Endereço - Campos separados e estruturados (Rua, Número, Complemento, Bairro, Cidade, UF, CEP) */}
+                            <div className="space-y-2 pt-2 border-t">
+                                <div className="flex items-center justify-between">
+                                    <Label className="font-semibold text-sm">Endereço</Label>
+                                    {isLoadingCep && (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Loader2 className="w-3 h-3 animate-spin" /> Buscando CEP...
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="col-span-2 space-y-1">
+                                        <Label htmlFor="address_street" className="text-xs text-muted-foreground">Rua</Label>
+                                        <Input id="address_street" placeholder="Nome da rua" {...form.register('address_street')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_number" className="text-xs text-muted-foreground">Número</Label>
+                                        <Input id="address_number" placeholder="Nº" {...form.register('address_number')} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_complement" className="text-xs text-muted-foreground">Complemento</Label>
+                                        <Input id="address_complement" placeholder="Apto, Bloco..." {...form.register('address_complement')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_neighborhood" className="text-xs text-muted-foreground">Bairro</Label>
+                                        <Input id="address_neighborhood" placeholder="Bairro" {...form.register('address_neighborhood')} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                    <div className="col-span-2 space-y-1">
+                                        <Label htmlFor="address_city" className="text-xs text-muted-foreground">Cidade</Label>
+                                        <Input id="address_city" placeholder="Cidade" {...form.register('address_city')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_state" className="text-xs text-muted-foreground">UF</Label>
+                                        <Input id="address_state" placeholder="SP" maxLength={2} {...form.register('address_state')} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="address_zip_code" className="text-xs text-muted-foreground">CEP</Label>
+                                        <Input
+                                            id="address_zip_code"
+                                            placeholder="00000-000"
+                                            maxLength={9}
+                                            {...form.register('address_zip_code')}
+                                            onBlur={handleCepBlur}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

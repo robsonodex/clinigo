@@ -28,6 +28,7 @@ import { ptBR } from 'date-fns/locale'
 
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDropdown'
 
 export default function ProntuariosPage() {
     const { toast } = useToast()
@@ -251,16 +252,7 @@ export default function ProntuariosPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    {hasPsicomotricidade && (
-                        <Button
-                            onClick={() => setShowPsicoModal(true)}
-                            variant="outline"
-                            className="flex items-center gap-2 min-h-[44px] h-10 sm:h-9 text-xs font-semibold border-emerald-600/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 shadow-none px-3.5 rounded-lg sm:rounded-xs transition-colors"
-                        >
-                            <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>Psicomotricidade</span>
-                        </Button>
-                    )}
+                    <SessionPlansDropdown />
                     <Button onClick={() => setShowNewRecordModal(true)} className="flex items-center gap-1.5 min-h-[44px] h-10 sm:h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-lg sm:rounded-xs px-3.5 font-medium border-0">
                         <Plus className="w-3.5 h-3.5" />
                         <span>Novo Prontuário</span>

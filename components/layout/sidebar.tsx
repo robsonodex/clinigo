@@ -56,6 +56,7 @@ import {
     CheckCircle2,
     Sun,
     Moon,
+    ShieldCheck,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
@@ -180,6 +181,12 @@ const navigationSections: NavSection[] = [
                 icon: FileArchive,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 // Apenas ADM e Recepção podem acessar documentos (solicitação Jeferson - Espaço Incluir)
+            },
+            {
+                title: 'Modelos de Termos & Contratos',
+                href: '/dashboard/configuracoes/modelos-documentos',
+                icon: ShieldCheck,
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
             },
             {
                 title: 'Templates Prontuário',

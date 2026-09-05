@@ -38,6 +38,7 @@ import {
     Activity,
     Send,
     HeartPulse,
+    Cake,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -157,6 +158,17 @@ const helpItems: HelpItem[] = [
         roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
         tags: ['cadastro', 'prontuário', 'dados pessoais', 'lgpd']
     },
+    {
+        id: 'aniversariantes',
+        title: 'Aniversariantes de Pacientes',
+        category: 'Equipe',
+        icon: Cake,
+        whatIsIt: 'Painel inteligente que monitora os aniversários dos pacientes cadastrados, exibindo quem faz aniversário hoje e nos próximos 30 dias, com botão de envio direto de mensagem de felicitação pelo WhatsApp com 1 clique.',
+        whenToUse: 'Diariamente na Recepção ou no Dashboard para parabenizar pacientes, estreitar o relacionamento e humanizar o acolhimento da clínica.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+        tags: ['aniversário', 'parabéns', 'whatsapp', 'fidelização', 'crm']
+    },
     // Prontuário
     {
         id: 'prontuarios',
@@ -190,6 +202,28 @@ const helpItems: HelpItem[] = [
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
         tags: ['exames', 'laudos externos', 'anexos', 'pdf']
+    },
+    {
+        id: 'termos-e-contratos',
+        title: 'Modelos de Termos & Contratos',
+        category: 'Prontuário',
+        icon: Scale,
+        whatIsIt: 'Central de criação e gestão de modelos de documentos institucionais, contratos terapêuticos, termos de consentimento LGPD, autorizações de imagem e regimento interno com suporte a tags inteligentes (ex: {{nome_paciente}}, {{nome_responsavel}}).',
+        whenToUse: 'Para cadastrar e padronizar minutas jurídicas e termos que os pais ou responsáveis dos pacientes precisam assinar digitalmente.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN'],
+        tags: ['contratos', 'termos', 'modelos', 'regimento', 'tags inteligentes', 'jurídico']
+    },
+    {
+        id: 'assinatura-digital-pais',
+        title: 'Assinatura Digital dos Pais',
+        category: 'Prontuário',
+        icon: Shield,
+        whatIsIt: 'Funcionalidade presente na ficha do paciente (aba Contratos & Termos) que emite termos personalizados e gera links seguros para os pais assinarem pelo celular (com desenho da rubrica na tela). Possui validade jurídica integral no Brasil (Lei nº 14.063/2020 e MP 2.200-2/2001) com trilha de auditoria (IP, data/hora, dispositivo e Hash criptográfico SHA-256).',
+        whenToUse: 'Sempre que um novo paciente ingressar na clínica ou quando for necessário coletar formalmente a anuência dos pais a termos de atendimento ou regimento interno.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
+        tags: ['assinatura digital', 'link whatsapp', 'responsável', 'validade jurídica', 'sha256', 'rubrica']
     },
     {
         id: 'templates-prontuario',

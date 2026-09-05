@@ -13,9 +13,11 @@ import {
 } from '@/lib/services/permissions-service'
 import {
     type FeatureKey,
+    FEATURE_METADATA,
     ALL_FEATURE_KEYS,
     PROTECTED_FEATURES,
 } from '@/lib/constants/features'
+import { isClinicInSessionPlansAllowlist } from '@/lib/constants/session-plans-beta-clinics'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -100,6 +102,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json(
                 { error: 'Invalid feature key' },
                 { status: 400 }
+            )
+        }
+
+        // Camada A: Se for feature de Terapia e a clínica não estiver na allowlist, retorna 404 (sem dar pista)
+        if (FEATURE_METADATA[feature]?.category === 'TERAPIA' && !isClinicInSessionPlansAllowlist(clinicId)) {
+            return NextResponse.json(
+                { error: 'Not Found' },
+                { status: 404 }
             )
         }
 
