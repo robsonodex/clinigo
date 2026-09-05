@@ -46,7 +46,19 @@ export async function GET(request: Request) {
         phone,
         email,
         created_at,
-        updated_at
+        updated_at,
+        billing_type,
+        health_insurance_id,
+        insurance_card_number,
+        insurance_validity,
+        insurance_plan_name,
+        insurance_holder_name,
+        insurance_holder_cpf,
+        health_insurances (
+            id,
+            name,
+            code
+        )
       `)
 
         // OBRIGATÓRIO: Filtro por clinic_id (exceto Super Admin)
@@ -95,8 +107,12 @@ export async function GET(request: Request) {
             query = query.or(`full_name.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`)
         }
 
+        // Limit support (default to 1000 so clinics can see all patients without truncation)
+        const limitParam = searchParams.get('limit')
+        const limit = limitParam === 'all' ? 10000 : limitParam ? parseInt(limitParam, 10) : 1000
+
         // Order by name
-        query = query.order('full_name', { ascending: true }).limit(50)
+        query = query.order('full_name', { ascending: true }).limit(limit)
 
         const { data: patients, error } = await query
 
@@ -105,7 +121,10 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        return NextResponse.json({ patients })
+        return NextResponse.json({ 
+            patients,
+            total: patients?.length || 0
+        })
     } catch (error) {
         console.error('Error in patients API:', error)
         return NextResponse.json({ error: 'Erro ao buscar pacientes' }, { status: 500 })
@@ -129,6 +148,11 @@ const createPatientSchema = z.object({
     address_zip_code: z.string().optional().or(z.literal('')),
     insurance_holder_name: z.string().optional().or(z.literal('')),
     insurance_holder_cpf: z.string().optional().or(z.literal('')),
+    billing_type: z.enum(['particular', 'convenio']).optional().default('particular'),
+    health_insurance_id: z.string().uuid().optional().nullable().or(z.literal('')),
+    insurance_card_number: z.string().optional().or(z.literal('')),
+    insurance_validity: z.string().optional().or(z.literal('')),
+    insurance_plan_name: z.string().optional().or(z.literal('')),
     clinic_id: z.string().optional()
 })
 
@@ -191,6 +215,12 @@ export async function POST(request: NextRequest) {
         const state = addressObj?.state || data.address_state || null
         const zipCode = addressObj?.zip_code || (data.address_zip_code ? data.address_zip_code.replace(/\D/g, '') : null)
 
+        const billingType = data.billing_type === 'convenio' ? 'convenio' : 'particular'
+        const healthInsuranceId = billingType === 'convenio' && data.health_insurance_id ? data.health_insurance_id : null
+        const insuranceCardNumber = billingType === 'convenio' ? (data.insurance_card_number?.trim() || null) : null
+        const insuranceValidity = billingType === 'convenio' && data.insurance_validity ? data.insurance_validity : null
+        const insurancePlanName = billingType === 'convenio' ? (data.insurance_plan_name?.trim() || null) : null
+
         const insertData = {
             full_name: data.full_name,
             cpf: cleanCPF,
@@ -198,8 +228,22 @@ export async function POST(request: NextRequest) {
             phone: data.phone || null,
             date_of_birth: data.date_of_birth || null,
             gender: data.gender || null,
+            billing_type: billingType,
+            health_insurance_id: healthInsuranceId,
+            insurance_card_number: insuranceCardNumber,
+            insurance_validity: insuranceValidity,
+            insurance_plan_name: insurancePlanName,
             insurance_holder_name: data.insurance_holder_name || null,
             insurance_holder_cpf: data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null,
+            health_insurance: {
+                billing_type: billingType,
+                health_insurance_id: healthInsuranceId,
+                insurance_card_number: insuranceCardNumber,
+                insurance_validity: insuranceValidity,
+                insurance_plan_name: insurancePlanName,
+                insurance_holder_name: data.insurance_holder_name || null,
+                insurance_holder_cpf: data.insurance_holder_cpf || null,
+            },
             clinic_id: clinicId,
             address: addressObj,
             address_number: addressNumber,

@@ -37,12 +37,14 @@ import {
     Receipt,
     Activity,
     ShieldCheck,
+    Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -62,6 +64,16 @@ interface Patient {
     birth_date?: string;
     address?: string;
     created_at: string;
+    billing_type?: 'particular' | 'convenio';
+    health_insurance_id?: string;
+    insurance_card_number?: string;
+    insurance_validity?: string;
+    insurance_plan_name?: string;
+    health_insurances?: {
+        id: string;
+        name: string;
+        code?: string;
+    };
 }
 
 interface BiometricStatus {
@@ -92,6 +104,11 @@ const PatientFormSchema = z.object({
     address_zip_code: z.string().optional(),
     insurance_holder_name: z.string().optional(),
     insurance_holder_cpf: z.string().optional(),
+    billing_type: z.enum(['particular', 'convenio']).default('particular'),
+    health_insurance_id: z.string().optional(),
+    insurance_card_number: z.string().optional(),
+    insurance_validity: z.string().optional(),
+    insurance_plan_name: z.string().optional(),
 });
 type PatientFormData = z.infer<typeof PatientFormSchema>;
 
@@ -116,6 +133,12 @@ export default function PatientDetailsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEnrollment, setShowEnrollment] = useState(false);
+    const [insurances, setInsurances] = useState<any[]>([]);
+    const [isHolder, setIsHolder] = useState(true);
+    const [showQuickInsuranceModal, setShowQuickInsuranceModal] = useState(false);
+    const [quickInsuranceName, setQuickInsuranceName] = useState('');
+    const [quickInsuranceCode, setQuickInsuranceCode] = useState('');
+    const [isCreatingQuickInsurance, setIsCreatingQuickInsurance] = useState(false);
 
     // Appointments state
     const [appointments, setAppointments] = useState<any[]>([]);
@@ -130,7 +153,28 @@ export default function PatientDetailsPage() {
     const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false);
     const form = useForm<PatientFormData>({
         resolver: zodResolver(PatientFormSchema),
-        defaultValues: { full_name: '', cpf: '', email: '', phone: '', date_of_birth: '', address_street: '', address_number: '', address_complement: '', address_neighborhood: '', address_city: '', address_state: '', address_zip_code: '', insurance_holder_name: '', insurance_holder_cpf: '' },
+        defaultValues: { 
+            full_name: '', 
+            cpf: '', 
+            email: '', 
+            phone: '', 
+            date_of_birth: '', 
+            gender: 'M',
+            address_street: '', 
+            address_number: '', 
+            address_complement: '', 
+            address_neighborhood: '', 
+            address_city: '', 
+            address_state: '', 
+            address_zip_code: '', 
+            insurance_holder_name: '', 
+            insurance_holder_cpf: '',
+            billing_type: 'particular',
+            health_insurance_id: '',
+            insurance_card_number: '',
+            insurance_validity: '',
+            insurance_plan_name: '',
+        },
     });
 
     const clinicId = user?.clinic_id;
@@ -141,6 +185,7 @@ export default function PatientDetailsPage() {
             loadBiometricStatus();
             loadAppointments();
             checkModules();
+            loadInsurances();
         }
     }, [patientId]);
 
@@ -268,11 +313,68 @@ export default function PatientDetailsPage() {
         return <Badge variant={s.variant}>{s.label}</Badge>;
     };
 
+    const loadInsurances = async () => {
+        try {
+            const res = await fetch('/api/health-insurances?status=ACTIVE&pageSize=100');
+            if (res.ok) {
+                const json = await res.json();
+                setInsurances(json.data || []);
+            }
+        } catch (e) {
+            console.error('Error loading insurances:', e);
+        }
+    };
+
+    const handleQuickCreateInsurance = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!quickInsuranceName.trim()) {
+            toast.error('Informe o nome da operadora/convênio');
+            return;
+        }
+
+        setIsCreatingQuickInsurance(true);
+        try {
+            const res = await fetch('/api/health-insurances', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: quickInsuranceName.trim(),
+                    code: quickInsuranceCode.trim() || undefined,
+                    status: 'ACTIVE',
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao cadastrar convênio');
+            }
+
+            const newIns = await res.json();
+            toast.success('Convênio cadastrado e selecionado!');
+            setInsurances(prev => [...prev, newIns]);
+            form.setValue('health_insurance_id', newIns.id);
+            setQuickInsuranceName('');
+            setQuickInsuranceCode('');
+            setShowQuickInsuranceModal(false);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao cadastrar convênio rápido');
+        } finally {
+            setIsCreatingQuickInsurance(false);
+        }
+    };
+
     const loadPatient = async () => {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('patients')
-            .select('*')
+            .select(`
+                *,
+                health_insurances:health_insurance_id (
+                    id,
+                    name,
+                    code
+                )
+            `)
             .eq('id', patientId)
             .single();
 
@@ -317,6 +419,7 @@ export default function PatientDetailsPage() {
 
             // Extract address fields from JSONB or separate columns
             const addr = d.address && typeof d.address === 'object' ? d.address : {};
+            setIsHolder(!d.insurance_holder_name && !d.insurance_holder_cpf);
             form.reset({
                 full_name: d.full_name || '',
                 cpf: d.cpf || '',
@@ -333,6 +436,11 @@ export default function PatientDetailsPage() {
                 address_zip_code: addr.zip_code || d.zip_code || '',
                 insurance_holder_name: d.insurance_holder_name || '',
                 insurance_holder_cpf: d.insurance_holder_cpf || '',
+                billing_type: d.billing_type || 'particular',
+                health_insurance_id: d.health_insurance_id || '',
+                insurance_card_number: d.insurance_card_number || '',
+                insurance_validity: d.insurance_validity || '',
+                insurance_plan_name: d.insurance_plan_name || '',
             });
             // Update the display address so the tab also shows the formatted version
             if (d.address && typeof d.address === 'object') {
@@ -367,6 +475,11 @@ export default function PatientDetailsPage() {
                 address: Object.keys(addressObj).length > 0 ? addressObj : null,
                 insurance_holder_name: data.insurance_holder_name || null,
                 insurance_holder_cpf: data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null,
+                billing_type: data.billing_type,
+                health_insurance_id: data.billing_type === 'convenio' ? (data.health_insurance_id || null) : null,
+                insurance_card_number: data.billing_type === 'convenio' ? (data.insurance_card_number?.trim() || null) : null,
+                insurance_validity: data.billing_type === 'convenio' ? (data.insurance_validity || null) : null,
+                insurance_plan_name: data.billing_type === 'convenio' ? (data.insurance_plan_name?.trim() || null) : null,
             };
 
             const response = await fetch(`/api/patients/${patientId}`, {
@@ -381,8 +494,8 @@ export default function PatientDetailsPage() {
             toast.success('Paciente atualizado com sucesso!');
             setShowEditModal(false);
             loadPatient();
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao salvar paciente');
         } finally {
             setIsSaving(false);
         }
@@ -482,7 +595,21 @@ export default function PatientDetailsPage() {
                         Voltar
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold">{typeof patient.full_name === 'object' ? '-' : patient.full_name}</h1>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <h1 className="text-2xl font-bold">{typeof patient.full_name === 'object' ? '-' : patient.full_name}</h1>
+                            {patient.billing_type === 'convenio' ? (
+                                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200">
+                                    <Shield className="w-3.5 h-3.5 mr-1" />
+                                    Convênio: {patient.health_insurances?.name || 'Convênio'}
+                                    {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="text-slate-600 dark:text-slate-400">
+                                    <User className="w-3.5 h-3.5 mr-1" />
+                                    Particular
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-muted-foreground">
                             Cadastrado em {patient.created_at && typeof patient.created_at !== 'object' ? new Date(patient.created_at).toLocaleDateString('pt-BR') : '-'}
                         </p>
@@ -613,6 +740,54 @@ export default function PatientDetailsPage() {
                                     <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
                                         {(patient as any).insurance_holder_name || (patient as any).responsible_name || (patient as any).guardian_name || (patient as any).mother_name || 'Não informado'}
                                     </p>
+                                </div>
+                                <div className="md:col-span-3 pt-3 border-t border-slate-200/70 dark:border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                            Modalidade
+                                        </span>
+                                        {patient.billing_type === 'convenio' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                                <Shield className="w-3.5 h-3.5" />
+                                                Convênio: {patient.health_insurances?.name || 'Não informado'}
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                <User className="w-3.5 h-3.5" />
+                                                Particular
+                                            </span>
+                                        )}
+                                    </div>
+                                    {patient.billing_type === 'convenio' && (
+                                        <>
+                                            <div>
+                                                <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                                    Nº Carteirinha
+                                                </span>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">
+                                                    {patient.insurance_card_number || 'Não informado'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                                    Plano / Categoria
+                                                </span>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">
+                                                    {patient.insurance_plan_name || 'Padrão'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
+                                                    Validade da Carteirinha
+                                                </span>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">
+                                                    {patient.insurance_validity
+                                                        ? new Date(patient.insurance_validity + 'T12:00:00').toLocaleDateString('pt-BR')
+                                                        : 'Não informada'}
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -927,31 +1102,188 @@ export default function PatientDetailsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="insurance_holder_name">Nome Completo dos Responsáveis / Titular</Label>
-                                    <Input
-                                        id="insurance_holder_name"
-                                        placeholder="Ex: Maria da Silva (Mãe)"
-                                        {...form.register('insurance_holder_name')}
-                                    />
+                            {/* Modalidade de Atendimento: Particular vs Convênio */}
+                            <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                    Tipo de Atendimento *
+                                </Label>
+                                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('billing_type', 'particular')}
+                                        className={cn(
+                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 min-h-[44px]",
+                                            form.watch('billing_type') === 'particular'
+                                                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
+                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                        )}
+                                    >
+                                        <User className="w-4 h-4" />
+                                        Particular
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('billing_type', 'convenio')}
+                                        className={cn(
+                                            "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 min-h-[44px]",
+                                            form.watch('billing_type') === 'convenio'
+                                                ? "bg-emerald-600 text-white shadow-xs"
+                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                        )}
+                                    >
+                                        <Shield className="w-4 h-4" />
+                                        Convênio
+                                    </button>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="insurance_holder_cpf">CPF do Responsável / Titular</Label>
-                                    <Input
-                                        id="insurance_holder_cpf"
-                                        placeholder="000.000.000-00"
-                                        {...form.register('insurance_holder_cpf')}
-                                    />
-                                </div>
+
+                                {form.watch('billing_type') === 'convenio' && (
+                                    <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-3.5">
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="health_insurance_id" className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                                                    Operadora / Convênio *
+                                                </Label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowQuickInsuranceModal(true)}
+                                                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline min-h-[36px] px-1.5"
+                                                >
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    + Novo Convênio
+                                                </button>
+                                            </div>
+                                            <Select
+                                                value={form.watch('health_insurance_id') || ''}
+                                                onValueChange={(val) => form.setValue('health_insurance_id', val)}
+                                            >
+                                                <SelectTrigger className="bg-white dark:bg-slate-900 min-h-[44px] text-sm">
+                                                    <SelectValue placeholder="Selecione o convênio da clínica..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {insurances.length === 0 ? (
+                                                        <div className="p-3 text-xs text-slate-500 text-center">
+                                                            Nenhum convênio cadastrado ainda. Clique em "+ Novo Convênio".
+                                                        </div>
+                                                    ) : (
+                                                        insurances.map((ins: any) => (
+                                                            <SelectItem key={ins.id} value={ins.id}>
+                                                                {ins.name} {ins.code ? `(ANS: ${ins.code})` : ''}
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label htmlFor="insurance_card_number" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
+                                                    Nº Carteirinha / Matrícula
+                                                </Label>
+                                                <Input
+                                                    id="insurance_card_number"
+                                                    placeholder="Ex: 0023456789"
+                                                    className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                    {...form.register('insurance_card_number')}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="insurance_validity" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
+                                                    Validade da Carteirinha
+                                                </Label>
+                                                <Input
+                                                    id="insurance_validity"
+                                                    type="date"
+                                                    className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                    {...form.register('insurance_validity')}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label htmlFor="insurance_plan_name" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
+                                                Plano / Categoria (opcional)
+                                            </Label>
+                                            <Input
+                                                id="insurance_plan_name"
+                                                placeholder="Ex: Básico, Executivo, Top Nacional..."
+                                                className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                {...form.register('insurance_plan_name')}
+                                            />
+                                        </div>
+
+                                        {/* Titularidade */}
+                                        <div className="pt-2 border-t border-emerald-200/40 dark:border-emerald-900/30 space-y-2">
+                                            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 min-h-[44px]">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isHolder}
+                                                    onChange={(e) => setIsHolder(e.target.checked)}
+                                                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                                O paciente é o próprio titular do plano
+                                            </label>
+
+                                            {!isHolder && (
+                                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                                    <div className="space-y-1">
+                                                        <Label htmlFor="insurance_holder_name" className="text-xs text-slate-600 dark:text-slate-400">
+                                                            Nome do Titular
+                                                        </Label>
+                                                        <Input
+                                                            id="insurance_holder_name"
+                                                            placeholder="Nome do pai/mãe ou titular"
+                                                            className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                            {...form.register('insurance_holder_name')}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label htmlFor="insurance_holder_cpf" className="text-xs text-slate-600 dark:text-slate-400">
+                                                            CPF do Titular
+                                                        </Label>
+                                                        <Input
+                                                            id="insurance_holder_cpf"
+                                                            placeholder="000.000.000-00"
+                                                            className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                            {...form.register('insurance_holder_cpf')}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
+                            {form.watch('billing_type') === 'particular' && (
+                                <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="insurance_holder_name">Nome Completo dos Responsáveis</Label>
+                                        <Input
+                                            id="insurance_holder_name"
+                                            placeholder="Ex: Maria da Silva (Mãe)"
+                                            className="min-h-[44px] text-sm"
+                                            {...form.register('insurance_holder_name')}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="insurance_holder_cpf">CPF do Responsável</Label>
+                                        <Input
+                                            id="insurance_holder_cpf"
+                                            placeholder="000.000.000-00"
+                                            className="min-h-[44px] text-sm"
+                                            {...form.register('insurance_holder_cpf')}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <DialogFooter className="p-4 px-6 border-t bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur shrink-0 flex items-center justify-end gap-2">
-                            <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+                            <Button type="button" variant="outline" onClick={() => setShowEditModal(false)} className="min-h-[44px]">
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={isSaving} className="font-semibold shadow-sm">
+                            <Button type="submit" disabled={isSaving} className="font-semibold shadow-sm min-h-[44px]">
                                 {isSaving ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -959,6 +1291,60 @@ export default function PatientDetailsPage() {
                                     </>
                                 ) : (
                                     'Salvar Alterações'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Quick Create Health Insurance Modal */}
+            <Dialog open={showQuickInsuranceModal} onOpenChange={setShowQuickInsuranceModal}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-emerald-600" />
+                            Cadastrar Novo Convênio
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Cadastre a operadora de saúde rapidamente. Ela ficará disponível para todos os atendimentos da clínica.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleQuickCreateInsurance} className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="quick_name_patient_detail">Nome do Convênio / Operadora *</Label>
+                            <Input
+                                id="quick_name_patient_detail"
+                                placeholder="Ex: Unimed, Bradesco Saúde, Amil..."
+                                value={quickInsuranceName}
+                                onChange={(e) => setQuickInsuranceName(e.target.value)}
+                                className="min-h-[44px]"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="quick_code_patient_detail">Registro ANS / Código (opcional)</Label>
+                            <Input
+                                id="quick_code_patient_detail"
+                                placeholder="Ex: 005711"
+                                value={quickInsuranceCode}
+                                onChange={(e) => setQuickInsuranceCode(e.target.value)}
+                                className="min-h-[44px]"
+                            />
+                        </div>
+                        <DialogFooter className="gap-2 pt-2">
+                            <Button type="button" variant="outline" onClick={() => setShowQuickInsuranceModal(false)} className="min-h-[44px]">
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isCreatingQuickInsurance || !quickInsuranceName.trim()} className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] text-white font-semibold">
+                                {isCreatingQuickInsurance ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Salvando...
+                                    </>
+                                ) : (
+                                    'Cadastrar Convênio'
                                 )}
                             </Button>
                         </DialogFooter>

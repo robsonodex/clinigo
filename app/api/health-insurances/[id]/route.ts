@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, NotFoundError, BadRequestError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { updateHealthInsuranceSchema } from '@/lib/validations/health-insurance'
@@ -18,9 +18,26 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
-        const userClinicId = request.headers.get('x-clinic-id')
+        let userId = request.headers.get('x-user-id')
+        let userRole = request.headers.get('x-user-role')
+        let userClinicId = request.headers.get('x-clinic-id')
+
+        if (!userId) {
+            const authClient = await createClient()
+            const { data: { user } } = await authClient.auth.getUser()
+            if (user) {
+                userId = user.id
+                const { data: profile } = await authClient
+                    .from('users')
+                    .select('role, clinic_id')
+                    .eq('id', user.id)
+                    .single()
+                if (profile) {
+                    userRole = (profile as any).role
+                    userClinicId = (profile as any).clinic_id
+                }
+            }
+        }
 
         if (!userId) {
             throw new ForbiddenError('Não autorizado')
@@ -56,16 +73,34 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
-        const userClinicId = request.headers.get('x-clinic-id')
+        let userId = request.headers.get('x-user-id')
+        let userRole = request.headers.get('x-user-role')
+        let userClinicId = request.headers.get('x-clinic-id')
+
+        if (!userId) {
+            const authClient = await createClient()
+            const { data: { user } } = await authClient.auth.getUser()
+            if (user) {
+                userId = user.id
+                const { data: profile } = await authClient
+                    .from('users')
+                    .select('role, clinic_id')
+                    .eq('id', user.id)
+                    .single()
+                if (profile) {
+                    userRole = (profile as any).role
+                    userClinicId = (profile as any).clinic_id
+                }
+            }
+        }
 
         if (!userId) {
             throw new ForbiddenError('Não autorizado')
         }
 
-        if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
-            throw new ForbiddenError('Apenas administradores podem editar operadoras')
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        if (!allowedRoles.includes(userRole || '')) {
+            throw new ForbiddenError('Apenas administradores e recepcionistas podem editar operadoras')
         }
 
         const body = await request.json()
@@ -101,14 +136,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 .single()
 
             if (duplicate) {
-                throw new BadRequestError('Já existe outra operadora com este nome')
+                throw new BadRequestError('Já existe uma operadora com este nome')
             }
         }
 
-        // Update
+        // Update the health insurance
         const { data, error } = await supabase
             .from('health_insurances')
-            .update(validatedData)
+            .update({
+                ...validatedData,
+                updated_at: new Date().toISOString()
+            })
             .eq('id', id)
             .select()
             .single()
@@ -124,9 +162,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
-        const userClinicId = request.headers.get('x-clinic-id')
+        let userId = request.headers.get('x-user-id')
+        let userRole = request.headers.get('x-user-role')
+        let userClinicId = request.headers.get('x-clinic-id')
+
+        if (!userId) {
+            const authClient = await createClient()
+            const { data: { user } } = await authClient.auth.getUser()
+            if (user) {
+                userId = user.id
+                const { data: profile } = await authClient
+                    .from('users')
+                    .select('role, clinic_id')
+                    .eq('id', user.id)
+                    .single()
+                if (profile) {
+                    userRole = (profile as any).role
+                    userClinicId = (profile as any).clinic_id
+                }
+            }
+        }
 
         if (!userId) {
             throw new ForbiddenError('Não autorizado')
@@ -141,7 +196,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         // Check if insurance exists
         const { data: existing, error: fetchError } = await supabase
             .from('health_insurances')
-            .select('id, clinic_id')
+            .select('id, clinic_id, name')
             .eq('id', id)
             .is('deleted_at', null)
             .single()
@@ -165,6 +220,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         if (activePlansCount && activePlansCount > 0) {
             throw new BadRequestError(
                 `Não é possível remover esta operadora pois possui ${activePlansCount} plano(s) ativo(s). Desative os planos primeiro.`
+            )
+        }
+
+        // Check if has linked patients
+        const { count: linkedPatientsCount } = await supabase
+            .from('patients')
+            .select('*', { count: 'exact', head: true })
+            .eq('health_insurance_id', id)
+            .is('deleted_at', null)
+
+        if (linkedPatientsCount && linkedPatientsCount > 0) {
+            throw new BadRequestError(
+                `Não é possível remover esta operadora pois existem ${linkedPatientsCount} paciente(s) vinculado(s) a ela. Em vez de remover, inative o status da operadora.`
             )
         }
 

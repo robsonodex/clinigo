@@ -358,6 +358,11 @@ const navigationSections: NavSection[] = [
                         href: '/dashboard/financial/producao',
                         icon: TrendingUp,
                     },
+                    {
+                        title: 'Notas & Demonstrativos',
+                        href: '/dashboard/financial/notas-demonstrativos',
+                        icon: Receipt,
+                    },
                 ]
             },
             {
@@ -458,6 +463,11 @@ const navigationSections: NavSection[] = [
                         title: 'Minha Produção',
                         href: '/dashboard/meu-financeiro/producao',
                         icon: BarChart3,
+                    },
+                    {
+                        title: 'Notas & Demonstrativos',
+                        href: '/dashboard/meu-financeiro/notas-demonstrativos',
+                        icon: Receipt,
                     }
                 ]
             },
@@ -465,7 +475,7 @@ const navigationSections: NavSection[] = [
                 title: 'Convênios e Reembolsos',
                 href: '/dashboard/convenios',
                 icon: Shield,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 children: [
                     {
                         title: 'Convênios',

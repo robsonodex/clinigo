@@ -17,7 +17,14 @@ export async function GET(
 
         const { data: patient, error } = await supabase
             .from('patients')
-            .select('*')
+            .select(`
+                *,
+                health_insurances:health_insurance_id (
+                    id,
+                    name,
+                    code
+                )
+            `)
             .eq('id', id)
             .eq('is_active', true)
             .single()
@@ -50,14 +57,42 @@ export async function PATCH(
 
         const body = await request.json()
 
+        const updatePayload: any = { ...body }
+        if (body.billing_type !== undefined) {
+            const isConvenio = body.billing_type === 'convenio'
+            updatePayload.billing_type = isConvenio ? 'convenio' : 'particular'
+            if (!isConvenio) {
+                updatePayload.health_insurance_id = null
+                updatePayload.insurance_card_number = null
+                updatePayload.insurance_validity = null
+                updatePayload.insurance_plan_name = null
+            }
+            updatePayload.health_insurance = {
+                billing_type: updatePayload.billing_type,
+                health_insurance_id: isConvenio ? (body.health_insurance_id || null) : null,
+                insurance_card_number: isConvenio ? (body.insurance_card_number || null) : null,
+                insurance_validity: isConvenio ? (body.insurance_validity || null) : null,
+                insurance_plan_name: isConvenio ? (body.insurance_plan_name || null) : null,
+                insurance_holder_name: body.insurance_holder_name || null,
+                insurance_holder_cpf: body.insurance_holder_cpf || null,
+            }
+        }
+
         const { data: patient, error } = await supabase
             .from('patients')
             .update({
-                ...body,
+                ...updatePayload,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
-            .select()
+            .select(`
+                *,
+                health_insurances:health_insurance_id (
+                    id,
+                    name,
+                    code
+                )
+            `)
             .single()
 
         if (error) {

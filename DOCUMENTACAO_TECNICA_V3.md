@@ -245,3 +245,73 @@
     - Tentativa de exclusão física em cascata para pacientes recém-cadastrados ou duplicados sem agendamentos/histórico clínico.
     - Fallback de soft-delete LGPD seguro sem violação de constraints para pacientes que já possuem histórico clínico atrelado.
     - O paciente real `Luiz Miguel Camargo Pocciotti (Tasy TO Tayara)` foi mantido 100% intacto no banco de dados para que a própria Patrícia possa efetuar a exclusão pela interface.
+
+### Modalidade de Atendimento no Cadastro do Paciente (Particular vs Convênio) e Gestão Aprimorada de Convênios
+- **Módulo**: Recepção / Pacientes / Faturamento → Modalidade de Atendimento (Particular vs Convênio) e Operadoras de Saúde
+- **Caminho**:
+  - `supabase/migrations/20260905163000_add_health_insurance_fields_to_patients.sql` → Migration com colunas estruturadas na tabela `patients`: `billing_type` ('particular' | 'convenio'), `health_insurance_id` (FK `health_insurances`), `insurance_card_number`, `insurance_validity`, `insurance_plan_name` e índices de performance `idx_patients_billing_type`, `idx_patients_health_insurance_id`.
+  - `app/api/health-insurances/route.ts` → Endpoint `GET`/`POST`: suporte a fallback de sessão Supabase (`createClient()`), permissão para `RECEPTIONIST` cadastrar convênios na recepção.
+  - `app/api/health-insurances/[id]/route.ts` → Endpoint `PATCH`/`DELETE`: trava de integridade impedindo a exclusão de operadora caso haja pacientes ativos vinculados, orientando inativação.
+  - `app/api/patients/route.ts` → Endpoint `GET`/`POST`: inclusão de campos de convênio e join relacional com `health_insurances(id, name, code)`, mantendo espelhamento na coluna legada `health_insurance` JSONB.
+  - `app/api/patients/[id]/route.ts` → Endpoint `GET`/`PATCH`: suporte completo aos campos relacionais no perfil individual.
+  - `app/dashboard/(clinic)/pacientes/page.tsx`:
+    - Filtro segmentado na barra de pesquisa: `[ Todos ] [ Particular ] [ Convênio ]`.
+    - Crachás distintivos na lista da tabela: `Particular` (cinza) e `Convênio: [Nome] • Cart: [Número]` (verde esmeralda).
+    - Modal de cadastro com seletor segmentado `Particular` | `Convênio`, select de operadoras, campos para carteirinha, data de validade, nome do plano e alternância de titularidade (paciente titular vs dependente com nome/CPF do titular).
+    - Atalho de 1 clique `+ Novo Convênio` (Quick Create Modal) que permite cadastrar e selecionar a operadora na hora em 3 segundos.
+  - `app/dashboard/(clinic)/pacientes/[id]/page.tsx`:
+    - Cabeçalho com badge da modalidade diretamente ao lado do nome do paciente.
+    - Aba "Informações" com bloco estruturado exibindo Modalidade, Operadora, Nº Carteirinha, Plano e Validade.
+    - Modal de edição do paciente totalmente alinhado com o seletor Particular vs Convênio e o atalho de criação rápida.
+  - `app/dashboard/(clinic)/convenios/page.tsx`:
+    - Eliminação de alertas nativos de `confirm()` do navegador e implantação de Modais de Confirmação com a mensagem obrigatória do protocolo: `Tem certeza que deseja excluir [item]? Esta ação não pode ser desfeita.` para operadoras, planos e desvinculação de médicos.
+    - Correção de duplicidade de chaves de formulário (`phone`, `email`).
+    - Adequação completa de acessibilidade móvel e PWA com botões e targets de toque ≥ 44×44px.
+  - `components/layout/sidebar.tsx` → Inclusão da role `RECEPTIONIST` no item de navegação `Convênios e Reembolsos`.
+- **Descrição Técnica**:
+  - **Retrocompatibilidade Multi-tenant Total**: Todos os pacientes pré-existentes mantiveram o valor padrão `'particular'`, sem quebrar relatórios, faturamentos ou prontuários legados.
+  - **Isolamento e Integridade**: Os convênios e planos continuam isolados por `clinic_id`, impedindo contaminação cruzada entre clínicas parceiras.
+
+### Diretório Alfabético A-Z e Paginação Inteligente de Pacientes (Fim da Rolagem Infinita e Roster Completo)
+- **Módulo**: Recepção / Pacientes → Roster de Pacientes, Diretório A-Z e Visualização Adaptativa
+- **Caminho**:
+  - pp/api/patients/route.ts → Remoção do limit fixo rígido de 50 registros; suporte ao parâmetro dinâmico limit=1000 refletindo a contagem real de pacientes (71 na World Sensory) com metadados 	otal: patients.length.
+  - pp/dashboard/(clinic)/pacientes/page.tsx →
+    - Painel de Métricas (KPIs) recalculado dinamicamente: Total real de pacientes cadastrados, novos no mês, total Particular e total Convênio.
+    - Barra de Busca com botão de limpeza rápida [X] em um clique.
+    - **Diretório Alfabético A-Z Inteligente**: Barra horizontal responsiva com contadores ao vivo por letra inicial (ex: A (8), B (3)), desativação automática de letras com 0 pacientes e filtragem instantânea em memória (0ms de latência, sem re-fetch).
+    - **Barra de Controle de Visualização**: Alternância entre Modo Tabela Compacta e Modo Cartões Visuais (Card Grid).
+    - **Seletor de Itens por Página**: Opções de 15, 25, 50, 100 ou Todos os pacientes por página, eliminando a rolagem vertical infinita.
+    - **Cartões Visuais Responsivos**: Visualização em cards com avatar de iniciais, crachá de aniversário, CPF, telefone com disparador direto de WhatsApp e atalhos rápidos de 1 clique para Ficha e Prontuário (PEP).
+    - **Barra de Paginação Inferior**: Controles de página anterior/próxima e navegação numérica com touch targets de 44×44px.
+- **Descrição Técnica**:
+  - A limitação de 50 pacientes no backend foi corrigida para permitir que todo o diretório de pacientes seja carregado e indexado instantaneamente no cliente, oferecendo uma experiência fluida para a gestora Patrícia navegar entre 71 ou mais pacientes sem sobrecarga visual.
+
+### Central de Notas Fiscais e Demonstrativos Financeiros de Repasse (Clínica e Profissionais)
+- **Módulo**: Financeiro / Repasses & Produção / Meu Financeiro → Central de Notas Fiscais e Demonstrativos
+- **Caminho**:
+  - supabase/migrations/20260905180000_create_professional_financial_documents.sql → Criação da tabela professional_financial_documents, bucket de storage inancial-documents, índices por clínica/mês/doutor e políticas de RLS estritas com isolamento multi-tenant por clinic_id.
+  - pp/api/financial/professional-documents/route.ts → Endpoint seguro GET e POST:
+    - GET: Lista os documentos por competência (month_reference) e ano, com join no perfil do profissional e listagem consolidada de todos os profissionais ativos para a clínica.
+    - POST: Upload via multipart/form-data para o Storage Supabase, suportando as ações UPLOAD_STATEMENT (pela clínica) e UPLOAD_INVOICE (pelo terapeuta/médico).
+  - pp/api/financial/professional-documents/[id]/route.ts → Endpoint PATCH e DELETE:
+    - PATCH: Transição de status do documento: APPROVE (aprovar nota fiscal), REJECT (solicitar correção informando motivo obrigatório), MARK_PAID (dar baixa e registrar liquidação do repasse).
+    - DELETE: Remoção autorizada exclusiva para administradores da clínica.
+  - pp/dashboard/(clinic)/financial/notas-demonstrativos/page.tsx → **Central da Administração da Clínica (Patrícia)**:
+    - Seletor de competência mensal com botões de navegação rápida (Mês Anterior / Mês Próximo / Seletor de Data).
+    - 5 Cards de KPIs financeiros: Total de Profissionais, Aguardando NF, NF Enviadas (Para Conferir), NF Aprovadas e Total de Repasses Pagos.
+    - Tabela consolidada dos profissionais da clínica com status em tempo real (SEM DEMONSTRATIVO, AGUARDANDO NOTA FISCAL, NF ENVIADA, NF APROVADA, CORREÇÃO SOLICITADA, REPASSE PAGO).
+    - Modal para Anexar Demonstrativo: Upload de PDF/Excel, valor líquido, produção bruta, deduções e observações.
+    - Ações em 1 clique: Visualizar/baixar demonstrativo, visualizar/baixar NF, Aprovar NF, Solicitar Correção com modal de justificativa e Dar Baixa/Confirmar Pagamento.
+    - Botão WhatsApp com mensagem pré-formatada inteligente adaptada ao status de cada profissional (aviso de demonstrativo disponível, solicitação de NF ou notificação de correção).
+  - components/financial/DoctorFinancialDocumentsView.tsx & pp/dashboard/(clinic)/meu-financeiro/notas-demonstrativos/page.tsx → **Portal do Profissional / Terapeuta**:
+    - Histórico anual de demonstrativos disponibilizados pela clínica com valor líquido e link de download.
+    - Modal de envio da Nota Fiscal (NFS-e): Upload do arquivo (PDF ou XML), preenchimento do número da nota, valor e data de emissão.
+    - Alerta em destaque caso a clínica tenha solicitado correção, exibindo o motivo detalhado e permitindo o reenvio imediato da nota corrigida.
+    - Confirmação visual de aprovação e liquidação do repasse.
+  - pp/dashboard/(clinic)/meu-financeiro/page.tsx → Integração direta com abas de navegação: [Notas Fiscais & Demonstrativos] e [Fechamentos do Sistema].
+  - components/layout/sidebar.tsx → Links dedicados de navegação:
+    - Para Administração: Financeiro → Repasses & Produção → Notas & Demonstrativos.
+    - Para Profissionais: Meu Financeiro → Notas & Demonstrativos.
+- **Descrição Técnica**:
+  - Resolução direta da solicitação de Patrícia Mendes (World Sensory): permite que a administração anexe mensalmente os demonstrativos financeiros de repasse calculados para os terapeutas e que os terapeutas anexem suas respectivas notas fiscais de serviço para conferência, aprovação e baixa financeira organizada.

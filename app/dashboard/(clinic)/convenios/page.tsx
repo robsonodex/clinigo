@@ -80,11 +80,10 @@ function OperadorasTab() {
     const [search, setSearch] = useState('')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<HealthInsurance | null>(null)
+    const [deleteTarget, setDeleteTarget] = useState<HealthInsurance | null>(null)
     const [formData, setFormData] = useState({
         name: '',
         code: '',
-        phone: '',
-        email: '',
         phone: '',
         email: '',
         notes: '',
@@ -127,8 +126,12 @@ function OperadorasTab() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['health-insurances'] })
             toast.success('Operadora removida com sucesso')
+            setDeleteTarget(null)
         },
-        onError: (err: any) => toast.error(err.message || 'Erro ao remover operadora')
+        onError: (err: any) => {
+            toast.error(err.message || 'Erro ao remover operadora')
+            setDeleteTarget(null)
+        }
     })
 
     const openDialog = (item?: HealthInsurance) => {
@@ -255,12 +258,8 @@ function OperadorasTab() {
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => {
-                                                            if (confirm('Tem certeza que deseja remover esta operadora?')) {
-                                                                deleteMutation.mutate(item.id)
-                                                            }
-                                                        }}
-                                                        className="text-destructive rounded-lg text-xs font-medium py-2"
+                                                        onClick={() => setDeleteTarget(item)}
+                                                        className="text-destructive rounded-lg text-xs font-medium py-2 min-h-[44px] cursor-pointer"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-2" />
                                                         Remover
@@ -351,14 +350,47 @@ function OperadorasTab() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={closeDialog}>
+                        <Button variant="outline" onClick={closeDialog} className="min-h-[44px]">
                             Cancelar
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={createMutation.isPending || updateMutation.isPending}
+                            className="min-h-[44px]"
                         >
                             {editingItem ? 'Salvar' : 'Criar'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Exclusão</DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir {deleteTarget?.name}? Esta ação não pode ser desfeita.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {deleteTarget && (
+                        <div className="py-2">
+                            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-700 dark:text-red-400">
+                                ⚠️ Se houver pacientes vinculados a esta operadora, ela não poderá ser excluída. Recomendamos inativá-la caso já possua atendimentos.
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)} className="min-h-[44px]">
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+                            disabled={deleteMutation.isPending}
+                            className="min-h-[44px]"
+                        >
+                            {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Operadora'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -377,6 +409,7 @@ function PlanosTab() {
     const [insuranceFilter, setInsuranceFilter] = useState<string>('all')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<HealthInsurancePlan | null>(null)
+    const [deletePlanTarget, setDeletePlanTarget] = useState<HealthInsurancePlan | null>(null)
     const [formData, setFormData] = useState({
         health_insurance_id: '',
         name: '',
@@ -428,8 +461,12 @@ function PlanosTab() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['health-insurance-plans'] })
             toast.success('Plano removido com sucesso')
+            setDeletePlanTarget(null)
         },
-        onError: (err: any) => toast.error(err.message || 'Erro ao remover plano')
+        onError: (err: any) => {
+            toast.error(err.message || 'Erro ao remover plano')
+            setDeletePlanTarget(null)
+        }
     })
 
     const openDialog = (item?: HealthInsurancePlan) => {
@@ -605,12 +642,8 @@ function PlanosTab() {
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => {
-                                                            if (confirm('Tem certeza que deseja remover este plano?')) {
-                                                                deleteMutation.mutate(item.id)
-                                                            }
-                                                        }}
-                                                        className="text-destructive rounded-lg text-xs font-medium py-2"
+                                                        onClick={() => setDeletePlanTarget(item)}
+                                                        className="text-destructive rounded-lg text-xs font-medium py-2 min-h-[44px] cursor-pointer"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-2" />
                                                         Remover
@@ -707,14 +740,47 @@ function PlanosTab() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={closeDialog}>
+                        <Button variant="outline" onClick={closeDialog} className="min-h-[44px]">
                             Cancelar
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={createMutation.isPending || updateMutation.isPending}
+                            className="min-h-[44px]"
                         >
                             {editingItem ? 'Salvar' : 'Criar'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Plan Confirmation Dialog */}
+            <Dialog open={!!deletePlanTarget} onOpenChange={(open) => !open && setDeletePlanTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Exclusão</DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir o plano {deletePlanTarget?.name}? Esta ação não pode ser desfeita.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {deletePlanTarget && (
+                        <div className="py-2">
+                            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-700 dark:text-red-400">
+                                ⚠️ Verifique se não há atendimentos vinculados a este plano antes de confirmar.
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setDeletePlanTarget(null)} className="min-h-[44px]">
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deletePlanTarget && deleteMutation.mutate(deletePlanTarget.id)}
+                            disabled={deleteMutation.isPending}
+                            className="min-h-[44px]"
+                        >
+                            {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Plano'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -732,6 +798,7 @@ function MedicosTab() {
     const [search, setSearch] = useState('')
     const [selectedDoctor, setSelectedDoctor] = useState<any>(null)
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false)
+    const [deleteDoctorInsuranceTarget, setDeleteDoctorInsuranceTarget] = useState<{ id: string; name: string } | null>(null)
 
     // Fetch doctors (reusing existing endpoint)
     const { data: doctorsResponse, isLoading: loadingDoctors } = useQuery({
@@ -974,15 +1041,11 @@ function MedicosTab() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={() => {
-                                                        if (confirm('Remover este convênio?')) {
-                                                            removeInsuranceMutation.mutate({
-                                                                doctorId: selectedDoctor.id,
-                                                                id: ins.id
-                                                            })
-                                                        }
-                                                    }}
+                                                    className="text-destructive hover:text-destructive min-h-[44px] min-w-[44px]"
+                                                    onClick={() => setDeleteDoctorInsuranceTarget({
+                                                        id: ins.id,
+                                                        name: `${ins.insurance_name} - ${ins.plan_name}`
+                                                    })}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
@@ -1087,8 +1150,41 @@ function MedicosTab() {
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setIsManageDialogOpen(false)} className="min-h-[44px]">
                             Fechar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Doctor Insurance Confirmation Dialog */}
+            <Dialog open={!!deleteDoctorInsuranceTarget} onOpenChange={(open) => !open && setDeleteDoctorInsuranceTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Exclusão</DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir o vínculo com {deleteDoctorInsuranceTarget?.name}? Esta ação não pode ser desfeita.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setDeleteDoctorInsuranceTarget(null)} className="min-h-[44px]">
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                if (deleteDoctorInsuranceTarget && selectedDoctor) {
+                                    removeInsuranceMutation.mutate({
+                                        doctorId: selectedDoctor.id,
+                                        id: deleteDoctorInsuranceTarget.id
+                                    })
+                                    setDeleteDoctorInsuranceTarget(null)
+                                }
+                            }}
+                            disabled={removeInsuranceMutation.isPending}
+                            className="min-h-[44px]"
+                        >
+                            {removeInsuranceMutation.isPending ? 'Excluindo...' : 'Excluir Vínculo'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

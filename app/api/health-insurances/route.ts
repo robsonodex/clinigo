@@ -15,9 +15,26 @@ import {
 
 export async function GET(request: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
-        const userClinicId = request.headers.get('x-clinic-id')
+        let userId = request.headers.get('x-user-id')
+        let userRole = request.headers.get('x-user-role')
+        let userClinicId = request.headers.get('x-clinic-id')
+
+        if (!userId) {
+            const authClient = await createClient()
+            const { data: { user } } = await authClient.auth.getUser()
+            if (user) {
+                userId = user.id
+                const { data: profile } = await authClient
+                    .from('users')
+                    .select('role, clinic_id')
+                    .eq('id', user.id)
+                    .single()
+                if (profile) {
+                    userRole = (profile as any).role
+                    userClinicId = (profile as any).clinic_id
+                }
+            }
+        }
 
         if (!userId) {
             throw new ForbiddenError('Não autorizado')
@@ -90,16 +107,34 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id')
-        const userRole = request.headers.get('x-user-role')
-        const userClinicId = request.headers.get('x-clinic-id')
+        let userId = request.headers.get('x-user-id')
+        let userRole = request.headers.get('x-user-role')
+        let userClinicId = request.headers.get('x-clinic-id')
+
+        if (!userId) {
+            const authClient = await createClient()
+            const { data: { user } } = await authClient.auth.getUser()
+            if (user) {
+                userId = user.id
+                const { data: profile } = await authClient
+                    .from('users')
+                    .select('role, clinic_id')
+                    .eq('id', user.id)
+                    .single()
+                if (profile) {
+                    userRole = (profile as any).role
+                    userClinicId = (profile as any).clinic_id
+                }
+            }
+        }
 
         if (!userId) {
             throw new ForbiddenError('Não autorizado')
         }
 
-        if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
-            throw new ForbiddenError('Apenas administradores podem criar operadoras')
+        const allowedCreateRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        if (!allowedCreateRoles.includes(userRole || '')) {
+            throw new ForbiddenError('Apenas administradores e recepcionistas podem cadastrar convênios')
         }
 
         const body = await request.json()

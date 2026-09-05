@@ -9,11 +9,14 @@ import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, DollarSign, ArrowUpRight, ArrowDownRight, Wallet, Receipt, RefreshCw, FileSpreadsheet, Download } from 'lucide-react';
 import { NotaRepasseButton } from '../financial/payroll/components/NotaRepasseButton';
+import { DoctorFinancialDocumentsView } from '@/components/financial/DoctorFinancialDocumentsView';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export default function MeuFinanceiroPage() {
     const [year, setYear] = useState(new Date().getFullYear().toString());
+    const [activeTab, setActiveTab] = useState<'documents' | 'system_payroll'>('documents');
 
     // Buscar histórico (backend força doctorId se for role DOCTOR)
     const { data: historyRes, isLoading, refetch } = useQuery({
@@ -142,6 +145,40 @@ export default function MeuFinanceiroPage() {
                 </div>
             </div>
 
+            {/* Tabs de Navegação */}
+            <div className="flex items-center gap-2 border-b border-border pb-3">
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('documents')}
+                    className={cn(
+                        "px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all min-h-[40px] flex items-center gap-2",
+                        activeTab === 'documents'
+                            ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    )}
+                >
+                    <Receipt className="w-4 h-4" />
+                    Notas Fiscais & Demonstrativos
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('system_payroll')}
+                    className={cn(
+                        "px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all min-h-[40px] flex items-center gap-2",
+                        activeTab === 'system_payroll'
+                            ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    )}
+                >
+                    <Wallet className="w-4 h-4" />
+                    Fechamentos do Sistema
+                </button>
+            </div>
+
+            {activeTab === 'documents' ? (
+                <DoctorFinancialDocumentsView />
+            ) : (
+                <>
             {/* Sumário Anual */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="border-l-4 border-l-blue-500 shadow-sm">
@@ -243,6 +280,8 @@ export default function MeuFinanceiroPage() {
                     </div>
                 )}
             </div>
+                </>
+            )}
         </div>
     );
 }
