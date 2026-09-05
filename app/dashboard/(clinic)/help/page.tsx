@@ -149,14 +149,14 @@ const helpItems: HelpItem[] = [
     },
     {
         id: 'pacientes',
-        title: 'Pacientes',
+        title: 'Pacientes & Diretório A-Z',
         category: 'Equipe',
         icon: Users,
-        whatIsIt: 'Cadastro unificado de pacientes com prontuário unificado, histórico de contatos, dados de faturamento, documentos anexados e termos de consentimento LGPD assinados.',
-        whenToUse: 'Para cadastrar um novo paciente que iniciará tratamento ou para atualizar dados de endereço, contato e operadoras de saúde.',
+        whatIsIt: 'Cadastro unificado e diretório inteligente de pacientes com navegação alfabética A-Z instantânea, alternância entre visualização em Tabela e Cards interativos, paginação dinâmica configurável, classificação Particular vs Convênio (com criação rápida de operadoras), PEP integrado e trilha LGPD.',
+        whenToUse: 'Para cadastrar, pesquisar com agilidade em grandes volumes de pacientes, filtrar por tipo de cobrança e acessar rapidamente prontuários, contatos e WhatsApp.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
-        tags: ['cadastro', 'prontuário', 'dados pessoais', 'lgpd']
+        tags: ['cadastro', 'diretório a-z', 'cards', 'tabela', 'convênio', 'particular', 'prontuário', 'lgpd']
     },
     {
         id: 'aniversariantes',
@@ -468,6 +468,17 @@ const helpItems: HelpItem[] = [
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
         tags: ['planos de saúde', 'credenciados', 'procedimentos', 'tabela de preços']
+    },
+    {
+        id: 'notas-demonstrativos',
+        title: 'Central de Notas Fiscais & Demonstrativos',
+        category: 'Financeiro',
+        icon: FileText,
+        whatIsIt: 'Central financeira para upload e disponibilização de demonstrativos mensais de repasse pela clínica e envio de Notas Fiscais pelos profissionais de saúde (médicos e terapeutas), com fluxo de aprovação, rejeição com motivo, comprovantes de pagamento e notificação via WhatsApp.',
+        whenToUse: 'Mensalmente nos ciclos de fechamento financeiro, para a gestão anexar os demonstrativos e para os profissionais anexarem suas notas fiscais de prestação de serviços.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        tags: ['notas fiscais', 'demonstrativos', 'repasses', 'comprovante', 'anexos', 'whatsapp']
     },
     // Comunicação
     {
