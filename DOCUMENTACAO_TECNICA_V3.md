@@ -227,4 +227,21 @@
     2. *Via WhatsApp*: Botão dispara mensagem convidativa pronta para o WhatsApp do terapeuta com link seguro;
     3. *No Login do Profissional*: Se o profissional acessar o sistema e tiver termo pendente, o banner de Onboarding o direciona para a assinatura.
   - **Validade Jurídica Assegurada**: MP 2.200-2/2001 e Lei 14.063/2020 (hash SHA-256, IP, data/hora oficial e rubrica biométrica gravada).
-
+### Correção de Exclusão de Pacientes (Multitenant, LGPD e Cadastros Duplicados)
+- **Módulo**: Recepção / Pacientes → Exclusão e Anonimização de Pacientes
+- **Caminho**:
+  - `app/api/patients/[id]/route.ts` → `DELETE` corrigido: suporte a médicos/administradores da clínica, prevenção de erro de violação de constraint `NOT NULL` (`cpf`, `email`) e exclusão limpa de duplicatas sem histórico.
+  - `app/dashboard/(clinic)/pacientes/page.tsx` → `deleteMutation`: captura precisa da mensagem de erro do servidor e exibição amigável do feedback ao usuário.
+  - `app/api/patients/route.ts` → `GET`: filtro com `.is('deleted_at', null).neq('is_active', false)` para isolar pacientes excluídos ou inativados.
+  - `app/api/patients/search/route.ts` → `GET`: filtro com `.is('deleted_at', null).neq('is_active', false)`.
+- **Descrição Técnica**:
+  - **Causa Raiz Identificada**:
+    1. A rota `DELETE /api/patients/[id]` validava apenas `role === 'CLINIC_ADMIN'` ou `'SUPER_ADMIN'`, bloqueando contas com perfil `DOCTOR` (como a conta operacional da Dra. Patrícia Mendes na World Sensory) com erro HTTP 403 `Sem permissão para excluir`.
+    2. O update antigo de soft-delete tentava setar `email: null` e `cpf: null`, violando as restrições de banco de dados `NOT NULL` e `CHECK (valid_patient_email)` da tabela `patients`, resultando em erro interno 500 para qualquer usuário do sistema.
+    3. O frontend capturava o erro e exibia apenas a mensagem genérica `Não foi possível remover o paciente.`.
+  - **Solução Implementada**:
+    - Suporte aos papéis operacionais autorizados da clínica: `['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST']`.
+    - Verificação rigorosa de isolamento multi-tenant: paciente só pode ser excluído se pertencer ao mesmo `clinic_id` do usuário logado.
+    - Tentativa de exclusão física em cascata para pacientes recém-cadastrados ou duplicados sem agendamentos/histórico clínico.
+    - Fallback de soft-delete LGPD seguro sem violação de constraints para pacientes que já possuem histórico clínico atrelado.
+    - O paciente real `Luiz Miguel Camargo Pocciotti (Tasy TO Tayara)` foi mantido 100% intacto no banco de dados para que a própria Patrícia possa efetuar a exclusão pela interface.

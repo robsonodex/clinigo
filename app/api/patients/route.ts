@@ -54,6 +54,9 @@ export async function GET(request: Request) {
             query = query.eq('clinic_id', userData.clinic_id)
         }
 
+        // Não listar pacientes excluídos (soft-deleted) ou inativos
+        query = query.is('deleted_at', null).neq('is_active', false)
+
         // DOCTOR não-coordenador: filtrar apenas pacientes com agendamentos do doctor
         if (userData.role === 'DOCTOR') {
             const { data: userFull } = await supabase

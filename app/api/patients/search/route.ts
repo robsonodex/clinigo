@@ -83,6 +83,9 @@ export async function GET(request: NextRequest) {
             searchQuery = searchQuery.eq('clinic_id', profile.clinic_id)
         }
 
+        // Excluir deletados ou inativos
+        searchQuery = searchQuery.is('deleted_at', null).neq('is_active', false)
+
         // Filter by allowed patient IDs (from doctor's agenda)
         if (allowedPatientIds) {
             searchQuery = searchQuery.in('id', allowedPatientIds)

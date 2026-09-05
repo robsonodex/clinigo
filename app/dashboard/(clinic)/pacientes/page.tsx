@@ -209,28 +209,31 @@ export default function PacientesPage() {
         },
     })
 
-    // Delete mutation (LGPD - soft delete)
+    // Delete mutation (LGPD - soft delete ou exclusão)
     const deleteMutation = useMutation({
         mutationFn: async (patientId: string) => {
             const response = await fetch(`/api/patients/${patientId}`, {
                 method: 'DELETE',
             })
-            if (!response.ok) throw new Error('Failed to delete patient')
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}))
+                throw new Error(errData.error || 'Não foi possível remover o paciente.')
+            }
             return response.json()
         },
-        onSuccess: () => {
+        onSuccess: (data: any) => {
             queryClient.invalidateQueries({ queryKey: ['patients'] })
             toast({
                 title: 'Paciente removido',
-                description: 'Os dados foram anonimizados conforme LGPD.',
+                description: data?.message || 'O paciente foi removido com sucesso.',
             })
             setShowDeleteDialog(false)
             setSelectedPatient(null)
         },
-        onError: () => {
+        onError: (error: any) => {
             toast({
                 title: 'Erro',
-                description: 'Não foi possível remover o paciente.',
+                description: error?.message || 'Não foi possível remover o paciente.',
                 variant: 'destructive',
             })
         },
