@@ -3,7 +3,7 @@
 import React, { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRole } from '@/lib/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Building,
   Loader2,
+  PenTool,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PatientRatesTab } from '@/components/doctors/PatientRatesTab';
+import { DoctorSignaturesTab } from '@/components/doctors/DoctorSignaturesTab';
 import { api, type Doctor } from '@/lib/api-client';
 
 interface PageProps {
@@ -56,6 +58,9 @@ export default function DoctorProfilePage({ params }: PageProps) {
   const crm = doctor?.crm ? `CRM ${doctor.crm}/${doctor.crm_state || ''}` : '';
   const email = doctor?.user?.email || '';
   const phone = doctor?.user?.phone || '';
+
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'valores-paciente';
 
   return (
     <div className="space-y-5 p-3 sm:p-5 max-w-7xl mx-auto animate-in fade-in duration-200">
@@ -143,7 +148,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
       </Card>
 
       {/* 3. ABAS DO PERFIL */}
-      <Tabs defaultValue="valores-paciente" className="w-full space-y-4">
+      <Tabs defaultValue={initialTab} className="w-full space-y-4">
         <TabsList className="bg-muted/40 p-1 rounded-md h-auto border border-border inline-flex flex-wrap gap-1">
           <TabsTrigger
             value="valores-paciente"
@@ -159,6 +164,14 @@ export default function DoctorProfilePage({ params }: PageProps) {
           >
             <FileText className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Contrato Geral</span>
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="contratos-termos"
+            className="rounded-sm px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Contratos & Termos</span>
           </TabsTrigger>
         </TabsList>
 
@@ -203,6 +216,11 @@ export default function DoctorProfilePage({ params }: PageProps) {
               </div>
             </div>
           </Card>
+        </TabsContent>
+
+        {/* CONTEÚDO DA ABA: CONTRATOS & TERMOS */}
+        <TabsContent value="contratos-termos" className="m-0 focus-visible:outline-none">
+          <DoctorSignaturesTab doctorId={doctorId} doctorName={doctorName} doctor={doctor} />
         </TabsContent>
       </Tabs>
     </div>

@@ -7,6 +7,7 @@ import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
 import { BillingOverdueBanner } from '@/components/plans/BillingOverdueBanner'
 import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
+import { DoctorPendingTermsBanner } from '@/components/doctors/DoctorPendingTermsBanner'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { SystemRefreshListener } from '@/components/system/system-refresh-listener'
 import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
@@ -69,6 +70,7 @@ export default async function DashboardRootLayout({
                         <BillingOverdueBanner dueDate={subscriptionDueDate} />
                     )}
                     <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
+                    <DoctorPendingTermsBanner />
                     {children}
                 </DashboardLayout>
                 <MobileBottomNav />

@@ -384,6 +384,12 @@ export default function DoctorsPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem asChild>
+                                                            <Link href={`/dashboard/medicos/${doctor.id}?tab=contratos-termos`}>
+                                                                <ShieldCheck className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                Contratos & Termos
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
                                                             <Link href={`/dashboard/medicos/${doctor.id}`}>
                                                                 <DollarSign className="w-4 h-4 mr-2 text-emerald-600" />
                                                                 Valores por Paciente

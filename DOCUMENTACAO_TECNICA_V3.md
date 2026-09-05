@@ -204,3 +204,27 @@
     - Tokens de assinatura UUID v4 criptograficamente aleatórios.
     - O endpoint público só consulta pelo token e expõe apenas os dados necessários do documento específico.
     - Isolamento de dados garantido por `clinic_id` nas rotas autenticadas da clínica e políticas RLS no Postgres.
+
+### Central de Contratos, Termos de Admissão e Onboarding de Profissionais da Equipe (Terapeutas / Médicos)
+- **Módulo**: Equipe / Profissionais / Configurações → Contratos de Parceria, Termos de Imagem e Sigilo LGPD
+- **Caminho**:
+  - `supabase/migrations/20260905140000_create_professional_term_signatures.sql` → Migration com tabela `professional_term_signatures`, índices, políticas RLS e seed de 3 templates padrão de equipe para World Sensory e Demo Clinic.
+  - `app/api/professional-signatures/route.ts` → Endpoint seguro de emissão e consulta com preenchimento inteligente de tags (`{{nome_profissional}}`, `{{cpf_profissional}}`, `{{conselho_regional}}`, `{{especialidade}}`, `{{valor_consulta}}`, `{{porcentagem_repasse}}`, etc.) e verificação de pendências por usuário logado.
+  - `app/api/public/signature/[token]/route.ts` → Rota unificada que resolve tanto termos de pacientes quanto contratos de equipe, registrando IP, User-Agent, carimbo UTC e Hash SHA-256 probatório.
+  - `app/assinar/[token]/page.tsx` → Portal público adaptado para identificação do profissional e termo de aceite legal de vínculo de parceria autônoma/PJ.
+  - `components/doctors/DoctorSignaturesTab.tsx` → Nova aba no perfil do profissional (`/dashboard/medicos/[id]`) com emissão de contratos, botão "Assinar no Dispositivo" (tablet/recepção na entrada do profissional), envio por WhatsApp, cópia de link, cancelamento e visualizador de certificado de autenticidade com impressão em PDF.
+  - `app/dashboard/(clinic)/medicos/[id]/page.tsx` → Integração da aba `contratos-termos` com suporte a query parameter `?tab=contratos-termos`.
+  - `app/dashboard/(clinic)/medicos/page.tsx` → Atalho direto de 1 clique no menu de ações dos profissionais já cadastrados para `Contratos & Termos`.
+  - `components/doctors/DoctorPendingTermsBanner.tsx` & `app/dashboard/layout.tsx` → Banner amigável de Onboarding no topo do dashboard que alerta o profissional logado caso ele possua contratos pendentes de assinatura eletrônica.
+  - `app/dashboard/(clinic)/configuracoes/modelos-documentos/page.tsx` → Gestão de modelos atualizada com as novas categorias de equipe e pílulas de tags dinâmicas de profissionais.
+- **Descrição Técnica**:
+  - **Fluxo Retroativo para Profissionais Já Cadastrados**:
+    - A clínica não precisa recadastrar nenhum profissional.
+    - Basta acessar `Equipe → Profissionais`, abrir o menu de 3 pontinhos do profissional e selecionar `Contratos & Termos`.
+    - Ao emitir o documento, o sistema preenche de imediato todos os dados previamente cadastrados (nome, conselho de classe, especialidade, taxas de repasse configuradas e valores de consulta).
+  - **Opções de Assinatura de Entrada (Onboarding)**:
+    1. *Presencial na Recepção/Entrada*: Botão "Assinar no Dispositivo" abre a tela touch no tablet ou terminal da clínica para rubrica imediata com o dedo;
+    2. *Via WhatsApp*: Botão dispara mensagem convidativa pronta para o WhatsApp do terapeuta com link seguro;
+    3. *No Login do Profissional*: Se o profissional acessar o sistema e tiver termo pendente, o banner de Onboarding o direciona para a assinatura.
+  - **Validade Jurídica Assegurada**: MP 2.200-2/2001 e Lei 14.063/2020 (hash SHA-256, IP, data/hora oficial e rubrica biométrica gravada).
+

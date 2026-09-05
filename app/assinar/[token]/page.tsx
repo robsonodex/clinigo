@@ -22,6 +22,7 @@ import {
     AlertCircle,
     Copy,
     Check,
+    Briefcase,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -90,7 +91,7 @@ export default function PublicSignaturePage() {
         }
 
         if (!acceptedConsent) {
-            toast.error('Por favor, marque a declaração de concordância com as normas')
+            toast.error('Por favor, marque a declaração de concordância com os termos')
             return
         }
 
@@ -155,14 +156,15 @@ export default function PublicSignaturePage() {
                         <CardDescription className="text-xs">{error}</CardDescription>
                     </CardHeader>
                     <CardContent className="text-center text-xs text-muted-foreground">
-                        Caso necessite assinar este documento, entre em contato com a recepção da clínica para solicitar um novo link.
+                        Caso necessite assinar este documento, entre em contato com a administração da clínica para solicitar um novo link.
                     </CardContent>
                 </Card>
             </div>
         )
     }
 
-    const { document: doc, clinic, patient } = data || {}
+    const { target_type, document: doc, clinic, patient, professional } = data || {}
+    const isProfessionalDoc = target_type === 'PROFESSIONAL'
 
     return (
         <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 py-6 px-3 sm:px-6 lg:px-8">
@@ -201,7 +203,9 @@ export default function PublicSignaturePage() {
                                 Documento Assinado com Sucesso!
                             </CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
-                                Sua assinatura eletrônica foi validada e arquivada no prontuário do paciente.
+                                {isProfessionalDoc
+                                    ? 'Sua assinatura eletrônica foi validada e arquivada no prontuário profissional da equipe.'
+                                    : 'Sua assinatura eletrônica foi validada e arquivada no prontuário do paciente.'}
                             </CardDescription>
                         </CardHeader>
 
@@ -215,12 +219,18 @@ export default function PublicSignaturePage() {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                     <div>
-                                        <p className="text-muted-foreground text-[11px]">Signatário / Responsável</p>
+                                        <p className="text-muted-foreground text-[11px]">Signatário</p>
                                         <p className="font-semibold text-foreground">{signedResult.signer}</p>
                                     </div>
                                     <div>
-                                        <p className="text-muted-foreground text-[11px]">Paciente</p>
-                                        <p className="font-semibold text-foreground">{patient?.name}</p>
+                                        <p className="text-muted-foreground text-[11px]">
+                                            {isProfessionalDoc ? 'Especialidade / Conselho' : 'Paciente'}
+                                        </p>
+                                        <p className="font-semibold text-foreground">
+                                            {isProfessionalDoc
+                                                ? `${professional?.specialty || 'Profissional'} ${professional?.council ? '• ' + professional.council : ''}`
+                                                : patient?.name}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-muted-foreground text-[11px]">Data e Hora da Assinatura</p>
@@ -266,7 +276,6 @@ export default function PublicSignaturePage() {
                                 )}
                             </div>
 
-                            {/* Base Legal */}
                             <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
                                 Documento assinado eletronicamente com validade jurídica assegurada pela <strong>Medida Provisória nº 2.200-2/2001</strong> e pela <strong>Lei Federal nº 14.063/2020</strong>.
                             </p>
@@ -275,7 +284,7 @@ export default function PublicSignaturePage() {
                                 <Button
                                     variant="outline"
                                     onClick={() => window.print()}
-                                    className="w-full sm:w-auto h-10 gap-2 text-xs font-semibold"
+                                    className="w-full sm:w-auto h-10 min-h-[44px] gap-2 text-xs font-semibold"
                                 >
                                     <Printer className="w-4 h-4" />
                                     Imprimir / Salvar Cópia
@@ -293,10 +302,20 @@ export default function PublicSignaturePage() {
                                         {doc?.title}
                                     </CardTitle>
                                     <CardDescription className="text-xs mt-1">
-                                        Paciente: <strong className="text-foreground">{patient?.name}</strong> • Responsável: <strong className="text-foreground">{doc?.signer_name}</strong>
+                                        {isProfessionalDoc ? (
+                                            <>
+                                                Profissional: <strong className="text-foreground">{professional?.name || doc?.signer_name}</strong>
+                                                {professional?.specialty && <> • Especialidade: <strong className="text-foreground">{professional.specialty}</strong></>}
+                                                {doc?.professional_council && <> • Conselho: <strong className="text-foreground">{doc.professional_council}</strong></>}
+                                            </>
+                                        ) : (
+                                            <>
+                                                Paciente: <strong className="text-foreground">{patient?.name}</strong> • Responsável: <strong className="text-foreground">{doc?.signer_name}</strong>
+                                            </>
+                                        )}
                                     </CardDescription>
                                 </div>
-                                <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 self-start sm:self-center font-medium">
+                                <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 self-start sm:self-center font-medium shrink-0">
                                     Aguardando Assinatura
                                 </Badge>
                             </div>
@@ -316,8 +335,9 @@ export default function PublicSignaturePage() {
 
                             {/* Dados do Signatário para Confirmação */}
                             <div className="p-4 rounded-xl border border-border/70 bg-muted/20 space-y-3">
-                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                                    Identificação do Responsável Legal
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                    {isProfessionalDoc ? <Briefcase className="w-3.5 h-3.5 text-emerald-600" /> : <User className="w-3.5 h-3.5 text-emerald-600" />}
+                                    {isProfessionalDoc ? 'Identificação do Profissional / Parceiro' : 'Identificação do Responsável Legal'}
                                 </h3>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -328,18 +348,18 @@ export default function PublicSignaturePage() {
                                             value={signerName}
                                             onChange={(e) => setSignerName(e.target.value)}
                                             placeholder="Seu nome completo"
-                                            className="h-9 text-xs"
+                                            className="h-10 min-h-[44px] text-xs"
                                         />
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="signer_cpf" className="text-xs font-medium">CPF do Responsável</Label>
+                                        <Label htmlFor="signer_cpf" className="text-xs font-medium">CPF do Signatário</Label>
                                         <Input
                                             id="signer_cpf"
                                             value={signerCpf}
                                             onChange={(e) => setSignerCpf(e.target.value)}
                                             placeholder="000.000.000-00"
-                                            className="h-9 text-xs font-mono"
+                                            className="h-10 min-h-[44px] text-xs font-mono"
                                         />
                                     </div>
                                 </div>
@@ -369,7 +389,15 @@ export default function PublicSignaturePage() {
                                     htmlFor="consent"
                                     className="text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed cursor-pointer font-medium"
                                 >
-                                    Declaro, sob as penas da lei, que sou o(a) responsável legal pelo paciente <strong>{patient?.name}</strong>, li integralmente o documento acima, estou de pleno acordo com todas as cláusulas e reconheço a autenticidade e plena validade jurídica desta assinatura eletrônica (nos termos da MP 2.200-2/2001 e Lei 14.063/2020).
+                                    {isProfessionalDoc ? (
+                                        <>
+                                            Declaro, sob as penas da lei, que li integralmente o documento acima referente à minha atuação profissional junto à clínica <strong>{clinic?.name || 'Clínica'}</strong>, estou de pleno acordo com todas as cláusulas e condições estipuladas, e reconheço a autenticidade e plena validade jurídica desta assinatura eletrônica (nos termos da MP 2.200-2/2001 e Lei 14.063/2020).
+                                        </>
+                                    ) : (
+                                        <>
+                                            Declaro, sob as penas da lei, que sou o(a) responsável legal pelo paciente <strong>{patient?.name}</strong>, li integralmente o documento acima, estou de pleno acordo com todas as cláusulas e reconheço a autenticidade e plena validade jurídica desta assinatura eletrônica (nos termos da MP 2.200-2/2001 e Lei 14.063/2020).
+                                        </>
+                                    )}
                                 </label>
                             </div>
 
@@ -378,7 +406,7 @@ export default function PublicSignaturePage() {
                                 <Button
                                     onClick={handleSign}
                                     disabled={isSubmitting || !acceptedConsent || !signatureImage}
-                                    className="w-full h-12 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md gap-2"
+                                    className="w-full h-12 min-h-[48px] text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md gap-2"
                                 >
                                     <ShieldCheck className="w-5 h-5" />
                                     {isSubmitting ? 'Validando e Registrando...' : 'Confirmar e Assinar Digitalmente'}

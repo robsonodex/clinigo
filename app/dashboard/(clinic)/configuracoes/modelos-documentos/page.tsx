@@ -43,22 +43,39 @@ interface DocumentTemplate {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-    normas_clinica: 'Normas da Clínica',
-    contrato: 'Contrato Terapêutico',
-    autorizacao_imagem: 'Uso de Imagem e Voz',
-    lgpd: 'Termo LGPD',
-    termo_aceite: 'Termo Geral de Aceite',
+    // Pacientes e Famílias
+    normas_clinica: 'Normas da Clínica (Pacientes)',
+    contrato: 'Contrato Terapêutico (Pacientes)',
+    autorizacao_imagem: 'Uso de Imagem e Voz (Pacientes)',
+    lgpd: 'Termo LGPD (Pacientes)',
+    termo_aceite: 'Termo Geral de Aceite (Pacientes)',
+    // Equipe e Profissionais
+    contrato_equipe: 'Contrato de Prestação de Serviços (Equipe)',
+    termo_imagem_profissional: 'Cessão de Imagem e Voz (Equipe)',
+    termo_sigilo_equipe: 'Sigilo, Confidencialidade e LGPD (Equipe)',
+    aditivo_contratual: 'Termo Aditivo Contratual (Equipe)',
 }
 
 const SMART_TAGS = [
-    { tag: '{{nome_paciente}}', label: 'Nome do Paciente' },
-    { tag: '{{cpf_paciente}}', label: 'CPF do Paciente' },
-    { tag: '{{data_nascimento}}', label: 'Data de Nascimento' },
-    { tag: '{{nome_responsavel}}', label: 'Nome do Responsável' },
-    { tag: '{{cpf_responsavel}}', label: 'CPF do Responsável' },
-    { tag: '{{telefone_responsavel}}', label: 'Telefone/WhatsApp' },
-    { tag: '{{nome_clinica}}', label: 'Nome da Clínica' },
-    { tag: '{{data_atual}}', label: 'Data Atual Formatada' },
+    // Tags de Pacientes
+    { tag: '{{nome_paciente}}', label: 'Nome do Paciente', group: 'Pacientes' },
+    { tag: '{{cpf_paciente}}', label: 'CPF do Paciente', group: 'Pacientes' },
+    { tag: '{{data_nascimento}}', label: 'Data de Nascimento', group: 'Pacientes' },
+    { tag: '{{nome_responsavel}}', label: 'Nome do Responsável', group: 'Pacientes' },
+    { tag: '{{cpf_responsavel}}', label: 'CPF do Responsável', group: 'Pacientes' },
+    { tag: '{{telefone_responsavel}}', label: 'WhatsApp do Responsável', group: 'Pacientes' },
+    // Tags de Profissionais da Equipe
+    { tag: '{{nome_profissional}}', label: 'Nome do Profissional', group: 'Equipe' },
+    { tag: '{{cpf_profissional}}', label: 'CPF do Profissional', group: 'Equipe' },
+    { tag: '{{conselho_regional}}', label: 'Conselho (CRM/CRP/CREFITO)', group: 'Equipe' },
+    { tag: '{{especialidade}}', label: 'Especialidade Clínica', group: 'Equipe' },
+    { tag: '{{email_profissional}}', label: 'E-mail do Profissional', group: 'Equipe' },
+    { tag: '{{telefone_profissional}}', label: 'Telefone do Profissional', group: 'Equipe' },
+    { tag: '{{valor_consulta}}', label: 'Valor da Consulta Padrão', group: 'Equipe' },
+    { tag: '{{porcentagem_repasse}}', label: 'Porcentagem de Repasse', group: 'Equipe' },
+    // Gerais da Clínica
+    { tag: '{{nome_clinica}}', label: 'Nome da Clínica', group: 'Geral' },
+    { tag: '{{data_atual}}', label: 'Data Atual Formatada', group: 'Geral' },
 ]
 
 export default function DocumentTemplatesPage() {
@@ -355,11 +372,15 @@ export default function DocumentTemplatesPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="normas_clinica">Normas da Clínica</SelectItem>
-                                        <SelectItem value="contrato">Contrato Terapêutico</SelectItem>
-                                        <SelectItem value="autorizacao_imagem">Uso de Imagem e Voz</SelectItem>
-                                        <SelectItem value="lgpd">Termo LGPD</SelectItem>
-                                        <SelectItem value="termo_aceite">Termo Geral</SelectItem>
+                                        <SelectItem value="normas_clinica">Normas da Clínica (Pacientes)</SelectItem>
+                                        <SelectItem value="contrato">Contrato Terapêutico (Pacientes)</SelectItem>
+                                        <SelectItem value="autorizacao_imagem">Uso de Imagem e Voz (Pacientes)</SelectItem>
+                                        <SelectItem value="lgpd">Termo LGPD (Pacientes)</SelectItem>
+                                        <SelectItem value="termo_aceite">Termo Geral de Aceite (Pacientes)</SelectItem>
+                                        <SelectItem value="contrato_equipe">Contrato de Prestação de Serviços (Equipe)</SelectItem>
+                                        <SelectItem value="termo_imagem_profissional">Cessão de Imagem e Voz (Equipe)</SelectItem>
+                                        <SelectItem value="termo_sigilo_equipe">Sigilo, Confidencialidade e LGPD (Equipe)</SelectItem>
+                                        <SelectItem value="aditivo_contratual">Termo Aditivo Contratual (Equipe)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -377,22 +398,70 @@ export default function DocumentTemplatesPage() {
                         </div>
 
                         {/* Barra de Tags Inteligentes */}
-                        <div className="space-y-1.5 p-3 rounded-lg bg-muted/40 border border-border/80">
-                            <Label className="text-[11px] font-bold text-foreground flex items-center gap-1">
+                        <div className="space-y-2 p-3 rounded-lg bg-muted/40 border border-border/80">
+                            <Label className="text-[11px] font-bold text-foreground flex items-center justify-between">
                                 <span>Tags Dinâmicas (Clique para inserir no texto):</span>
+                                <span className="text-[10px] text-muted-foreground font-normal">Preenchimento 100% automático</span>
                             </Label>
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                                {SMART_TAGS.map((st) => (
-                                    <button
-                                        key={st.tag}
-                                        type="button"
-                                        onClick={() => handleInsertTag(st.tag)}
-                                        className="text-[10px] font-mono font-medium px-2 py-1 rounded bg-background hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-border hover:border-emerald-500/50 transition-colors"
-                                        title={`Insere ${st.label}`}
-                                    >
-                                        {st.tag}
-                                    </button>
-                                ))}
+
+                            {/* Tags de Pacientes */}
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                                    Para Pacientes & Família:
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {SMART_TAGS.filter(s => s.group === 'Pacientes').map((st) => (
+                                        <button
+                                            key={st.tag}
+                                            type="button"
+                                            onClick={() => handleInsertTag(st.tag)}
+                                            className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-background hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-border hover:border-emerald-500/50 transition-colors"
+                                            title={`Insere ${st.label}`}
+                                        >
+                                            {st.tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tags de Profissionais */}
+                            <div className="space-y-1 pt-1 border-t border-border/60">
+                                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+                                    Para Profissionais & Equipe:
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {SMART_TAGS.filter(s => s.group === 'Equipe').map((st) => (
+                                        <button
+                                            key={st.tag}
+                                            type="button"
+                                            onClick={() => handleInsertTag(st.tag)}
+                                            className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-background hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-border hover:border-emerald-500/50 transition-colors text-emerald-800 dark:text-emerald-300"
+                                            title={`Insere ${st.label}`}
+                                        >
+                                            {st.tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tags Gerais */}
+                            <div className="space-y-1 pt-1 border-t border-border/60">
+                                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                                    Gerais:
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {SMART_TAGS.filter(s => s.group === 'Geral').map((st) => (
+                                        <button
+                                            key={st.tag}
+                                            type="button"
+                                            onClick={() => handleInsertTag(st.tag)}
+                                            className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-background hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-border hover:border-emerald-500/50 transition-colors"
+                                            title={`Insere ${st.label}`}
+                                        >
+                                            {st.tag}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
