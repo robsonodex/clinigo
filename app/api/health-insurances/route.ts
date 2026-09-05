@@ -80,19 +80,27 @@ export async function GET(request: NextRequest) {
 
         if (error) throw error
 
-        // Add plans count for each insurance
+        // Add plans and patients count for each insurance
         const insurancesWithCounts = await Promise.all(
             (data || []).map(async (insurance: any) => {
-                const { count: plansCount } = await supabase
-                    .from('health_insurance_plans')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('health_insurance_id', insurance.id)
-                    .eq('status', 'ACTIVE')
-                    .is('deleted_at', null)
+                const [plansRes, patientsRes] = await Promise.all([
+                    supabase
+                        .from('health_insurance_plans')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('health_insurance_id', insurance.id)
+                        .eq('status', 'ACTIVE')
+                        .is('deleted_at', null),
+                    supabase
+                        .from('patients')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('health_insurance_id', insurance.id)
+                        .is('deleted_at', null)
+                ])
 
                 return {
                     ...insurance,
-                    plans_count: plansCount || 0
+                    plans_count: plansRes.count || 0,
+                    patients_count: patientsRes.count || 0
                 }
             })
         )

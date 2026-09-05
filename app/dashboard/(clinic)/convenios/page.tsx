@@ -57,6 +57,8 @@ import {
     Edit,
     Trash2,
     Eye,
+    EyeOff,
+    AlertTriangle,
     Shield,
     Heart
 } from 'lucide-react'
@@ -78,6 +80,7 @@ import type { TissVersion } from '@/lib/types/tiss-versions'
 function OperadorasTab() {
     const queryClient = useQueryClient()
     const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'INACTIVE'>('all')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<HealthInsurance | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<HealthInsurance | null>(null)
@@ -87,14 +90,15 @@ function OperadorasTab() {
         phone: '',
         email: '',
         notes: '',
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
         tiss_version: '4.01.00' as TissVersion
     })
 
     const { data: response, isLoading } = useQuery({
-        queryKey: ['health-insurances', search],
+        queryKey: ['health-insurances', search, statusFilter],
         queryFn: () => api.getFull<HealthInsurance[]>('/health-insurances', {
             search: search || undefined,
-            status: 'ACTIVE'
+            status: statusFilter === 'all' ? undefined : statusFilter
         }),
     })
 
@@ -121,8 +125,19 @@ function OperadorasTab() {
         onError: (err: any) => toast.error(err.message || 'Erro ao atualizar operadora')
     })
 
+    const toggleStatusMutation = useMutation({
+        mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'INACTIVE' }) =>
+            api.patch(`/health-insurances/${id}`, { status }),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['health-insurances'] })
+            toast.success(variables.status === 'ACTIVE' ? 'Operadora ativada com sucesso' : 'Operadora inativada com sucesso')
+        },
+        onError: (err: any) => toast.error(err.message || 'Erro ao alterar status da operadora')
+    })
+
     const deleteMutation = useMutation({
-        mutationFn: (id: string) => api.delete(`/health-insurances/${id}`),
+        mutationFn: ({ id, unlinkPatients }: { id: string; unlinkPatients?: boolean }) =>
+            api.delete(`/health-insurances/${id}${unlinkPatients ? '?unlink_patients=true' : ''}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['health-insurances'] })
             toast.success('Operadora removida com sucesso')
@@ -130,7 +145,6 @@ function OperadorasTab() {
         },
         onError: (err: any) => {
             toast.error(err.message || 'Erro ao remover operadora')
-            setDeleteTarget(null)
         }
     })
 
@@ -143,11 +157,12 @@ function OperadorasTab() {
                 phone: item.phone || '',
                 email: item.email || '',
                 notes: item.notes || '',
+                status: item.status || 'ACTIVE',
                 tiss_version: (item.tiss_version as TissVersion) || '4.01.00'
             })
         } else {
             setEditingItem(null)
-            setFormData({ name: '', code: '', phone: '', email: '', notes: '', tiss_version: '4.01.00' })
+            setFormData({ name: '', code: '', phone: '', email: '', notes: '', status: 'ACTIVE', tiss_version: '4.01.00' })
         }
         setIsDialogOpen(true)
     }
@@ -155,7 +170,7 @@ function OperadorasTab() {
     const closeDialog = () => {
         setIsDialogOpen(false)
         setEditingItem(null)
-        setFormData({ name: '', code: '', phone: '', email: '', notes: '' })
+        setFormData({ name: '', code: '', phone: '', email: '', notes: '', status: 'ACTIVE', tiss_version: '4.01.00' })
     }
 
     const handleSubmit = () => {
@@ -173,25 +188,37 @@ function OperadorasTab() {
 
     return (
         <div className="space-y-4">
-            {/* Header / Barra de Busca Premium */}
+            {/* Header / Barra de Busca e Filtros Premium */}
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-450 dark:text-slate-500" />
-                    <Input
-                        placeholder="Buscar operadora..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-11 pr-4 h-9 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-xs"
-                    />
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-450 dark:text-slate-500" />
+                        <Input
+                            placeholder="Buscar operadora..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-11 pr-4 h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80 text-sm"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+                        <SelectTrigger className="w-full sm:w-[160px] h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-emerald-500/20 text-slate-700 dark:text-slate-350 text-sm font-medium">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-slate-100 dark:border-slate-800">
+                            <SelectItem value="all">Todas</SelectItem>
+                            <SelectItem value="ACTIVE">Ativas</SelectItem>
+                            <SelectItem value="INACTIVE">Inativas</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Button onClick={() => openDialog()} className="rounded-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-9 px-4 text-xs font-medium hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5">
+                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-10 px-4 text-xs font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5 min-h-[44px]">
                     <Plus className="w-3.5 h-3.5" />
                     Nova Operadora
                 </Button>
             </div>
 
             {/* Table Premium */}
-            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
+            <Card className="rounded-xl border border-border shadow-xs overflow-hidden bg-card">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
@@ -200,6 +227,7 @@ function OperadorasTab() {
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Código ANS</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Telefone</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Planos</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Pacientes</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Status</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider text-right w-[80px]">Ações</TableHead>
                             </TableRow>
@@ -212,13 +240,14 @@ function OperadorasTab() {
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-24 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-12 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-12 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-16 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6 text-right"><Skeleton className="h-5 w-8 rounded ml-auto" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : insurances.length === 0 ? (
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                                    <TableCell colSpan={7} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
                                         Nenhuma operadora cadastrada
                                     </TableCell>
                                 </TableRow>
@@ -241,6 +270,12 @@ function OperadorasTab() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="py-3.5 px-6">
+                                            <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 flex items-center gap-1 w-fit">
+                                                <Users className="w-3 h-3 text-slate-450" />
+                                                {item.patients_count || 0}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="py-3.5 px-6">
                                             <Badge variant={item.status === 'ACTIVE' ? 'default' : 'secondary'} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 hover:bg-emerald-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                                                 {item.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
                                             </Badge>
@@ -248,21 +283,37 @@ function OperadorasTab() {
                                         <TableCell className="py-3.5 px-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-xs h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                    <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 hover:bg-slate-100 dark:hover:bg-slate-850 min-h-[44px] min-w-[44px]">
                                                         <MoreVertical className="w-4 h-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800">
-                                                    <DropdownMenuItem onClick={() => openDialog(item)} className="rounded-lg text-xs font-medium py-2">
+                                                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800 min-w-[160px]">
+                                                    <DropdownMenuItem onClick={() => openDialog(item)} className="rounded-lg text-xs font-medium py-2.5 min-h-[44px] cursor-pointer">
                                                         <Edit className="w-4 h-4 mr-2 text-slate-500" />
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
+                                                        onClick={() => toggleStatusMutation.mutate({ id: item.id, status: item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
+                                                        className="rounded-lg text-xs font-medium py-2.5 min-h-[44px] cursor-pointer"
+                                                    >
+                                                        {item.status === 'ACTIVE' ? (
+                                                            <>
+                                                                <EyeOff className="w-4 h-4 mr-2 text-amber-500" />
+                                                                Inativar
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Eye className="w-4 h-4 mr-2 text-emerald-500" />
+                                                                Ativar
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
                                                         onClick={() => setDeleteTarget(item)}
-                                                        className="text-destructive rounded-lg text-xs font-medium py-2 min-h-[44px] cursor-pointer"
+                                                        className="text-destructive focus:text-destructive rounded-lg text-xs font-medium py-2.5 min-h-[44px] cursor-pointer"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-2" />
-                                                        Remover
+                                                        Excluir
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -275,37 +326,58 @@ function OperadorasTab() {
                 </div>
             </Card>
 
-            {/* Dialog */}
+            {/* Dialog Form */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>
                             {editingItem ? 'Editar Operadora' : 'Nova Operadora'}
                         </DialogTitle>
                         <DialogDescription>
-                            {editingItem ? 'Atualize os dados da operadora' : 'Cadastre uma nova operadora de saúde'}
+                            {editingItem ? 'Atualize os dados da operadora de convênio' : 'Cadastre uma nova operadora de saúde'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-3">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Nome *</Label>
+                            <Label htmlFor="name">Nome da Operadora / Convênio *</Label>
                             <Input
                                 id="name"
-                                placeholder="Ex: Unimed"
+                                placeholder="Ex: Unimed, Bradesco Saúde, SulAmérica..."
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="min-h-[44px]"
                             />
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="code">Código ANS</Label>
-                            <Input
-                                id="code"
-                                placeholder="Ex: 302147"
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                            />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="code">Código ANS</Label>
+                                <Input
+                                    id="code"
+                                    placeholder="Ex: 302147"
+                                    value={formData.code}
+                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                    className="min-h-[44px]"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select
+                                    value={formData.status}
+                                    onValueChange={(val: 'ACTIVE' | 'INACTIVE') => setFormData({ ...formData, status: val })}
+                                >
+                                    <SelectTrigger id="status" className="min-h-[44px]">
+                                        <SelectValue placeholder="Selecione o status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ACTIVE">Ativa</SelectItem>
+                                        <SelectItem value="INACTIVE">Inativa</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="phone">Telefone</Label>
                                 <Input
@@ -313,6 +385,7 @@ function OperadorasTab() {
                                     placeholder="(11) 99999-9999"
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    className="min-h-[44px]"
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -323,6 +396,7 @@ function OperadorasTab() {
                                     placeholder="contato@unimed.com.br"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className="min-h-[44px]"
                                 />
                             </div>
                         </div>
@@ -346,19 +420,20 @@ function OperadorasTab() {
                                 placeholder="Informações adicionais..."
                                 value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                rows={3}
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="gap-2">
                         <Button variant="outline" onClick={closeDialog} className="min-h-[44px]">
                             Cancelar
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={createMutation.isPending || updateMutation.isPending}
-                            className="min-h-[44px]"
+                            className="min-h-[44px] bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                         >
-                            {editingItem ? 'Salvar' : 'Criar'}
+                            {editingItem ? 'Salvar Alterações' : 'Cadastrar Operadora'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -366,32 +441,75 @@ function OperadorasTab() {
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Confirmar Exclusão</DialogTitle>
-                        <DialogDescription>
-                            Tem certeza que deseja excluir {deleteTarget?.name}? Esta ação não pode ser desfeita.
+                        <DialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                            <Trash2 className="w-5 h-5" />
+                            Excluir Operadora / Convênio
+                        </DialogTitle>
+                        <DialogDescription className="text-sm pt-1">
+                            Tem certeza que deseja excluir <strong>{deleteTarget?.name}</strong>? Esta ação não pode ser desfeita.
                         </DialogDescription>
                     </DialogHeader>
+
                     {deleteTarget && (
-                        <div className="py-2">
-                            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-700 dark:text-red-400">
-                                ⚠️ Se houver pacientes vinculados a esta operadora, ela não poderá ser excluída. Recomendamos inativá-la caso já possua atendimentos.
-                            </div>
+                        <div className="py-2 space-y-3">
+                            {(deleteTarget.patients_count || 0) > 0 ? (
+                                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl space-y-2 text-xs text-amber-800 dark:text-amber-300">
+                                    <div className="flex items-center gap-2 font-semibold">
+                                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                        <span>Existem {deleteTarget.patients_count} paciente(s) vinculado(s) a este convênio.</span>
+                                    </div>
+                                    <p className="text-slate-600 dark:text-slate-400">
+                                        Se este convênio foi cadastrado por engano, você pode <strong>desvincular os pacientes</strong> (eles serão alterados para Particular) e excluir este convênio, ou simplesmente <strong>inativá-lo</strong> para mantê-lo no histórico.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-700 dark:text-red-400">
+                                    ⚠️ Esta operadora não possui pacientes vinculados e será excluída permanentemente.
+                                </div>
+                            )}
                         </div>
                     )}
-                    <DialogFooter className="gap-2 pt-2">
+
+                    <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
                         <Button variant="outline" onClick={() => setDeleteTarget(null)} className="min-h-[44px]">
                             Cancelar
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-                            disabled={deleteMutation.isPending}
-                            className="min-h-[44px]"
-                        >
-                            {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Operadora'}
-                        </Button>
+                        {deleteTarget && (deleteTarget.patients_count || 0) > 0 ? (
+                            <>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        if (deleteTarget) {
+                                            toggleStatusMutation.mutate({ id: deleteTarget.id, status: 'INACTIVE' })
+                                            setDeleteTarget(null)
+                                        }
+                                    }}
+                                    disabled={toggleStatusMutation.isPending}
+                                    className="min-h-[44px]"
+                                >
+                                    Apenas Inativar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id, unlinkPatients: true })}
+                                    disabled={deleteMutation.isPending}
+                                    className="min-h-[44px]"
+                                >
+                                    {deleteMutation.isPending ? 'Excluindo...' : 'Desvincular e Excluir'}
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                variant="destructive"
+                                onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id, unlinkPatients: false })}
+                                disabled={deleteMutation.isPending}
+                                className="min-h-[44px]"
+                            >
+                                {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Operadora'}
+                            </Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -407,15 +525,25 @@ function PlanosTab() {
     const queryClient = useQueryClient()
     const [search, setSearch] = useState('')
     const [insuranceFilter, setInsuranceFilter] = useState<string>('all')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'INACTIVE'>('all')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<HealthInsurancePlan | null>(null)
     const [deletePlanTarget, setDeletePlanTarget] = useState<HealthInsurancePlan | null>(null)
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        health_insurance_id: string
+        name: string
+        code: string
+        type: HealthInsurancePlanType
+        coverage_type: HealthInsuranceCoverageType
+        status: 'ACTIVE' | 'INACTIVE'
+        notes: string
+    }>({
         health_insurance_id: '',
         name: '',
         code: '',
-        type: 'INDIVIDUAL' as const,
-        coverage_type: 'COMPLETO' as const,
+        type: 'INDIVIDUAL',
+        coverage_type: 'COMPLETO',
+        status: 'ACTIVE',
         notes: ''
     })
 
@@ -426,11 +554,11 @@ function PlanosTab() {
     const insurances = insurancesResponse?.data || []
 
     const { data: response, isLoading } = useQuery({
-        queryKey: ['health-insurance-plans', search, insuranceFilter],
+        queryKey: ['health-insurance-plans', search, insuranceFilter, statusFilter],
         queryFn: () => api.getFull<HealthInsurancePlan[]>('/health-insurance-plans', {
             search: search || undefined,
             insurance_id: insuranceFilter !== 'all' ? insuranceFilter : undefined,
-            status: 'ACTIVE'
+            status: statusFilter !== 'all' ? statusFilter : undefined
         }),
     })
     const plans = response?.data || []
@@ -456,6 +584,16 @@ function PlanosTab() {
         onError: (err: any) => toast.error(err.message || 'Erro ao atualizar plano')
     })
 
+    const toggleStatusMutation = useMutation({
+        mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'INACTIVE' }) =>
+            api.patch(`/health-insurance-plans/${id}`, { status }),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['health-insurance-plans'] })
+            toast.success(variables.status === 'ACTIVE' ? 'Plano ativado com sucesso' : 'Plano inativado com sucesso')
+        },
+        onError: (err: any) => toast.error(err.message || 'Erro ao alterar status do plano')
+    })
+
     const deleteMutation = useMutation({
         mutationFn: (id: string) => api.delete(`/health-insurance-plans/${id}`),
         onSuccess: () => {
@@ -478,6 +616,7 @@ function PlanosTab() {
                 code: item.code || '',
                 type: item.type,
                 coverage_type: item.coverage_type,
+                status: item.status || 'ACTIVE',
                 notes: item.notes || ''
             })
         } else {
@@ -488,6 +627,7 @@ function PlanosTab() {
                 code: '',
                 type: 'INDIVIDUAL',
                 coverage_type: 'COMPLETO',
+                status: 'ACTIVE',
                 notes: ''
             })
         }
@@ -544,7 +684,7 @@ function PlanosTab() {
                         />
                     </div>
                     <Select value={insuranceFilter} onValueChange={setInsuranceFilter}>
-                        <SelectTrigger className="w-full sm:w-[220px] h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-emerald-500/20 text-slate-700 dark:text-slate-350 text-sm font-medium">
+                        <SelectTrigger className="w-full sm:w-[200px] h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-emerald-500/20 text-slate-700 dark:text-slate-350 text-sm font-medium">
                             <SelectValue placeholder="Filtrar por operadora" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-slate-100 dark:border-slate-800">
@@ -556,15 +696,25 @@ function PlanosTab() {
                             ))}
                         </SelectContent>
                     </Select>
+                    <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+                        <SelectTrigger className="w-full sm:w-[140px] h-10 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-emerald-500/20 text-slate-700 dark:text-slate-350 text-sm font-medium">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-slate-100 dark:border-slate-800">
+                            <SelectItem value="all" className="rounded-lg text-sm">Todos</SelectItem>
+                            <SelectItem value="ACTIVE" className="rounded-lg text-sm">Ativos</SelectItem>
+                            <SelectItem value="INACTIVE" className="rounded-lg text-sm">Inativos</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Button onClick={() => openDialog()} className="rounded-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-9 px-4 text-xs font-medium hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5">
+                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-10 px-4 text-xs font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5 min-h-[44px]">
                     <Plus className="w-3.5 h-3.5" />
                     Novo Plano
                 </Button>
             </div>
 
             {/* Table Premium */}
-            <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
+            <Card className="rounded-xl border border-border shadow-xs overflow-hidden bg-card">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
@@ -574,6 +724,7 @@ function PlanosTab() {
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Tipo</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Cobertura</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Médicos</TableHead>
+                                <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider">Status</TableHead>
                                 <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider text-right w-[80px]">Ações</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -586,12 +737,13 @@ function PlanosTab() {
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-20 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6"><Skeleton className="h-5 w-12 rounded" /></TableCell>
+                                        <TableCell className="py-3 px-6"><Skeleton className="h-5 w-16 rounded" /></TableCell>
                                         <TableCell className="py-3 px-6 text-right"><Skeleton className="h-5 w-8 rounded ml-auto" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : plans.length === 0 ? (
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                                    <TableCell colSpan={7} className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm font-medium">
                                         Nenhum plano cadastrado
                                     </TableCell>
                                 </TableRow>
@@ -629,24 +781,45 @@ function PlanosTab() {
                                                 {item.doctors_count || 0} médicos
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="py-3.5 px-6">
+                                            <Badge variant={item.status === 'ACTIVE' ? 'default' : 'secondary'} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 hover:bg-emerald-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                                                {item.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell className="py-3.5 px-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-xs h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                    <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 hover:bg-slate-100 dark:hover:bg-slate-850 min-h-[44px] min-w-[44px]">
                                                         <MoreVertical className="w-4 h-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800">
-                                                    <DropdownMenuItem onClick={() => openDialog(item)} className="rounded-lg text-xs font-medium py-2">
+                                                <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800 min-w-[160px]">
+                                                    <DropdownMenuItem onClick={() => openDialog(item)} className="rounded-lg text-xs font-medium py-2.5 min-h-[44px] cursor-pointer">
                                                         <Edit className="w-4 h-4 mr-2 text-slate-500" />
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
+                                                        onClick={() => toggleStatusMutation.mutate({ id: item.id, status: item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
+                                                        className="rounded-lg text-xs font-medium py-2.5 min-h-[44px] cursor-pointer"
+                                                    >
+                                                        {item.status === 'ACTIVE' ? (
+                                                            <>
+                                                                <EyeOff className="w-4 h-4 mr-2 text-amber-500" />
+                                                                Inativar
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Eye className="w-4 h-4 mr-2 text-emerald-500" />
+                                                                Ativar
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
                                                         onClick={() => setDeletePlanTarget(item)}
-                                                        className="text-destructive rounded-lg text-xs font-medium py-2 min-h-[44px] cursor-pointer"
+                                                        className="text-destructive focus:text-destructive rounded-lg text-xs font-medium py-2.5 min-h-[44px] cursor-pointer"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-2" />
-                                                        Remover
+                                                        Excluir
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -659,15 +832,18 @@ function PlanosTab() {
                 </div>
             </Card>
 
-            {/* Dialog */}
+            {/* Dialog Form */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>
                             {editingItem ? 'Editar Plano' : 'Novo Plano'}
                         </DialogTitle>
+                        <DialogDescription>
+                            {editingItem ? 'Atualize os dados do plano de convênio' : 'Cadastre um novo plano vinculado a uma operadora'}
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-3">
                         {!editingItem && (
                             <div className="grid gap-2">
                                 <Label>Operadora *</Label>
@@ -675,7 +851,7 @@ function PlanosTab() {
                                     value={formData.health_insurance_id}
                                     onValueChange={(v) => setFormData({ ...formData, health_insurance_id: v })}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="min-h-[44px]">
                                         <SelectValue placeholder="Selecione a operadora" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -691,27 +867,48 @@ function PlanosTab() {
                         <div className="grid gap-2">
                             <Label>Nome do Plano *</Label>
                             <Input
-                                placeholder="Ex: Premium"
+                                placeholder="Ex: Premium, Básico, Especial..."
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="min-h-[44px]"
                             />
                         </div>
-                        <div className="grid gap-2">
-                            <Label>Código do Plano</Label>
-                            <Input
-                                placeholder="Ex: PRM001"
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                            />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label>Código do Plano</Label>
+                                <Input
+                                    placeholder="Ex: PRM001"
+                                    value={formData.code}
+                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                    className="min-h-[44px]"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Status</Label>
+                                <Select
+                                    value={formData.status}
+                                    onValueChange={(v: 'ACTIVE' | 'INACTIVE') => setFormData({ ...formData, status: v })}
+                                >
+                                    <SelectTrigger className="min-h-[44px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ACTIVE">Ativo</SelectItem>
+                                        <SelectItem value="INACTIVE">Inativo</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label>Tipo</Label>
                                 <Select
                                     value={formData.type}
                                     onValueChange={(v: any) => setFormData({ ...formData, type: v })}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="min-h-[44px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -727,7 +924,7 @@ function PlanosTab() {
                                     value={formData.coverage_type}
                                     onValueChange={(v: any) => setFormData({ ...formData, coverage_type: v })}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="min-h-[44px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -739,16 +936,16 @@ function PlanosTab() {
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="gap-2">
                         <Button variant="outline" onClick={closeDialog} className="min-h-[44px]">
                             Cancelar
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={createMutation.isPending || updateMutation.isPending}
-                            className="min-h-[44px]"
+                            className="min-h-[44px] bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                         >
-                            {editingItem ? 'Salvar' : 'Criar'}
+                            {editingItem ? 'Salvar Alterações' : 'Cadastrar Plano'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -756,23 +953,39 @@ function PlanosTab() {
 
             {/* Delete Plan Confirmation Dialog */}
             <Dialog open={!!deletePlanTarget} onOpenChange={(open) => !open && setDeletePlanTarget(null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Confirmar Exclusão</DialogTitle>
-                        <DialogDescription>
-                            Tem certeza que deseja excluir o plano {deletePlanTarget?.name}? Esta ação não pode ser desfeita.
+                        <DialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                            <Trash2 className="w-5 h-5" />
+                            Excluir Plano de Convênio
+                        </DialogTitle>
+                        <DialogDescription className="text-sm pt-1">
+                            Tem certeza que deseja excluir o plano <strong>{deletePlanTarget?.name}</strong>? Esta ação não pode ser desfeita.
                         </DialogDescription>
                     </DialogHeader>
                     {deletePlanTarget && (
                         <div className="py-2">
-                            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-700 dark:text-red-400">
-                                ⚠️ Verifique se não há atendimentos vinculados a este plano antes de confirmar.
+                            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-700 dark:text-red-400">
+                                ⚠️ Se houver atendimentos ou médicos vinculados a este plano, recomendamos inativá-lo para preservar o histórico.
                             </div>
                         </div>
                     )}
-                    <DialogFooter className="gap-2 pt-2">
+                    <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
                         <Button variant="outline" onClick={() => setDeletePlanTarget(null)} className="min-h-[44px]">
                             Cancelar
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (deletePlanTarget) {
+                                    toggleStatusMutation.mutate({ id: deletePlanTarget.id, status: 'INACTIVE' })
+                                    setDeletePlanTarget(null)
+                                }
+                            }}
+                            disabled={toggleStatusMutation.isPending}
+                            className="min-h-[44px]"
+                        >
+                            Apenas Inativar
                         </Button>
                         <Button
                             variant="destructive"

@@ -65,6 +65,7 @@ import {
     List,
     X,
     Filter,
+    ExternalLink,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -75,6 +76,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 // Validation schema
 const PatientFormSchema = z.object({
@@ -1305,18 +1307,28 @@ export default function PacientesPage() {
                                 {form.watch('billing_type') === 'convenio' && (
                                     <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-3.5">
                                         <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between flex-wrap gap-1">
                                                 <Label htmlFor="health_insurance_id" className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
                                                     Operadora / Convênio *
                                                 </Label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowQuickInsuranceModal(true)}
-                                                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline min-h-[36px] px-1.5"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                    + Novo Convênio
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowQuickInsuranceModal(true)}
+                                                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline min-h-[44px] px-1.5"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                        + Novo Convênio
+                                                    </button>
+                                                    <Link
+                                                        href="/dashboard/convenios"
+                                                        target="_blank"
+                                                        className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:underline min-h-[44px] px-1.5"
+                                                    >
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                        Gerenciar
+                                                    </Link>
+                                                </div>
                                             </div>
                                             <Select
                                                 value={form.watch('health_insurance_id') || ''}
@@ -1520,6 +1532,17 @@ export default function PacientesPage() {
                                 )}
                             </Button>
                         </DialogFooter>
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                            <span>Cadastrou convênio com erro?</span>
+                            <Link
+                                href="/dashboard/convenios"
+                                target="_blank"
+                                className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                            >
+                                Gerenciar / Excluir Convênios
+                                <ExternalLink className="w-3 h-3" />
+                            </Link>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>

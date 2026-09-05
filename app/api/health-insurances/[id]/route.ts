@@ -187,9 +187,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             throw new ForbiddenError('Não autorizado')
         }
 
-        if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
-            throw new ForbiddenError('Apenas administradores podem remover operadoras')
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        if (!allowedRoles.includes(userRole || '')) {
+            throw new ForbiddenError('Apenas administradores e recepcionistas podem remover operadoras')
         }
+
+        const { searchParams } = new URL(request.url)
+        const unlinkPatients = searchParams.get('unlink_patients') === 'true'
 
         const supabase = createServiceRoleClient()
 
@@ -231,9 +235,27 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .is('deleted_at', null)
 
         if (linkedPatientsCount && linkedPatientsCount > 0) {
-            throw new BadRequestError(
-                `Não é possível remover esta operadora pois existem ${linkedPatientsCount} paciente(s) vinculado(s) a ela. Em vez de remover, inative o status da operadora.`
-            )
+            if (!unlinkPatients) {
+                throw new BadRequestError(
+                    `Não é possível remover diretamente pois existem ${linkedPatientsCount} paciente(s) vinculado(s) a esta operadora. Você pode inativá-la ou confirmar a desvinculação dos pacientes para cobrança Particular.`
+                )
+            }
+
+            // Desvincula os pacientes do convênio antes do soft delete
+            const { error: unlinkError } = await supabase
+                .from('patients')
+                .update({
+                    health_insurance_id: null,
+                    billing_type: 'particular',
+                    insurance_card_number: null,
+                    insurance_validity: null,
+                    insurance_plan_name: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('health_insurance_id', id)
+                .eq('clinic_id', existing.clinic_id)
+
+            if (unlinkError) throw unlinkError
         }
 
         // Soft delete
@@ -241,7 +263,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             .from('health_insurances')
             .update({
                 deleted_at: new Date().toISOString(),
-                status: 'INACTIVE'
+                status: 'INACTIVE',
+                updated_at: new Date().toISOString()
             })
             .eq('id', id)
 

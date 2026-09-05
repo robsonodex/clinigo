@@ -315,3 +315,30 @@
     - Para Profissionais: Meu Financeiro → Notas & Demonstrativos.
 - **Descrição Técnica**:
   - Resolução direta da solicitação de Patrícia Mendes (World Sensory): permite que a administração anexe mensalmente os demonstrativos financeiros de repasse calculados para os terapeutas e que os terapeutas anexem suas respectivas notas fiscais de serviço para conferência, aprovação e baixa financeira organizada.
+
+### Gerenciamento, Inativação e Exclusão Segura de Convênios e Planos (Resolução de Cadastros Incorretos)
+- **Módulo**: Recepção → Convênios e Reembolsos & Cadastro de Pacientes
+- **Caminho**:
+  - `lib/types/health-insurance.ts` → Adição de `patients_count?: number` à interface `HealthInsurance`.
+  - `app/api/health-insurances/route.ts` → Retorno dinâmico da contagem de pacientes associados a cada operadora (`patients_count`), suporte a filtro por `status` (`ACTIVE`/`INACTIVE`), e ampliação de permissões para `RECEPTIONIST`.
+  - `app/api/health-insurances/[id]/route.ts` →
+    - Suporte a `DELETE` com query param `unlink_patients=true`: desvincula automaticamente todos os pacientes associados (revertendo para `billing_type = 'particular'` e `health_insurance_id = null`) e remove a operadora em caso de cadastro incorreto.
+    - Atualização do endpoint `PATCH` para permitir alternância de status e atualização por recepcionistas.
+  - `app/api/health-insurance-plans/[id]/route.ts` → Ampliação de permissão do perfil `RECEPTIONIST` para operações nos planos de saúde.
+  - `app/dashboard/(clinic)/convenios/page.tsx`:
+    - **Aba Operadoras**:
+      - Filtro por status (`Todos`, `Ativos`, `Inativos`).
+      - Coluna **Pacientes Vinculados** (`patients_count`) informando visualmente a dependência antes de qualquer ação.
+      - Coluna **Status** com Badge visual (`Ativo` / `Inativo`) e ação rápida no menu suspenso de 1 clique para `Inativar` ou `Ativar`.
+      - Modal Inteligente de Exclusão contextual:
+        - Para operadoras sem pacientes: confirmação direta e segura.
+        - Para operadoras com pacientes vinculados: alerta detalhado e opções de "Apenas Inativar" ou "Desvincular Pacientes e Excluir" (com aviso e contagem exata de pacientes afetados).
+    - **Aba Planos**:
+      - Filtro por status (`Todos`, `Ativos`, `Inativos`).
+      - Coluna de Status e ações rápidas para Ativar / Inativar e Excluir com modal de confirmação.
+      - Acessibilidade e touch targets ≥ 44×44px em todos os botões e itens interativos.
+  - `app/dashboard/(clinic)/pacientes/page.tsx`:
+    - Link rápido "Gerenciar" ao lado de "+ Novo Convênio" na seleção de modalidade.
+    - Atalho explicativo no rodapé do modal de criação rápida: *"Cadastrou convênio com erro? Gerenciar / Excluir Convênios"*, conduzindo a usuária Patrícia diretamente ao local de exclusão.
+- **Descrição Técnica**:
+  - Resolve integralmente a dúvida e necessidade de Patrícia (World Sensory): quando um convênio ou plano for cadastrado incorretamente, a usuária pode excluí-lo diretamente na aba de Operadoras (mesmo que pacientes já tenham sido vinculados por engano, através da opção segura de desvinculação em massa) ou simplesmente inativá-lo para que não apareça mais nas opções de novos cadastros.

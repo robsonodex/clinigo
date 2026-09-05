@@ -64,8 +64,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             throw new ForbiddenError('Não autorizado')
         }
 
-        if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
-            throw new ForbiddenError('Apenas administradores podem editar planos')
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        if (!allowedRoles.includes(userRole || '')) {
+            throw new ForbiddenError('Apenas administradores e recepcionistas podem editar planos')
         }
 
         const body = await request.json()
@@ -136,8 +137,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             throw new ForbiddenError('Não autorizado')
         }
 
-        if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN') {
-            throw new ForbiddenError('Apenas administradores podem remover planos')
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        if (!allowedRoles.includes(userRole || '')) {
+            throw new ForbiddenError('Apenas administradores e recepcionistas podem remover planos')
         }
 
         const supabase = createServiceRoleClient()

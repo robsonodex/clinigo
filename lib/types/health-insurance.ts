@@ -29,6 +29,7 @@ export interface HealthInsurance {
     updated_at: string
     // Virtual fields
     plans_count?: number
+    patients_count?: number
 }
 
 export interface CreateHealthInsuranceData {
