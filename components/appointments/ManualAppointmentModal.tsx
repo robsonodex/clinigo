@@ -69,7 +69,7 @@ interface HealthInsurance {
 const manualAppointmentSchema = z.object({
     doctor_id: z.string().min(1, 'Selecione um médico'),
     appointment_date: z.string().min(1, 'Selecione uma data'),
-    appointment_time: z.string().min(1, 'Selecione um horário'),
+    appointment_time: z.string().min(1, 'Selecione um horário').regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido (use HH:MM)'),
     duration_minutes: z.number().default(30),
     type: z.enum(['presencial', 'telemedicina']).default('presencial'),
     payment_type: z.string().min(1, 'Selecione forma de pagamento'),
@@ -194,6 +194,19 @@ export function ManualAppointmentModal({
         refetchOnWindowFocus: false,
         retry: 2,
     })
+
+    // Fetch health insurances for payment selector
+    const { data: healthInsurancesRes } = useQuery({
+        queryKey: ['health-insurances', 'manual'],
+        queryFn: async () => {
+            const res = await api.getFull<HealthInsurance[]>('/health-insurances', { status: 'ACTIVE', pageSize: '100' })
+            return res?.data || []
+        },
+        enabled: open,
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    })
+    const healthInsurances = healthInsurancesRes || []
 
     // Get selected doctor data
     const selectedDoctor = doctors?.find(d => d.id === selectedDoctorId)
@@ -366,14 +379,6 @@ export function ManualAppointmentModal({
         saveAppointment(data)
     }
 
-    // Generate time slots
-    const timeSlots = Array.from({ length: 24 }, (_, hour) =>
-        Array.from({ length: 2 }, (_, half) => {
-            const h = hour.toString().padStart(2, '0')
-            const m = (half * 30).toString().padStart(2, '0')
-            return `${h}:${m}`
-        })
-    ).flat()
 
     return (
         <>
@@ -552,26 +557,17 @@ export function ManualAppointmentModal({
                                 <div className="space-y-2">
                                     <Label className="flex items-center gap-2">
                                         <Clock className="h-4 w-4" />
-                                        Horário
+                                        Horário (HH:MM)
                                     </Label>
-                                    <Controller
-                                        name="appointment_time"
-                                        control={form.control}
-                                        render={({ field }) => (
-                                            <Select onValueChange={field.onChange} value={field.value || ''}>
-                                                <SelectTrigger className={errors.appointment_time ? 'border-destructive' : ''}>
-                                                    <SelectValue placeholder="Selecione" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {timeSlots.map((time) => (
-                                                        <SelectItem key={time} value={time}>
-                                                            {time}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
+                                    <Input
+                                        type="time"
+                                        step="60"
+                                        {...form.register('appointment_time')}
+                                        className={errors.appointment_time ? 'border-destructive' : ''}
                                     />
+                                    {errors.appointment_time && (
+                                        <p className="text-xs text-destructive">{errors.appointment_time.message}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -646,6 +642,7 @@ export function ManualAppointmentModal({
                                     price={price}
                                     selectedType={paymentType}
                                     onTypeChange={(type) => setValue('payment_type', type)}
+                                    healthInsurances={healthInsurances}
                                     selectedInsuranceId={watch('health_insurance_id')}
                                     onInsuranceChange={(id) => setValue('health_insurance_id', id)}
                                     insuranceCardNumber={watch('insurance_card_number')}

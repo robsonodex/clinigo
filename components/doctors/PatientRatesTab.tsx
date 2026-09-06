@@ -147,6 +147,22 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
   const [isSavingNewPatient, setIsSavingNewPatient] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 1. Consulta principal de dados (declarada antes de callbacks que dependem de patientRates)
+  const { data: responseData, isLoading, refetch } = useQuery<PatientRatesResponse>({
+    queryKey: ['doctor-patient-rates', doctorId],
+    queryFn: async () => {
+      const res = await fetch(`/api/doctor-patient-rates?doctorId=${doctorId}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao carregar taxas');
+      }
+      return res.json();
+    },
+  });
+
+  const patientRates = responseData?.data || [];
+  const stats = responseData?.statistics;
+
   // Busca debounced de pacientes para o modal de adicionar
   const handlePatientSearch = useCallback((searchValue: string) => {
     if (searchTimeoutRef.current) {
@@ -227,22 +243,6 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
       setIsSavingNewPatient(false);
     }
   };
-
-  // 1. Consulta principal de dados
-  const { data: responseData, isLoading, refetch } = useQuery<PatientRatesResponse>({
-    queryKey: ['doctor-patient-rates', doctorId],
-    queryFn: async () => {
-      const res = await fetch(`/api/doctor-patient-rates?doctorId=${doctorId}`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao carregar taxas');
-      }
-      return res.json();
-    },
-  });
-
-  const patientRates = responseData?.data || [];
-  const stats = responseData?.statistics;
 
   // Pacientes filtrados
   const filteredRates = useMemo(() => {

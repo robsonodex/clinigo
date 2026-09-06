@@ -83,7 +83,7 @@ const ROLES = {
     'CLINIC_ADMIN': { label: 'Administrador', color: 'bg-purple-100 text-purple-800' },
     'DOCTOR': { label: 'Médico', color: 'bg-blue-100 text-blue-800' },
     'RECEPTIONIST': { label: 'Recepcionista', color: 'bg-green-100 text-green-800' },
-    'FINANCIAL': { label: 'Financeiro', color: 'bg-yellow-100 text-yellow-800' },
+    'FINANCIAL': { label: 'Administrativo / Financeiro', color: 'bg-amber-100 text-amber-800' },
     'READONLY': { label: 'Apenas Leitura', color: 'bg-gray-100 text-gray-800' },
 }
 
@@ -197,7 +197,7 @@ export default function UsuariosPermissoesPage() {
                 setUsers(clinicUsers.map(u => ({
                     id: u.id,
                     email: u.email || '',
-                    name: u.name || u.email?.split('@')[0] || 'Sem nome',
+                    name: u.full_name || u.name || u.email?.split('@')[0] || 'Sem nome',
                     role: (u.role as User['role']) || 'READONLY',
                     status: u.is_active ? 'active' : 'inactive',
                     created_at: u.created_at,

@@ -73,7 +73,7 @@ interface NavItem {
     title: string
     href: string
     icon: React.ComponentType<{ className?: string }>
-    roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF')[]
+    roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF' | 'FINANCIAL')[]
     badge?: string
     minPlan?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
     children?: NavItem[]
@@ -311,7 +311,7 @@ const navigationSections: NavSection[] = [
                 title: 'Transações e Caixa',
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 children: [
                     {
                         title: 'Lançamentos',
@@ -340,7 +340,7 @@ const navigationSections: NavSection[] = [
                 title: 'Repasses & Produção',
                 href: '/dashboard/financial/payroll',
                 icon: Users,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -369,7 +369,7 @@ const navigationSections: NavSection[] = [
                 title: 'Controladoria & BI',
                 href: '/dashboard/financial/dre',
                 icon: BarChart3,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
                 children: [
                     {
@@ -422,7 +422,7 @@ const navigationSections: NavSection[] = [
                 title: 'Faturamento TISS',
                 href: '/dashboard/tiss',
                 icon: Receipt,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 minPlan: 'PROFESSIONAL',
                 children: [
                     {
@@ -475,7 +475,7 @@ const navigationSections: NavSection[] = [
                 title: 'Convênios e Reembolsos',
                 href: '/dashboard/convenios',
                 icon: Shield,
-                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL'],
                 children: [
                     {
                         title: 'Convênios',
@@ -503,21 +503,21 @@ const navigationSections: NavSection[] = [
                 title: 'Chat Interno',
                 href: '/dashboard/chat',
                 icon: MessagesSquare,
-                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
             },
             {
                 title: 'WhatsApp',
                 href: '/dashboard/whatsapp',
                 icon: MessageCircle,
-                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
             },
             {
                 title: 'Notificações',
                 href: '/dashboard/notificacoes',
                 icon: Send,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 // Acessível a todos os planos (BASICO+)
             },
             {

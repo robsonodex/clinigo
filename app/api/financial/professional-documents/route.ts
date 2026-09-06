@@ -345,6 +345,56 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: saveErr.message }, { status: 500 })
             }
 
+            // Disparo de notificação in-app para os administradores e setor financeiro da clínica
+            try {
+                const { data: doctorInfo } = await supabase
+                    .from('doctors')
+                    .select('specialty, user:user_id(full_name)')
+                    .eq('id', doctorId)
+                    .single()
+
+                const doctorName = (doctorInfo as any)?.user?.full_name || 'Profissional'
+                const doctorSpecialty = (doctorInfo as any)?.specialty ? ` (${(doctorInfo as any).specialty})` : ''
+                const periodLabel = monthReference ? ` referente a ${monthStr}/${yearStr}` : ''
+                const notificationTitle = 'Nota Fiscal Anexada'
+                const notificationMessage = `${doctorName}${doctorSpecialty} anexou a nota fiscal${periodLabel}.`
+
+                // Buscar admins e financeiro exclusivamente da mesma clínica (isolamento multi-tenant)
+                const { data: adminUsers } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('clinic_id', userClinicId)
+                    .in('role', ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'])
+
+                if (adminUsers && adminUsers.length > 0) {
+                    const notificationsToInsert = adminUsers.map((u: any) => ({
+                        user_id: u.id,
+                        clinic_id: userClinicId,
+                        title: notificationTitle,
+                        message: notificationMessage,
+                        type: 'FINANCIAL_INVOICE',
+                        read: false,
+                        link: '/dashboard/financial/notas-demonstrativos',
+                        metadata: {
+                            doctor_id: doctorId,
+                            month_reference: monthReference,
+                            document_id: (saved as any)?.id,
+                            action: 'UPLOAD_INVOICE'
+                        }
+                    }))
+
+                    const { error: notifErr } = await supabase
+                        .from('notifications')
+                        .insert(notificationsToInsert)
+
+                    if (notifErr) {
+                        console.error('Aviso ao registrar notificações financeiras:', notifErr)
+                    }
+                }
+            } catch (notifException) {
+                console.error('Erro no fluxo de notificação de nota fiscal:', notifException)
+            }
+
             return NextResponse.json({
                 success: true,
                 message: 'Nota Fiscal enviada com sucesso para conferência!',

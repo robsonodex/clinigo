@@ -62,7 +62,7 @@ export default function GeneralInfoTab() {
 
                 // Preencher formulários
                 generalForm.reset({
-                    name: data.user.name || '',
+                    name: data.user.name || data.user.full_name || '',
                     email: data.user.email || '',
                     phone: data.user.phone || '',
                     cpf: data.user.cpf || '',

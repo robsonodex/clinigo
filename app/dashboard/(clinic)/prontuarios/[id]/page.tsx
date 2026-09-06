@@ -33,6 +33,11 @@ import { ptBR } from 'date-fns/locale'
 import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
 import { SignatureBadge } from '@/components/pep/SignatureBadge'
 import { useAuth as useAuthContext } from '@/lib/hooks/use-auth'
+import {
+    WorldSensoryEvolutionForm,
+    WorldSensoryData,
+    initialWorldSensoryData
+} from '@/components/medical-records/WorldSensoryEvolutionForm'
 
 // html2pdf import handle
 const generatePDF = async (element: HTMLElement, filename: string) => {
@@ -81,6 +86,8 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     const [recordId, setRecordId] = useState<string | null>(null)
     const [professionType, setProfessionType] = useState('MEDICO')
     const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false)
+    const [hasWorldSensoryEvolution, setHasWorldSensoryEvolution] = useState(false)
+    const [worldSensoryData, setWorldSensoryData] = useState<WorldSensoryData>(initialWorldSensoryData)
 
     // Open sign modal after save completes and recordId is set
     React.useEffect(() => {
@@ -169,7 +176,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             const [patientRes, clinicRes, doctorRes] = await Promise.all([
                 supabase.from('patients').select('*').eq('id', appt.patient_id).single(),
                 supabase.from('clinics').select('id, name, logo_url, professional_label, council_label').eq('id', appt.clinic_id).single(),
-                supabase.from('doctors').select('id, user:user_id(full_name), specialty').eq('id', appt.doctor_id).single()
+                supabase.from('doctors').select('id, user:user_id(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).single()
             ])
 
             if (patientRes.data) setPatient(patientRes.data)
@@ -189,6 +196,21 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 }
             } catch (e) {
                 console.error('Error checking psicomotricidade module:', e)
+            }
+
+            // Verifica se módulo Evolução World Sensory está ativo na clínica
+            try {
+                const { data: wsModData } = await supabase
+                    .from('clinica_modulos')
+                    .select('ativo')
+                    .eq('clinica_id', appt.clinic_id)
+                    .eq('modulo_id', 'evolucao_world_sensory')
+                    .maybeSingle()
+                if (wsModData?.ativo) {
+                    setHasWorldSensoryEvolution(true)
+                }
+            } catch (e) {
+                console.error('Error checking evolucao_world_sensory module:', e)
             }
 
             // Detecta se perfil ou clínica é de Terapia
@@ -234,6 +256,17 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
                 if (customData.escala_dor !== undefined) {
                     setEscalaDor([Number(customData.escala_dor)])
+                }
+
+                if (customData.worldSensoryData) {
+                    setWorldSensoryData(customData.worldSensoryData)
+                } else if (record.chief_complaint || record.history_present_illness) {
+                    setWorldSensoryData({
+                        ...initialWorldSensoryData,
+                        objetivo_sessao: record.chief_complaint || '',
+                        procedimentos_realizados: record.history_present_illness || '',
+                        conduta: record.treatment_plan || ''
+                    })
                 }
 
                 setFormData({
@@ -331,6 +364,9 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
         try {
             const customDataPayload = JSON.stringify({
                 professionType,
+                hasWorldSensoryEvolution,
+                worldSensoryData: hasWorldSensoryEvolution ? worldSensoryData : undefined,
+                templateVersion: hasWorldSensoryEvolution ? 'world_sensory_v1' : undefined,
                 escala_dor: escalaDor[0],
                 // Médico
                 diagnosis_text: formData.diagnosis_text,
@@ -369,10 +405,14 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 appointment_id: appointment.id,
                 patient_id: patient.id,
                 doctor_id: appointment.doctor_id,
-                chief_complaint: formData.chief_complaint,
-                history_present_illness: formData.history_present_illness,
-                physical_exam: formData.physical_exam,
-                treatment_plan: formData.treatment_plan,
+                chief_complaint: hasWorldSensoryEvolution ? (worldSensoryData.objetivo_sessao || '') : formData.chief_complaint,
+                history_present_illness: hasWorldSensoryEvolution ? (worldSensoryData.procedimentos_realizados || '') : formData.history_present_illness,
+                physical_exam: hasWorldSensoryEvolution
+                    ? `RESPOSTA:\nDesempenho: ${worldSensoryData.desempenho_observado}\nNivel Ajuda: ${worldSensoryData.nivel_ajuda_necessario}\n\nINTERPRETACAO:\nIndicadores: ${worldSensoryData.interpretacao_dados_indicam}\nComparacao: ${worldSensoryData.interpretacao_comparacao_anteriores}`
+                    : formData.physical_exam,
+                treatment_plan: hasWorldSensoryEvolution
+                    ? `CONDUTA:\n${worldSensoryData.conduta}\n\nINTERCORRENCIAS:\n${worldSensoryData.intercorrencias}\n\nORIENTACOES:\n${worldSensoryData.orientacoes_contato_familia}`
+                    : formData.treatment_plan,
                 follow_up_instructions: customDataPayload,
                 updated_at: new Date().toISOString()
             }
@@ -502,38 +542,83 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                         </Button>
                     )}
 
-                    <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md border">
-                        <Label htmlFor="prof-selector" className="text-sm font-medium whitespace-nowrap">Área:</Label>
-                        <Select value={professionType} onValueChange={setProfessionType}>
-                            <SelectTrigger id="prof-selector" className="h-8 border-0 bg-transparent shadow-none focus:ring-0">
-                                <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[
-                                    { id: 'MEDICO', label: clinic?.professional_label === 'Terapeuta' ? 'Médico' : (clinic?.professional_label || 'Médico'), icon: Stethoscope },
-                                    { id: 'PSICOLOGO', label: 'Psicologia', icon: Brain },
-                                    { id: 'TERAPEUTA', label: clinic?.professional_label === 'Terapeuta' ? 'Terapeuta' : 'Terapia / Funcional', icon: ActivitySquare },
-                                ].map(p => (
-                                    <SelectItem key={p.id} value={p.id}>
-                                        <div className="flex items-center gap-2">
-                                            <p.icon className="w-4 h-4" />
-                                            <span>{p.label}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {!hasWorldSensoryEvolution && (
+                        <>
+                            <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md border">
+                                <Label htmlFor="prof-selector" className="text-sm font-medium whitespace-nowrap">Área:</Label>
+                                <Select value={professionType} onValueChange={setProfessionType}>
+                                    <SelectTrigger id="prof-selector" className="h-8 border-0 bg-transparent shadow-none focus:ring-0">
+                                        <SelectValue placeholder="Selecione" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[
+                                            { id: 'MEDICO', label: clinic?.professional_label === 'Terapeuta' ? 'Médico' : (clinic?.professional_label || 'Médico'), icon: Stethoscope },
+                                            { id: 'PSICOLOGO', label: 'Psicologia', icon: Brain },
+                                            { id: 'TERAPEUTA', label: clinic?.professional_label === 'Terapeuta' ? 'Terapeuta' : 'Terapia / Funcional', icon: ActivitySquare },
+                                        ].map(p => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <p.icon className="w-4 h-4" />
+                                                    <span>{p.label}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                    <Button variant="outline" onClick={handleGeneratePDF} disabled={isGeneratingPDF}>
-                        {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
-                        Imprimir
-                    </Button>
+                            <Button variant="outline" onClick={handleGeneratePDF} disabled={isGeneratingPDF}>
+                                {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
+                                Imprimir
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Este é o ref que será impresso/exportado para PDF */}
-            <div ref={printableRef} className="bg-white border rounded-lg shadow-sm overflow-hidden text-slate-800 printable-area relative">
+            {hasWorldSensoryEvolution ? (
+                <WorldSensoryEvolutionForm
+                    data={worldSensoryData}
+                    onChange={(field, value) => {
+                        if (isLocked) {
+                            toast({ title: 'Bloqueado', description: 'O prazo de 48h para evolução expirou.', variant: 'destructive' })
+                            return
+                        }
+                        setWorldSensoryData(prev => ({ ...prev, [field]: value }))
+                    }}
+                    onSave={handleSave}
+                    onSign={() => {
+                        if (!recordId) {
+                            setPendingSign(true)
+                            handleSave()
+                        } else {
+                            setShowSignModal(true)
+                        }
+                    }}
+                    isSaving={isSaving}
+                    isLocked={isLocked}
+                    isSigned={!!signatureData}
+                    signatureData={signatureData ? {
+                        signerName: signatureData.signerName,
+                        specialty: doctor?.specialty,
+                        councilNumber: signatureData.crm ? `${doctor?.council_name || clinic?.council_label || 'Conselho'} - ${signatureData.crm}${signatureData.crmState ? `/${signatureData.crmState}` : ''}` : undefined,
+                        signedAt: signatureData.signedAt
+                    } : null}
+                    doctor={{
+                        name: doctor?.user?.full_name,
+                        specialty: doctor?.specialty,
+                        crm: doctor?.crm,
+                        crm_state: doctor?.crm_state,
+                        council_name: doctor?.council_name || clinic?.council_label
+                    }}
+                    patient={patient}
+                    appointment={appointment}
+                    clinicName={clinic?.name || 'World Sensory'}
+                />
+            ) : (
+                <>
+                    {/* Este é o ref que será impresso/exportado para PDF */}
+                    <div ref={printableRef} className="bg-white border rounded-lg shadow-sm overflow-hidden text-slate-800 printable-area relative">
                 
                 {/* Header (Visão Clinica) */}
                 
@@ -933,6 +1018,8 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     )}
                 </div>
             </div>
+        </>
+    )}
 
             {/* Sign Document Modal */}
             {recordId && (

@@ -9,7 +9,7 @@ interface UserProfile {
     id: string
     email: string
     full_name: string
-    role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST'
+    role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL'
     clinic_id?: string
     avatar_url?: string
     is_coordinator?: boolean
@@ -242,6 +242,7 @@ export function useRole() {
         isClinicAdmin: effectiveRole === 'CLINIC_ADMIN',
         isDoctor: effectiveRole === 'DOCTOR',
         isReceptionist: effectiveRole === 'RECEPTIONIST',
+        isFinancial: effectiveRole === 'FINANCIAL',
         isCoordinator: !!profile?.is_coordinator,
         clinicId: effectiveClinicId,
         isImpersonating,

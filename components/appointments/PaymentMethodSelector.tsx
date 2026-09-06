@@ -123,12 +123,18 @@ export function PaymentMethodSelector({
                                 <SelectValue placeholder="Selecione o convênio" />
                             </SelectTrigger>
                             <SelectContent>
-                                {healthInsurances.map((insurance) => (
-                                    <SelectItem key={insurance.id} value={insurance.id}>
-                                        {insurance.name}
-                                        {insurance.plan_name && ` - ${insurance.plan_name}`}
-                                    </SelectItem>
-                                ))}
+                                {healthInsurances.length === 0 ? (
+                                    <div className="p-3 text-xs text-muted-foreground text-center">
+                                        Nenhum convênio ativo encontrado para esta clínica
+                                    </div>
+                                ) : (
+                                    healthInsurances.map((insurance) => (
+                                        <SelectItem key={insurance.id} value={insurance.id}>
+                                            {insurance.name}
+                                            {insurance.plan_name && ` - ${insurance.plan_name}`}
+                                        </SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>

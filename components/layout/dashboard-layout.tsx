@@ -32,8 +32,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <main className="p-4 lg:p-6">{children}</main>
             </div>
 
-            {/* Support Chat Widget (PRO/Enterprise only) */}
-            <SupportChatWrapper />
+            {/* Support Chat Widget - Inativado a pedido do usuario */}
+            {/* <SupportChatWrapper /> */}
 
             {/* Chat Internal Notification Popup */}
             <ChatNotificationPopup />

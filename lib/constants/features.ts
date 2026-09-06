@@ -55,6 +55,7 @@ export const FEATURE_KEYS = {
     // Terapias & Especialidades
     PSICOMOTRICIDADE: 'psicomotricidade',
     PLANO_FISIOTERAPIA: 'plano_fisioterapia',
+    EVOLUCAO_WORLD_SENSORY: 'evolucao_world_sensory',
 } as const
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS]
@@ -274,6 +275,12 @@ export const FEATURE_METADATA: Record<FeatureKey, FeatureMetadata> = {
         category: 'TERAPIA',
         defaultPlans: [],
         description: 'Ficha de Acompanhamento Clínico, 14 Categorias Motoras (MOB, POS, EQU, MAR...) e Gráfico de Desempenho',
+    },
+    [FEATURE_KEYS.EVOLUCAO_WORLD_SENSORY]: {
+        label: 'Evolução Terapêutica — World Sensory',
+        category: 'TERAPIA',
+        defaultPlans: [],
+        description: 'Ficha de Evolução Terapêutica em 7 seções com subcampos clínicos e bloco de assinatura dinâmica',
     },
 }
 

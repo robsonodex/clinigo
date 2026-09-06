@@ -367,8 +367,99 @@
   - `app/dashboard/(clinic)/pacientes/page.tsx` →
     - Suporte a `billing_type = 'ambos'` no formulário de criação rápida, tabela desktop, cards mobile e visualização rápida.
     - Filtro e estatísticas atualizados para computar pacientes da modalidade mista em ambos os relatórios.
-- **Descrição Técnica**:
-  - Elimina o bug que impedia fonoaudiólogas (CRFa) e psicólogas (CRP) de terem seus conselhos salvos no banco.
-  - Elimina o bug que apagava o endereço cadastrado do paciente ao submeter uma alteração cadastral.
-  - Permite o cadastro e gerenciamento flexível de pacientes que realizam terapias particulares e também procedimentos cobertos por convênio de saúde.
+---
 
+### Atualização 05/09/2026 — Assistente Inteligente CliniGo IA (Google Gemini) & Central de Sugestões de Novas Funcionalidades
+
+- **Módulo**: Suporte → Assistente IA & Guia do Usuário
+- **Caminho**:
+  - `supabase/migrations/20260905204000_create_feature_suggestions.sql` → Migration versionada criando a tabela `feature_suggestions` com RLS, índices e campos de identificação da clínica, usuário, contatos e status `PENDING`.
+  - `lib/services/gemini-support.ts` → Serviço de integração de IA contextualizada com base de conhecimento do CliniGo, tolerância a picos temporários e cascata de modelos (`gemini-3.6-flash`, `gemini-flash-latest`, `gemini-3.5-flash`, `gemini-3-flash-preview`). Formato JSON estruturado com chave `clickPath` e `suggestFeature`.
+  - `app/api/support/ai/route.ts` → Endpoint seguro com autenticação de sessão e extração de contexto da clínica/usuário para consulta ao assistente.
+  - `app/api/support/suggest/route.ts` → Endpoint para submissão e registro de ideias e solicitações de novas funcionalidades enviadas pelas clínicas.
+  - `components/support/support-assistant-widget.tsx` → Interface interativa com botão flutuante launcher responsivo, chat guiado passo a passo, banner de "Caminho no Sistema" com botão de cópia, e modal pré-preenchido para envio de sugestões.
+  - `components/support/support-chat-wrapper.tsx` → Integração direta no Dashboard CliniGo com passagem segura de dados de usuário e clínica.
+- **Descrição Técnica**:
+  - Permite que qualquer colaborador de qualquer clínica tire dúvidas em linguagem natural e receba o caminho exato dos cliques no formato `👉 Caminho: Menu Lateral → [Módulo] → [Ação] → Botão "[Nome]"`.
+  - Caso a funcionalidade solicitada não exista no CliniGo, a IA instrui amigavelmente e ativa o botão "💡 Sugerir Nova Funcionalidade", permitindo registrar a necessidade com dados da clínica e contato para a equipe de produto.
+
+
+
+---
+
+### Atualização 06/09/2026 — Lote de Correções e Implementações (Cliente: World Sensory / Patrícia)
+
+#### Item 1 — Agendamento Manual: Horário Livre (Minuto a Minuto) e Listagem de Convênios
+- **Módulo**: Recepção → Agenda → Agendamento Manual
+- **Caminho**:
+  - `components/appointments/ManualAppointmentModal.tsx`
+  - `components/appointments/PaymentMethodSelector.tsx`
+- **Descrição Técnica**:
+  - **1a. Horário Livre**: Substituído o seletor engessado de intervalos de 30 em 30 minutos por `<Input type="time" step="60" ... />` com validação de formato `HH:MM` livre no schema Zod (`timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/`). Agora o usuário pode agendar em qualquer minuto exato (ex: 07:21, 07:56, 08:32), mantendo intactas as validações de conflito de agenda e expediente da clínica.
+  - **1b. Convênios no Agendamento**: Integrada a consulta de operadoras de convênio ativas da clínica logada (`/api/health-insurances`) e repassada via prop `healthInsurances` ao seletor de pagamento. Caso a clínica não possua convênios ativos cadastrados, é exibido aviso claro com atalho orientador. Isolamento estrito por `clinic_id`.
+
+#### Item 2 — Nome de Perfil Editável Manualmente
+- **Módulo**: Minha Conta → Perfil
+- **Caminho**:
+  - `app/api/profile/route.ts`
+  - `app/dashboard/perfil/components/general-info-tab.tsx`
+- **Descrição Técnica**:
+  - Corrigida a rota de persistência do perfil: a tabela oficial do PostgreSQL é `users` com a coluna `full_name` (o código anterior tentava atualizar uma coluna inexistente `name`).
+  - Adicionada sanitização completa do nome (remoção de tags, espaços extras e limite seguro de 100 caracteres) e sincronização com o metadata do Supabase Auth (`supabase.auth.admin.updateUserById`).
+  - Como os módulos do sistema (Agenda, Prontuário, Financeiro, Painel de TV) realizam join dinâmico com `users.full_name`, a alteração reflete imediatamente em todos os pontos do CliniGo.
+
+#### Itens 3 e 4 — Papel Administrativo / Financeiro & Controle de Permissões
+- **Módulo**: Configurações → Usuários & Controle de Acesso
+- **Caminho**:
+  - `supabase/migrations/20260906_world_sensory_updates.sql`
+  - `lib/hooks/use-auth.ts`
+  - `components/layout/sidebar.tsx`
+  - `app/dashboard/(clinic)/configuracoes/usuarios/page.tsx`
+  - `docs/CHECKLIST_REGRESSAO_CLINIGO.md`
+- **Descrição Técnica**:
+  - Adicionado o valor `'FINANCIAL'` ao enum de banco `user_role` via migration versionada.
+  - No `use-auth.ts`, adicionada a verificação `isFinancial: effectiveRole === 'FINANCIAL'`.
+  - No `sidebar.tsx`, concedido acesso a todos os módulos financeiros, faturamento, notas/demonstrativos, cobranças, comunicação e convênios, bloqueando categoricamente o acesso a prontuários, prescrições e agenda médica.
+  - Os colaboradores com papel Administrativo / Financeiro são cadastrados exclusivamente na tabela `users` (sem vínculo na tabela `doctors`), assegurando por design que **nunca apareçam** nas listas de atendimento da agenda, painel de chamada da TV ou seleção de repasse clínico.
+
+#### Item 5 — Ficha Exclusiva de Prontuário / Evolução Terapêutica (World Sensory)
+- **Módulo**: Atendimento Clínico → Prontuário / PEP
+- **Caminho**:
+  - `components/medical-records/WorldSensoryEvolutionForm.tsx`
+  - `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`
+  - `lib/constants/features.ts`
+  - `supabase/migrations/20260906_world_sensory_updates.sql`
+- **Descrição Técnica**:
+  - Criado o componente dedicado `WorldSensoryEvolutionForm` reproduzindo integralmente a estrutura de "EVOLUÇÃO TERAPÊUTICA" da cliente:
+    1. Objetivo da Sessão
+    2. Procedimentos Realizados
+    3. Resposta do Paciente (Apresentação geral, Desempenho observado e Nível de ajuda necessário)
+    4. Interpretação Clínica (O que os dados indicam e Comparação com sessões anteriores)
+    5. Conduta
+    6. Intercorrências (Descrição da intercorrência, manejo realizado e repercussão clínica)
+    7. Orientações ou Contato com Família/Equipe
+  - **Bloco de Assinatura Dinâmico**: Nome do profissional logado + Especialidade + Registro do Conselho de Classe (ex: *Crefito 3 – 11193TO*), puxados automaticamente do cadastro do profissional no banco.
+  - **Isolamento Multi-tenant Estrito**: Ativado via tabela `clinica_modulos` (`modulo_id = 'evolucao_world_sensory'`) apenas para as clínicas World Sensory e Demo Teste. Clínicas padrão continuam com o modelo tradicional intacto.
+  - Exportação fiel para PDF via `html2pdf.js` respeitando o modelo interno fornecido.
+
+#### Item 6 — Correção do Bug Crítico de TDZ ("Cannot access 'eL' before initialization")
+- **Módulo**: Cadastros → Médicos/Profissionais → Valores por Paciente
+- **Caminho**:
+  - `components/doctors/PatientRatesTab.tsx`
+- **Descrição Técnica**:
+  - Identificada a causa raiz: a função de busca `handlePatientSearch` na linha 151 acessava a constante `patientRates` antes de sua declaração na linha 244 (Temporal Dead Zone). No ambiente de build minificado do Turbopack/Next.js, essa variável foi nomeada como `eL`, gerando o `ReferenceError`.
+  - Reposicionado o hook `useQuery` e a declaração de `patientRates` para o topo do componente antes de qualquer manipulador dependente, eliminando completamente a TDZ tanto em desenvolvimento quanto em produção.
+
+#### Item 7 — Notificação Automática ao Anexar Nota Fiscal
+- **Módulo**: Financeiro → Notas Fiscais e Demonstrativos
+- **Caminho**:
+  - `app/api/financial/professional-documents/route.ts`
+- **Descrição Técnica**:
+  - No endpoint `POST` (ação `UPLOAD_INVOICE`), após o upload com sucesso da nota fiscal pelo profissional, o backend consulta os dados do doutor (`full_name`, `specialty`) e busca todos os usuários com papel `CLINIC_ADMIN`, `FINANCIAL` ou `SUPER_ADMIN` vinculados àquela mesma clínica.
+  - Insere registros na tabela `notifications` com o título *"Nota Fiscal Anexada"*, a mensagem *"{Nome} ({Especialidade}) anexou a nota fiscal referente a MM/AAAA"* e o link direto para a conferência financeira. Isolamento estrito por `clinic_id`.
+
+#### Pensando à Frente — Resiliência e Prevenção de Regressão
+- **Error Boundary Global do Dashboard**:
+  - Criado `app/dashboard/(clinic)/error.tsx` com interface sóbria, ícones neutros e botões de recuperação imediata para impedir telas em branco.
+- **Matriz de Permissões e Checklist**:
+  - Criado `docs/CHECKLIST_REGRESSAO_CLINIGO.md` documentando a matriz de papéis e as 8 etapas essenciais de homologação pré-deploy.
