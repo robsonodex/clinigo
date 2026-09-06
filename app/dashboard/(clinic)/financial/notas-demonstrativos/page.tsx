@@ -59,7 +59,8 @@ import {
     HelpCircle,
     Check,
     X,
-    Trash2
+    Trash2,
+    Calculator
 } from 'lucide-react'
 
 // Status labels and styling
@@ -133,6 +134,13 @@ export default function CentralNotasEDemonstrativosPage() {
     const [payModalOpen, setPayModalOpen] = useState(false)
     const [selectedDocForPay, setSelectedDocForPay] = useState<any>(null)
     const [isPaying, setIsPaying] = useState(false)
+
+    // Modal de Detalhamento e Cálculo de Produção
+    const [isCalculatingProduction, setIsCalculatingProduction] = useState(false)
+    const [isExportingExcel, setIsExportingExcel] = useState(false)
+    const [productionDetailOpen, setProductionDetailOpen] = useState(false)
+    const [productionData, setProductionData] = useState<{ summary: any; items: any[] } | null>(null)
+    const [selectedDoctorForProduction, setSelectedDoctorForProduction] = useState<any>(null)
 
     // Consulta documentos e profissionais do mês selecionado
     const { data: responseData, isLoading, refetch } = useQuery({
@@ -247,7 +255,217 @@ export default function CentralNotasEDemonstrativosPage() {
         setStatementDeductions(item.document?.statement_deductions ? String(item.document.statement_deductions) : '')
         setStatementNotes(item.document?.statement_notes || '')
         setStatementFile(null)
+        setProductionData(null)
         setStatementModalOpen(true)
+    }
+
+    // Buscar resumo de produção do profissional no mês
+    const fetchProductionSummary = async (doctorId: string, month: string) => {
+        const res = await fetch(`/api/financial/production-summary?doctor_id=${doctorId}&month_reference=${month}`)
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.error || 'Erro ao calcular produção do profissional')
+        }
+        return res.json()
+    }
+
+    // Calcular produção e preencher formulário do demonstrativo automaticamente
+    const handleCalculateForStatement = async () => {
+        if (!selectedDoctorForStatement?.doctor?.id) return
+        setIsCalculatingProduction(true)
+        try {
+            const res = await fetchProductionSummary(selectedDoctorForStatement.doctor.id, selectedMonth)
+            if (!res.success) throw new Error(res.error || 'Falha no cálculo')
+
+            setProductionData(res)
+            setStatementAmount(res.summary.total_net_repasse.toFixed(2))
+            setStatementGrossAmount(res.summary.total_gross.toFixed(2))
+            if (!statementNotes) {
+                setStatementNotes(`Fechamento de ${res.summary.total_appointments} atendimentos no mês (${res.summary.unique_patients_count} pacientes atendidos).`)
+            }
+            toast({
+                title: 'Produção calculada com sucesso!',
+                description: `Total de ${res.summary.total_appointments} sessões apuradas. Repasse líquido: ${formatCurrency(res.summary.total_net_repasse)}.`
+            })
+        } catch (err: any) {
+            toast({
+                title: 'Erro no cálculo de produção',
+                description: err.message,
+                variant: 'destructive'
+            })
+        } finally {
+            setIsCalculatingProduction(false)
+        }
+    }
+
+    // Ação rápida: visualizar detalhamento de produção na tabela
+    const handleQuickViewProduction = async (item: any) => {
+        setSelectedDoctorForProduction(item)
+        setIsCalculatingProduction(true)
+        setProductionDetailOpen(true)
+        try {
+            const res = await fetchProductionSummary(item.doctor.id, selectedMonth)
+            if (!res.success) throw new Error(res.error || 'Falha ao buscar dados')
+            setProductionData(res)
+        } catch (err: any) {
+            toast({
+                title: 'Erro ao carregar produção',
+                description: err.message,
+                variant: 'destructive'
+            })
+        } finally {
+            setIsCalculatingProduction(false)
+        }
+    }
+
+    // Exportar planilha Excel com produção e repasse detalhado
+    const handleExportProductionExcel = async (targetData?: { summary: any; items: any[] } | null) => {
+        const activeData = targetData || productionData
+        if (!activeData || !activeData.summary) {
+            toast({
+                title: 'Sem dados para exportar',
+                description: 'Nenhum cálculo de produção disponível no momento.',
+                variant: 'destructive'
+            })
+            return
+        }
+
+        setIsExportingExcel(true)
+        try {
+            const ExcelJS = (await import('exceljs')).default
+            const wb = new ExcelJS.Workbook()
+            wb.creator = 'CliniGo'
+            wb.created = new Date()
+
+            const ws = wb.addWorksheet('Demonstrativo de Produção')
+
+            // Título do cabeçalho
+            ws.mergeCells('A1:G1')
+            const titleCell = ws.getCell('A1')
+            titleCell.value = 'CLINIGO — DEMONSTRATIVO DE PRODUÇÃO E REPASSE TERAPÊUTICO'
+            titleCell.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FFFFFFFF' } }
+            titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }
+            titleCell.alignment = { vertical: 'middle', horizontal: 'center' }
+            ws.getRow(1).height = 30
+
+            // Informações do Profissional
+            ws.getCell('A3').value = 'Profissional:'
+            ws.getCell('B3').value = activeData.summary.doctor_name
+            ws.getCell('A3').font = { bold: true }
+
+            ws.getCell('D3').value = 'Competência:'
+            ws.getCell('E3').value = activeData.summary.month_reference
+            ws.getCell('D3').font = { bold: true }
+
+            ws.getCell('A4').value = 'Especialidade:'
+            ws.getCell('B4').value = activeData.summary.specialty || 'Não informada'
+            ws.getCell('A4').font = { bold: true }
+
+            ws.getCell('D4').value = 'Data de Emissão:'
+            ws.getCell('E4').value = new Date().toLocaleDateString('pt-BR')
+            ws.getCell('D4').font = { bold: true }
+
+            // Bloco de Totais
+            ws.mergeCells('A6:B6')
+            ws.getCell('A6').value = 'RESUMO CONSOLIDADO DO MÊS'
+            ws.getCell('A6').font = { bold: true, color: { argb: 'FF1E293B' } }
+
+            ws.getCell('A7').value = 'Total de Atendimentos:'
+            ws.getCell('B7').value = activeData.summary.total_appointments
+            ws.getCell('A8').value = 'Pacientes Únicos Atendidos:'
+            ws.getCell('B8').value = activeData.summary.unique_patients_count
+            ws.getCell('A9').value = 'Produção Bruta Total (R$):'
+            ws.getCell('B9').value = activeData.summary.total_gross
+            ws.getCell('B9').numFmt = 'R$ #,##0.00'
+            ws.getCell('A10').value = 'Total Líquido a Repassar (R$):'
+            ws.getCell('B10').value = activeData.summary.total_net_repasse
+            ws.getCell('B10').numFmt = 'R$ #,##0.00'
+            ws.getCell('B10').font = { bold: true, color: { argb: 'FF15803D' } }
+
+            // Cabeçalho da Tabela Detalhada
+            const startTableRow = 12
+            const tableHeaders = [
+                'Data',
+                'Horário',
+                'Paciente',
+                'Procedimento / Terapia',
+                'Produção Bruta (R$)',
+                'Repasse Terapeuta (R$)',
+                'Regra de Repasse Aplicada'
+            ]
+
+            const headerRow = ws.getRow(startTableRow)
+            tableHeaders.forEach((header, idx) => {
+                const cell = headerRow.getCell(idx + 1)
+                cell.value = header
+                cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }
+                cell.alignment = { vertical: 'middle', horizontal: idx >= 4 && idx <= 5 ? 'right' : 'left' }
+            })
+            headerRow.height = 24
+
+            // Inserir linhas de atendimentos
+            activeData.items.forEach((item, index) => {
+                const currentRowNum = startTableRow + 1 + index
+                const row = ws.getRow(currentRowNum)
+
+                let formattedDate = ''
+                if (item.date) {
+                    const parts = item.date.split('-')
+                    formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : item.date
+                }
+
+                row.getCell(1).value = formattedDate
+                row.getCell(2).value = item.time || ''
+                row.getCell(3).value = item.patient_name
+                row.getCell(4).value = item.procedure
+                row.getCell(5).value = item.gross_amount
+                row.getCell(5).numFmt = 'R$ #,##0.00'
+                row.getCell(6).value = item.repasse_amount
+                row.getCell(6).numFmt = 'R$ #,##0.00'
+                row.getCell(6).font = { bold: true, color: { argb: 'FF15803D' } }
+                row.getCell(7).value = item.rule_description
+
+                // Linhas alternadas
+                if (index % 2 === 1) {
+                    for (let c = 1; c <= 7; c++) {
+                        row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
+                    }
+                }
+            })
+
+            // Largura das colunas
+            ws.getColumn(1).width = 14
+            ws.getColumn(2).width = 10
+            ws.getColumn(3).width = 32
+            ws.getColumn(4).width = 26
+            ws.getColumn(5).width = 20
+            ws.getColumn(6).width = 22
+            ws.getColumn(7).width = 38
+
+            const buffer = await wb.xlsx.writeBuffer()
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            const sanitizedDocName = (activeData.summary.doctor_name || 'Profissional').replace(/\s+/g, '_')
+            link.href = url
+            link.download = `Demonstrativo_Producao_${sanitizedDocName}_${activeData.summary.month_reference}.xlsx`
+            link.click()
+            window.URL.revokeObjectURL(url)
+
+            toast({
+                title: 'Planilha exportada com sucesso!',
+                description: `Arquivo Excel gerado para ${activeData.summary.doctor_name}.`
+            })
+        } catch (err: any) {
+            toast({
+                title: 'Erro ao exportar Excel',
+                description: err.message || 'Falha ao gerar planilha.',
+                variant: 'destructive'
+            })
+        } finally {
+            setIsExportingExcel(false)
+        }
     }
 
     // Salvar demonstrativo financeiro
@@ -761,6 +979,18 @@ export default function CentralNotasEDemonstrativosPage() {
                                                 {/* Coluna 5: Ações */}
                                                 <TableCell className="py-3 px-5 text-right">
                                                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                                        {/* Botão de Produção Rápida */}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleQuickViewProduction(item)}
+                                                            className="h-8 px-2.5 text-xs font-medium border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-700 hover:border-emerald-300"
+                                                            title="Conferir produção e repasse detalhado do mês"
+                                                        >
+                                                            <Calculator className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                                                            Produção
+                                                        </Button>
+
                                                         {/* Botão de Demonstrativo (Criar / Editar) */}
                                                         <Button
                                                             variant="outline"
@@ -860,6 +1090,70 @@ export default function CentralNotasEDemonstrativosPage() {
                     </DialogHeader>
 
                     <form onSubmit={handleSaveStatement} className="space-y-4 py-2">
+                        {/* Bloco de Cálculo Automático por Produção */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Calculator className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Cálculo Automático por Produção</span>
+                                </div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleCalculateForStatement}
+                                    disabled={isCalculatingProduction}
+                                    className="h-7 px-2.5 text-[11px] font-semibold bg-white dark:bg-slate-800 border-emerald-500 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50"
+                                >
+                                    {isCalculatingProduction ? (
+                                        <>
+                                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                            Calculando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Calculator className="w-3 h-3 mr-1" />
+                                            Puxar Produção do Mês
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                                Cruza os atendimentos do mês com as taxas cadastradas por paciente (ou contrato padrão do profissional) e preenche os valores abaixo.
+                            </p>
+                            {productionData && productionData.summary && (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800 text-xs">
+                                    <div className="space-x-1.5">
+                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{productionData.summary.total_appointments} sessões</span>
+                                        <span className="text-slate-400">•</span>
+                                        <span className="font-semibold text-emerald-600">Líquido: {formatCurrency(productionData.summary.total_net_repasse)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setProductionDetailOpen(true)}
+                                            className="h-6 px-2 text-[10px] font-semibold text-blue-600 hover:underline"
+                                        >
+                                            <Eye className="w-3 h-3 mr-1" />
+                                            Ver sessões
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleExportProductionExcel(productionData)}
+                                            disabled={isExportingExcel}
+                                            className="h-6 px-2 text-[10px] font-semibold text-emerald-600 hover:underline"
+                                        >
+                                            <Download className="w-3 h-3 mr-1" />
+                                            Excel
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         <div>
                             <Label className="text-xs font-semibold">Valor Líquido a Repassar (R$) *</Label>
                             <div className="relative mt-1">
@@ -1052,6 +1346,170 @@ export default function CentralNotasEDemonstrativosPage() {
                             {isPaying ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
                             Confirmar Pagamento
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Detalhamento Completo da Produção */}
+            <Dialog open={productionDetailOpen} onOpenChange={setProductionDetailOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+                    <DialogHeader className="p-5 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40">
+                                    <Calculator className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-base font-bold text-foreground">
+                                        Produção e Repasse — {productionData?.summary?.doctor_name || selectedDoctorForProduction?.doctor?.user?.full_name || 'Profissional'}
+                                    </DialogTitle>
+                                    <DialogDescription className="text-xs mt-0.5">
+                                        Competência: <strong className="text-slate-800 dark:text-slate-200">{selectedMonth}</strong> • Especialidade: {productionData?.summary?.specialty || selectedDoctorForProduction?.doctor?.specialty || 'Terapeuta'}
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                            {productionData?.summary && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleExportProductionExcel(productionData)}
+                                    disabled={isExportingExcel}
+                                    className="h-8 px-3 text-xs font-semibold border-slate-200 dark:border-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 shrink-0"
+                                >
+                                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                                    {isExportingExcel ? 'Gerando...' : 'Exportar Excel'}
+                                </Button>
+                            )}
+                        </div>
+                    </DialogHeader>
+
+                    <div className="p-5 space-y-4 overflow-y-auto flex-1">
+                        {isCalculatingProduction ? (
+                            <div className="p-12 text-center space-y-3">
+                                <Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600" />
+                                <p className="text-xs text-slate-500 font-medium">Calculando produção e cruzando taxas do mês...</p>
+                            </div>
+                        ) : !productionData ? (
+                            <div className="p-8 text-center text-xs text-slate-500">
+                                Nenhum dado carregado para esta competência.
+                            </div>
+                        ) : (
+                            <>
+                                {/* Cards de KPI do Mês */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Atendimentos</p>
+                                        <p className="text-lg font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                            {productionData.summary.total_appointments}
+                                        </p>
+                                    </div>
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pacientes Atendidos</p>
+                                        <p className="text-lg font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                            {productionData.summary.unique_patients_count}
+                                        </p>
+                                    </div>
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Produção Bruta</p>
+                                        <p className="text-lg font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                            {formatCurrency(productionData.summary.total_gross)}
+                                        </p>
+                                    </div>
+                                    <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40">
+                                        <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Repasse Líquido</p>
+                                        <p className="text-lg font-black text-emerald-700 dark:text-emerald-300 mt-0.5">
+                                            {formatCurrency(productionData.summary.total_net_repasse)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Tabela detalhada de atendimentos */}
+                                <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+                                    <div className="overflow-x-auto max-h-[380px]">
+                                        <Table>
+                                            <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80 sticky top-0 z-10">
+                                                <TableRow className="border-b border-slate-200 dark:border-slate-800">
+                                                    <TableHead className="text-[11px] font-bold py-2.5 px-3">Data / Hora</TableHead>
+                                                    <TableHead className="text-[11px] font-bold py-2.5 px-3">Paciente</TableHead>
+                                                    <TableHead className="text-[11px] font-bold py-2.5 px-3">Procedimento</TableHead>
+                                                    <TableHead className="text-[11px] font-bold py-2.5 px-3 text-right">Valor Bruto</TableHead>
+                                                    <TableHead className="text-[11px] font-bold py-2.5 px-3 text-right">Repasse Terapeuta</TableHead>
+                                                    <TableHead className="text-[11px] font-bold py-2.5 px-3">Regra Aplicada</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {productionData.items.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-400 italic">
+                                                            Nenhum atendimento realizado encontrado para este profissional na competência {selectedMonth}.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    productionData.items.map((it: any, idx: number) => {
+                                                        const dateFormatted = it.date ? it.date.split('-').reverse().join('/') : ''
+                                                        return (
+                                                            <TableRow key={it.appointment_id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 text-xs border-b border-slate-100 dark:border-slate-800/60">
+                                                                <TableCell className="py-2.5 px-3 font-medium whitespace-nowrap">
+                                                                    <span>{dateFormatted}</span>
+                                                                    {it.time && <span className="text-slate-400 ml-1.5 font-mono text-[11px]">{it.time}</span>}
+                                                                </TableCell>
+                                                                <TableCell className="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-200">
+                                                                    {it.patient_name}
+                                                                </TableCell>
+                                                                <TableCell className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
+                                                                    {it.procedure}
+                                                                </TableCell>
+                                                                <TableCell className="py-2.5 px-3 text-right font-medium text-slate-700 dark:text-slate-300">
+                                                                    {formatCurrency(it.gross_amount)}
+                                                                </TableCell>
+                                                                <TableCell className="py-2.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                                                    {formatCurrency(it.repasse_amount)}
+                                                                </TableCell>
+                                                                <TableCell className="py-2.5 px-3">
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={cn(
+                                                                            "text-[10px] font-normal px-1.5 py-0.5 rounded-md",
+                                                                            it.is_custom_rate
+                                                                                ? "border-emerald-300 bg-emerald-50/80 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                                                                : "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                                                                        )}
+                                                                    >
+                                                                        {it.rule_description}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 shrink-0 gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setProductionDetailOpen(false)}
+                            className="h-9 text-xs"
+                        >
+                            Fechar
+                        </Button>
+                        {productionData?.summary && selectedDoctorForStatement && statementModalOpen && (
+                            <Button
+                                onClick={() => {
+                                    setStatementAmount(productionData.summary.total_net_repasse.toFixed(2))
+                                    setStatementGrossAmount(productionData.summary.total_gross.toFixed(2))
+                                    setProductionDetailOpen(false)
+                                }}
+                                className="h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                                Aplicar no Demonstrativo
+                            </Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

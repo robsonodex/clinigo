@@ -103,7 +103,15 @@ When user's prompt is NOT in English:
 2. **Respond in user's language** - match their communication
 3. **Code comments/variables** remain in English
 
+### 🚫 PROIBIÇÃO ABSOLUTA DE EMOJIS (SaaS Médico Premium Internacional)
+
+O CliniGo é uma plataforma médica corporativa séria de padrão premium internacional:
+1. **ZERO EMOJIS**: É TERMINANTEMENTE PROIBIDO o uso de emojis na interface, botões, títulos, respostas de IA, mensagens de sistema, notificações ou qualquer componente.
+2. **Iconografia Sóbria**: Use exclusivamente ícones vetoriais neutros (Lucide Icons). Proibido ícones infantis ou efeitos espalhafatosos.
+3. **Comunicação Profissional**: Toda resposta e texto deve ser direto, técnico, formal e elegante.
+
 ### 🧹 Clean Code (Global Mandatory)
+
 
 **ALL code MUST follow `@[skills/clean-code]` rules. No exceptions.**
 

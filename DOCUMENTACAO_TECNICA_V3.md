@@ -463,3 +463,22 @@
   - Criado `app/dashboard/(clinic)/error.tsx` com interface sóbria, ícones neutros e botões de recuperação imediata para impedir telas em branco.
 - **Matriz de Permissões e Checklist**:
   - Criado `docs/CHECKLIST_REGRESSAO_CLINIGO.md` documentando a matriz de papéis e as 8 etapas essenciais de homologação pré-deploy.
+
+#### Item 8 — Fechamento Automático de Produção, Cálculo de Repasse e Sigilo Individual por Terapeuta
+- **Módulo**: Financeiro → Notas Fiscais e Demonstrativos & Meu Financeiro
+- **Caminho**:
+  - `app/api/financial/production-summary/route.ts` (API de cálculo com blindagem RBAC)
+  - `app/dashboard/(clinic)/financial/notas-demonstrativos/page.tsx` (Central da Administração - Patrícia)
+  - `components/financial/DoctorFinancialDocumentsView.tsx` (Portal do Terapeuta - Meu Financeiro)
+- **Descrição Técnica**:
+  - **Motor de Cálculo Automático**: Criada a rota `/api/financial/production-summary` que recebe `doctor_id` e `month_reference`. Varre os atendimentos realizados no mês (excluindo cancelados e no-shows) e cruza com a tabela de taxas específicas por paciente (`doctor_patient_rates`), aplicando fallback para o contrato padrão do médico (`doctor_contracts`) ou valor base de consulta.
+  - **Garantia de Sigilo Absoluto entre Terapeutas (RBAC Backend)**: Quando um usuário autenticado possui o papel `DOCTOR`, o endpoint valida no banco se o ID do médico solicitado pertence estritamente ao seu próprio `user_id`. Tentativas de consultar colegas retornam `403 Forbidden: Acesso negado: você só pode visualizar a sua própria produção`. Nenhum profissional tem acesso a salários, sessões ou demonstrativos de outros terapeutas.
+  - **Central da Administração (Patrícia)**:
+    - No modal de Anexar Demonstrativo: adicionado o bloco "Cálculo Automático por Produção" com botão "Puxar Produção do Mês", preenchendo automaticamente o valor líquido, produção bruta e notas de fechamento.
+    - Na tabela de profissionais: adicionado o botão rápido "Produção" na coluna de Ações, permitindo conferência e exportação em 1 clique.
+    - Modal de visualização detalhada com cards de KPI (atendimentos, pacientes únicos, valor bruto e líquido) e tabela completa das sessões com indicação da regra aplicada.
+  - **Exportação Profissional em Excel (`ExcelJS`)**:
+    - Gerador de planilha com formatação institucional CliniGo, cabeçalho de metadados, blocos de totais consolidados e listagem detalhada de atendimentos com formatação monetária e larguras automáticas.
+  - **Portal do Terapeuta (`Meu Financeiro`)**:
+    - Adicionado o botão "Conferir Produção" em cada card mensal, permitindo que o terapeuta confira suas próprias sessões e baixe a planilha Excel individual sem visibilidade sobre outros membros da clínica.
+
