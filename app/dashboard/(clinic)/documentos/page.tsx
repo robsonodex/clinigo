@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
     FileText, Upload, Search, Filter, Loader2, Eye, Download,
-    Trash2, FileImage, FileScan, Calendar, User, Tag, FileArchive
+    Trash2, FileImage, FileScan, Calendar, User, Tag, FileArchive,
+    ExternalLink
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -65,6 +66,23 @@ export default function DocumentsPage() {
     const [uploadDocType, setUploadDocType] = useState('')
     const [uploadNotes, setUploadNotes] = useState('')
     const [runOcr, setRunOcr] = useState(true)
+    const [loadingSignedUrl, setLoadingSignedUrl] = useState(false)
+
+    const handleOpenSecureDocument = async (doc: Document) => {
+        try {
+            setLoadingSignedUrl(true)
+            const res = await fetch(`/api/documents/${doc.id}/signed-url`)
+            const data = await res.json()
+            if (!res.ok || !data.signedUrl) {
+                throw new Error(data.error || 'Falha ao obter link seguro do documento')
+            }
+            window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao abrir documento seguro')
+        } finally {
+            setLoadingSignedUrl(false)
+        }
+    }
 
     const fetchDocuments = useCallback(async () => {
         try {
@@ -541,10 +559,22 @@ export default function DocumentsPage() {
                                     
                                     {selectedDocument.file_type.startsWith('image/') || selectedDocument.file_type === 'application/pdf' ? (
                                         <div className="mt-4 flex justify-center p-4 bg-muted/50 rounded-lg">
-                                            <Button asChild variant="outline">
-                                                <a href={selectedDocument.storage_path || '#'} target="_blank" rel="noopener noreferrer">
-                                                    Abrir Documento Original
-                                                </a>
+                                            <Button 
+                                                variant="outline"
+                                                onClick={() => selectedDocument && handleOpenSecureDocument(selectedDocument)}
+                                                disabled={loadingSignedUrl}
+                                            >
+                                                {loadingSignedUrl ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Gerando Acesso Seguro...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                                        Abrir Documento Seguro
+                                                    </>
+                                                )}
                                             </Button>
                                         </div>
                                     ) : null}
@@ -571,10 +601,22 @@ export default function DocumentsPage() {
                             </div>
 
                             <div className="mt-6 flex justify-center">
-                                <Button asChild variant="outline">
-                                    <a href={selectedDocument?.storage_path || '#'} target="_blank" rel="noopener noreferrer">
-                                        Abrir / Visualizar Original Externo
-                                    </a>
+                                <Button 
+                                    variant="outline"
+                                    onClick={() => selectedDocument && handleOpenSecureDocument(selectedDocument)}
+                                    disabled={loadingSignedUrl}
+                                >
+                                    {loadingSignedUrl ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Gerando Acesso Seguro...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            Abrir Documento Seguro
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </div>

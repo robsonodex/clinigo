@@ -812,5 +812,53 @@
   - **Implementação do Handler DELETE em API v2**: Adicionado o handler `DELETE` completo em `app/api-v2/appointments/[id]/route.ts` com validação de permissões por clínica/profissional e desvinculo defensivo de dependências e chaves estrangeiras (`appointment_qr_codes`, `video_rooms`, `reschedule_tokens`, `nps_surveys`, `financial_entries`, `waiting_list`, `consultations`, `payments`, `tiss_guides`, `referrals`).
   - **Blindagem do Parsing HTTP no Frontend**: Implementada leitura resiliente com `res.text()` e fallback seguro para JSON em `agenda-view.tsx` e `AppointmentDetailsDrawer.tsx`, assegurando que nenhuma resposta de erro ou corpo inesperado do servidor quebre a execução da interface.
 
+#### Item 27 — Segurança de Storage e Privacidade de Documentos Médicos (Frente A)
+- **Módulo**: Segurança & LGPD → Documentos de Pacientes & Storage
+- **Caminho**:
+  - `supabase/migrations/20260907_make_documents_buckets_private.sql`
+  - `app/api/documents/[id]/signed-url/route.ts` → `GET`
+  - `app/dashboard/(clinic)/documentos/page.tsx` → `handleOpenSecureDocument`
+  - `app/api/documents/route.ts` → `POST`
+  - `components/documents/DocumentUpload.tsx` → `handleFileUpload`
+  - `lib/validations/documents.ts` → `uploadDocumentSchema`
+- **Descrição Técnica**:
+  - **Privatização dos Buckets no Supabase Storage**: Os buckets `patient-documents`, `checkin-docs` e `clinic-assets` foram alterados de `public = true` para `public = false` na tabela `storage.buckets`. Todas as políticas RLS de leitura pública irrestrita foram revogadas, impedindo imediatamente que qualquer arquivo médico seja acessado por terceiros sem autenticação.
+  - **Camada de URLs Assinadas Temporárias (`GET /api/documents/[id]/signed-url`)**: Criado endpoint protegido que valida a sessão do usuário, a permissão do profissional/coordenador e o isolamento multi-tenant da clínica (`clinic_id`). Ao autorizar a leitura, gera uma URL assinada via Supabase Storage com tempo estrito de expiração de 10 minutos (600 segundos). Suporta de forma retrocompatível tanto os registros legados (que continham a URL pública completa) quanto os novos registros (com caminho relativo limpo).
+  - **Visualização Segura no Frontend**: O painel de documentos do paciente (`app/dashboard/(clinic)/documentos/page.tsx`) substituiu a abertura de links estáticos pelo acionamento assíncrono com feedback visual (`Gerando Acesso Seguro...`), abrindo a URL assinada em nova aba e bloqueando a exposição de URLs públicas fixas.
+  - **Eliminação de URLs Públicas no Upload**: Os fluxos de upload (`DocumentUpload.tsx` e `/api/documents`) foram ajustados para salvar exclusivamente o caminho relativo (`filePath`) do objeto, eliminando dependência de URLs públicas estáticas no banco de dados.
+
+#### Item 28 — Retenção Automática e Expurgo de Logs do Postgres via pg_cron (Frente B)
+- **Módulo**: Banco de Dados & Infraestrutura → Retenção e Descarte de Logs Internos
+- **Caminho**:
+  - `supabase/migrations/20260907_setup_logs_retention_cron.sql`
+  - Extensões: `pg_cron` e `pg_net`
+- **Descrição Técnica**:
+  - **Diagnóstico de Espaço em Disco**: O banco continha 266 MB, dos quais 168 MB (63%) eram logs internos acumulados sem valor de negócio: `net._http_response` (125 MB, 47%) e `cron.job_run_details` (43 MB, 16%, mais de 142.000 linhas geradas por crons de minuto a minuto).
+  - **Agendamento de Crons Recorrentes de Limpeza**:
+    1. Job `purge-old-cron-job-run-details`: Agendado diariamente às 03:00 UTC (`0 3 * * *`), executa `DELETE FROM cron.job_run_details WHERE start_time < NOW() - INTERVAL '7 days'`.
+    2. Job `purge-old-net-http-responses`: Agendado diariamente às 04:00 UTC (`0 4 * * *`), executa `DELETE FROM net._http_response WHERE created < NOW() - INTERVAL '3 days'`.
+  - **Expurgo Inicial**: 132.746 linhas obsoletas de `cron.job_run_details` foram purgadas com sucesso, estabilizando o consumo e estancando o crescimento descontrolado do disco.
+
+#### Item 29 — Camada de Storage Desacoplada e Integração com Cloudflare R2 (Frente C)
+- **Módulo**: Storage & Arquitetura Cloud → Abstração de Armazenamento Híbrido
+- **Caminho**:
+  - `lib/services/storage/storage-service.ts` → Interface `StorageService` e fábrica `getStorageService`
+  - `lib/services/storage/r2-client.ts` → Singleton S3Client e detecção de configuração do Cloudflare R2
+  - `lib/services/storage/adapters/r2-adapter.ts` → Implementação para Cloudflare R2 via `@aws-sdk/client-s3` e `@aws-sdk/s3-request-presigner`
+  - `lib/services/storage/adapters/supabase-adapter.ts` → Implementação de fallback para Supabase Storage
+  - `app/api/documents/route.ts` → Upload desacoplado via `getStorageService('patient-documents')`
+  - `app/api/documents/[id]/route.ts` → Exclusão física compatível com R2 e Supabase Storage
+  - `app/api/documents/[id]/signed-url/route.ts` → Resolução dinâmica de URLs assinadas temporárias (R2 ou Supabase)
+  - `components/documents/DocumentUpload.tsx` → Upload seguro via rota interna sem expor credenciais no cliente
+  - `scripts/migrate-storage-to-r2.ts` → Script de migração segura com `--dry-run`, validação SHA-256 e retenção integral dos arquivos originais no Supabase
+  - `.env.example` → Documentação técnica das variáveis do Cloudflare R2
+- **Descrição Técnica**:
+  - **Padrão de Armazenamento Padronizado**: Estrutura das chaves: `{clinic_id}/{modulo}/{entidade_id}/{uuid}-{nome_original_sanitizado}`. Documentos no R2 recebem o prefixo `r2://` no campo `patient_documents.file_url`, permitindo rápida identificação visual e roteamento instantâneo.
+  - **Feature Flag com Rollback Instantâneo**: Variável `STORAGE_PROVIDER_PATIENT_DOCUMENTS=r2` ou `supabase`. Se a variável estiver como `supabase`, se não estiver definida ou se as credenciais do R2 estiverem ausentes, o sistema utiliza automaticamente o Supabase Storage sem falhas ou indisponibilidade.
+  - **Segurança de Credenciais**: O upload passa pelo backend (Next.js API route), garantindo que nem o Access Key nem o Secret Key do R2 sejam expostos ao navegador.
+  - **Migração com Validação Criptográfica**: O script `migrate-storage-to-r2.ts` calcula o hash SHA-256 do arquivo original no Supabase e compara com o hash do objeto lido do R2 após o upload. Apenas se os hashes forem idênticos o ponteiro do banco é atualizado. Nenhum arquivo é excluído do Supabase Storage.
+
+
+
 
 

@@ -34,7 +34,7 @@ export const uploadDocumentSchema = z.object({
     file_name: z.string()
         .min(1, 'File name required')
         .max(255, 'File name too long'),
-    file_url: z.string().url('Invalid file URL'),
+    file_url: z.string().min(1, 'File path or URL required'),
     file_size: z.number()
         .int('File size must be integer')
         .positive('File size must be positive')

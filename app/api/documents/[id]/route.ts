@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * ao paciente dono do documento (via appointments).
  * Retorna true se permitido, false se bloqueado.
  */
-async function isDoctorAllowedForDocument(
+export async function isDoctorAllowedForDocument(
     supabase: any,
     userId: string,
     patientId: string
@@ -91,12 +91,22 @@ export async function DELETE(
             }
         }
 
-        // Delete from storage
+        // Delete from storage (R2 ou Supabase Storage)
         if (document.file_url) {
-            const fileNameMatch = document.file_url.match(/patient-documents\/(.*?)$/)
-            if (fileNameMatch && fileNameMatch[1]) {
-                const filePath = fileNameMatch[1]
-                await supabase.storage.from('patient-documents').remove([filePath])
+            try {
+                if (document.file_url.startsWith('r2://') || (document.file_url.includes('/patient-documents/') && !document.file_url.startsWith('http'))) {
+                    const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
+                    const r2Adapter = new R2StorageAdapter()
+                    await r2Adapter.delete({ key: document.file_url })
+                } else {
+                    let cleanPath = document.file_url.replace(/^supabase:\/\//, '')
+                    if (cleanPath.includes('patient-documents/')) {
+                        cleanPath = cleanPath.split('patient-documents/')[1].split('?')[0]
+                    }
+                    await supabase.storage.from('patient-documents').remove([cleanPath])
+                }
+            } catch (storageDelErr) {
+                console.error('[STORAGE_DELETE_ERROR] Falha ao remover arquivo fisico do storage:', storageDelErr)
             }
         }
 

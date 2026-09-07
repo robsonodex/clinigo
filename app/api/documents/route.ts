@@ -4,6 +4,7 @@ import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/midd
 import { log } from '@/lib/logger'
 import { uploadDocumentSchema, listDocumentsQuerySchema } from '@/lib/validations/documents'
 import { withRateLimit } from '@/lib/rate-limit'
+import { getStorageService } from '@/lib/services/storage/storage-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -215,33 +216,33 @@ export async function POST(request: Request) {
                 }
             }
 
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${patient_id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-
             // Convert to array buffer for upload
             const arrayBuffer = await file.arrayBuffer()
             const buffer = Buffer.from(arrayBuffer)
 
-            const { error: uploadError } = await supabase.storage
-                .from('patient-documents')
-                .upload(fileName, buffer, {
-                    contentType: file.type,
-                    upsert: false
-                })
+            // Upload via camada de storage desacoplada (Supabase ou Cloudflare R2 com fallback)
+            const storageService = getStorageService('patient-documents')
+            const effectiveClinicId = userFull?.clinic_id || 'general'
 
-            if (uploadError) {
-                console.error('Storage upload error:', uploadError)
+            let uploadResult
+            try {
+                uploadResult = await storageService.upload({
+                    clinicId: effectiveClinicId,
+                    module: 'patient-documents',
+                    entityId: patient_id,
+                    file: buffer,
+                    filename: file.name,
+                    contentType: file.type || 'application/octet-stream'
+                })
+            } catch (storageError: any) {
+                console.error('[STORAGE_UPLOAD_ERROR]', storageError)
                 return NextResponse.json({ error: 'Erro ao salvar arquivo no storage.' }, { status: 500 })
             }
-
-            const { data: publicUrlData } = supabase.storage
-                .from('patient-documents')
-                .getPublicUrl(fileName)
 
             bodyToValidate = {
                 patient_id,
                 file_name: file.name,
-                file_url: publicUrlData.publicUrl,
+                file_url: uploadResult.key,
                 file_size: file.size,
                 file_type: file.type,
                 category,
