@@ -35,6 +35,8 @@ import {
     HelpCircle,
     UserCheck,
     CheckCircle2,
+    Check,
+    ArrowRight,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -1048,7 +1050,8 @@ export default function AgendaPage() {
                         onClick={() => setShowFreeSlots(!showFreeSlots)}
                     >
                         <EyeOff className="h-4 w-4" />
-                        {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
+                        <span>Horários Livres</span>
+                        {showFreeSlots && <Check className="h-3.5 w-3.5 ml-1" />}
                     </Button>
 
                     <Button
@@ -1184,7 +1187,7 @@ export default function AgendaPage() {
                                 )}
                             >
                                 <span>Ver Todos os Profissionais</span>
-                                {selectedDoctorIds.length === 0 && <span className="text-emerald-600 font-bold">✓</span>}
+                                {selectedDoctorIds.length === 0 && <Check className="h-4 w-4 text-emerald-600" />}
                             </button>
 
                             {doctorsList?.filter((d: any) => d.id && d.user).map((doctor: any) => {
@@ -1224,7 +1227,7 @@ export default function AgendaPage() {
                                             "w-4 h-4 rounded flex items-center justify-center border shrink-0 text-[10px]",
                                             isSelected ? "bg-emerald-600 border-emerald-600 text-white" : "border-slate-300 dark:border-slate-600"
                                         )}>
-                                            {isSelected && '✓'}
+                                            {isSelected && <Check className="w-3 h-3 text-white" />}
                                         </div>
                                     </button>
                                 )
@@ -2081,7 +2084,7 @@ export default function AgendaPage() {
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}
                 onSuccess={(appointmentDate) => {
-                    // ✅ Navigate agenda to created appointment date so it appears immediately
+                    // Navigate agenda to created appointment date so it appears immediately
                     setSelectedDate(parseISO(appointmentDate))
                 }}
             />
@@ -2204,7 +2207,7 @@ export default function AgendaPage() {
                                         {draggedAppointment.appointment_time.substring(0, 5)}
                                     </p>
                                 </div>
-                                <div className="text-primary">➔</div>
+                                <ArrowRight className="h-4 w-4 text-primary" />
                                 <div className="text-sm text-right">
                                     <p className="text-muted-foreground">Novo Horário</p>
                                     <p className="font-medium text-primary">

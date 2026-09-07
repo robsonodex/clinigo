@@ -141,7 +141,7 @@ export function AppointmentDetailsDrawer({
             const response = await fetch(`/api-v2/appointments/${appointmentId}?include=qr_code`)
 
             if (!response.ok) {
-                // 🔍 Enhanced debugging - capture full error details
+                // Enhanced debugging - capture full error details
                 let errorData: any = {};
                 const rawText = await response.text();
                 try {
@@ -228,10 +228,10 @@ export function AppointmentDetailsDrawer({
             console.log('[DEBUG] Video room from API:', apiData?.video_room)
 
             if (apiData?.video_room) {
-                console.log('[DEBUG] ✅ Video room found:', apiData.video_room)
+                console.log('[DEBUG] [OK] Video room found:', apiData.video_room)
                 setVideoRoom(apiData.video_room)
             } else {
-                console.log('[DEBUG] ❌ No video room in API response')
+                console.log('[DEBUG] [INFO] No video room in API response')
             }
         } catch (error) {
             console.error('[ERROR] Error loading appointment:', error)
