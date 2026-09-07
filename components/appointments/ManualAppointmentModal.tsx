@@ -34,6 +34,7 @@ import {
     Calendar,
     Clock,
     User,
+    Users,
     Stethoscope,
     AlertTriangle,
     Bell,
@@ -82,6 +83,7 @@ const manualAppointmentSchema = z.object({
     ignore_schedule_constraints: z.boolean().default(false),
     override_reason: z.string().optional(),
     specialty: z.string().optional(),
+    co_doctor_id: z.string().optional(),
 })
 
 type ManualAppointmentFormData = z.infer<typeof manualAppointmentSchema>
@@ -135,6 +137,7 @@ export function ManualAppointmentModal({
             ignore_schedule_constraints: false,
             specialty: '',
             notes: '',
+            co_doctor_id: '',
         },
     })
 
@@ -171,6 +174,7 @@ export function ManualAppointmentModal({
                 send_email: false,
                 ignore_schedule_constraints: true, // Assume valid if existing
                 specialty: editingSpecialty || appointmentToEdit.doctor?.specialty || '',
+                co_doctor_id: appointmentToEdit.co_doctor_id || '',
             })
         } else if (open && !appointmentToEdit) {
             // Reset for create mode
@@ -249,11 +253,16 @@ export function ManualAppointmentModal({
     // Create/Update appointment mutation
     const { mutate: saveAppointment, isPending } = useMutation({
         mutationFn: async (data: ManualAppointmentFormData) => {
+            const cleanCoDoctorId = data.co_doctor_id && data.co_doctor_id !== 'none' && data.co_doctor_id !== data.doctor_id
+                ? data.co_doctor_id
+                : null
+
             const payload = {
                 // ... payload construction
                 patient_id: selectedPatient?.id,
                 quick_registration: quickRegistration,
                 doctor_id: data.doctor_id,
+                co_doctor_id: cleanCoDoctorId || undefined,
                 appointment_date: data.appointment_date,
                 appointment_time: data.appointment_time,
                 duration_minutes: data.duration_minutes,
@@ -285,6 +294,7 @@ export function ManualAppointmentModal({
                     appointment_type: data.type === 'telemedicina' ? 'online' : 'presencial',
                     notes: data.notes,
                     reception_notes: data.specialty ? `[ESP:${data.specialty}]` : null,
+                    co_doctor_id: cleanCoDoctorId,
                 }
                 response = await fetch(`/api/appointments/${appointmentToEdit.id}`, {
                     method: 'PATCH',
@@ -542,6 +552,39 @@ export function ManualAppointmentModal({
                                      />
                                  </div>
                              )}
+
+                             {/* Co-Doctor / Co-Therapist Selection (Optional) */}
+                             <div className="space-y-2">
+                                 <Label className="flex items-center gap-2 text-muted-foreground font-normal">
+                                     <Users className="h-4 w-4" />
+                                     Co-Terapeuta / 2º Profissional (Opcional)
+                                 </Label>
+                                 <Controller
+                                     name="co_doctor_id"
+                                     control={form.control}
+                                     render={({ field }) => (
+                                         <Select 
+                                             onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} 
+                                             value={field.value || 'none'}
+                                         >
+                                             <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
+                                                 <SelectValue placeholder="Nenhum (atendimento individual)" />
+                                             </SelectTrigger>
+                                             <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                 <SelectItem value="none">Nenhum (atendimento individual)</SelectItem>
+                                                 {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doctor) => (
+                                                     <SelectItem key={doctor.id} value={doctor.id}>
+                                                         {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
+                                                     </SelectItem>
+                                                 ))}
+                                             </SelectContent>
+                                         </Select>
+                                     )}
+                                 />
+                                 <p className="text-xs text-muted-foreground">
+                                     Permite que dois profissionais atendam simultaneamente na mesma sessão sem conflito de horário.
+                                 </p>
+                             </div>
 
                              {/* Date and Time */}
                             <div className="grid grid-cols-2 gap-4">

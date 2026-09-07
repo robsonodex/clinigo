@@ -169,10 +169,8 @@ export const scheduleEntrySchema = z.object({
     slot_duration_minutes: z
         .number()
         .int()
-        .refine(
-            (val) => [15, 30, 45, 60].includes(val),
-            { message: 'Duração do slot deve ser 15, 30, 45 ou 60 minutos' }
-        ),
+        .min(5, 'Duração mínima de 5 minutos')
+        .max(480, 'Duração máxima de 480 minutos (8h)'),
 })
 
 /**
@@ -182,7 +180,7 @@ export const updateSchedulesSchema = z
     .object({
         schedules: z
             .array(scheduleEntrySchema)
-            .max(21, 'Máximo de 21 blocos de horário permitidos'), // 3 per day max
+            .max(70, 'Máximo de 70 blocos de horário permitidos'), // Até 10 por dia
     })
     .refine(
         (data) => {

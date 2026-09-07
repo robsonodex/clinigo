@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid'
 interface RecurringSeriesRequest {
     patient_id: string
     doctor_id: string
+    co_doctor_id?: string | null
     days_of_week: number[]       // [1, 3] = Monday + Wednesday
     appointment_time: string     // "08:00"
     therapy_type?: string        // "ABA", "Fono", etc.
@@ -144,6 +145,30 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Validate co_doctor if provided
+        if (body.co_doctor_id) {
+            if (body.co_doctor_id === body.doctor_id) {
+                return NextResponse.json(
+                    { error: 'O co-terapeuta não pode ser o mesmo profissional que o terapeuta principal' },
+                    { status: 400 }
+                )
+            }
+
+            const { data: coDoctor } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('id', body.co_doctor_id)
+                .eq('clinic_id', clinicId)
+                .single()
+
+            if (!coDoctor) {
+                return NextResponse.json(
+                    { error: 'Co-terapeuta não encontrado nesta clínica' },
+                    { status: 404 }
+                )
+            }
+        }
+
         // Generate all dates for the series
         const allDates = generateDatesForSeries(body.days_of_week, body.start_date, body.end_date)
 
@@ -154,8 +179,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Check ALL dates for conflicts - if any conflict exists, BLOCK creation
-        const { data: conflicts } = await supabase
+        // Check ALL dates for conflicts for primary doctor
+        const { data: primaryConflicts } = await supabase
             .from('appointments')
             .select('appointment_date, appointment_time')
             .eq('doctor_id', body.doctor_id)
@@ -163,8 +188,25 @@ export async function POST(request: NextRequest) {
             .in('appointment_date', allDates)
             .not('status', 'in', '("CANCELLED")')
 
-        if (conflicts && conflicts.length > 0) {
-            const conflictDates = conflicts.map((c: any) => c.appointment_date)
+        let allConflicts: any[] = primaryConflicts || []
+
+        // Check conflicts for co-doctor if specified
+        if (body.co_doctor_id) {
+            const { data: coConflicts } = await supabase
+                .from('appointments')
+                .select('appointment_date, appointment_time')
+                .or(`doctor_id.eq.${body.co_doctor_id},co_doctor_id.eq.${body.co_doctor_id}`)
+                .eq('appointment_time', body.appointment_time)
+                .in('appointment_date', allDates)
+                .not('status', 'in', '("CANCELLED")')
+
+            if (coConflicts && coConflicts.length > 0) {
+                allConflicts = [...allConflicts, ...coConflicts]
+            }
+        }
+
+        if (allConflicts.length > 0) {
+            const conflictDates = Array.from(new Set(allConflicts.map((c: any) => c.appointment_date))).sort()
             return NextResponse.json(
                 {
                     error: 'Existem conflitos de horário nas datas abaixo. Resolva os conflitos antes de criar a série.',
@@ -186,6 +228,7 @@ export async function POST(request: NextRequest) {
                 clinic_id: clinicId,
                 patient_id: body.patient_id,
                 doctor_id: body.doctor_id,
+                co_doctor_id: body.co_doctor_id || null,
                 days_of_week: body.days_of_week,
                 appointment_time: body.appointment_time,
                 therapy_type: body.therapy_type || null,
@@ -228,6 +271,7 @@ export async function POST(request: NextRequest) {
             id: uuidv4(),
             clinic_id: clinicId,
             doctor_id: body.doctor_id,
+            co_doctor_id: body.co_doctor_id || null,
             patient_id: body.patient_id,
             appointment_date: date,
             appointment_time: body.appointment_time,
@@ -331,7 +375,8 @@ export async function GET(request: NextRequest) {
             .select(`
                 *,
                 patient:patients(id, full_name, phone),
-                doctor:doctors(id, user:users(full_name), specialty),
+                doctor:doctors!recurring_appointment_series_doctor_id_fkey(id, user:users(full_name), specialty),
+                co_doctor:doctors!recurring_appointment_series_co_doctor_id_fkey(id, user:users(full_name), specialty),
                 created_by_user:users!recurring_appointment_series_created_by_fkey(full_name)
             `)
             .eq('clinic_id', effectiveClinicId)
@@ -344,7 +389,7 @@ export async function GET(request: NextRequest) {
             query = query.eq('patient_id', patientId)
         }
         if (doctorId) {
-            query = query.eq('doctor_id', doctorId)
+            query = query.or(`doctor_id.eq.${doctorId},co_doctor_id.eq.${doctorId}`)
         }
 
         const { data: series, error } = await query

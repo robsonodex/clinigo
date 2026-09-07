@@ -358,6 +358,27 @@ export async function POST(request: NextRequest) {
                     { status: 409 }
                 )
             }
+
+            if (body.co_doctor_id) {
+                const { data: coConflicts } = await supabase
+                    .from('appointments')
+                    .select('id')
+                    .or(`doctor_id.eq.${body.co_doctor_id},co_doctor_id.eq.${body.co_doctor_id}`)
+                    .eq('appointment_date', body.appointment_date)
+                    .eq('appointment_time', body.appointment_time)
+                    .not('status', 'in', '("CANCELLED","COMPLETED","NO_SHOW")')
+
+                if (coConflicts && coConflicts.length > 0) {
+                    return NextResponse.json(
+                        {
+                            error: 'Conflito de horário do co-terapeuta detectado',
+                            conflict: true,
+                            message: 'O co-terapeuta já possui um agendamento para este horário.'
+                        },
+                        { status: 409 }
+                    )
+                }
+            }
         }
 
         // Calculate price - check schedule_price_ranges first, fallback to doctor default
@@ -419,6 +440,7 @@ export async function POST(request: NextRequest) {
             id: appointmentId,
             clinic_id: clinicId,
             doctor_id: primaryDoctorId,
+            co_doctor_id: body.co_doctor_id || null,
             patient_id: body.is_block ? null : patientId,
             appointment_date: appointmentDate,
             appointment_time: appointmentTime,
@@ -667,7 +689,7 @@ export async function POST(request: NextRequest) {
                     const videoUrl = `${baseUrl}/video/${appointmentId}?token=${(videoRoom as any).patient_token}`
                     videoLinkHtml = `
                         <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #3b82f6;">
-                            <h3 style="color: #1e40af; margin: 0 0 8px 0;">📹 Link da Teleconsulta</h3>
+                            <h3 style="color: #1e40af; margin: 0 0 8px 0;">Link da Teleconsulta</h3>
                             <p style="margin: 0 0 12px 0;">Acesse o link abaixo no horário da consulta:</p>
                             <p style="text-align: center;">
                                 <a href="${videoUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
@@ -682,7 +704,7 @@ export async function POST(request: NextRequest) {
                 let checkinHtml = ''
                 if (!isTelemedicina) {
                     checkinHtml = `
-                        <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                        <h3 style="color: #3b82f6;">Faça seu Pré-Check-in Online</h3>
                         <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
                         <p style="text-align: center;">
                             <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
@@ -696,18 +718,18 @@ export async function POST(request: NextRequest) {
                 await sendEmailMultiTenant({
                     clinicId,
                     to: patient.email,
-                    subject: `✅ Consulta Confirmada - ${appointmentDate} às ${appointmentTime}`,
+                    subject: `Consulta Confirmada - ${appointmentDate} às ${appointmentTime}`,
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h2 style="color: #10b981;">✅ Agendamento Confirmado!</h2>
+                            <h2 style="color: #10b981;">Agendamento Confirmado</h2>
                             <p>Olá <strong>${patient.full_name}</strong>,</p>
                             <p>Sua consulta foi agendada com sucesso:</p>
                             <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                                <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorFullName}</p>
-                                <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${appointmentDate}</p>
-                                <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${appointmentTime}</p>
-                                <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicName}</p>
-                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isTelemedicina ? 'Teleconsulta' : 'Presencial'}</p>
+                                <p style="margin: 4px 0;"><strong>Médico:</strong> Dr(a). ${doctorFullName}</p>
+                                <p style="margin: 4px 0;"><strong>Data:</strong> ${appointmentDate}</p>
+                                <p style="margin: 4px 0;"><strong>Horário:</strong> ${appointmentTime}</p>
+                                <p style="margin: 4px 0;"><strong>Clínica:</strong> ${clinicName}</p>
+                                <p style="margin: 4px 0;"><strong>Tipo:</strong> ${isTelemedicina ? 'Teleconsulta' : 'Presencial'}</p>
                             </div>
                             ${videoLinkHtml}
                             ${checkinHtml}
@@ -732,27 +754,27 @@ export async function POST(request: NextRequest) {
                 const clinicName = appointmentWithRelations?.clinic?.name || 'Clínica'
                 const isTelemedicina = body.type === 'telemedicina'
 
-                let message = `✅ *Agendamento Confirmado!*\n\n`
+                let message = `*Agendamento Confirmado*\n\n`
                 message += `Olá *${patient.full_name}*!\n\n`
                 message += `Sua consulta foi agendada com sucesso:\n\n`
-                message += `👨‍⚕️ *Médico(a):* Dr(a). ${doctorFullName}\n`
-                message += `📅 *Data:* ${appointmentDate}\n`
-                message += `🕐 *Horário:* ${appointmentTime}\n`
-                message += `🏥 *Clínica:* ${clinicName}\n`
-                message += `📋 *Tipo:* ${isTelemedicina ? '📹 Teleconsulta' : '🏥 Presencial'}\n`
+                message += `*Médico(a):* Dr(a). ${doctorFullName}\n`
+                message += `*Data:* ${appointmentDate}\n`
+                message += `*Horário:* ${appointmentTime}\n`
+                message += `*Clínica:* ${clinicName}\n`
+                message += `*Tipo:* ${isTelemedicina ? 'Teleconsulta' : 'Presencial'}\n`
 
                 if (isTelemedicina && videoRoom) {
                     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
                     const videoUrl = `${baseUrl}/video/${appointmentId}?role=patient&token=${(videoRoom as any).patient_token}`
-                    message += `\n🎥 *Link da Teleconsulta:*\n${videoUrl}\n`
+                    message += `\n*Link da Teleconsulta:*\n${videoUrl}\n`
                     message += `\n_Acesse o link acima no horário da consulta._`
                 } else {
                     const checkinUrl = qrCodeData?.url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'}/checkin/${appointmentId}`
-                    message += `\n📱 *Faça seu pré-check-in:*\n${checkinUrl}\n`
+                    message += `\n*Faça seu pré-check-in:*\n${checkinUrl}\n`
                     message += `\n_Agilize seu atendimento fazendo o check-in antes da consulta._`
                 }
 
-                message += `\n\n_CliniGo - Cuidando de você! 💚_`
+                message += `\n\n_CliniGo - Plataforma Integrada de Saúde_`
 
                 let sectorToSend = ''
                 const doctorUserId = (doctor as any)?.user_id

@@ -192,6 +192,7 @@ export async function fetchAvailableSlots(doctorId: string, date: string) {
 export interface CreateAppointmentData {
     clinic_slug: string
     doctor_id: string
+    co_doctor_id?: string | null
     appointment_date: string
     appointment_time: string
     payment_type?: 'PARTICULAR' | 'CONVENIO'
@@ -243,6 +244,8 @@ export interface Appointment {
     notes?: string
     payment_type?: string
     doctor: Doctor
+    co_doctor?: Doctor | null
+    co_doctor_id?: string | null
     patient: {
         id: string
         full_name: string

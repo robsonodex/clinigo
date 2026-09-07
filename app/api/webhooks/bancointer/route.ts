@@ -189,12 +189,30 @@ export async function POST(request: NextRequest) {
                                 logger.warn({ error: emailError }, 'Welcome email failed (non-blocking)')
                             }
 
+                            // 8. Notificar proprietário da plataforma CliniGo
+                            try {
+                                const { notifyOwnerPaymentReceived } = await import('@/lib/services/notifications/owner-payment-notification')
+                                await notifyOwnerPaymentReceived({
+                                    clinicName: newClinic.name,
+                                    clinicId: newClinic.id,
+                                    adminEmail: pendingReg.email,
+                                    adminName: pendingReg.full_name,
+                                    amount: 0,
+                                    planType: pendingReg.plan_type,
+                                    paymentMethod: 'BOLETO',
+                                    transactionId: nossoNumero,
+                                    dueDate: newDueDate.toLocaleDateString('pt-BR'),
+                                })
+                            } catch (ownerNotifErr: any) {
+                                logger.warn({ error: ownerNotifErr.message }, 'Owner notification failed (non-blocking)')
+                            }
+
                             logger.info({
                                 clinicId: newClinic.id,
                                 clinicName: newClinic.name,
                                 email: pendingReg.email,
                                 plan: pendingReg.plan_type,
-                            }, '✅ New clinic registered via boleto payment')
+                            }, 'New clinic registered via boleto payment')
                             continue
 
                         } catch (regError) {
@@ -287,7 +305,7 @@ export async function POST(request: NextRequest) {
                             await (supabase.from('billing_notifications').insert({
                                 clinic_id: paymentRequest.clinic_id,
                                 type: 'PAYMENT_RECEIVED',
-                                title: 'Pagamento Confirmado! 🎉',
+                                title: 'Pagamento Confirmado',
                                 message: `Recebemos seu pagamento via Boleto. Sua assinatura foi renovada até ${newDueDate.toLocaleDateString('pt-BR')}. Obrigado por confiar no CliniGo!`,
                                 priority: 'HIGH',
                             } as any) as any)
@@ -320,6 +338,23 @@ export async function POST(request: NextRequest) {
                             } catch (emailError) {
                                 logger.warn({ error: emailError }, 'Email send failed (non-blocking)')
                             }
+                        }
+
+                        // 6. Notificar proprietário da plataforma CliniGo
+                        try {
+                            const { notifyOwnerPaymentReceived } = await import('@/lib/services/notifications/owner-payment-notification')
+                            await notifyOwnerPaymentReceived({
+                                clinicName: clinic?.name || 'Clínica',
+                                clinicId: paymentRequest.clinic_id,
+                                adminEmail: clinic?.email,
+                                amount: paymentRequest.amount || 0,
+                                planType: clinic?.plan_type || paymentRequest.plan_type,
+                                paymentMethod: 'BOLETO',
+                                transactionId: nossoNumero,
+                                dueDate: newDueDate.toLocaleDateString('pt-BR'),
+                            })
+                        } catch (ownerNotifErr: any) {
+                            logger.warn({ error: ownerNotifErr.message }, 'Owner notification failed (non-blocking)')
                         }
 
                         logger.info({
@@ -402,6 +437,23 @@ export async function POST(request: NextRequest) {
                             } catch (emailError) {
                                 logger.warn({ error: emailError }, 'Email send failed (non-blocking)')
                             }
+                        }
+
+                        // Notificar proprietário da plataforma CliniGo
+                        try {
+                            const { notifyOwnerPaymentReceived } = await import('@/lib/services/notifications/owner-payment-notification')
+                            await notifyOwnerPaymentReceived({
+                                clinicName: clinic?.name || 'Clínica',
+                                clinicId: subscription.clinic_id,
+                                adminEmail: clinic?.email,
+                                amount: 0,
+                                planType: clinic?.plan_type || subscription.plan_type,
+                                paymentMethod: 'BOLETO',
+                                transactionId: nossoNumero,
+                                dueDate: periodEnd.toLocaleDateString('pt-BR'),
+                            })
+                        } catch (ownerNotifErr: any) {
+                            logger.warn({ error: ownerNotifErr.message }, 'Owner notification failed (non-blocking)')
                         }
 
                         logger.info({

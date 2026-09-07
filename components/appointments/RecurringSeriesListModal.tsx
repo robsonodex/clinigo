@@ -47,6 +47,7 @@ import {
     CalendarDays,
     Phone,
     ArrowUpRight,
+    Users,
 } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
@@ -82,6 +83,14 @@ interface RecurringSeries {
         phone?: string | null
     }
     doctor?: {
+        id: string
+        specialty: string
+        user?: {
+            full_name: string
+        }
+    }
+    co_doctor_id?: string | null
+    co_doctor?: {
         id: string
         specialty: string
         user?: {
@@ -415,6 +424,12 @@ export function RecurringSeriesListModal({
                                                     {item.therapy_type && (
                                                         <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-medium text-slate-700 dark:text-slate-300">
                                                             {item.therapy_type}
+                                                        </span>
+                                                    )}
+                                                    {item.co_doctor && (
+                                                        <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px] font-medium flex items-center gap-1">
+                                                            <Users className="h-3 w-3 text-emerald-600" />
+                                                            Co-terapeuta: {item.co_doctor.user?.full_name || 'Profissional'}
                                                         </span>
                                                     )}
                                                 </div>

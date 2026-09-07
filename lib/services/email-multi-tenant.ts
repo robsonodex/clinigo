@@ -73,19 +73,23 @@ export function encryptPassword(password: string): string {
 }
 
 /**
- * Get SMTP configuration for a clinic
- * Falls back to global SMTP if clinic doesn't have custom config
+ * Get SMTP configuration for a clinic or system
+ * Returns null if the clinic does not have a configured and enabled SMTP server.
+ * Only 'system' and 'global' use platform-level credentials.
  */
-async function getSMTPConfig(clinicId: string): Promise<SMTPConfig> {
+async function getSMTPConfig(clinicId: string): Promise<SMTPConfig | null> {
     if (!clinicId || clinicId === 'global' || clinicId === 'system') {
-        // Fall back to global SMTP configuration directly
+        // Credenciais globais do sistema CliniGo (usadas exclusivamente para alertas internos da plataforma/dono)
+        if (!process.env.SMTP_HOST || !process.env.SMTP_PASSWORD) {
+            return null
+        }
         return {
             host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
             port: parseInt(process.env.SMTP_PORT || '587'),
             user: process.env.SMTP_USER || 'apikey',
             password: process.env.SMTP_PASSWORD || '',
-            fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@clinigo.com.br',
-            fromName: process.env.SMTP_FROM_NAME || 'CliniGo Telemedicina',
+            fromEmail: process.env.SMTP_FROM_EMAIL || 'contato@clinigo.app',
+            fromName: process.env.SMTP_FROM_NAME || 'CliniGo',
             secure: process.env.SMTP_PORT === '465',
         }
     }
@@ -99,39 +103,36 @@ async function getSMTPConfig(clinicId: string): Promise<SMTPConfig> {
         .single()
 
     if (error || !clinic) {
-        throw new Error(`Clinic not found: ${clinicId}`)
+        console.warn(`[EmailMultiTenant] Clínica não encontrada: ${clinicId}`)
+        return null
     }
 
-    // Check if clinic can use custom SMTP (PRO or ENTERPRISE plans)
-    const canUseCustomSMTP = ['PRO', 'ENTERPRISE'].includes(clinic.plan_type || '')
+    // Regra Estrita Multi-Tenant:
+    // E-mails de clínica só devem ser disparados se a clínica estiver com SMTP conectado e ativo!
+    // NUNCA fazer fallback para contato@clinigo.app ou credenciais globais da plataforma.
+    if (!clinic.smtp_enabled || !clinic.smtp_host || !clinic.smtp_password) {
+        return null
+    }
 
-    if (clinic.smtp_enabled && canUseCustomSMTP && clinic.smtp_host && clinic.smtp_password) {
-        // Use clinic's custom SMTP
+    try {
+        const decryptedPassword = decryptPassword(clinic.smtp_password)
         return {
             host: clinic.smtp_host,
             port: clinic.smtp_port || 587,
             user: clinic.smtp_user || '',
-            password: decryptPassword(clinic.smtp_password),
-            fromEmail: clinic.smtp_from_email || '',
-            fromName: clinic.smtp_from_name || '',
+            password: decryptedPassword,
+            fromEmail: clinic.smtp_from_email || clinic.smtp_user || '',
+            fromName: clinic.smtp_from_name || 'Clínica',
             secure: clinic.smtp_port === 465,
         }
-    }
-
-    // Fall back to global SMTP configuration
-    return {
-        host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        user: process.env.SMTP_USER || 'apikey',
-        password: process.env.SMTP_PASSWORD || '',
-        fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@clinigo.com.br',
-        fromName: process.env.SMTP_FROM_NAME || 'CliniGo Telemedicina',
-        secure: process.env.SMTP_PORT === '465',
+    } catch (decErr) {
+        console.error(`[EmailMultiTenant] Falha ao descriptografar senha SMTP da clínica ${clinicId}:`, decErr)
+        return null
     }
 }
 
 /**
- * Send email using clinic's SMTP or global fallback
+ * Send email using clinic's SMTP (or global for system alerts)
  */
 export async function sendEmailMultiTenant({
     clinicId,
@@ -139,9 +140,18 @@ export async function sendEmailMultiTenant({
     subject,
     html,
     text,
-}: SendEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
+}: SendEmailParams): Promise<{ success: boolean; skipped?: boolean; messageId?: string; error?: string }> {
     try {
         const config = await getSMTPConfig(clinicId)
+
+        if (!config) {
+            console.info(`[EmailMultiTenant] Disparo cancelado: Clínica ${clinicId} não possui SMTP próprio conectado/ativo. Nenhum e-mail de plataforma foi enviado.`)
+            return {
+                success: false,
+                skipped: true,
+                error: 'CLINIC_SMTP_NOT_CONFIGURED: E-mails transacionais da clínica só são disparados quando a clínica possuir SMTP conectado.',
+            }
+        }
 
         const transporter = nodemailer.createTransport({
             host: config.host,
@@ -235,23 +245,23 @@ export async function testSMTPConnection(config: Partial<SMTPConfig> & { testEma
             await transporter.sendMail({
                 from: `"${fromName}" <${fromEmail}>`,
                 to: toEmail,
-                subject: '✅ Teste de Configuração SMTP - CliniGo',
+                subject: 'Teste de Configuracao SMTP - CliniGo',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h2 style="color: #10b981;">✅ Configuração SMTP Funcionando!</h2>
-                        <p>Este é um e-mail de teste para confirmar que sua configuração SMTP está correta.</p>
+                        <h2 style="color: #10b981;">Configuracao SMTP Funcionando</h2>
+                        <p>Este e um e-mail de teste para confirmar que sua configuracao SMTP esta correta.</p>
                         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
                         <p style="color: #6b7280; font-size: 14px;">
                             <strong>Servidor:</strong> ${config.host}<br>
                             <strong>Porta:</strong> ${config.port || 587}<br>
-                            <strong>Usuário:</strong> ${config.user}
+                            <strong>Usuario:</strong> ${config.user}
                         </p>
                         <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">
                             Este e-mail foi enviado automaticamente pelo CliniGo.
                         </p>
                     </div>
                 `,
-                text: `Configuração SMTP Funcionando!\n\nEste é um e-mail de teste para confirmar que sua configuração SMTP está correta.\n\nServidor: ${config.host}\nPorta: ${config.port || 587}\nUsuário: ${config.user}`,
+                text: `Configuracao SMTP Funcionando\n\nEste e um e-mail de teste para confirmar que sua configuracao SMTP esta correta.\n\nServidor: ${config.host}\nPorta: ${config.port || 587}\nUsuario: ${config.user}`,
             })
         }
 

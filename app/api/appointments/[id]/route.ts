@@ -55,7 +55,15 @@ export async function GET(
                 patient:patients!appointments_patient_id_fkey(id, full_name, phone, email, cpf),
                 doctor:doctors!appointments_doctor_id_fkey(
                     id,
-                    user:users(full_name)
+                    user:users(full_name),
+                    specialty,
+                    crm
+                ),
+                co_doctor:doctors!appointments_co_doctor_id_fkey(
+                    id,
+                    user:users(full_name),
+                    specialty,
+                    crm
                 ),
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
             `)
@@ -178,9 +186,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         const { data: appointment, error: fetchError } = await adminDb
             .from('appointments')
             .select(`
-                clinic_id, doctor_id, status, appointment_date, appointment_time, appointment_type,
+                clinic_id, doctor_id, co_doctor_id, status, appointment_date, appointment_time, appointment_type,
                 patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
                 doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
+                co_doctor:doctors!appointments_co_doctor_id_fkey(user:users(full_name)),
                 clinic:clinics!appointments_clinic_id_fkey(id, name),
                 video_room:video_rooms(room_id, patient_token)
             `)
@@ -197,7 +206,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 throw new ForbiddenError('Acesso negado')
             }
 
-            // Doctors can only update their own appointments
+            // Doctors can only update their own appointments (as doctor or co-doctor)
             if (currentUser.role === 'DOCTOR') {
                 const { data: doctor } = await adminDb
                     .from('doctors')
@@ -205,7 +214,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                     .eq('user_id', currentUser.id)
                     .single()
 
-                if (doctor?.id !== appointment.doctor_id) {
+                if (doctor?.id !== appointment.doctor_id && doctor?.id !== appointment.co_doctor_id) {
                     throw new ForbiddenError('Acesso negado')
                 }
             }
@@ -235,6 +244,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             .select(`
                 *,
                 doctor:doctors!appointments_doctor_id_fkey(user:users(full_name)),
+                co_doctor:doctors!appointments_co_doctor_id_fkey(user:users(full_name)),
                 patient:patients!appointments_patient_id_fkey(full_name, email)
             `)
             .single()

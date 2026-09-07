@@ -142,6 +142,11 @@ export const updateAppointmentSchema = z.object({
         .string()
         .optional()
         .nullable(),
+    co_doctor_id: z
+        .string()
+        .uuid('ID do co-profissional inválido')
+        .optional()
+        .nullable(),
 })
 
 /**

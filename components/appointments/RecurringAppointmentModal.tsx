@@ -34,6 +34,7 @@ import {
     Repeat,
     AlertTriangle,
     CheckCircle2,
+    Users,
 } from 'lucide-react'
 import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearchCombobox'
 import { QuickPatientForm } from './QuickPatientForm'
@@ -87,6 +88,7 @@ export function RecurringAppointmentModal({
 
     // Form state
     const [doctorId, setDoctorId] = useState(defaultDoctorId || '')
+    const [coDoctorId, setCoDoctorId] = useState('')
     const [selectedDays, setSelectedDays] = useState<number[]>([])
 
     useEffect(() => {
@@ -113,6 +115,7 @@ export function RecurringAppointmentModal({
     })
 
     const selectedDoctor = doctors?.find(d => d.id === doctorId)
+    const selectedCoDoctor = doctors?.find(d => d.id === coDoctorId)
 
     // Calculate total sessions
     const calculateSessions = () => {
@@ -146,6 +149,7 @@ export function RecurringAppointmentModal({
                 body: JSON.stringify({
                     patient_id: selectedPatient?.id,
                     doctor_id: doctorId,
+                    co_doctor_id: coDoctorId || undefined,
                     days_of_week: selectedDays,
                     appointment_time: appointmentTime,
                     therapy_type: therapyType || undefined,
@@ -186,6 +190,7 @@ export function RecurringAppointmentModal({
         setSelectedPatient(null)
         setQuickRegistration(null)
         setDoctorId(defaultDoctorId || '')
+        setCoDoctorId('')
         setSelectedDays([])
         setAppointmentTime('')
         setTherapyType('')
@@ -275,7 +280,7 @@ export function RecurringAppointmentModal({
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2">
                                 <Stethoscope className="h-4 w-4" />
-                                {profLabel.singular}
+                                {profLabel.singular} (Titular)
                             </Label>
                             <Select value={doctorId} onValueChange={setDoctorId}>
                                 <SelectTrigger>
@@ -294,6 +299,45 @@ export function RecurringAppointmentModal({
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        {/* Co-Doctor / Co-Therapist Selection (Optional) */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Users className="h-3.5 w-3.5" />
+                                    Co-Terapeuta Coparticipante (Opcional — Co-Atendimento)
+                                </Label>
+                                {coDoctorId && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setCoDoctorId('')}
+                                        className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                                    >
+                                        Remover
+                                    </Button>
+                                )}
+                            </div>
+                            <Select value={coDoctorId || 'NONE'} onValueChange={(val) => setCoDoctorId(val === 'NONE' ? '' : val)}>
+                                <SelectTrigger className="border-dashed">
+                                    <SelectValue placeholder="Nenhum (atendimento individual)" />
+                                </SelectTrigger>
+                                <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                    <SelectItem value="NONE">
+                                        <span className="text-muted-foreground">Nenhum (atendimento individual)</span>
+                                    </SelectItem>
+                                    {doctors?.filter(d => d.id && d.user && d.id !== doctorId).map((doctor) => (
+                                        <SelectItem key={doctor.id} value={doctor.id}>
+                                            {doctor.user?.full_name || 'Profissional'} - {doctor.specialty}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground">
+                                Ambos os profissionais visualizarão a sessão em suas agendas e poderão evoluir no prontuário.
+                            </p>
                         </div>
 
                         {/* Therapy Type */}
@@ -411,7 +455,12 @@ export function RecurringAppointmentModal({
                                 <div className="text-sm text-green-700 space-y-1">
                                     <p><strong>{totalSessions} sessões</strong> serão agendadas automaticamente</p>
                                     {selectedDoctor && (
-                                        <p>Terapeuta: {selectedDoctor.user?.full_name}</p>
+                                        <p>Terapeuta Titular: <strong>{selectedDoctor.user?.full_name}</strong> ({selectedDoctor.specialty})</p>
+                                    )}
+                                    {selectedCoDoctor && (
+                                        <p className="text-emerald-900 font-medium">
+                                            Co-Terapeuta: <strong>{selectedCoDoctor.user?.full_name}</strong> ({selectedCoDoctor.specialty})
+                                        </p>
                                     )}
                                     {therapyType && <p>Terapia: {therapyType}</p>}
                                     <p>Período: {startDate} a {endDate}</p>

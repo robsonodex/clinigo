@@ -917,6 +917,68 @@
     - Suporte ao campo `cpf` no handler `PATCH` da rota `/api/profile`.
     - Resolução dos alertas de acessibilidade (`DialogContent requires a DialogTitle`) com a inserção de `SheetHeader`, `SheetTitle` e `SheetDescription` (utilizando a classe `sr-only`) na gaveta lateral mobile.
 
+#### Item 34 — Permissões Customizadas Sincronizadas, Padrão SaaS Médico Internacional, Botão Gerar Boleto, Alerta de Pagamento ao Dono, Trava Estrita de SMTP e Correção do Modal de Convite
+- **Módulo**: Master Hub, Layout/Sidebar, Configurações (Assinatura e Usuários), Mensageria e Webhooks Financeiros
+- **Caminho Completo**:
+  - Master Hub → Permissões Customizadas → `app/system-master-hub/clinics/[id]/permissions/page.tsx` & `app/api/super-admin/clinics/[id]/permissions/route.ts`
+  - Catálogo de Features & Serviço → `lib/constants/features.ts` & `lib/services/permissions-service.ts`
+  - Permissões do Usuário / Impersonation → `app/api/permissions/current/route.ts` (Novo) & `lib/hooks/use-plan.ts`
+  - Navegação Principal → `components/layout/sidebar.tsx` & `components/sidebar/visual-lock.tsx`
+  - Usuários → Convite → `app/dashboard/(clinic)/configuracoes/usuarios/page.tsx` → `InviteUserModal`
+  - Assinatura & Planos → `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx` & `app/dashboard/configuracoes/plano/page.tsx` & `app/dashboard/page.tsx`
+  - E-mail Multi-Tenant → `lib/services/email-multi-tenant.ts` & `app/api/appointments/route.ts`
+  - Notificação Executiva ao Dono → `lib/services/notifications/owner-payment-notification.ts` (Novo)
+  - Webhooks de Pagamento → `app/api/webhooks/bancointer/route.ts` & `app/api/billing/webhook/route.ts`
+- **Descrição Técnica**:
+  - **1. Sincronização Real das Permissões Customizadas**:
+    - Expandido o catálogo em `lib/constants/features.ts` com todos os 40+ módulos reais do CliniGo (chat, fila de espera, encaminhamentos, supervisão, bi de terapia, fechamento de caixa, créditos, modelos de documentos, controle de faltas, etc.).
+    - Isolada a restrição da Camada A estritamente às 3 fichas proprietárias da World Sensory (`PSICOMOTRICIDADE`, `PLANO_FISIOTERAPIA`, `EVOLUCAO_WORLD_SENSORY`). Todas as demais funcionalidades de Terapia agora podem ser habilitadas/desabilitadas para qualquer clínica via Master Hub.
+    - Criado o endpoint `/api/permissions/current` com suporte a impersonation do Super Admin e integrado ao hook `usePlan()`.
+    - Na `Sidebar`, vinculados todos os itens de navegação ao `featureKey`, filtrando dinamicamente itens desativados em `filteredSections` e desbloqueando itens customizados via `NavItemComponent` e `VisualLock`.
+  - **2. Padrão SaaS Médico Corporativo Premium Internacional**:
+    - Banimento absoluto de emojis em interfaces, alertas e e-mails transacionais de consultas.
+    - Substituídos ícones de coroa (`Crown`) e efeitos espalhafatosos por iconografia vetorial sóbria (`ShieldCheck`, `Activity`, `Layers`).
+    - Ocultado banner de upgrade no dashboard para clínicas em planos avançados/corporativos.
+  - **3. Faturamento & Botão "Gerar Boleto"**:
+    - Implementado botão visível e padronizado "Gerar Boleto" na tela de Assinatura (`/dashboard/configuracoes/assinatura`).
+    - Desenvolvido o serviço `lib/services/notifications/owner-payment-notification.ts` para notificar imediatamente o proprietário da plataforma via e-mail executivo corporativo (`contato@clinigo.app`) e registrar auditoria sempre que um pagamento de boleto, PIX ou assinatura for liquidado automaticamente.
+    - Conectada a notificação nos webhooks oficiais do Banco Inter (`/api/webhooks/bancointer`) e do Mercado Pago (`/api/billing/webhook`).
+  - **4. Trava Estrita de E-mail Multi-Tenant**:
+    - Reformulado `lib/services/email-multi-tenant.ts`: e-mails transacionais de clínicas só são disparados se a clínica possuir servidor SMTP próprio conectado e ativo (`smtp_enabled && smtp_host && smtp_password`).
+    - Eliminado o fallback indevido para as credenciais globais da plataforma (`contato@clinigo.app`), garantindo isolamento total entre clínicas e pacientes.
+  - **5. Correção do Modal de Convite de Usuários**:
+    - Reestruturado o container do modal com `max-h-[90vh] flex flex-col p-0`.
+    - O corpo do formulário agora possui rolagem vertical interna suave (`overflow-y-auto flex-1`), mantendo o cabeçalho e o rodapé de ações fixos e visíveis com botões de altura acessível (mínimo 42px), resolvendo o problema de botões escondidos em qualquer resolução.
+
+#### Item 35 — Co-Terapeuta Nativo (Atendimento Multidisciplinar Simultâneo) e Flexibilização de Horários e Turnos da Agenda
+- **Módulo**: Recepção & Agenda → Horários de Atendimento, Agendamentos Recorrentes, Agendamentos Manuais e Visualização da Grade
+- **Caminho Completo**:
+  - Banco de Dados / Migrations → `supabase/migrations/20260907_expand_schedules_slot_duration.sql` & `supabase/migrations/20260907_add_co_doctor_to_appointments_and_series.sql`
+  - Validações & Client → `lib/validations/doctor.ts` & `lib/validations/appointment.ts` & `lib/api-client.ts`
+  - Horários do Profissional → `app/dashboard/(clinic)/horarios/page.tsx`
+  - Endpoints de Agendamento → `app/api/appointments/recurring/route.ts` & `app/api/appointments/recurring/[id]/route.ts` & `app/api/appointments/route.ts` & `app/api-v2/appointments/[id]/route.ts` & `app/api/appointments/[id]/route.ts` & `app/api/appointments/manual/route.ts`
+  - Modais de Agendamento → `components/appointments/RecurringAppointmentModal.tsx` & `components/appointments/EditSeriesModal.tsx` & `components/appointments/RecurringSeriesListModal.tsx` & `components/appointments/ManualAppointmentModal.tsx`
+  - Visualização da Grade & Detalhes → `components/ui/agenda-view.tsx` & `components/dashboard/AppointmentDetailsDrawer.tsx`
+- **Descrição Técnica**:
+  - **1. Flexibilização de Turnos e Duração dos Atendimentos (`horarios/page.tsx`)**:
+    - **Remoção do limite de 3 turnos**: O profissional agora pode cadastrar até 10 blocos/turnos por dia de atendimento, acomodando múltiplas janelas (ex: início da manhã, meio da manhã, início da tarde, fim da tarde, período noturno).
+    - **Durações clínicas ampliadas**: A trava rígida que permitia apenas 15, 30, 45 ou 60 minutos foi substituída no Postgres pela constraint `CHECK (slot_duration_minutes >= 5 AND slot_duration_minutes <= 480)`. No frontend, foram disponibilizados presets clínicos rápidos (15m, 20m, 30m, 40m, 45m, 50m para Psicologia/Terapia, 60m, 75m, 80m, 90m para Integração Sensorial, 120m para ABA, 150m, 180m e 240m para Turno ABA intensivo) além de input numérico para minutagem personalizada customizada.
+    - **Calculadora em tempo real de slots**: Exibição imediata da contagem exata e da lista de horários gerados em cada bloco conforme o usuário altera o horário de início, fim ou duração.
+    - **Ações de produtividade**: Botão suspenso "Copiar dia" (permite replicar os turnos configurados para Segunda a Sexta, para Todos os dias da semana, ou para qualquer dia específico com 1 clique) e botão "Limpar dia" para zerar os blocos do dia selecionado.
+  - **2. Co-Terapeuta Nativo (Atendimento Duplo Simultâneo)**:
+    - **Arquitetura de Coluna Única (`co_doctor_id`)**: Em vez de criar dois registros duplicados no banco que causariam conflito na constraint única de horário (`appointments_doctor_id_appointment_date_appointment_time_key`), foi adicionada a coluna `co_doctor_id` vinculada à tabela `doctors` nas tabelas `appointments` e `recurring_appointment_series`.
+    - **Sem Falso Conflito de Horário**: A criação de agendamento valida e registra os dois profissionais no mesmo bloco de tempo sem colisão. Na verificação de conflitos, o sistema garante que nem o profissional titular nem o co-terapeuta já possuam outro compromisso com outro paciente no mesmo horário.
+    - **Visualização Bidirecional na Agenda**: O agendamento aparece na grade visual de ambos os profissionais selecionados (`selectedDoctorIds.includes(doctor_id) || selectedDoctorIds.includes(co_doctor_id)`). Ambos visualizam o paciente em sua respectiva linha do tempo e recebem o evento.
+    - **Identificação Visual Elegante**: Cards de agendamento na grade e na linha do tempo exibem badge neutro "Co-atendimento" e a identificação dos dois profissionais (ex: "Dr. Ana + Bruno").
+    - **Gestão Completa em Séries Recorrentes**:
+      - Seleção no modal de novo agendamento recorrente com resumo prévio.
+      - Edição de série com alteração ou remoção de Co-terapeuta e propagação automática para todas as sessões futuras em aberto.
+      - Listagem de séries recorrentes com badge de co-terapeuta ativo.
+    - **Agendamento Manual Pontual**: Modal manual adaptado com seletor opcional de 2º profissional e gravação direta.
+    - **Drawer de Detalhes**: Bloco corporativo em destaque com nome completo, especialidade e número de registro do Co-Terapeuta.
+    - **Evolução Clínica / PEP**: Cada profissional pode emitir sua respectiva evolução de sessão no prontuário sem restrição, com seu próprio carimbo e número de conselho de classe.
+
+
 
 
 

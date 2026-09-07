@@ -374,16 +374,16 @@ export default function UsuariosPermissoesPage() {
                             Convidar Usuário
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Convidar Novo Usuário</DialogTitle>
-                            <DialogDescription>
+                    <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl border-border/80">
+                        <DialogHeader className="p-6 pb-4 border-b shrink-0 bg-background">
+                            <DialogTitle className="text-xl font-bold text-foreground">Convidar Novo Usuário</DialogTitle>
+                            <DialogDescription className="text-sm text-muted-foreground">
                                 Envie um convite por email para adicionar um novo usuário à clínica.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4 p-6 py-4 overflow-y-auto flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Nome Completo</Label>
                                     <Input
@@ -442,15 +442,15 @@ export default function UsuariosPermissoesPage() {
                             </div>
 
                             <div className="space-y-3 pt-4 border-t">
-                                <Label>Permissões Customizadas</Label>
-                                <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
+                                <Label className="text-sm font-semibold text-foreground">Permissões Customizadas</Label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {PERMISSION_MODULES.map((module) => (
-                                        <Card key={module.name} className="p-3">
-                                            <h4 className="font-medium mb-2">{module.name}</h4>
+                                        <Card key={module.name} className="p-3 border-border/70">
+                                            <h4 className="font-medium text-sm mb-2 text-foreground">{module.name}</h4>
                                             <div className="space-y-2">
                                                 {module.permissions.map((perm) => (
-                                                    <div key={perm.id} className="flex items-center justify-between">
-                                                        <span className="text-sm">{perm.name}</span>
+                                                    <div key={perm.id} className="flex items-center justify-between gap-2 py-0.5">
+                                                        <span className="text-xs text-muted-foreground">{perm.name}</span>
                                                         <Switch
                                                             checked={newUser.permissions[perm.id] ?? perm.default}
                                                             onCheckedChange={(checked) => setNewUser({
@@ -467,11 +467,11 @@ export default function UsuariosPermissoesPage() {
                             </div>
                         </div>
 
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        <DialogFooter className="p-4 px-6 border-t bg-muted/20 shrink-0 flex items-center justify-end gap-3">
+                            <Button variant="outline" className="min-h-[42px]" onClick={() => setDialogOpen(false)}>
                                 Cancelar
                             </Button>
-                            <Button onClick={handleInviteUser}>
+                            <Button className="min-h-[42px] px-5" onClick={handleInviteUser}>
                                 <Mail className="w-4 h-4 mr-2" />
                                 Enviar Convite
                             </Button>

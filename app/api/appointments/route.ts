@@ -63,6 +63,10 @@ export async function GET(request: NextRequest) {
           id, crm, specialty, consultation_price,
           user:users(full_name, email, avatar_url)
         ),
+        co_doctor:doctors!appointments_co_doctor_id_fkey(
+          id, crm, specialty, consultation_price,
+          user:users(full_name, email, avatar_url)
+        ),
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
         payment:payments(id, status, amount, payment_method)
       `, { count: 'exact' })
@@ -81,9 +85,9 @@ export async function GET(request: NextRequest) {
         }
         const isCoordinator = !!currentUser?.is_coordinator
         if (query.doctor_id && (userRole !== 'DOCTOR' || isCoordinator)) {
-            queryBuilder = queryBuilder.eq('doctor_id', query.doctor_id)
+            queryBuilder = queryBuilder.or(`doctor_id.eq.${query.doctor_id},co_doctor_id.eq.${query.doctor_id}`)
         } else if (userRole === 'DOCTOR' && !isCoordinator && doctorId) {
-            queryBuilder = queryBuilder.eq('doctor_id', doctorId)
+            queryBuilder = queryBuilder.or(`doctor_id.eq.${doctorId},co_doctor_id.eq.${doctorId}`)
         }
         if (query.patient_id) {
             queryBuilder = queryBuilder.eq('patient_id', query.patient_id)
@@ -477,7 +481,7 @@ export async function POST(request: NextRequest) {
                     let checkinHtml = ''
                     if (!isPrepaidTelemedicine) {
                         checkinHtml = `
-                            <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                            <h3 style="color: #3b82f6;">Faça seu Pré-Check-in Online</h3>
                             <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
                             <p style="text-align: center;">
                                 <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
@@ -491,22 +495,22 @@ export async function POST(request: NextRequest) {
                     await sendEmailMultiTenant({
                         clinicId: clinic.id,
                         to: patientData.email,
-                        subject: `⏳ Agendamento Pendente - Complete o Pagamento - ${validatedData.appointment_date} às ${validatedData.appointment_time}`,
+                        subject: `Agendamento Pendente - Complete o Pagamento - ${validatedData.appointment_date} às ${validatedData.appointment_time}`,
                         html: `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                                <h2 style="color: #f59e0b;">⏳ Agendamento Pendente de Pagamento</h2>
+                                <h2 style="color: #f59e0b;">Agendamento Pendente de Pagamento</h2>
                                 <p>Olá <strong>${patientData.full_name}</strong>,</p>
                                 <p>Sua consulta foi pré-agendada. Complete o pagamento para confirmar:</p>
                                 <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                                    <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
-                                    <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
-                                    <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
-                                    <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicNotifData?.name || clinic.name}</p>
-                                    <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isPrepaidTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
-                                    <p style="margin: 4px 0;"><strong>💰 Valor:</strong> R$ ${(doctor.consultation_price / 100).toFixed(2).replace('.', ',')}</p>
+                                    <p style="margin: 4px 0;"><strong>Médico:</strong> Dr(a). ${doctorName}</p>
+                                    <p style="margin: 4px 0;"><strong>Data:</strong> ${validatedData.appointment_date}</p>
+                                    <p style="margin: 4px 0;"><strong>Horário:</strong> ${validatedData.appointment_time}</p>
+                                    <p style="margin: 4px 0;"><strong>Clínica:</strong> ${clinicNotifData?.name || clinic.name}</p>
+                                    <p style="margin: 4px 0;"><strong>Tipo:</strong> ${isPrepaidTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                    <p style="margin: 4px 0;"><strong>Valor:</strong> R$ ${(doctor.consultation_price / 100).toFixed(2).replace('.', ',')}</p>
                                 </div>
                                 <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #f59e0b;">
-                                    <h3 style="color: #92400e; margin: 0 0 8px 0;">💳 Instruções de Pagamento</h3>
+                                    <h3 style="color: #92400e; margin: 0 0 8px 0;">Instruções de Pagamento</h3>
                                     ${clinicPaymentInfo?.pix_key ? `<p><strong>Chave PIX:</strong> ${clinicPaymentInfo.pix_key}</p>` : ''}
                                     ${clinicPaymentInfo?.bank_account_info ? `<p><strong>Dados Bancários:</strong> ${clinicPaymentInfo.bank_account_info}</p>` : ''}
                                     <p>${clinicPaymentInfo?.payment_instructions || 'Entre em contato com a clínica para realizar o pagamento.'}</p>
@@ -534,20 +538,20 @@ export async function POST(request: NextRequest) {
                     await sendEmailMultiTenant({
                         clinicId: clinic.id,
                         to: clinicNotifData.email,
-                        subject: `⏳ Novo Agendamento (Pendente Pagamento) - ${patientData?.full_name || 'Paciente'}`,
+                        subject: `Novo Agendamento (Pendente Pagamento) - ${patientData?.full_name || 'Paciente'}`,
                         html: `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                                <h2 style="color: #f59e0b;">⏳ Novo Agendamento - Aguardando Pagamento</h2>
+                                <h2 style="color: #f59e0b;">Novo Agendamento - Aguardando Pagamento</h2>
                                 <p>Um novo agendamento foi realizado e está aguardando confirmação de pagamento:</p>
                                 <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                                    <p style="margin: 4px 0;"><strong>👤 Paciente:</strong> ${patientData?.full_name || 'N/A'}</p>
-                                    <p style="margin: 4px 0;"><strong>📧 Email:</strong> ${patientData?.email || 'N/A'}</p>
-                                    <p style="margin: 4px 0;"><strong>📱 Telefone:</strong> ${patientData?.phone || 'N/A'}</p>
-                                    <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
-                                    <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
-                                    <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
-                                    <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isPrepaidTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
-                                    <p style="margin: 4px 0;"><strong>💳 Pagamento:</strong> Particular (Pendente)</p>
+                                    <p style="margin: 4px 0;"><strong>Paciente:</strong> ${patientData?.full_name || 'N/A'}</p>
+                                    <p style="margin: 4px 0;"><strong>Email:</strong> ${patientData?.email || 'N/A'}</p>
+                                    <p style="margin: 4px 0;"><strong>Telefone:</strong> ${patientData?.phone || 'N/A'}</p>
+                                    <p style="margin: 4px 0;"><strong>Médico:</strong> Dr(a). ${doctorName}</p>
+                                    <p style="margin: 4px 0;"><strong>Data:</strong> ${validatedData.appointment_date}</p>
+                                    <p style="margin: 4px 0;"><strong>Horário:</strong> ${validatedData.appointment_time}</p>
+                                    <p style="margin: 4px 0;"><strong>Tipo:</strong> ${isPrepaidTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                    <p style="margin: 4px 0;"><strong>Pagamento:</strong> Particular (Pendente)</p>
                                     <p style="margin: 4px 0;"><strong>💰 Valor:</strong> R$ ${(doctor.consultation_price / 100).toFixed(2).replace('.', ',')}</p>
                                 </div>
                                 <p style="color: #6b7280; font-size: 14px;">
@@ -689,7 +693,7 @@ export async function POST(request: NextRequest) {
                 let checkinHtml = ''
                 if (!isTelemedicine) {
                     checkinHtml = `
-                        <h3 style="color: #3b82f6;">📱 Faça seu Pré-Check-in Online</h3>
+                        <h3 style="color: #3b82f6;">Faça seu Pré-Check-in Online</h3>
                         <p>Agilize seu atendimento fazendo o pré-check-in antes da consulta:</p>
                         <p style="text-align: center;">
                             <a href="${checkinUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
@@ -703,18 +707,18 @@ export async function POST(request: NextRequest) {
                 await sendEmailMultiTenant({
                     clinicId: clinic.id,
                     to: patientData.email,
-                    subject: `✅ Consulta Confirmada - ${validatedData.appointment_date} às ${validatedData.appointment_time}`,
+                    subject: `Consulta Confirmada - ${validatedData.appointment_date} às ${validatedData.appointment_time}`,
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h2 style="color: #10b981;">✅ Agendamento Confirmado!</h2>
+                            <h2 style="color: #10b981;">Agendamento Confirmado</h2>
                             <p>Olá <strong>${patientData.full_name}</strong>,</p>
                             <p>Sua consulta foi agendada com sucesso:</p>
                             <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                                <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
-                                <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
-                                <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
-                                <p style="margin: 4px 0;"><strong>🏥 Clínica:</strong> ${clinicNotifData?.name || clinic.name}</p>
-                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                <p style="margin: 4px 0;"><strong>Médico:</strong> Dr(a). ${doctorName}</p>
+                                <p style="margin: 4px 0;"><strong>Data:</strong> ${validatedData.appointment_date}</p>
+                                <p style="margin: 4px 0;"><strong>Horário:</strong> ${validatedData.appointment_time}</p>
+                                <p style="margin: 4px 0;"><strong>Clínica:</strong> ${clinicNotifData?.name || clinic.name}</p>
+                                <p style="margin: 4px 0;"><strong>Tipo:</strong> ${isTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
                             </div>
                             ${videoLinkHtml}
                             ${checkinHtml}
@@ -739,20 +743,20 @@ export async function POST(request: NextRequest) {
                 await sendEmailMultiTenant({
                     clinicId: clinic.id,
                     to: clinicNotifData.email,
-                    subject: `🗓️ Novo Agendamento Online - ${patientData?.full_name || 'Paciente'}`,
+                    subject: `Novo Agendamento Online - ${patientData?.full_name || 'Paciente'}`,
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h2 style="color: #3b82f6;">🗓️ Novo Agendamento Recebido!</h2>
+                            <h2 style="color: #3b82f6;">Novo Agendamento Recebido</h2>
                             <p>Um novo agendamento foi realizado através da página pública de agendamento:</p>
                             <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                                <p style="margin: 4px 0;"><strong>👤 Paciente:</strong> ${patientData?.full_name || 'N/A'}</p>
-                                <p style="margin: 4px 0;"><strong>📧 Email:</strong> ${patientData?.email || 'N/A'}</p>
-                                <p style="margin: 4px 0;"><strong>📱 Telefone:</strong> ${patientData?.phone || 'N/A'}</p>
-                                <p style="margin: 4px 0;"><strong>👨‍⚕️ Médico:</strong> Dr(a). ${doctorName}</p>
-                                <p style="margin: 4px 0;"><strong>📅 Data:</strong> ${validatedData.appointment_date}</p>
-                                <p style="margin: 4px 0;"><strong>🕐 Horário:</strong> ${validatedData.appointment_time}</p>
-                                <p style="margin: 4px 0;"><strong>📋 Tipo:</strong> ${isTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
-                                <p style="margin: 4px 0;"><strong>💳 Pagamento:</strong> ${validatedData.payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}</p>
+                                <p style="margin: 4px 0;"><strong>Paciente:</strong> ${patientData?.full_name || 'N/A'}</p>
+                                <p style="margin: 4px 0;"><strong>Email:</strong> ${patientData?.email || 'N/A'}</p>
+                                <p style="margin: 4px 0;"><strong>Telefone:</strong> ${patientData?.phone || 'N/A'}</p>
+                                <p style="margin: 4px 0;"><strong>Médico:</strong> Dr(a). ${doctorName}</p>
+                                <p style="margin: 4px 0;"><strong>Data:</strong> ${validatedData.appointment_date}</p>
+                                <p style="margin: 4px 0;"><strong>Horário:</strong> ${validatedData.appointment_time}</p>
+                                <p style="margin: 4px 0;"><strong>Tipo:</strong> ${isTelemedicine ? 'Teleconsulta' : 'Presencial'}</p>
+                                <p style="margin: 4px 0;"><strong>Pagamento:</strong> ${validatedData.payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}</p>
                             </div>
                             <p style="color: #6b7280; font-size: 14px;">
                                 O agendamento já está visível na agenda do sistema.

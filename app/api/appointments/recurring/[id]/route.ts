@@ -73,7 +73,8 @@ export async function GET(
             .select(`
                 *,
                 patient:patients(id, full_name, phone),
-                doctor:doctors(id, user:users(full_name), specialty)
+                doctor:doctors!recurring_appointment_series_doctor_id_fkey(id, user:users(full_name), specialty),
+                co_doctor:doctors!recurring_appointment_series_co_doctor_id_fkey(id, user:users(full_name), specialty)
             `)
             .eq('id', seriesId)
             .eq('clinic_id', effectiveClinicId)
@@ -302,6 +303,15 @@ export async function PATCH(
         if (body.notes !== undefined) {
             updateData.notes = body.notes
         }
+        if (body.co_doctor_id !== undefined) {
+            if (body.co_doctor_id && body.co_doctor_id === series.doctor_id) {
+                return NextResponse.json(
+                    { error: 'O co-terapeuta não pode ser o mesmo profissional que o titular' },
+                    { status: 400 }
+                )
+            }
+            updateData.co_doctor_id = body.co_doctor_id || null
+        }
 
         if (Object.keys(updateData).length === 0) {
             return NextResponse.json(
@@ -321,6 +331,17 @@ export async function PATCH(
                 { error: 'Erro ao atualizar série' },
                 { status: 500 }
             )
+        }
+
+        // Propagar co_doctor_id para os agendamentos futuros da série
+        if (body.co_doctor_id !== undefined) {
+            const today = new Date().toISOString().split('T')[0]
+            await supabase
+                .from('appointments')
+                .update({ co_doctor_id: updateData.co_doctor_id })
+                .eq('series_id', seriesId)
+                .gte('appointment_date', today)
+                .not('status', 'in', '("CANCELLED")')
         }
 
         const action = updateData.is_active === false ? 'pausada' : updateData.is_active === true ? 'reativada' : 'atualizada'

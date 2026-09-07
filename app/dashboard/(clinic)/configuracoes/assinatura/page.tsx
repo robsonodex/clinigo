@@ -15,10 +15,12 @@ import {
     ArrowRight,
 
     RefreshCw,
-    Crown,
+    ShieldCheck,
     Zap,
     Building2,
-    Rocket
+    Activity,
+    Layers,
+    FileText
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, type PlanType, migrateLegacyPlan } from '@/lib/constants/plans'
@@ -46,17 +48,17 @@ interface PaymentHistory {
 }
 
 const PLAN_ICONS: Record<string, any> = {
-    'BASICO': Zap,
-    'AVANCADO': Rocket,
-    'PROFESSIONAL': Crown,
+    'BASICO': Layers,
+    'AVANCADO': Activity,
+    'PROFESSIONAL': ShieldCheck,
     'ENTERPRISE': Building2,
 }
 
 const PLAN_COLORS: Record<string, string> = {
     'BASICO': 'bg-gray-100 text-gray-800 border-gray-300',
-    'AVANCADO': 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    'PROFESSIONAL': 'bg-blue-100 text-blue-800 border-blue-300',
-    'ENTERPRISE': 'bg-purple-100 text-purple-800 border-purple-300',
+    'AVANCADO': 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    'PROFESSIONAL': 'bg-slate-50 text-slate-800 border-slate-300',
+    'ENTERPRISE': 'bg-purple-50 text-purple-800 border-purple-300',
 }
 
 export default function AssinaturaPage() {
@@ -249,9 +251,29 @@ export default function AssinaturaPage() {
                                         <CardDescription>Plano atual</CardDescription>
                                     </div>
                                 </div>
-                                <Badge variant="secondary" className="text-lg px-4 py-1">
-                                    R$ {planConfig?.price || 149}/mês
-                                </Badge>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <Badge variant="secondary" className="text-lg px-4 py-1">
+                                        R$ {planConfig?.price || 149}/mês
+                                    </Badge>
+                                    <Button 
+                                        variant="outline"
+                                        className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-medium px-4 h-10 shadow-xs min-h-[42px]"
+                                        onClick={() => handleGeneratePayment(currentPlan)}
+                                        disabled={generatingPayment}
+                                    >
+                                        {generatingPayment ? (
+                                            <>
+                                                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                                Gerando Boleto...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText className="w-4 h-4 mr-2 text-emerald-600" />
+                                                Gerar Boleto
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -297,23 +319,34 @@ export default function AssinaturaPage() {
                                         </div>
                                     </div>
                                     <Button 
-                                        className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+                                        className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white min-h-[42px]"
                                         onClick={() => handleGeneratePayment(currentPlan)}
                                         disabled={generatingPayment}
                                     >
-                                        {generatingPayment ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <CreditCard className="w-4 h-4 mr-2" />}
-                                        PAGAR MEU PLANO
+                                        {generatingPayment ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
+                                        Gerar Boleto do Plano
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                                    <Check className="w-5 h-5 text-green-600 shrink-0" />
-                                    <div>
-                                        <p className="font-medium text-green-900">Assinatura Ativa</p>
-                                        <p className="text-sm text-green-800">
-                                            Recebemos o seu pagamento e o seu plano está ativo! Seu acesso está garantido.
-                                        </p>
+                                <div className="mt-6 p-4 bg-slate-50 border border-slate-200 dark:border-slate-800 dark:bg-slate-900 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                                        <div>
+                                            <p className="font-medium text-foreground">Assinatura Ativa</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Recebemos o seu pagamento e o seu plano está ativo! Seu acesso está garantido.
+                                            </p>
+                                        </div>
                                     </div>
+                                    <Button 
+                                        variant="outline"
+                                        className="shrink-0 border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-medium min-h-[42px]"
+                                        onClick={() => handleGeneratePayment(currentPlan)}
+                                        disabled={generatingPayment}
+                                    >
+                                        {generatingPayment ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2 text-emerald-600" />}
+                                        Emitir Boleto da Assinatura
+                                    </Button>
                                 </div>
                             )}
 

@@ -552,7 +552,7 @@ export default function AgendaPage() {
                 if (a.appointment_date !== dateStr) return false
                 const apptHour = parseInt(a.appointment_time?.substring(0, 2) || '-1', 10)
                 if (apptHour !== slotHour) return false
-                if (selectedDoctorIds.length > 0 && !selectedDoctorIds.includes(a.doctor?.id)) return false
+                if (selectedDoctorIds.length > 0 && !selectedDoctorIds.includes(a.doctor?.id) && !selectedDoctorIds.includes((a as any).co_doctor?.id)) return false
                 if (searchLower && !a.patient?.full_name?.toLowerCase().includes(searchLower)) return false
                 if (confirmationFilter === 'CONFIRMED' && !(a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) return false
                 if (confirmationFilter === 'PENDING' && !(a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING')) return false
@@ -572,7 +572,7 @@ export default function AgendaPage() {
         const searchLower = patientSearch.trim().toLowerCase()
         return appointments.filter(
             (a) => a.appointment_date === dateStr &&
-                (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id)) &&
+                (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id) || selectedDoctorIds.includes((a as any).co_doctor?.id)) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
                 (confirmationFilter === 'ALL' ||
                     (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) ||
@@ -593,7 +593,7 @@ export default function AgendaPage() {
             const hasAppointmentNow = appointments.some(
                 (a: any) =>
                     a.appointment_date === todayStr &&
-                    a.doctor?.id === doctor.id &&
+                    (a.doctor?.id === doctor.id || a.co_doctor?.id === doctor.id) &&
                     a.status !== 'CANCELLED' &&
                     a.status !== 'NO_SHOW' &&
                     a.appointment_time?.substring(0, 5) <= currentTime &&
@@ -685,7 +685,7 @@ export default function AgendaPage() {
         return appointments.filter(a => 
             a.status === 'CANCELLED' && 
             currentDates.includes(a.appointment_date) &&
-            (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id))
+            (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id) || selectedDoctorIds.includes((a as any).co_doctor?.id))
         )
     }, [appointments, view, days, currentDate, selectedDoctorIds])
 
@@ -1422,11 +1422,22 @@ export default function AgendaPage() {
 
                                                                             {/* Doctor Name */}
                                                                             <div className="text-[10px] font-medium mt-0.5 truncate opacity-80">
-                                                                                Dr. {appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
+                                                                                {profLabel.singular === 'Médico' ? 'Dr. ' : ''}{appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
+                                                                                {(appointment as any).co_doctor?.user?.full_name && (
+                                                                                    <span className="text-[9px] font-semibold text-teal-800 dark:text-teal-300 ml-1">
+                                                                                        + {(appointment as any).co_doctor.user.full_name.split(' ')[0]}
+                                                                                    </span>
+                                                                                )}
                                                                             </div>
 
                                                                             {/* Status de Confirmacao */}
                                                                             <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                                                                {(appointment as any).co_doctor && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-800 dark:text-teal-300 bg-teal-100/90 dark:bg-teal-950/70 px-1.5 py-0.5 rounded">
+                                                                                        <Users className="w-2.5 h-2.5" />
+                                                                                        Co-atendimento
+                                                                                    </span>
+                                                                                )}
                                                                                 {appointment.status === 'CONFIRMED' && (
                                                                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded">
                                                                                         <CheckCircle2 className="w-2.5 h-2.5" />
@@ -1547,6 +1558,9 @@ export default function AgendaPage() {
                                                                             </div>
                                                                             <div className="text-xs space-y-1">
                                                                                 <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                {(appointment as any).co_doctor && (
+                                                                                    <p><strong>Co-Terapeuta:</strong> {(appointment as any).co_doctor.user?.full_name || (appointment as any).co_doctor.full_name || 'N/A'}</p>
+                                                                                )}
                                                                                 <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                 <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
                                                                                 {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
@@ -1702,6 +1716,7 @@ export default function AgendaPage() {
                                                                 const duration = (appointment.doctor as any).consultation_duration || 60
                                                                 const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
                                                                 const doctorName = appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'
+                                                                const coDoctorName = (appointment as any).co_doctor?.user?.full_name?.split(' ')[0]
                                                                 const specialty = appointment.reception_notes?.startsWith('[ESP:')
                                                                     ? appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]
                                                                     : ((appointment.doctor as any).specialty || '')
@@ -1730,7 +1745,7 @@ export default function AgendaPage() {
                                                                                     }}
                                                                                 >
                                                                                     <div className="text-[11px] font-bold leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                                                                                        {(appointment.patient?.full_name || (appointment as any).notes || '🔒 BLOQUEIO').toUpperCase()}({doctorName.toUpperCase()}{specShort ? `-${specShort}` : ''})
+                                                                                        {(appointment.patient?.full_name || (appointment as any).notes || '[BLOQUEIO]').toUpperCase()} ({doctorName.toUpperCase()}{coDoctorName ? ` + ${coDoctorName.toUpperCase()}` : ''}{specShort ? `-${specShort}` : ''})
                                                                                     </div>
                                                                                     <div className="text-[11px] opacity-90 leading-tight">
                                                                                         {appointment.appointment_time.substring(0, 5)} – {endTime}
@@ -1823,13 +1838,16 @@ export default function AgendaPage() {
                                                                             <TooltipContent side="top" className="max-w-xs">
                                                                                 <div className="space-y-2">
                                                                                     <div>
-                                                                                        <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || '🔒 Bloqueio / Compromisso'}</p>
+                                                                                        <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || '[Bloqueio / Compromisso]'}</p>
                                                                                         <p className="text-xs text-muted-foreground">
                                                                                             {appointment.patient?.phone ? `Tel: ${appointment.patient.phone}` : 'Compromisso Interno'}
                                                                                         </p>
                                                                                     </div>
                                                                                     <div className="text-xs space-y-1">
                                                                                         <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                        {(appointment as any).co_doctor && (
+                                                                                            <p><strong>Co-Terapeuta:</strong> {(appointment as any).co_doctor.user?.full_name || (appointment as any).co_doctor.full_name || 'N/A'}</p>
+                                                                                        )}
                                                                                         <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                         <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
                                                                                         {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (

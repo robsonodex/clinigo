@@ -290,13 +290,15 @@ export default function ClinicPermissionsPage() {
 
     // Filter features by search and clinic allowlist (Camada A)
     const isAllowlisted = isClinicInSessionPlansAllowlist(clinicId)
+    const PROPRIETARY_KEYS: string[] = ['psicomotricidade', 'plano_fisioterapia', 'evolucao_world_sensory']
     const featuresByCategory = getFeaturesByCategory()
     const filteredCategories = Object.entries(featuresByCategory)
-        .filter(([category]) => {
-            // Se a clínica NÃO estiver na allowlist da Camada A, a categoria TERAPIA nem aparece na tela
-            if (category === 'TERAPIA' && !isAllowlisted) return false
-            return true
+        .map(([category, features]) => {
+            // Remove apenas as features proprietárias se não estiver na allowlist
+            const visibleFeatures = features.filter((f) => isAllowlisted || !PROPRIETARY_KEYS.includes(f.key))
+            return [category, visibleFeatures] as [FeatureCategory, typeof features]
         })
+        .filter(([_, features]) => features.length > 0)
         .filter(([category, features]) => {
             if (!searchQuery) return true
             return features.some(

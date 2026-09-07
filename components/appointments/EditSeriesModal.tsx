@@ -34,7 +34,9 @@ import {
     AlertTriangle,
     CheckCircle2,
     Pencil,
+    Users,
 } from 'lucide-react'
+import { api } from '@/lib/api-client'
 
 const DAYS_OF_WEEK = [
     { value: 1, label: 'Segunda-feira', short: 'Seg' },
@@ -72,9 +74,18 @@ export function EditSeriesModal({
     const [appointmentTime, setAppointmentTime] = useState('')
     const [therapyType, setTherapyType] = useState('')
     const [notes, setNotes] = useState('')
+    const [coDoctorId, setCoDoctorId] = useState('')
 
     // Conflict state
     const [conflictDates, setConflictDates] = useState<string[]>([])
+
+    // Fetch doctors for co-doctor selection
+    const { data: doctors } = useQuery({
+        queryKey: ['doctors-for-edit-series'],
+        queryFn: async () => api.get<any[]>('/doctors'),
+        enabled: open,
+        staleTime: 5 * 60 * 1000,
+    })
 
     // Fetch series details
     const { data: series, isLoading } = useQuery({
@@ -94,6 +105,7 @@ export function EditSeriesModal({
             setAppointmentTime(series.appointment_time?.substring(0, 5) || '')
             setTherapyType(series.therapy_type || '')
             setNotes(series.notes || '')
+            setCoDoctorId(series.co_doctor_id || series.co_doctor?.id || '')
             setConflictDates([])
         }
     }, [series])
@@ -111,10 +123,14 @@ export function EditSeriesModal({
         appointmentTime !== (series.appointment_time?.substring(0, 5) || '')
     )
 
+    const currentCoDocId = series?.co_doctor_id || series?.co_doctor?.id || ''
+    const hasCoDoctorChanged = coDoctorId !== currentCoDocId
+
     const hasAnyChange = series && (
         hasScheduleChanged ||
         therapyType !== (series.therapy_type || '') ||
-        notes !== (series.notes || '')
+        notes !== (series.notes || '') ||
+        hasCoDoctorChanged
     )
 
     // Update mutation
@@ -131,6 +147,9 @@ export function EditSeriesModal({
             }
             if (notes !== (series?.notes || '')) {
                 payload.notes = notes
+            }
+            if (hasCoDoctorChanged) {
+                payload.co_doctor_id = coDoctorId || null
             }
 
             const response = await fetch(`/api/appointments/recurring/${seriesId}`, {
@@ -216,6 +235,45 @@ export function EditSeriesModal({
                                     <strong>{series.future_appointments_count}</strong> agendamentos futuros serão afetados
                                 </div>
                             )}
+                        </div>
+
+                        {/* Co-Doctor / Co-Therapist Selection */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Users className="h-3.5 w-3.5" />
+                                    Co-Terapeuta Coparticipante (Co-Atendimento)
+                                </Label>
+                                {coDoctorId && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setCoDoctorId('')}
+                                        className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                                    >
+                                        Remover co-terapeuta
+                                    </Button>
+                                )}
+                            </div>
+                            <Select value={coDoctorId || 'NONE'} onValueChange={(val) => setCoDoctorId(val === 'NONE' ? '' : val)}>
+                                <SelectTrigger className="border-dashed">
+                                    <SelectValue placeholder="Nenhum (atendimento individual)" />
+                                </SelectTrigger>
+                                <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                    <SelectItem value="NONE">
+                                        <span className="text-muted-foreground">Nenhum (atendimento individual)</span>
+                                    </SelectItem>
+                                    {doctors?.filter((d: any) => d.id && d.user && d.id !== series.doctor_id).map((doctor: any) => (
+                                        <SelectItem key={doctor.id} value={doctor.id}>
+                                            {doctor.user?.full_name || 'Profissional'} - {doctor.specialty}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground">
+                                Salvar com co-terapeuta atualizará automaticamente todas as sessões futuras desta série.
+                            </p>
                         </div>
 
                         <Separator />

@@ -52,6 +52,14 @@ export async function GET(
                 patient:patients!appointments_patient_id_fkey(id, full_name, phone, email, cpf),
                 doctor:doctors!appointments_doctor_id_fkey(
                     id,
+                    specialty,
+                    crm,
+                    user:users(full_name)
+                ),
+                co_doctor:doctors!appointments_co_doctor_id_fkey(
+                    id,
+                    specialty,
+                    crm,
                     user:users(full_name)
                 ),
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug)

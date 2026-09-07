@@ -11,14 +11,14 @@ import { usePlan } from '@/lib/hooks/use-plan'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Star, Sparkles, Zap, Crown, Check, Loader2 } from 'lucide-react'
+import { Layers, Activity, ShieldCheck, Building2, Check, Loader2 } from 'lucide-react'
 import { DISPLAY_PLANS, type PlanType } from '@/lib/constants/plans'
 
 const PLAN_ICONS: Record<string, any> = {
-    BASICO: Star,
-    AVANCADO: Sparkles,
-    PROFESSIONAL: Zap,
-    ENTERPRISE: Crown,
+    BASICO: Layers,
+    AVANCADO: Activity,
+    PROFESSIONAL: ShieldCheck,
+    ENTERPRISE: Building2,
 }
 
 const PLAN_COLORS: Record<string, string> = {

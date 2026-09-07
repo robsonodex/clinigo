@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Sparkles, Trash2, AlertTriangle } from 'lucide-react'
+import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Sparkles, Trash2, AlertTriangle, Users } from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
 interface AppointmentDetailsDrawerProps {
@@ -280,11 +280,11 @@ export function AppointmentDetailsDrawer({
         const patientName = appointment.patient?.full_name || 'Paciente'
 
         const message =
-            `✅ *Consulta Agendada!*\n\n` +
-            `👤 ${patientName}\n` +
-            `📅 ${formattedDate}\n` +
-            `👨⚕️ Dr(a). ${doctorName}\n\n` +
-            `📲 ${qrCode.url}`
+            `*Consulta Agendada!*\n\n` +
+            `Paciente: ${patientName}\n` +
+            `Data: ${formattedDate}\n` +
+            `Profissional: Dr(a). ${doctorName}\n\n` +
+            `Acesse seu QR Code: ${qrCode.url}`
 
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
     }
@@ -361,11 +361,11 @@ export function AppointmentDetailsDrawer({
         const link = `${baseUrl}/video/${videoRoom.room_id}?role=patient&token=${videoRoom.patient_token}`
         const patientName = appointment.patient?.full_name || 'Paciente'
         const message =
-            `Olá ${patientName}! 👋\n\n` +
+            `Olá ${patientName}!\n\n` +
             `Seu link de teleconsulta está pronto:\n\n` +
-            `🔗 ${link}\n\n` +
-            `📅 Data: ${formattedDate}\n` +
-            `👨‍⚕️ Médico(a): Dr(a). ${doctorName}\n\n` +
+            `${link}\n\n` +
+            `Data: ${formattedDate}\n` +
+            `Profissional: Dr(a). ${doctorName}\n\n` +
             `Clique no link no horário da consulta para entrar na sala de vídeo.`
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
     }
@@ -432,6 +432,22 @@ export function AppointmentDetailsDrawer({
                                 <Label>Médico</Label>
                                 <p className="font-medium">Dr(a). {doctorName}</p>
                             </div>
+                            {appointment.co_doctor && (
+                                <div className="p-3 bg-teal-50/70 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-900/40 rounded-lg space-y-1">
+                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-teal-900 dark:text-teal-200">
+                                        <Users className="h-3.5 w-3.5 text-teal-700" />
+                                        Co-Terapeuta / 2º Profissional (Co-atendimento)
+                                    </div>
+                                    <p className="font-medium text-sm text-teal-950 dark:text-teal-100">
+                                        {appointment.co_doctor.user?.full_name || appointment.co_doctor.full_name || 'Profissional'}
+                                    </p>
+                                    {(appointment.co_doctor.specialty || appointment.co_doctor.crm) && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {appointment.co_doctor.specialty} {appointment.co_doctor.crm ? `• Registro: ${appointment.co_doctor.crm}` : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             <div>
                                 <Label>Status</Label>
                                 <div className="mt-1">

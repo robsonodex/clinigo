@@ -114,6 +114,12 @@ export async function checkFeatureAccessForUser(
     return { canAccess, clinicId: user.clinic_id }
 }
 
+const PROPRIETARY_SENSORY_FEATURES: FeatureKey[] = [
+    FEATURE_KEYS.PSICOMOTRICIDADE,
+    FEATURE_KEYS.PLANO_FISIOTERAPIA,
+    FEATURE_KEYS.EVOLUCAO_WORLD_SENSORY,
+]
+
 /**
  * Enable a feature for a clinic (SUPER_ADMIN only)
  */
@@ -127,8 +133,8 @@ export async function enableFeature(
         throw new Error('Cannot modify protected feature')
     }
 
-    // Camada A: Bloqueio estrito de features de Terapia fora da Allowlist
-    if (FEATURE_METADATA[featureKey]?.category === 'TERAPIA') {
+    // Camada A: Bloqueio estrito de features proprietárias fora da Allowlist
+    if (PROPRIETARY_SENSORY_FEATURES.includes(featureKey)) {
         if (!isClinicInSessionPlansAllowlist(clinicId)) {
             throw new Error('Feature restrita e não autorizada para esta clínica (Camada A)')
         }
@@ -218,8 +224,8 @@ export async function disableFeature(
         throw new Error('Cannot modify protected feature')
     }
 
-    // Camada A: Bloqueio estrito de features de Terapia fora da Allowlist
-    if (FEATURE_METADATA[featureKey]?.category === 'TERAPIA') {
+    // Camada A: Bloqueio estrito de features proprietárias fora da Allowlist
+    if (PROPRIETARY_SENSORY_FEATURES.includes(featureKey)) {
         if (!isClinicInSessionPlansAllowlist(clinicId)) {
             throw new Error('Feature restrita e não autorizada para esta clínica (Camada A)')
         }
@@ -293,7 +299,7 @@ export async function disableFeature(
 }
 
 /**
- * Get all permissions for a clinic (custom + defaults)
+ * Get all permissions for a clinic (considering plan defaults and custom overrides)
  */
 export async function getClinicPermissions(
     clinicId: string
@@ -347,11 +353,11 @@ export async function getClinicPermissions(
     // Build result
     const result = {} as Record<FeatureKey, { enabled: boolean; isCustom: boolean }>
 
-    for (const [featureKey, metadata] of Object.entries(FEATURE_METADATA)) {
+    for (const [featureKey, _] of Object.entries(FEATURE_METADATA)) {
         const key = featureKey as FeatureKey
 
-        // Se a feature for de Terapia e a clínica NÃO estiver na allowlist, fica 100% desabilitada
-        if (metadata.category === 'TERAPIA' && !isAllowlisted) {
+        // Se a feature for de Terapia proprietária e a clínica NÃO estiver na allowlist, fica 100% desabilitada
+        if (PROPRIETARY_SENSORY_FEATURES.includes(key) && !isAllowlisted) {
             result[key] = { enabled: false, isCustom: false }
             continue
         }

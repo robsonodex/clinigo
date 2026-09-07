@@ -181,7 +181,24 @@ async function handleNewRegistration(supabase: any, payment: any, paymentId: str
             }
         }
 
-        console.log(`✅ [WEBHOOK] NEW REGISTRATION complete: clinic=${clinic.id}, user=${userId}`)
+        // 9. Notificar proprietário do CliniGo
+        try {
+            const { notifyOwnerPaymentReceived } = await import('@/lib/services/notifications/owner-payment-notification')
+            await notifyOwnerPaymentReceived({
+                clinicName: clinic.name,
+                clinicId: clinic.id,
+                adminEmail: metadata.email,
+                adminName: metadata.full_name,
+                amount: Math.round(amount * 100),
+                planType: planType,
+                paymentMethod: paymentMethod.toUpperCase(),
+                transactionId: paymentId.toString(),
+            })
+        } catch (notifErr: any) {
+            console.warn('[WEBHOOK] Notificacao ao proprietario falhou (nao-bloqueante):', notifErr)
+        }
+
+        console.log(`[WEBHOOK] NEW REGISTRATION complete: clinic=${clinic.id}, user=${userId}`)
 
         return NextResponse.json({
             received: true,
@@ -416,7 +433,7 @@ export async function POST(req: NextRequest) {
             await supabase.from('billing_notifications').insert({
                 clinic_id: clinicId,
                 type: 'PAYMENT_RECEIVED',
-                title: 'Pagamento Confirmado! 🎉',
+                title: 'Pagamento Confirmado',
                 message: `Recebemos seu pagamento de R$ ${amount.toFixed(2)}. Sua assinatura foi renovada até ${newDueDate.toLocaleDateString('pt-BR')}. Obrigado por confiar no CliniGo!`,
                 priority: 'HIGH',
             })
@@ -466,12 +483,31 @@ export async function POST(req: NextRequest) {
                     .eq('payment_id', paymentId.toString())
                     .eq('clinic_id', clinicId)
             } catch (emailError) {
-                console.error('⚠️ [WEBHOOK] Email send failed:', emailError)
+                console.error('[WEBHOOK] Email send failed:', emailError)
                 // Don't fail the webhook if email fails
             }
         }
 
-        console.log(`✅ [WEBHOOK] Processed: clinic=${clinicId}, confirmed=${paymentConfirmed}`)
+        // 15. Notificar proprietário do CliniGo
+        if (paymentConfirmed) {
+            try {
+                const { notifyOwnerPaymentReceived } = await import('@/lib/services/notifications/owner-payment-notification')
+                await notifyOwnerPaymentReceived({
+                    clinicName: clinic.name,
+                    clinicId: clinic.id,
+                    adminEmail: clinic.email,
+                    amount: Math.round(amount * 100),
+                    planType: clinic.plan_type,
+                    paymentMethod: paymentMethod.toUpperCase(),
+                    transactionId: paymentId.toString(),
+                    dueDate: newDueDate.toLocaleDateString('pt-BR'),
+                })
+            } catch (notifErr: any) {
+                console.warn('[WEBHOOK] Notificacao ao proprietario falhou (nao-bloqueante):', notifErr)
+            }
+        }
+
+        console.log(`[WEBHOOK] Processed: clinic=${clinicId}, confirmed=${paymentConfirmed}`)
 
         return NextResponse.json({
             received: true,

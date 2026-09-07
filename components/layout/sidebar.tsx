@@ -51,7 +51,6 @@ import {
     MessagesSquare,
     ClipboardList,
     UserX,
-    Crown,
     Brain,
     CheckCircle2,
     Sun,
@@ -62,6 +61,7 @@ import {
 import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
+import { type FeatureKey, FEATURE_KEYS } from '@/lib/constants/features'
 import {
     Dialog,
     DialogContent,
@@ -78,6 +78,7 @@ interface NavItem {
     roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF' | 'FINANCIAL')[]
     badge?: string
     minPlan?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
+    featureKey?: FeatureKey
     children?: NavItem[]
 }
 
@@ -97,6 +98,7 @@ const navigationSections: NavSection[] = [
                 title: 'Dashboard',
                 href: '/dashboard',
                 icon: LayoutDashboard,
+                featureKey: FEATURE_KEYS.DASHBOARD,
             },
             {
                 title: 'Checklist Inicial',
@@ -115,30 +117,35 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/agenda',
                 icon: Calendar,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
+                featureKey: FEATURE_KEYS.AGENDA,
             },
             {
                 title: 'Minha Agenda',
                 href: '/dashboard/minha-agenda',
                 icon: Calendar,
                 roles: ['DOCTOR'],
+                featureKey: FEATURE_KEYS.AGENDA,
             },
             {
                 title: 'Consultas',
                 href: '/dashboard/consultas',
                 icon: Video,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                featureKey: FEATURE_KEYS.CONSULTAS,
             },
             {
                 title: 'Recepção',
                 href: '/dashboard/recepcao',
                 icon: Clipboard,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
+                featureKey: FEATURE_KEYS.RECEPCAO,
             },
             {
                 title: 'Horários',
                 href: '/dashboard/horarios',
                 icon: Clock,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.HORARIOS,
             },
         ],
     },
@@ -151,12 +158,14 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/medicos',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.MEDICOS,
             },
             {
                 title: 'Pacientes',
                 href: '/dashboard/pacientes',
                 icon: UserPlus,
                 roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE', 'STAFF'],
+                featureKey: FEATURE_KEYS.PACIENTES,
             },
         ],
     },
@@ -168,6 +177,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/prontuarios',
                 icon: FileText,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                featureKey: FEATURE_KEYS.PRONTUARIOS,
                 // Acessível a todos os planos (BASICO+)
             },
             {
@@ -176,12 +186,14 @@ const navigationSections: NavSection[] = [
                 icon: Clipboard,
                 roles: ['DOCTOR'],
                 minPlan: 'PROFESSIONAL',
+                featureKey: FEATURE_KEYS.PRESCRICOES,
             },
             {
                 title: 'Documentos',
                 href: '/dashboard/documentos',
                 icon: FileArchive,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+                featureKey: FEATURE_KEYS.DOCUMENTOS,
                 // Apenas ADM e Recepção podem acessar documentos (solicitação Jeferson - Espaço Incluir)
             },
             {
@@ -189,30 +201,35 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/configuracoes/modelos-documentos',
                 icon: ShieldCheck,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+                featureKey: FEATURE_KEYS.MODELOS_DOCUMENTOS,
             },
             {
                 title: 'Templates Prontuário',
                 href: '/dashboard/configuracoes/templates-prontuario',
                 icon: FileText,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                featureKey: FEATURE_KEYS.TEMPLATES_PRONTUARIO,
             },
             {
                 title: 'Planos Terapêuticos',
                 href: '/dashboard/planos-terapeuticos',
                 icon: ClipboardList,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                featureKey: FEATURE_KEYS.PLANOS_TERAPEUTICOS,
             },
             {
                 title: 'Evoluções',
                 href: '/dashboard/evolucoes',
                 icon: TrendingUp,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
+                featureKey: FEATURE_KEYS.EVOLUCOES,
             },
             {
                 title: 'Controle de Faltas',
                 href: '/dashboard/controle-faltas',
                 icon: UserX,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.CONTROLE_FALTAS,
             },
         ],
     },
@@ -229,18 +246,21 @@ const navigationSections: NavSection[] = [
                         title: 'Fila de Espera',
                         href: '/dashboard/terapia/fila-espera',
                         icon: Clock,
+                        featureKey: FEATURE_KEYS.FILA_ESPERA,
                     },
                     {
                         title: 'Encaminhamentos',
                         href: '/dashboard/terapia/encaminhamentos',
                         icon: Send,
                         minPlan: 'AVANCADO',
+                        featureKey: FEATURE_KEYS.ENCAMINHAMENTOS,
                     },
                     {
                         title: 'Supervisão',
                         href: '/dashboard/terapia/supervisao',
                         icon: Stethoscope,
                         minPlan: 'AVANCADO',
+                        featureKey: FEATURE_KEYS.SUPERVISAO,
                     },
                 ],
             },
@@ -250,6 +270,7 @@ const navigationSections: NavSection[] = [
                 icon: BarChart3,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.BI_TERAPIA,
                 children: [
                     {
                         title: 'Retenção',
@@ -314,27 +335,32 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/financeiro',
                 icon: DollarSign,
                 roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+                featureKey: FEATURE_KEYS.FINANCEIRO,
                 children: [
                     {
                         title: 'Lançamentos',
                         href: '/dashboard/financeiro',
                         icon: DollarSign,
+                        featureKey: FEATURE_KEYS.FINANCEIRO,
                     },
                     {
                         title: 'Pagamentos',
                         href: '/dashboard/pagamentos',
                         icon: CreditCard,
+                        featureKey: FEATURE_KEYS.PAGAMENTOS,
                     },
                     {
                         title: 'Fechamentos de Caixa',
                         href: '/dashboard/financeiro/fechamento',
                         icon: FileText,
+                        featureKey: FEATURE_KEYS.FECHAMENTO_CAIXA,
                     },
                     {
                         title: 'Créditos de Pacientes',
                         href: '/dashboard/financial/credits',
                         icon: Wallet,
                         minPlan: 'PROFESSIONAL',
+                        featureKey: FEATURE_KEYS.CREDITOS_PACIENTES,
                     },
                 ]
             },
@@ -344,6 +370,7 @@ const navigationSections: NavSection[] = [
                 icon: Users,
                 roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.REPASSE_MEDICO,
                 children: [
                     {
                         title: 'Folha de Repasse',
@@ -373,6 +400,7 @@ const navigationSections: NavSection[] = [
                 icon: BarChart3,
                 roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.DRE,
                 children: [
                     {
                         title: 'DRE Consolidada',
@@ -426,6 +454,7 @@ const navigationSections: NavSection[] = [
                 icon: Receipt,
                 roles: ['CLINIC_ADMIN', 'FINANCIAL'],
                 minPlan: 'PROFESSIONAL',
+                featureKey: FEATURE_KEYS.FATURAMENTO_TISS,
                 children: [
                     {
                         title: 'Guias e Lotes',
@@ -450,6 +479,7 @@ const navigationSections: NavSection[] = [
                 icon: Wallet,
                 roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.MEU_FINANCEIRO,
                 children: [
                     {
                         title: 'Meu Painel',
@@ -478,6 +508,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/convenios',
                 icon: Shield,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL'],
+                featureKey: FEATURE_KEYS.CONVENIOS,
                 children: [
                     {
                         title: 'Convênios',
@@ -507,6 +538,7 @@ const navigationSections: NavSection[] = [
                 icon: MessagesSquare,
                 roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.CHAT,
             },
             {
                 title: 'WhatsApp',
@@ -514,12 +546,14 @@ const navigationSections: NavSection[] = [
                 icon: MessageCircle,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.WHATSAPP,
             },
             {
                 title: 'Notificações',
                 href: '/dashboard/notificacoes',
                 icon: Send,
                 roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+                featureKey: FEATURE_KEYS.NOTIFICACOES,
                 // Acessível a todos os planos (BASICO+)
             },
             {
@@ -528,6 +562,7 @@ const navigationSections: NavSection[] = [
                 icon: Megaphone,
                 roles: ['CLINIC_ADMIN'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.FLUXOMED,
                 children: [
                     {
                         title: 'Automações',
@@ -553,6 +588,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/estoque',
                 icon: Package,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+                featureKey: FEATURE_KEYS.ESTOQUE,
                 // Acessível a todos os planos (BASICO+)
             },
             {
@@ -560,6 +596,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/relatorios',
                 icon: BarChart3,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.RELATORIOS,
                 // Acessível a todos os planos (BASICO+)
             },
             {
@@ -567,6 +604,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/termos',
                 icon: Scale,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.TERMOS_LEGAIS,
                 // Acessível a todos os planos (BASICO+)
             },
             {
@@ -575,6 +613,7 @@ const navigationSections: NavSection[] = [
                 icon: Upload,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.IMPORTACAO,
             },
             {
                 title: 'Automação',
@@ -582,6 +621,7 @@ const navigationSections: NavSection[] = [
                 icon: Bot,
                 roles: ['CLINIC_ADMIN'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.AUTOMACAO,
                 children: [
                     {
                         title: 'Painel',
@@ -602,6 +642,7 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/logs-auditoria',
                 icon: Shield,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.LOGS_AUDITORIA,
             },
         ],
     },
@@ -613,42 +654,49 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard/configuracoes',
                 icon: Settings,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.MINHA_CLINICA,
             },
             {
                 title: 'Página Pública',
                 href: '/dashboard/configuracoes/pagina-publica',
                 icon: Globe,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.PAGINA_PUBLICA,
             },
             {
                 title: 'Teleconsulta',
                 href: '/dashboard/configuracoes/teleconsulta',
                 icon: Video,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.TELECONSULTA,
             },
             {
                 title: 'Usuários',
                 href: '/dashboard/configuracoes/usuarios',
                 icon: Users,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.USUARIOS,
             },
             {
                 title: 'Terapias',
                 href: '/dashboard/configuracoes/terapias',
                 icon: Stethoscope,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.TERAPIAS_CONFIG,
             },
             {
                 title: 'Assinatura',
                 href: '/dashboard/configuracoes/assinatura',
                 icon: CreditCard,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.ASSINATURA,
             },
             {
                 title: 'Segurança',
                 href: '/dashboard/seguranca',
                 icon: Lock,
                 roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.SEGURANCA,
             },
             {
                 title: 'Integrações',
@@ -656,6 +704,7 @@ const navigationSections: NavSection[] = [
                 icon: Globe,
                 roles: ['CLINIC_ADMIN'],
                 minPlan: 'AVANCADO',
+                featureKey: FEATURE_KEYS.INTEGRACOES,
             },
 
         ],
@@ -756,12 +805,14 @@ function NavItemComponent({
     item,
     isActive,
     currentPlan,
+    permissions,
     isMobile = false,
     sidebarTheme = 'dark-green'
 }: {
     item: NavItem
     isActive: boolean
     currentPlan: PlanType
+    permissions?: Record<string, { enabled: boolean; isCustom: boolean }>
     isMobile?: boolean
     sidebarTheme?: 'dark-green' | 'light-classic'
 }) {
@@ -779,7 +830,8 @@ function NavItemComponent({
         }
         const parentCurrentLevel = PLAN_ORDER_PARENT[currentPlan] || 0
         const parentRequiredLevel = PLAN_ORDER_PARENT[item.minPlan || 'BASICO'] || 0
-        const parentIsLocked = parentCurrentLevel < parentRequiredLevel
+        const isParentCustomUnlocked = Boolean(item.featureKey && permissions?.[item.featureKey]?.enabled === true)
+        const parentIsLocked = isParentCustomUnlocked ? false : (parentCurrentLevel < parentRequiredLevel)
 
         const [showUpgrade, setShowUpgrade] = useState(false)
         const pathname = usePathname()
@@ -803,7 +855,7 @@ function NavItemComponent({
                                 : 'text-muted-foreground/50 hover:bg-muted/50'
                             : isActive
                                 ? isDark
-                                    ? 'text-emerald-300 font-bold hover:bg-white/5'
+                                ? 'text-emerald-300 font-bold hover:bg-white/5'
                                     : 'text-emerald-700 font-bold hover:bg-slate-100/80'
                                 : isDark
                                     ? 'text-emerald-100/70 hover:bg-white/5 hover:text-white active:bg-white/10'
@@ -854,10 +906,12 @@ function NavItemComponent({
                     )}>
                         {item.children?.map((child) => {
                             const isChildActive = pathname === child.href || pathname.startsWith(`${child.href}/`)
+                            const isChildCustomUnlocked = Boolean(child.featureKey && permissions?.[child.featureKey]?.enabled === true)
+                            const effectivePlan = isChildCustomUnlocked ? 'BASICO' : (child.minPlan || 'BASICO')
                             return (
                                 <VisualLock
                                     key={child.href}
-                                    requiredPlan={child.minPlan || 'BASICO'}
+                                    requiredPlan={effectivePlan}
                                     currentPlan={currentPlan}
                                     featureName={child.title}
                                 >
@@ -911,8 +965,8 @@ function NavItemComponent({
                         <DialogContent className="sm:max-w-lg">
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
-                                    <Crown className="h-5 w-5 text-amber-500" />
-                                    Recurso Premium
+                                    <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                                    Recurso Corporativo
                                 </DialogTitle>
                                 <DialogDescription>
                                     <strong>{item.title}</strong> requer o plano <strong>{item.minPlan}</strong> ou superior.
@@ -935,7 +989,8 @@ function NavItemComponent({
     }
     const currentLevel = PLAN_ORDER[currentPlan] || 0
     const requiredLevel = PLAN_ORDER[item.minPlan || 'BASICO'] || 0
-    const isLocked = currentLevel < requiredLevel
+    const isItemCustomUnlocked = Boolean(item.featureKey && permissions?.[item.featureKey]?.enabled === true)
+    const isLocked = isItemCustomUnlocked ? false : (currentLevel < requiredLevel)
 
     return (
         <Link
@@ -1000,7 +1055,7 @@ function NavItemComponent({
 export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
     const { role, isCoordinator } = useRole()
-    const { planType, isLoading } = usePlan()
+    const { planType, isLoading, permissions } = usePlan()
     const profLabel = useProfessionalLabel()
     const { clinic } = useClinic()
 
@@ -1031,7 +1086,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     // Default to BASIC if loading
     const currentPlan: PlanType = planType || 'BASICO'
 
-    // Filter sections based on role + inject professional labels
+    // Filter sections based on role + inject professional labels + respeitar Permissões Customizadas
     // Coordenadoras DOCTOR veem também o menu Documentos (solicitação Espaço Incluir)
     const filteredSections = navigationSections
         .map(section => ({
@@ -1042,18 +1097,48 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     if (role && item.roles.includes(role)) {
                         // Remove 'Planos', 'Grupos' e 'Cobrança' para SUPER_ADMIN — não pertinentes ao contexto operacional
                         if (role === 'SUPER_ADMIN' && ['/dashboard/planos', '/dashboard/grupos', '/dashboard/cobranca'].includes(item.href)) return false
+                        
+                        // Permissões Customizadas da clínica: se foi explicitamente desativada no Master Hub, oculta
+                        if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
+                            return false
+                        }
                         return true
                     }
                     // Coordenadoras DOCTOR também veem Documentos e Agenda Geral
-                    if (role === 'DOCTOR' && isCoordinator && ['/dashboard/documentos', '/dashboard/agenda'].includes(item.href)) return true
+                    if (role === 'DOCTOR' && isCoordinator && ['/dashboard/documentos', '/dashboard/agenda'].includes(item.href)) {
+                        if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
+                            return false
+                        }
+                        return true
+                    }
                     return false
                 })
-                .map(item => ({
-                    ...item,
-                    title: item.title
-                        .replace('__PROFESSIONAL_PLURAL__', profLabel.plural)
-                        .replace('__REPASSE_LABEL__', profLabel.repasse),
-                })),
+                .map(item => {
+                    let children = item.children
+                    if (children && children.length > 0) {
+                        children = children.filter(child => {
+                            if (child.featureKey && permissions?.[child.featureKey]?.enabled === false) {
+                                return false
+                            }
+                            return true
+                        })
+                    }
+
+                    return {
+                        ...item,
+                        children,
+                        title: item.title
+                            .replace('__PROFESSIONAL_PLURAL__', profLabel.plural)
+                            .replace('__REPASSE_LABEL__', profLabel.repasse),
+                    }
+                })
+                .filter(item => {
+                    // Se o item tinha filhos e todos foram desativados, oculta o item pai agrupador
+                    if (item.children && item.children.length === 0) {
+                        return false
+                    }
+                    return true
+                }),
         }))
         .filter(section => {
             // STRICT BLOCK: Remove 'Financeiro' entirely for Receptionists/Staff and Super Admin
@@ -1206,6 +1291,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                                 item={item}
                                                 isActive={isActive}
                                                 currentPlan={currentPlan}
+                                                permissions={permissions}
                                                 isMobile={isMobile}
                                                 sidebarTheme={sidebarTheme}
                                             />
@@ -1264,6 +1350,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                                         item={item}
                                                         isActive={isActive}
                                                         currentPlan={currentPlan}
+                                                        permissions={permissions}
                                                         isMobile={isMobile}
                                                         sidebarTheme={sidebarTheme}
                                                     />

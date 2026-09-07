@@ -18,10 +18,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Save, Plus, Trash2, Clock } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, Save, Plus, Trash2, Clock, Copy, RotateCcw, CalendarDays } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRole } from '@/lib/hooks/use-auth'
 import { SavedSchedulesList } from '@/components/doctors/SavedSchedulesList'
@@ -37,18 +45,56 @@ const DAYS_OF_WEEK = [
     { value: 6, label: 'Sábado', short: 'Sáb' },
 ]
 
+const STANDARD_DURATIONS = [
+    { value: 15, label: '15 min (Triagem rápida)' },
+    { value: 20, label: '20 min (Avaliação breve)' },
+    { value: 30, label: '30 min (Consulta padrão)' },
+    { value: 40, label: '40 min (Fono/Fisioterapia)' },
+    { value: 45, label: '45 min (Atendimento clínico)' },
+    { value: 50, label: '50 min (Psicologia / Terapia)' },
+    { value: 60, label: '60 min (1 hora padrão)' },
+    { value: 75, label: '75 min (1h15 estendida)' },
+    { value: 80, label: '80 min (1h20 sessão)' },
+    { value: 90, label: '90 min (1h30 integração sensorial)' },
+    { value: 120, label: '120 min (2h - Programa ABA)' },
+    { value: 150, label: '150 min (2h30 intensivo)' },
+    { value: 180, label: '180 min (3h - Turno ABA intensivo)' },
+    { value: 240, label: '240 min (4h - Meio período ABA)' },
+]
+
 interface ShiftBlock {
     id: string
     day_of_week: number
     start_time: string
     end_time: string
     slot_duration_minutes: number
+    is_custom_duration?: boolean
 }
 
 // Generate a unique ID for each shift block
 let shiftIdCounter = 0
 function generateShiftId(): string {
     return `shift-${Date.now()}-${++shiftIdCounter}`
+}
+
+function calculateSlotPreview(start: string, end: string, duration: number): { count: number; slots: string[] } {
+    if (!start || !end || !duration || duration <= 0) return { count: 0, slots: [] }
+    const [sh, sm] = start.split(':').map(Number)
+    const [eh, em] = end.split(':').map(Number)
+    if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return { count: 0, slots: [] }
+    const startMin = sh * 60 + sm
+    const endMin = eh * 60 + em
+    if (startMin >= endMin) return { count: 0, slots: [] }
+
+    const slots: string[] = []
+    let current = startMin
+    while (current + duration <= endMin) {
+        const h = Math.floor(current / 60).toString().padStart(2, '0')
+        const m = (current % 60).toString().padStart(2, '0')
+        slots.push(`${h}:${m}`)
+        current += duration
+    }
+    return { count: slots.length, slots }
 }
 
 export default function SchedulePage() {
@@ -74,13 +120,18 @@ export default function SchedulePage() {
     // Update local state when schedules load
     useEffect(() => {
         if (currentSchedules && currentSchedules.length > 0) {
-            const loadedShifts: ShiftBlock[] = currentSchedules.map((s: any) => ({
-                id: generateShiftId(),
-                day_of_week: s.day_of_week,
-                start_time: s.start_time?.substring(0, 5) || '09:00',
-                end_time: s.end_time?.substring(0, 5) || '18:00',
-                slot_duration_minutes: s.slot_duration_minutes || 30,
-            }))
+            const loadedShifts: ShiftBlock[] = currentSchedules.map((s: any) => {
+                const duration = s.slot_duration_minutes || 30
+                const isStandard = STANDARD_DURATIONS.some(d => d.value === duration)
+                return {
+                    id: generateShiftId(),
+                    day_of_week: s.day_of_week,
+                    start_time: s.start_time?.substring(0, 5) || '09:00',
+                    end_time: s.end_time?.substring(0, 5) || '18:00',
+                    slot_duration_minutes: duration,
+                    is_custom_duration: !isStandard,
+                }
+            })
             setShifts(loadedShifts)
         } else {
             setShifts([])
@@ -93,11 +144,11 @@ export default function SchedulePage() {
         shifts: shifts.filter(s => s.day_of_week === day.value),
     }))
 
-    // Add a new shift to a specific day
+    // Add a new shift to a specific day (permite ate 10 turnos por dia)
     const addShift = (dayOfWeek: number) => {
         const dayShifts = shifts.filter(s => s.day_of_week === dayOfWeek)
-        if (dayShifts.length >= 3) {
-            toast.error('Máximo de 3 turnos por dia')
+        if (dayShifts.length >= 10) {
+            toast.error('Limite de 10 turnos por dia atingido')
             return
         }
 
@@ -106,12 +157,11 @@ export default function SchedulePage() {
         let defaultEnd = '18:00'
         if (dayShifts.length > 0) {
             const lastShift = dayShifts.sort((a, b) => a.end_time.localeCompare(b.end_time))[dayShifts.length - 1]
-            // Start 1 hour after last shift ends (lunch break pattern)
             const [h, m] = lastShift.end_time.split(':').map(Number)
-            const newStartMinutes = (h * 60 + m) + 60
+            const newStartMinutes = (h * 60 + m) + 15 // 15 min buffer
             if (newStartMinutes < 23 * 60) {
                 defaultStart = `${Math.floor(newStartMinutes / 60).toString().padStart(2, '0')}:${(newStartMinutes % 60).toString().padStart(2, '0')}`
-                const newEndMinutes = Math.min(newStartMinutes + 240, 23 * 60) // 4h block or until 23:00
+                const newEndMinutes = Math.min(newStartMinutes + 240, 23 * 60)
                 defaultEnd = `${Math.floor(newEndMinutes / 60).toString().padStart(2, '0')}:${(newEndMinutes % 60).toString().padStart(2, '0')}`
             }
         }
@@ -121,7 +171,7 @@ export default function SchedulePage() {
             day_of_week: dayOfWeek,
             start_time: defaultStart,
             end_time: defaultEnd,
-            slot_duration_minutes: 30,
+            slot_duration_minutes: 50, // Padrão terapia
         }])
     }
 
@@ -130,11 +180,56 @@ export default function SchedulePage() {
         setShifts(prev => prev.filter(s => s.id !== shiftId))
     }
 
+    // Clear all shifts for a day
+    const clearDayShifts = (dayOfWeek: number) => {
+        setShifts(prev => prev.filter(s => s.day_of_week !== dayOfWeek))
+        const dayName = DAYS_OF_WEEK.find(d => d.value === dayOfWeek)?.label
+        toast.success(`Turnos de ${dayName} limpos`)
+    }
+
+    // Copy shifts from one day to target days
+    const copyDayShifts = (sourceDay: number, targetDays: number[]) => {
+        const sourceShifts = shifts.filter(s => s.day_of_week === sourceDay)
+        if (sourceShifts.length === 0) {
+            toast.error('O dia selecionado não possui turnos para copiar')
+            return
+        }
+
+        setShifts(prev => {
+            const filtered = prev.filter(s => !targetDays.includes(s.day_of_week))
+            const cloned: ShiftBlock[] = []
+            for (const targetDay of targetDays) {
+                for (const s of sourceShifts) {
+                    cloned.push({
+                        id: generateShiftId(),
+                        day_of_week: targetDay,
+                        start_time: s.start_time,
+                        end_time: s.end_time,
+                        slot_duration_minutes: s.slot_duration_minutes,
+                        is_custom_duration: s.is_custom_duration,
+                    })
+                }
+            }
+            return [...filtered, ...cloned]
+        })
+
+        const targetLabels = targetDays.map(d => DAYS_OF_WEEK.find(dw => dw.value === d)?.short).join(', ')
+        toast.success(`Turnos replicados com sucesso para: ${targetLabels}`)
+    }
+
     // Update a shift field
-    const updateShift = (shiftId: string, field: keyof ShiftBlock, value: string | number) => {
-        setShifts(prev => prev.map(s =>
-            s.id === shiftId ? { ...s, [field]: value } : s
-        ))
+    const updateShift = (shiftId: string, field: keyof ShiftBlock, value: any) => {
+        setShifts(prev => prev.map(s => {
+            if (s.id !== shiftId) return s
+            if (field === 'slot_duration_minutes') {
+                if (value === 'custom') {
+                    return { ...s, is_custom_duration: true }
+                } else {
+                    return { ...s, slot_duration_minutes: Number(value), is_custom_duration: false }
+                }
+            }
+            return { ...s, [field]: value }
+        }))
     }
 
     // Validate and submit
@@ -151,6 +246,11 @@ export default function SchedulePage() {
             if (sh * 60 + sm >= eh * 60 + em) {
                 const dayLabel = DAYS_OF_WEEK.find(d => d.value === shift.day_of_week)?.label
                 toast.error(`${dayLabel}: Hora de início deve ser anterior à hora de término`)
+                return
+            }
+            if (!shift.slot_duration_minutes || shift.slot_duration_minutes < 5 || shift.slot_duration_minutes > 480) {
+                const dayLabel = DAYS_OF_WEEK.find(d => d.value === shift.day_of_week)?.label
+                toast.error(`${dayLabel}: Duração do slot deve ser entre 5 e 480 minutos`)
                 return
             }
         }
@@ -183,7 +283,7 @@ export default function SchedulePage() {
             day_of_week: s.day_of_week,
             start_time: s.start_time,
             end_time: s.end_time,
-            slot_duration_minutes: s.slot_duration_minutes,
+            slot_duration_minutes: Number(s.slot_duration_minutes),
         }))
 
         updateSchedules.mutate({
@@ -233,7 +333,7 @@ export default function SchedulePage() {
                 </CardContent>
             </Card>
 
-            {/* ✅ SHOW SAVED SCHEDULES IMMEDIATELY */}
+            {/* SHOW SAVED SCHEDULES IMMEDIATELY */}
             {selectedDoctorId && (
                 <SavedSchedulesList doctorId={selectedDoctorId} />
             )}
@@ -243,7 +343,7 @@ export default function SchedulePage() {
                     <CardHeader>
                         <CardTitle>Configurar Agenda Semanal</CardTitle>
                         <CardDescription>
-                            Adicione turnos para cada dia. Use múltiplos turnos para bloquear horário de almoço ou saídas temporárias.
+                            Adicione múltiplos turnos para cada dia com durações flexíveis (15m a 240m ou personalizada). O sistema calcula a capacidade de vagas automaticamente.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -259,12 +359,12 @@ export default function SchedulePage() {
                                             key={day.value}
                                             className={`p-4 border rounded-lg transition-colors ${
                                                 day.shifts.length > 0
-                                                    ? 'bg-green-50/50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                                                    ? 'bg-green-50/40 border-green-200 dark:bg-green-950/20 dark:border-green-800'
                                                     : 'bg-card border-border'
                                             }`}
                                         >
-                                            {/* Day Header */}
-                                            <div className="flex items-center justify-between mb-3">
+                                            {/* Day Header with Copy Action */}
+                                            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                                                 <div className="flex items-center gap-2">
                                                     <div
                                                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -277,99 +377,180 @@ export default function SchedulePage() {
                                                     </div>
                                                     <span className="font-medium">{day.label}</span>
                                                     {day.shifts.length > 0 && (
-                                                        <span className="text-xs text-green-600 font-medium">
-                                                            ({day.shifts.length} {day.shifts.length === 1 ? 'turno' : 'turnos'})
-                                                        </span>
+                                                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-normal">
+                                                            {day.shifts.length} {day.shifts.length === 1 ? 'turno' : 'turnos'}
+                                                        </Badge>
                                                     )}
                                                 </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => addShift(day.value)}
-                                                    disabled={day.shifts.length >= 3}
-                                                    className="text-xs"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5 mr-1" />
-                                                    Adicionar turno
-                                                </Button>
+
+                                                <div className="flex items-center gap-2">
+                                                    {day.shifts.length > 0 && (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="outline" size="sm" className="text-xs h-8">
+                                                                    <Copy className="w-3.5 h-3.5 mr-1" />
+                                                                    Copiar dia...
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => copyDayShifts(day.value, [1, 2, 3, 4, 5])}>
+                                                                    <CalendarDays className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                                                                    Copiar para Seg a Sex
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => copyDayShifts(day.value, [0, 1, 2, 3, 4, 5, 6].filter(d => d !== day.value))}>
+                                                                    <CalendarDays className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                                                                    Copiar para todos os outros dias
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onClick={() => clearDayShifts(day.value)} className="text-destructive focus:text-destructive">
+                                                                    <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                                                                    Limpar turnos deste dia
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    )}
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => addShift(day.value)}
+                                                        disabled={day.shifts.length >= 10}
+                                                        className="text-xs h-8"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5 mr-1" />
+                                                        Adicionar turno
+                                                    </Button>
+                                                </div>
                                             </div>
 
                                             {/* Shifts list */}
                                             {day.shifts.length === 0 ? (
                                                 <p className="text-sm text-muted-foreground italic pl-10">
-                                                    Nenhum turno configurado — clique em &quot;Adicionar turno&quot;
+                                                    Nenhum turno configurado para este dia
                                                 </p>
                                             ) : (
-                                                <div className="space-y-2 pl-10">
+                                                <div className="space-y-3 pl-0 sm:pl-10">
                                                     {day.shifts
                                                         .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                                                        .map((shift, idx) => (
-                                                            <div
-                                                                key={shift.id}
-                                                                className="flex items-center gap-3 p-2.5 bg-white dark:bg-gray-900 border rounded-md"
-                                                            >
-                                                                <span className="text-xs text-muted-foreground font-medium w-14">
-                                                                    Turno {idx + 1}
-                                                                </span>
+                                                        .map((shift, idx) => {
+                                                            const preview = calculateSlotPreview(
+                                                                shift.start_time,
+                                                                shift.end_time,
+                                                                shift.slot_duration_minutes
+                                                            )
 
-                                                                <div className="grid gap-1">
-                                                                    <Label className="text-xs text-muted-foreground">
-                                                                        Início
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="time"
-                                                                        value={shift.start_time}
-                                                                        onChange={(e) => updateShift(shift.id, 'start_time', e.target.value)}
-                                                                        className="w-28 h-8 text-sm"
-                                                                    />
-                                                                </div>
-
-                                                                <div className="grid gap-1">
-                                                                    <Label className="text-xs text-muted-foreground">
-                                                                        Fim
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="time"
-                                                                        value={shift.end_time}
-                                                                        onChange={(e) => updateShift(shift.id, 'end_time', e.target.value)}
-                                                                        className="w-28 h-8 text-sm"
-                                                                    />
-                                                                </div>
-
-                                                                <div className="grid gap-1">
-                                                                    <Label className="text-xs text-muted-foreground">
-                                                                        Duração
-                                                                    </Label>
-                                                                    <Select
-                                                                        value={String(shift.slot_duration_minutes)}
-                                                                        onValueChange={(val) =>
-                                                                            updateShift(shift.id, 'slot_duration_minutes', Number(val))
-                                                                        }
-                                                                    >
-                                                                        <SelectTrigger className="w-24 h-8 text-sm">
-                                                                            <SelectValue />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="15">15 min</SelectItem>
-                                                                            <SelectItem value="30">30 min</SelectItem>
-                                                                            <SelectItem value="45">45 min</SelectItem>
-                                                                            <SelectItem value="60">60 min</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 mt-auto"
-                                                                    onClick={() => removeShift(shift.id)}
+                                                            return (
+                                                                <div
+                                                                    key={shift.id}
+                                                                    className="p-3 bg-white dark:bg-gray-900 border rounded-lg shadow-2xs space-y-2"
                                                                 >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </Button>
-                                                            </div>
-                                                        ))}
+                                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                                        <span className="text-xs text-muted-foreground font-semibold w-16">
+                                                                            Turno {idx + 1}
+                                                                        </span>
+
+                                                                        <div className="grid gap-1">
+                                                                            <Label className="text-xs text-muted-foreground">
+                                                                                Início
+                                                                            </Label>
+                                                                            <Input
+                                                                                type="time"
+                                                                                value={shift.start_time}
+                                                                                onChange={(e) => updateShift(shift.id, 'start_time', e.target.value)}
+                                                                                className="w-28 h-8 text-sm"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className="grid gap-1">
+                                                                            <Label className="text-xs text-muted-foreground">
+                                                                                Fim
+                                                                            </Label>
+                                                                            <Input
+                                                                                type="time"
+                                                                                value={shift.end_time}
+                                                                                onChange={(e) => updateShift(shift.id, 'end_time', e.target.value)}
+                                                                                className="w-28 h-8 text-sm"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className="grid gap-1">
+                                                                            <Label className="text-xs text-muted-foreground">
+                                                                                Duração
+                                                                            </Label>
+                                                                            {!shift.is_custom_duration ? (
+                                                                                <Select
+                                                                                    value={String(shift.slot_duration_minutes)}
+                                                                                    onValueChange={(val) => updateShift(shift.id, 'slot_duration_minutes', val)}
+                                                                                >
+                                                                                    <SelectTrigger className="w-52 h-8 text-xs">
+                                                                                        <SelectValue />
+                                                                                    </SelectTrigger>
+                                                                                    <SelectContent>
+                                                                                        {STANDARD_DURATIONS.map((dur) => (
+                                                                                            <SelectItem key={dur.value} value={String(dur.value)}>
+                                                                                                {dur.label}
+                                                                                            </SelectItem>
+                                                                                        ))}
+                                                                                        <DropdownMenuSeparator />
+                                                                                        <SelectItem value="custom">
+                                                                                            Personalizado (digitar minutos)...
+                                                                                        </SelectItem>
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                            ) : (
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        min={5}
+                                                                                        max={480}
+                                                                                        value={shift.slot_duration_minutes}
+                                                                                        onChange={(e) => updateShift(shift.id, 'slot_duration_minutes', Number(e.target.value))}
+                                                                                        className="w-20 h-8 text-xs"
+                                                                                        placeholder="Min"
+                                                                                    />
+                                                                                    <span className="text-xs text-muted-foreground">min</span>
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="h-8 px-2 text-xs"
+                                                                                        onClick={() => updateShift(shift.id, 'slot_duration_minutes', 50)}
+                                                                                    >
+                                                                                        Padrões
+                                                                                    </Button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                                                                            onClick={() => removeShift(shift.id)}
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </Button>
+                                                                    </div>
+
+                                                                    {/* Slot preview calculation */}
+                                                                    {preview.count > 0 ? (
+                                                                        <div className="pt-1 border-t border-dashed border-border/70 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                            <Clock className="w-3 h-3 text-primary shrink-0" />
+                                                                            <span>
+                                                                                <strong>{preview.count} vaga(s)</strong> gerada(s): {preview.slots.slice(0, 6).join(', ')}
+                                                                                {preview.slots.length > 6 ? ` ... e mais ${preview.slots.length - 6}` : ''}
+                                                                            </span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="pt-1 border-t border-dashed border-border/70 text-xs text-amber-600 dark:text-amber-400">
+                                                                            A duração selecionada ({shift.slot_duration_minutes} min) excede o intervalo entre início e fim.
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })}
                                                 </div>
                                             )}
                                         </div>

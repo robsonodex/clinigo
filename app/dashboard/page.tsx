@@ -1176,9 +1176,9 @@ export default function DashboardPage() {
                 )
             }
 
-            {/* Feature Highlights */}
+            {/* Feature Highlights - Apenas para planos de entrada (oculto para PRO, PROFESSIONAL, ENTERPRISE e NETWORK) */}
             {
-                isClinicAdmin && clinicInfo?.plan_type !== 'ENTERPRISE' && clinicInfo?.plan_type !== 'NETWORK' && (
+                isClinicAdmin && !['PRO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(String(clinicInfo?.plan_type || '').toUpperCase()) && (
                     <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">

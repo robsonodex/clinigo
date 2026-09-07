@@ -105,8 +105,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             )
         }
 
-        // Camada A: Se for feature de Terapia e a clínica não estiver na allowlist, retorna 404 (sem dar pista)
-        if (FEATURE_METADATA[feature]?.category === 'TERAPIA' && !isClinicInSessionPlansAllowlist(clinicId)) {
+        // Camada A: Se for feature de Terapia proprietária e a clínica não estiver na allowlist, retorna 404 (sem dar pista)
+        const proprietarySensory = [FEATURE_KEYS.PSICOMOTRICIDADE, FEATURE_KEYS.PLANO_FISIOTERAPIA, FEATURE_KEYS.EVOLUCAO_WORLD_SENSORY] as FeatureKey[]
+        if (proprietarySensory.includes(feature) && !isClinicInSessionPlansAllowlist(clinicId)) {
             return NextResponse.json(
                 { error: 'Not Found' },
                 { status: 404 }
