@@ -884,6 +884,24 @@
   - **Uso do Limite Free (500 MB)**: Ocupação caiu de 53,2% para apenas **20,4%**, deixando ~400 MB de margem livre.
   - **Disponibilidade**: Ambas as tabelas são de uso exclusivo de extensões em segundo plano (`pg_net` e `pg_cron`), com tempo de execução de menos de 1 segundo e impacto zero para médicos e recepcionistas.
 
+#### Item 32 — Rotinas Automáticas e Recorrentes de Limpeza de Logs (pg_cron e pg_net)
+- **Módulo**: Banco de Dados & Infraestrutura → Prevenção de Bloat Recorrente
+- **Caminho**:
+  - `supabase/migrations/20260907_standardize_log_cleanup_crons.sql`
+  - Jobs no `cron.job`: `clinigo-cleanup-pg-net-logs` e `clinigo-cleanup-cron-job-logs`
+- **Descrição Técnica**:
+  - **Motivação**: Prevenção ativa de bloat recorrente no Postgres, garantindo que o acúmulo de respostas HTTP e histórico de jobs nunca mais ultrapasse os limites do banco.
+  - **Job 1 (`jobid: 4` — `clinigo-cleanup-pg-net-logs`)**:
+    - Agendamento: Diariamente às 03:00 UTC (`0 3 * * *`).
+    - Comando: `DELETE FROM net._http_response WHERE created < now() - interval '3 days';`
+    - Retenção: 3 dias (suficiente para rastreamento de chamadas recentes de webhooks e integração WhatsApp, sem inflar o disco).
+  - **Job 2 (`jobid: 5` — `clinigo-cleanup-cron-job-logs`)**:
+    - Agendamento: Diariamente às 03:10 UTC (`10 3 * * *`).
+    - Comando: `DELETE FROM cron.job_run_details WHERE end_time < now() - interval '14 days';`
+    - Retenção: 14 dias (duas semanas de histórico completo de execuções para auditoria e conferência).
+  - **Manutenção Automatizada**: A purga diária fragmentada mantém as tabelas pequenas, permitindo que o `autovacuum` nativo recicle as páginas em tempo real sem locks ou necessidade de novas intervenções manuais.
+
+
 
 
 
