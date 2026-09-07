@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle2, Share2, Printer, Copy, Download, Check } from 'lucide-react'
 import { AppointmentVoucher } from '@/components/shared/appointment-voucher'
 import { generateVoucherImage, downloadVoucherImage } from '@/lib/utils/voucher-image-generator'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface QRCodeData {
     id: string
@@ -45,6 +46,7 @@ interface AppointmentSuccessModalProps {
 }
 
 export function AppointmentSuccessModal({ isOpen, onClose, appointment }: AppointmentSuccessModalProps) {
+    const profLabel = useProfessionalLabel()
     const [copied, setCopied] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const voucherRef = useRef<HTMLDivElement>(null)
@@ -59,7 +61,9 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
     // Handle different doctor name formats
     const doctorName = appointment.doctor.full_name ||
         appointment.doctor.user?.full_name ||
-        'Médico'
+        profLabel.singular
+
+    const doctorDisplay = profLabel.singular === 'Médico' ? `Dr(a). ${doctorName}` : doctorName
 
     // 1. Share via WhatsApp (with PNG image)
     async function handleShareWhatsApp() {
@@ -78,11 +82,11 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
             const file = new File([blob], `comprovante-${appointment.patient.full_name.replace(/\s+/g, '-').toLowerCase()}.png`, { type: 'image/png' })
 
             const message =
-                `✅ *Consulta Agendada!*\n\n` +
-                `👤 Paciente: ${appointment.patient.full_name}\n` +
-                `📅 Data: ${formattedDate}\n` +
-                `👨‍⚕️ Médico: Dr(a). ${doctorName}\n\n` +
-                `📲 *Link de check-in:*\n${appointment.qr_code.url}\n\n` +
+                `*Agendamento Confirmado*\n\n` +
+                `Paciente: ${appointment.patient.full_name}\n` +
+                `Data: ${formattedDate}\n` +
+                `${profLabel.singular}: ${doctorDisplay}\n\n` +
+                `Link de check-in:\n${appointment.qr_code.url}\n\n` +
                 `Apresente o comprovante anexado na recepção.`
 
             // Try native share API
@@ -225,7 +229,7 @@ export function AppointmentSuccessModal({ isOpen, onClose, appointment }: Appoin
                     <div className="space-y-1 text-left text-sm text-muted-foreground">
                         <p><strong>Paciente:</strong> {appointment.patient.full_name}</p>
                         <p><strong>Data:</strong> {formattedDate}</p>
-                        <p><strong>Médico:</strong> Dr(a). {doctorName}</p>
+                        <p><strong>{profLabel.singular}:</strong> {doctorDisplay}</p>
                     </div>
                 </DialogHeader>
 

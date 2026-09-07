@@ -39,6 +39,7 @@ import {
     Send,
     HeartPulse,
     Cake,
+    Repeat,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -101,6 +102,17 @@ const helpItems: HelpItem[] = [
         minPlan: 'Básico',
         roles: ['DOCTOR'],
         tags: ['agenda pessoal', 'privacidade', 'médico', 'terapeuta']
+    },
+    {
+        id: 'agendamento-recorrente',
+        title: 'Central de Agendamentos Recorrentes',
+        category: 'Agendamento',
+        icon: Repeat,
+        whatIsIt: 'Módulo de gestão e conferência de todas as séries de agendamentos contínuos da clínica. Permite consultar pacientes com horários fixos semanais, conferir terapeuta responsável, data de início e término, pausar ou reativar séries, editar dias e horários em lote, e navegar diretamente para a data exata da consulta na grade da agenda.',
+        whenToUse: 'Sempre que um paciente necessitar de acompanhamento contínuo semanal (ex: terapias multidisciplinares, Fonoaudiologia, Terapia Ocupacional, Psicologia) ou quando a administração precisar auditar e validar quais horários fixos estão ativos.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+        tags: ['recorrência', 'horário fixo', 'terapias', 'séries', 'semanal']
     },
     {
         id: 'consultas',

@@ -84,8 +84,10 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useRole, useAuth } from '@/lib/hooks/use-auth'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { ManualAppointmentModal } from '@/components/appointments/ManualAppointmentModal'
 import { RecurringAppointmentModal } from '@/components/appointments/RecurringAppointmentModal'
+import { RecurringSeriesListModal } from '@/components/appointments/RecurringSeriesListModal'
 import { EditSeriesModal } from '@/components/appointments/EditSeriesModal'
 import { TherapistAbsenceModal } from '@/components/appointments/TherapistAbsenceModal'
 import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionModal'
@@ -191,6 +193,7 @@ function calcEndTime(startTime: string, durationMinutes: number = 60): string {
 
 
 export default function AgendaPage() {
+    const profLabel = useProfessionalLabel()
     const router = useRouter()
     const { isDoctor, isCoordinator } = useRole()
     const { user } = useAuth()
@@ -201,6 +204,7 @@ export default function AgendaPage() {
     const [blockModalOpen, setBlockModalOpen] = useState(false)
     const [isEncaixeMode, setIsEncaixeMode] = useState(false)
     const [recurringAppointmentOpen, setRecurringAppointmentOpen] = useState(false)
+    const [recurringSeriesListOpen, setRecurringSeriesListOpen] = useState(false)
     const [absenceModalOpen, setAbsenceModalOpen] = useState(false)
     const [suggestionModalOpen, setSuggestionModalOpen] = useState(false)
     const [preselectedSlot, setPreselectedSlot] = useState<{ date: string; time: string } | null>(null)
@@ -875,7 +879,7 @@ export default function AgendaPage() {
                     <Button
                         variant="outline"
                         className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold"
-                        onClick={() => setRecurringAppointmentOpen(true)}
+                        onClick={() => setRecurringSeriesListOpen(true)}
                     >
                         <Repeat className="h-4 w-4" />
                         Recorrente
@@ -1365,7 +1369,7 @@ export default function AgendaPage() {
                                                                                 </p>
                                                                             </div>
                                                                             <div className="text-xs space-y-1">
-                                                                                <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
                                                                                 <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                 <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
                                                                                 {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
@@ -1625,7 +1629,7 @@ export default function AgendaPage() {
                                                                                         </p>
                                                                                     </div>
                                                                                     <div className="text-xs space-y-1">
-                                                                                        <p><strong>Médico:</strong> Dr. {appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                        <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
                                                                                         <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                         <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
                                                                                         {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
@@ -1803,11 +1807,56 @@ export default function AgendaPage() {
                 }}
             />
 
+            <RecurringSeriesListModal
+                open={recurringSeriesListOpen}
+                onOpenChange={setRecurringSeriesListOpen}
+                onNewSeries={() => {
+                    setRecurringSeriesListOpen(false)
+                    setRecurringAppointmentOpen(true)
+                }}
+                onEditSeries={(seriesId) => {
+                    setRecurringSeriesListOpen(false)
+                    setEditingSeriesId(seriesId)
+                }}
+                onNavigateToDate={(dateStr, doctorId) => {
+                    try {
+                        const targetDate = parseISO(dateStr)
+                        if (!isNaN(targetDate.getTime())) {
+                            setCurrentDate(targetDate)
+                            setSelectedDate(targetDate)
+                        }
+                    } catch (e) {
+                        console.error('Erro ao navegar data:', e)
+                    }
+                    if (doctorId) {
+                        setSelectedDoctorIds([doctorId])
+                    }
+                    setRecurringSeriesListOpen(false)
+                    toast.info(`Navegando para ${format(parseISO(dateStr), 'dd/MM/yyyy')} na agenda.`)
+                }}
+            />
+
             <RecurringAppointmentModal
                 open={recurringAppointmentOpen}
                 onOpenChange={setRecurringAppointmentOpen}
-                onSuccess={() => {
+                defaultDoctorId={selectedDoctorIds.length === 1 ? selectedDoctorIds[0] : (isDoctor && user ? doctorsList?.find((d: any) => d.user_id === user.id)?.id : undefined)}
+                onSuccess={(details) => {
                     queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+                    queryClient.invalidateQueries({ queryKey: ['recurring-series-list'], exact: false })
+                    if (details?.startDate) {
+                        try {
+                            const targetDate = parseISO(details.startDate)
+                            if (!isNaN(targetDate.getTime())) {
+                                setCurrentDate(targetDate)
+                                setSelectedDate(targetDate)
+                            }
+                        } catch (e) {
+                            console.error('Erro ao navegar data:', e)
+                        }
+                    }
+                    if (details?.doctorId) {
+                        setSelectedDoctorIds([details.doctorId])
+                    }
                 }}
             />
 

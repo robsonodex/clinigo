@@ -712,3 +712,33 @@
 - **Descrição Técnica**:
   - **Causa Raiz do Erro de Tela ("Camera is not defined")**: Na página da recepção (`app/dashboard/(clinic)/recepcao/page.tsx`), o componente `<Camera className="w-3.5 h-3.5 text-emerald-600" />` foi adicionado ao dropdown de ações rápidas para acesso ao "Check-in Facial", porém o símbolo `Camera` não havia sido importado da biblioteca `lucide-react`. Isso causava uma exceção JavaScript em tempo de renderização (`ReferenceError: Camera is not defined`), acionando o Error Boundary do Dashboard. O símbolo foi devidamente adicionado ao bloco de imports do `lucide-react`.
   - **Causa Raiz do Erro 400 em /api/billing/clinic-info**: A rota assumia que todo usuário autenticado possuía obrigatoriamente a coluna `clinic_id` preenchida na tabela `users`. Usuários com perfil `SUPER_ADMIN` ou em sessão de impersonação recebiam resposta 400. A rota foi atualizada utilizando o utilitário `resolveClinicId`, resolvendo adequadamente a clínica a partir do perfil ou do cookie `impersonation_clinic_id`, com fallback estruturado para administradores gerais da plataforma.
+
+#### Item 21 — Nomenclatura Profissional Dinâmica no Novo Agendamento Manual e Modais de Agenda
+- **Módulo**: Recepção & Agenda → Agendamento Manual
+- **Caminho**:
+  - `lib/hooks/use-professional-label.ts` → `useProfessionalLabel()`
+  - `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal`
+  - `components/dashboard/AppointmentSuccessModal.tsx` → `AppointmentSuccessModal`
+  - `components/appointments/RecurringAppointmentModal.tsx` → `RecurringAppointmentModal`
+  - `components/appointments/AppointmentDetailsModal.tsx` → `AppointmentDetailsModal`
+  - `components/ui/agenda-view.tsx` → `AgendaPage`
+- **Descrição Técnica**:
+  - **Problema Corrigido**: No modal de "Novo Agendamento Manual" (`ManualAppointmentModal.tsx`), o termo "Médico" e placeholder "Selecione o médico" estavam cravados de forma estática, ignorando a configuração de "Nomenclatura Profissional" definida pela clínica em "Configurações" (ex: "Terapeuta", "Fisioterapeuta", "Psicólogo" ou termo customizado).
+  - **Solução Implementada**: Integrado o hook `useProfessionalLabel()`, tornando dinâmicos a descrição do modal, o label de seleção, o placeholder (`Selecione o [termo]`), as mensagens de carregamento/erro/vazio e os alertas de expediente.
+  - **Blindagem do Hook**: O hook `useProfessionalLabel()` foi atualizado para suportar o modo impersonation (verificação do cookie `impersonation_clinic_id`), garantindo que administradores impersonando clínicas também visualizem a nomenclatura correta em tempo real.
+  - **Consistência Sistêmica**: A nomenclatura dinâmica foi estendida ao comprovante de sucesso pós-agendamento (`AppointmentSuccessModal`), aos detalhes do agendamento (`AppointmentDetailsModal`), ao agendamento recorrente (`RecurringAppointmentModal`) e aos tooltips da agenda (`agenda-view.tsx`), com eliminação de emojis residuais.
+
+#### Item 22 — Central de Agendamentos Recorrentes e Sincronização Dinâmica com a Grade da Agenda
+- **Módulo**: Recepção & Agenda → Recorrência
+- **Caminho**:
+  - `components/appointments/RecurringSeriesListModal.tsx` → `RecurringSeriesListModal`
+  - `components/appointments/RecurringAppointmentModal.tsx` → `RecurringAppointmentModal`
+  - `components/ui/agenda-view.tsx` → `AgendaPage`
+  - `app/dashboard/(clinic)/help/page.tsx` → Guia de Ajuda Integrado
+- **Descrição Técnica**:
+  - **Diagnóstico do Caso Real**: Usuária gestora realizou agendamento de duas séries recorrentes de 53 sessões para terças-feiras (início em 08/09/2026 com Dra. Lara Maria Barros Vieira - Fonoaudiologia). Ao visualizar a agenda de hoje (segunda-feira 07/09/2026) e com filtro individual focado em outra profissional (Patricia Mendes - Terapia Ocupacional), os agendamentos não apareciam na grade diária, gerando incerteza sobre se as séries haviam sido gravadas com sucesso no banco de dados.
+  - **Constatação no Banco de Dados**: Consulta via MCP Supabase confirmou que ambas as séries foram gravadas com sucesso na tabela `recurring_appointment_series` (IDs `1ca6d8e5-7888-46ec-b130-778d8bb02aca` e `d04e1b06-813a-43de-98cd-5b1e8df6e9a4`) e geraram 106 agendamentos confirmados em lote a partir de 08/09/2026.
+  - **Implantação da Central de Agendamentos Recorrentes**: Criado o componente `RecurringSeriesListModal`, acessível pelo botão 'Recorrente' no cabeçalho da Agenda. O painel centraliza todas as séries ativas e pausadas da clínica, exibindo paciente, profissional, especialidade, dia da semana, horário, período de vigência e status.
+  - **Navegação Direta para a Agenda**: Adicionado botão 'Ver na Agenda' em cada card de série recorrente. Ao clicar, o calendário navega automaticamente para a data da consulta e seleciona a profissional correspondente no filtro, eliminando dúvidas visuais.
+  - **Pré-seleção e Redirecionamento Pós-Criação**: O formulário de criação de séries (`RecurringAppointmentModal`) agora recebe a propriedade `defaultDoctorId` baseada no profissional ativo na tela e, ao concluir o cadastro com sucesso, navega a grade diretamente para o primeiro dia da série recém-criada.
+

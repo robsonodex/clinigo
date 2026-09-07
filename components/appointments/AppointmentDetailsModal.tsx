@@ -29,6 +29,7 @@ import {
 import { type Appointment } from '@/lib/api-client'
 import { formatCurrency, formatPhone } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface AppointmentDetailsModalProps {
     appointment: Appointment | null
@@ -45,6 +46,7 @@ export function AppointmentDetailsModal({
     onEdit,
     onCancel
 }: AppointmentDetailsModalProps) {
+    const profLabel = useProfessionalLabel()
     const router = useRouter()
     const [isResending, setIsResending] = useState(false)
 
@@ -151,13 +153,13 @@ export function AppointmentDetailsModal({
                             </div>
                         </div>
 
-                        {/* Doctor */}
+                        {/* Doctor / Professional */}
                         <div className="space-y-1">
                             <span className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
-                                <Stethoscope className="h-3 w-3" /> Médico
+                                <Stethoscope className="h-3 w-3" /> {profLabel.singular}
                             </span>
                             <p className="font-medium">
-                                Dr. {appointment.doctor.user.full_name} <span className="text-muted-foreground font-normal">
+                                {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user.full_name} <span className="text-muted-foreground font-normal">
                                     - {appointment.reception_notes?.startsWith('[ESP:')
                                         ? appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]
                                         : appointment.doctor.specialty}

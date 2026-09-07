@@ -47,6 +47,7 @@ import { AppointmentSuccessModal } from '@/components/dashboard/AppointmentSucce
 import { NoShowPatientBadge } from '@/components/patients/NoShowPatientBadge'
 import { formatCurrency } from '@/lib/utils'
 import { api } from '@/lib/api-client'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 // Types
 interface Doctor {
@@ -67,7 +68,7 @@ interface HealthInsurance {
 
 // Form schema
 const manualAppointmentSchema = z.object({
-    doctor_id: z.string().min(1, 'Selecione um médico'),
+    doctor_id: z.string().min(1, 'Selecione um profissional'),
     appointment_date: z.string().min(1, 'Selecione uma data'),
     appointment_time: z.string().min(1, 'Selecione um horário').regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido (use HH:MM)'),
     duration_minutes: z.number().default(30),
@@ -106,6 +107,7 @@ export function ManualAppointmentModal({
     onSuccess,
     isEncaixe,
 }: ManualAppointmentModalProps) {
+    const profLabel = useProfessionalLabel()
     const queryClient = useQueryClient()
     const [step, setStep] = useState<'search' | 'register' | 'form'>('search')
     const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null)
@@ -312,7 +314,7 @@ export function ManualAppointmentModal({
                 setCreatedAppointment(data.appointment)
                 setShowSuccessModal(true)
                 toast.success('Agendamento criado com sucesso!')
-                // ✅ Notify parent to navigate agenda to created appointment date
+                // Notify parent to navigate agenda to created appointment date
                 onSuccess?.(data.appointment.appointment_date)
             }
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
@@ -391,8 +393,8 @@ export function ManualAppointmentModal({
                         </DialogTitle>
                         <DialogDescription>
                             {isEncaixe 
-                                ? 'Crie um encaixe que ignora bloqueios ou limite de horários do médico. Confirme com o profissional antes de realizar o encaixe.'
-                                : 'Crie um agendamento manual selecionando o paciente, médico e horário desejado.'}
+                                ? `Crie um encaixe que ignora bloqueios ou limite de horários do ${profLabel.singular.toLowerCase()}. Confirme com o profissional antes de realizar o encaixe.`
+                                : `Crie um agendamento manual selecionando o paciente, ${profLabel.singular.toLowerCase()} e horário desejado.`}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -460,11 +462,11 @@ export function ManualAppointmentModal({
 
                             <Separator />
 
-                            {/* Doctor Selection */}
+                            {/* Doctor / Professional Selection */}
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
                                     <Stethoscope className="h-4 w-4" />
-                                    Médico
+                                    {profLabel.singular}
                                 </Label>
                                 <Controller
                                     name="doctor_id"
@@ -472,7 +474,7 @@ export function ManualAppointmentModal({
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} value={field.value || ''}>
                                             <SelectTrigger className={errors.doctor_id ? 'border-destructive' : ''}>
-                                                <SelectValue placeholder="Selecione o médico" />
+                                                <SelectValue placeholder={`Selecione o ${profLabel.singular.toLowerCase()}`} />
                                             </SelectTrigger>
                                             <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
                                                 {doctorsLoading && (
@@ -482,17 +484,17 @@ export function ManualAppointmentModal({
                                                 )}
                                                 {doctorsError && (
                                                     <div className="p-2 text-center text-sm text-destructive">
-                                                        Erro ao carregar médicos
+                                                        Erro ao carregar {profLabel.plural.toLowerCase()}
                                                     </div>
                                                 )}
                                                 {!doctorsLoading && !doctorsError && doctors && doctors.length === 0 && (
                                                     <div className="p-2 text-center text-sm text-muted-foreground">
-                                                        Nenhum médico cadastrado
+                                                        Nenhum {profLabel.singular.toLowerCase()} cadastrado
                                                     </div>
                                                 )}
                                                 {doctors?.filter(d => d.id && d.user).map((doctor) => (
                                                     <SelectItem key={doctor.id} value={doctor.id}>
-                                                        {doctor.user?.full_name || 'Médico'} - {doctor.specialty}
+                                                        {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
                                                         {doctor.consultation_price > 0 && (
                                                             <span className="text-muted-foreground ml-2">
                                                                 ({formatCurrency(doctor.consultation_price)})
@@ -581,7 +583,7 @@ export function ManualAppointmentModal({
                                                 Atenção: Horário fora do expediente
                                             </p>
                                             <p className="text-sm text-yellow-700">
-                                                Este horário está fora do expediente padrão do médico.
+                                                Este horário está fora do expediente padrão do {profLabel.singular.toLowerCase()}.
                                             </p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <Checkbox

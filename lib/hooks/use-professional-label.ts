@@ -80,7 +80,7 @@ function resolveLabels(rawLabel: string): Omit<ProfessionalLabels, 'isLoading'> 
     }
 }
 
-export function useProfessionalLabel(): ProfessionalLabels {
+export function useProfessionalLabel(overrideClinicId?: string | null): ProfessionalLabels {
     const [rawLabel, setRawLabel] = useState<string>(DEFAULT_LABEL)
     const [isLoading, setIsLoading] = useState(true)
 
@@ -89,19 +89,43 @@ export function useProfessionalLabel(): ProfessionalLabels {
             try {
                 const supabase = createClient()
 
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) {
-                    setIsLoading(false)
-                    return
+                let targetClinicId = overrideClinicId || null
+
+                if (!targetClinicId) {
+                    // Verificar modo impersonation no client-side
+                    const cookies = typeof document !== 'undefined'
+                        ? document.cookie.split(';').reduce((acc, cookie) => {
+                            const [key, value] = cookie.trim().split('=')
+                            if (key) acc[key] = decodeURIComponent(value || '')
+                            return acc
+                        }, {} as Record<string, string>)
+                        : {}
+
+                    const isImpersonating = cookies['impersonation_active'] === 'true'
+                    const impersonationClinicId = cookies['impersonation_clinic_id']
+
+                    if (isImpersonating && impersonationClinicId) {
+                        targetClinicId = impersonationClinicId
+                    } else {
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (!user) {
+                            setIsLoading(false)
+                            return
+                        }
+
+                        const { data: userData } = await supabase
+                            .from('users')
+                            .select('clinic_id')
+                            .eq('id', user.id)
+                            .single()
+
+                        if ((userData as any)?.clinic_id) {
+                            targetClinicId = (userData as any).clinic_id
+                        }
+                    }
                 }
 
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('clinic_id')
-                    .eq('id', user.id)
-                    .single()
-
-                if (!(userData as any)?.clinic_id) {
+                if (!targetClinicId) {
                     setIsLoading(false)
                     return
                 }
@@ -109,7 +133,7 @@ export function useProfessionalLabel(): ProfessionalLabels {
                 const { data: clinic } = await supabase
                     .from('clinics')
                     .select('professional_label')
-                    .eq('id', (userData as any).clinic_id)
+                    .eq('id', targetClinicId)
                     .single()
 
                 if (clinic && (clinic as any).professional_label) {
@@ -123,7 +147,7 @@ export function useProfessionalLabel(): ProfessionalLabels {
         }
 
         fetchLabel()
-    }, [])
+    }, [overrideClinicId])
 
     const labels = resolveLabels(rawLabel)
 

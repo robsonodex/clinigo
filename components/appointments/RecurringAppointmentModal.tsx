@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -39,6 +39,7 @@ import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearch
 import { QuickPatientForm } from './QuickPatientForm'
 import { api } from '@/lib/api-client'
 import { formatCurrency } from '@/lib/utils'
+import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface Doctor {
     id: string
@@ -68,22 +69,31 @@ const TIME_OPTIONS = Array.from({ length: 28 }, (_, i) => {
 interface RecurringAppointmentModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    onSuccess?: () => void
+    defaultDoctorId?: string
+    onSuccess?: (details?: { doctorId: string; startDate: string }) => void
 }
 
 export function RecurringAppointmentModal({
     open,
     onOpenChange,
+    defaultDoctorId,
     onSuccess,
 }: RecurringAppointmentModalProps) {
+    const profLabel = useProfessionalLabel()
     const queryClient = useQueryClient()
     const [step, setStep] = useState<'patient' | 'register' | 'config' | 'review'>('patient')
     const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null)
     const [quickRegistration, setQuickRegistration] = useState<any>(null)
 
     // Form state
-    const [doctorId, setDoctorId] = useState('')
+    const [doctorId, setDoctorId] = useState(defaultDoctorId || '')
     const [selectedDays, setSelectedDays] = useState<number[]>([])
+
+    useEffect(() => {
+        if (open && defaultDoctorId) {
+            setDoctorId(defaultDoctorId)
+        }
+    }, [open, defaultDoctorId])
     const [appointmentTime, setAppointmentTime] = useState('')
     const [therapyType, setTherapyType] = useState('')
     const [startDate, setStartDate] = useState('')
@@ -160,9 +170,10 @@ export function RecurringAppointmentModal({
             return data
         },
         onSuccess: (data) => {
-            toast.success(data.message || `${data.total_created} agendamentos criados!`)
+            toast.success(data.message || `${data.total_created} agendamentos criados com sucesso!`)
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
-            onSuccess?.()
+            queryClient.invalidateQueries({ queryKey: ['recurring-series-list'], exact: false })
+            onSuccess?.({ doctorId, startDate })
             handleClose()
         },
         onError: (error: Error) => {
@@ -174,7 +185,7 @@ export function RecurringAppointmentModal({
         setStep('patient')
         setSelectedPatient(null)
         setQuickRegistration(null)
-        setDoctorId('')
+        setDoctorId(defaultDoctorId || '')
         setSelectedDays([])
         setAppointmentTime('')
         setTherapyType('')
@@ -260,15 +271,15 @@ export function RecurringAppointmentModal({
 
                         <Separator />
 
-                        {/* Doctor Selection */}
+                        {/* Doctor / Professional Selection */}
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2">
                                 <Stethoscope className="h-4 w-4" />
-                                Terapeuta / Médico
+                                {profLabel.singular}
                             </Label>
                             <Select value={doctorId} onValueChange={setDoctorId}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o terapeuta" />
+                                    <SelectValue placeholder={`Selecione o ${profLabel.singular.toLowerCase()}`} />
                                 </SelectTrigger>
                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
                                     {doctorsLoading && (
@@ -278,7 +289,7 @@ export function RecurringAppointmentModal({
                                     )}
                                     {doctors?.filter(d => d.id && d.user).map((doctor) => (
                                         <SelectItem key={doctor.id} value={doctor.id}>
-                                            {doctor.user?.full_name || 'Terapeuta'} - {doctor.specialty}
+                                            {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
