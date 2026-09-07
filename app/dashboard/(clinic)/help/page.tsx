@@ -86,11 +86,11 @@ const helpItems: HelpItem[] = [
         title: 'Agenda',
         category: 'Agendamento',
         icon: Calendar,
-        whatIsIt: 'Calendário unificado interativo com visão diária, semanal e mensal. Permite agendar atendimentos, arrastar blocos para reagendar (drag and drop), gerenciar conflitos e visualizar disponibilidades por salas ou terapeutas.',
-        whenToUse: 'Sempre que precisar agendar uma nova consulta, visualizar horários livres de profissionais ou reagendar atendimentos a pedido de pacientes.',
+        whatIsIt: 'Calendário unificado interativo com visão diária e semanal. Permite agendar atendimentos, arrastar blocos para reagendar, gerenciar conflitos, ocultar cancelados com um clique ou excluir permanentemente horários cancelados da grade, e visualizar disponibilidades por terapeutas.',
+        whenToUse: 'Sempre que precisar agendar uma nova consulta, visualizar horários livres de profissionais, gerenciar agendamentos cancelados ou reagendar atendimentos a pedido de pacientes.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
-        tags: ['calendário', 'marcação', 'grade', 'overbooking']
+        tags: ['calendário', 'marcação', 'grade', 'cancelados', 'excluir']
     },
     {
         id: 'minha-agenda',
