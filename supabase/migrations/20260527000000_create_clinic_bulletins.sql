@@ -20,13 +20,13 @@ alter table clinic_bulletins enable row level security;
 drop policy if exists "Clinic staff can manage bulletins" on clinic_bulletins;
 drop policy if exists "Patients can read public bulletins" on clinic_bulletins;
 
--- Política 1: Usuários da clínica (médicos, admins, recepção) podem gerenciar tudo da sua clínica
+-- Política 1: Usuários da clínica (médicos, admins, recepção) e SUPER_ADMIN podem gerenciar da sua clínica
 create policy "Clinic staff can manage bulletins" on clinic_bulletins
   for all using (
     exists (
       select 1 from users
       where users.id = auth.uid()
-      and users.clinic_id = clinic_bulletins.clinic_id
+      and (users.clinic_id = clinic_bulletins.clinic_id or users.role = 'SUPER_ADMIN')
     )
   );
 

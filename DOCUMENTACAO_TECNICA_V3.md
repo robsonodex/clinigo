@@ -744,3 +744,20 @@
   - **Correção Crucial de Renderização na Grade (Horários Fracionados)**: Identificado que o método `getAppointmentsForSlot` em `agenda-view.tsx` utilizava comparação estrita de string (`a.appointment_time?.substring(0, 5) === time`), exigindo que o agendamento fosse exatamente no minuto :00 do slot. Agendamentos em horários como 07:40, 08:25, 07:45 e 08:15 eram descartados pelo filtro e não apareciam na grade do calendário. A lógica foi atualizada para agrupar pelo bloco de hora de início (`apptHour === slotHour`) com ordenação interna, permitindo que todas as consultas fracionadas e recorrentes apareçam visualmente na grade em seus respectivos blocos com seus horários exatos.
   - **Isolamento Absoluto Multi-Tenant**: Todas as rotas de listagem (`/api/appointments`, `/api/appointments/recurring`) mantêm filtros rígidos e invioláveis de `clinic_id`, assegurando que dados de uma clínica jamais sejam expostos ou visíveis em outra.
 
+#### Item 23 — Resolução do Mural de Recados e Exibição de Séries na Central de Agendamentos Recorrentes
+- **Módulo**: Recepção & Agenda → Mural de Recados & Recorrência Multi-Tenant
+- **Caminho**:
+  - `app/api/bulletins/route.ts` → `GET`, `POST`, `PUT`, `DELETE`
+  - `components/ui/agenda-view.tsx` → `useQuery(['clinic-bulletins'])`, `handleOpenMural`
+  - `app/api/appointments/recurring/route.ts` → `GET`, `POST`
+  - `app/api/appointments/recurring/[id]/route.ts` → `GET`, `PATCH`, `DELETE`
+  - `components/appointments/RecurringSeriesListModal.tsx` → `RecurringSeriesListModal`
+  - `supabase/migrations/20260527000000_create_clinic_bulletins.sql`
+- **Descrição Técnica**:
+  - **Correção do Erro Crítico no Mural de Recados (TypeError: ta.map is not a function)**: Identificado que o endpoint `/api/bulletins` retornava a estrutura JSON `{ bulletins: [...] }`. No componente `agenda-view.tsx`, a consulta `useQuery` atribuía o objeto diretamente à variável `bulletins`. Ao clicar no botão do Mural de Recados, a verificação `bulletins.length === 0` falhava (retornando `undefined === 0` falso em um objeto) e executava `bulletins.map(...)`, disparando o `TypeError` que era interceptado pelo Error Boundary do Dashboard. A consulta e o componente foram corrigidos para desempacotar e garantir que `bulletins` seja estritamente um array (`Array.isArray(json) ? json : (json.bulletins || [])`).
+  - **Criação da Tabela e Migration de `clinic_bulletins`**: A tabela `clinic_bulletins` e suas políticas de RLS não haviam sido aplicadas no banco de dados de produção do Supabase. A migration foi atualizada com suporte explícito a administradores (`SUPER_ADMIN`) e aplicada via MCP Supabase, habilitando persistência real e sigilo por clínica.
+  - **Eliminação de Emojis do Mural**: Opções de tipos de alerta no formulário de recados foram ajustadas para o padrão SaaS corporativo, eliminando emojis residuais (`Informativo (Azul)`, `Positivo (Verde)`, `Atenção (Amarelo)`, `Urgente (Vermelho)`).
+  - **Correção da Listagem de Séries na Central de Agendamentos Recorrentes**: No endpoint `/api/appointments/recurring`, a cláusula de filtro utilizava `profile.clinic_id` diretamente. Para usuários de perfil `SUPER_ADMIN` (cujo `clinic_id` é `null`) ou em sessões de impersonação, a query executava `WHERE clinic_id IS NULL`, retornando sempre lista vazia `[]`. Dessa forma, mesmo ao selecionar um profissional específico no dropdown, nenhuma série era exibida. A API foi integrada com o utilitário `resolveClinicId` e com a leitura do cabeçalho `x-clinic-id`, assegurando resolução precisa da clínica ativa tanto para administradores da clínica quanto para administradores gerais.
+  - **Sincronização e Resiliência da Central de Recorrentes**: O modal `RecurringSeriesListModal` recebeu suporte aos props `initialDoctorId` e lista de profissionais repassada da tela de agenda, sincronizando a seleção ativa no calendário e assegurando parsing defensivo de respostas.
+  - **Isolamento Absoluto Multi-Tenant e LGPD**: Todas as rotas de recados e recorrência aplicam checagem obrigatória de `effectiveClinicId`, impedindo qualquer vazamento cruzado de informações entre clínicas.
+

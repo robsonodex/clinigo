@@ -4,6 +4,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 import { v4 as uuidv4 } from 'uuid'
 
 interface RecurringSeriesRequest {
@@ -49,7 +50,7 @@ function generateDatesForSeries(
 
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         // Auth
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -73,7 +74,20 @@ export async function POST(request: NextRequest) {
         }
 
         const body: RecurringSeriesRequest = await request.json()
-        const clinicId = profile.clinic_id
+
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: profile.clinic_id,
+            profileRole: profile.role,
+        })
+        const clinicId = headerClinicId || resolvedClinicId || profile.clinic_id
+
+        if (!clinicId) {
+            return NextResponse.json(
+                { error: 'Clínica não identificada para a série recorrente' },
+                { status: 400 }
+            )
+        }
 
         // Validate required fields
         if (!body.patient_id || !body.doctor_id || !body.days_of_week?.length || !body.appointment_time || !body.start_date || !body.end_date) {
@@ -279,7 +293,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
@@ -296,6 +310,17 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
         }
 
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: profile.clinic_id,
+            profileRole: profile.role,
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || profile.clinic_id
+
+        if (!effectiveClinicId) {
+            return NextResponse.json([])
+        }
+
         const { searchParams } = new URL(request.url)
         const activeOnly = searchParams.get('active') !== 'false'
         const patientId = searchParams.get('patient_id')
@@ -309,7 +334,7 @@ export async function GET(request: NextRequest) {
                 doctor:doctors(id, user:users(full_name), specialty),
                 created_by_user:users!recurring_appointment_series_created_by_fkey(full_name)
             `)
-            .eq('clinic_id', profile.clinic_id)
+            .eq('clinic_id', effectiveClinicId)
             .order('created_at', { ascending: false })
 
         if (activeOnly) {

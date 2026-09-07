@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -99,6 +99,8 @@ interface RecurringSeriesListModalProps {
     onNewSeries: () => void
     onEditSeries: (seriesId: string) => void
     onNavigateToDate: (dateStr: string, doctorId: string) => void
+    initialDoctorId?: string
+    doctors?: any[]
 }
 
 export function RecurringSeriesListModal({
@@ -107,6 +109,8 @@ export function RecurringSeriesListModal({
     onNewSeries,
     onEditSeries,
     onNavigateToDate,
+    initialDoctorId,
+    doctors: doctorsProp,
 }: RecurringSeriesListModalProps) {
     const queryClient = useQueryClient()
     const [searchTerm, setSearchTerm] = useState('')
@@ -115,6 +119,17 @@ export function RecurringSeriesListModal({
     const [cancellingSeriesId, setCancellingSeriesId] = useState<string | null>(null)
     const [seriesToCancelName, setSeriesToCancelName] = useState('')
     const [isCancelling, setIsCancelling] = useState(false)
+
+    // Sincronizar filtro de profissional ao abrir modal
+    useEffect(() => {
+        if (open) {
+            if (initialDoctorId) {
+                setSelectedDoctorFilter(initialDoctorId)
+            } else {
+                setSelectedDoctorFilter('ALL')
+            }
+        }
+    }, [open, initialDoctorId])
 
     // Fetch recurring series
     const {
@@ -127,19 +142,21 @@ export function RecurringSeriesListModal({
         queryFn: async () => {
             const res = await fetch('/api/appointments/recurring?active=false')
             if (!res.ok) throw new Error('Erro ao carregar séries recorrentes')
-            return res.json() as Promise<RecurringSeries[]>
+            const data = await res.json()
+            return (Array.isArray(data) ? data : (data?.series || data?.data || [])) as RecurringSeries[]
         },
         enabled: open,
         staleTime: 30 * 1000,
     })
 
-    // Fetch doctors for filter
-    const { data: doctors } = useQuery({
+    // Fetch doctors for filter (ou usa lista repassada da tela de agenda)
+    const { data: doctorsFromApi } = useQuery({
         queryKey: ['doctors-for-series-filter'],
-        queryFn: async () => api.get<any[]>('/doctors'),
-        enabled: open,
+        queryFn: async () => api.get<any[]>('/doctors', { pageSize: '100' }),
+        enabled: open && (!doctorsProp || doctorsProp.length === 0),
         staleTime: 5 * 60 * 1000,
     })
+    const doctors = (doctorsProp && doctorsProp.length > 0 ? doctorsProp : doctorsFromApi) || []
 
     // Toggle active status mutation
     const toggleStatusMutation = useMutation({
@@ -288,11 +305,14 @@ export function RecurringSeriesListModal({
                                     </SelectTrigger>
                                     <SelectContent position="popper" className="z-[9999]">
                                         <SelectItem value="ALL">Todos os Profissionais</SelectItem>
-                                        {doctors?.filter((d: any) => d.id && d.user).map((doc: any) => (
-                                            <SelectItem key={doc.id} value={doc.id}>
-                                                {doc.user?.full_name} ({doc.specialty})
-                                            </SelectItem>
-                                        ))}
+                                        {doctors?.filter((d: any) => d?.id).map((doc: any) => {
+                                            const docName = doc.user?.full_name || doc.full_name || 'Profissional'
+                                            return (
+                                                <SelectItem key={doc.id} value={doc.id}>
+                                                    {docName} {doc.specialty ? `(${doc.specialty})` : ''}
+                                                </SelectItem>
+                                            )
+                                        })}
                                     </SelectContent>
                                 </Select>
                             </div>

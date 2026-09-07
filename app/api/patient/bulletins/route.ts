@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         // Buscar a clínica vinculada ao paciente
         const { data: patientData, error: patientError } = await supabase
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
             .eq('id', patient.sub)
             .single()
 
-        if (patientError || !patientData?.clinic_id) {
+        if (patientError || !patientData || !(patientData as any).clinic_id) {
             return NextResponse.json({ error: 'Paciente ou clínica não cadastrados' }, { status: 404 })
         }
 

@@ -240,15 +240,17 @@ export default function AgendaPage() {
     const canManageBulletins = isClinicAdmin || isReceptionist || isDoctor || isCoordinator || !!user
 
     // Fetch Bulletins (Mural)
-    const { data: bulletins = [], isLoading: bulletinsLoading, refetch: refetchBulletins } = useQuery({
+    const { data: rawBulletinsData, isLoading: bulletinsLoading, refetch: refetchBulletins } = useQuery({
         queryKey: ['clinic-bulletins'],
         queryFn: async () => {
             const res = await fetch('/api/bulletins')
             if (!res.ok) throw new Error('Falha ao carregar mural')
-            return res.json()
+            const json = await res.json()
+            return Array.isArray(json) ? json : (json.bulletins || [])
         },
         staleTime: 30 * 1000,
     })
+    const bulletins = Array.isArray(rawBulletinsData) ? rawBulletinsData : (rawBulletinsData?.bulletins || [])
 
     // Monitoramento de novos recados (Notificação ativa)
     useEffect(() => {
@@ -1814,6 +1816,8 @@ export default function AgendaPage() {
             <RecurringSeriesListModal
                 open={recurringSeriesListOpen}
                 onOpenChange={setRecurringSeriesListOpen}
+                initialDoctorId={selectedDoctorIds.length === 1 ? selectedDoctorIds[0] : undefined}
+                doctors={doctorsList}
                 onNewSeries={() => {
                     setRecurringSeriesListOpen(false)
                     setRecurringAppointmentOpen(true)
@@ -1826,7 +1830,6 @@ export default function AgendaPage() {
                     try {
                         const targetDate = parseISO(dateStr)
                         if (!isNaN(targetDate.getTime())) {
-                            setCurrentDate(targetDate)
                             setSelectedDate(targetDate)
                         }
                     } catch (e) {
@@ -1851,7 +1854,6 @@ export default function AgendaPage() {
                         try {
                             const targetDate = parseISO(details.startDate)
                             if (!isNaN(targetDate.getTime())) {
-                                setCurrentDate(targetDate)
                                 setSelectedDate(targetDate)
                             }
                         } catch (e) {
@@ -2173,10 +2175,10 @@ export default function AgendaPage() {
                                             onChange={(e: any) => setBulletinType(e.target.value as any)}
                                             className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            <option value="info">💡 Informativo (Azul)</option>
-                                            <option value="success">✅ Positivo (Verde)</option>
-                                            <option value="warning">⚠️ Atenção (Amarelo)</option>
-                                            <option value="alert">🚨 Urgente (Vermelho)</option>
+                                            <option value="info">Informativo (Azul)</option>
+                                            <option value="success">Positivo (Verde)</option>
+                                            <option value="warning">Atenção (Amarelo)</option>
+                                            <option value="alert">Urgente (Vermelho)</option>
                                         </select>
                                     </div>
                                 </div>

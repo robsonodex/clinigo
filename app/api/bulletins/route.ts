@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 import { z } from 'zod'
 
 const bulletinSchema = z.object({
@@ -14,7 +15,7 @@ const bulletinSchema = z.object({
 // GET: Retorna os boletins ativos da clínica
 export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         let userId = request.headers.get('x-user-id')
         if (!userId) {
@@ -29,18 +30,29 @@ export async function GET(request: NextRequest) {
         // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', userId)
             .maybeSingle()
 
-        if (userError || !currentUser?.clinic_id) {
+        if (userError || !currentUser) {
+            return NextResponse.json({ bulletins: [] })
+        }
+
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: currentUser.clinic_id,
+            profileRole: currentUser.role || '',
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
+
+        if (!effectiveClinicId) {
             return NextResponse.json({ bulletins: [] })
         }
 
         const { data: bulletins, error } = await supabase
             .from('clinic_bulletins')
             .select('*')
-            .eq('clinic_id', currentUser.clinic_id)
+            .eq('clinic_id', effectiveClinicId)
             .order('is_pinned', { ascending: false })
             .order('created_at', { ascending: false })
 
@@ -60,21 +72,37 @@ export async function GET(request: NextRequest) {
 // POST: Cria um novo boletim
 export async function POST(request: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id')
+        const supabase = (await createClient()) as any
+
+        let userId = request.headers.get('x-user-id')
+        if (!userId) {
+            const { data: { user } } = await supabase.auth.getUser()
+            userId = user?.id || null
+        }
+
         if (!userId) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const supabase = await createClient()
-
         // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', userId)
             .single()
 
-        if (userError || !currentUser?.clinic_id) {
+        if (userError || !currentUser) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+        }
+
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: currentUser.clinic_id,
+            profileRole: currentUser.role || '',
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
+
+        if (!effectiveClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada para o usuário' }, { status: 404 })
         }
 
@@ -85,7 +113,7 @@ export async function POST(request: NextRequest) {
             .from('clinic_bulletins')
             .insert({
                 ...validatedData,
-                clinic_id: currentUser.clinic_id,
+                clinic_id: effectiveClinicId,
                 sender_id: userId,
             })
             .select()
@@ -110,21 +138,37 @@ export async function POST(request: NextRequest) {
 // PUT: Atualiza um boletim existente
 export async function PUT(request: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id')
+        const supabase = (await createClient()) as any
+
+        let userId = request.headers.get('x-user-id')
+        if (!userId) {
+            const { data: { user } } = await supabase.auth.getUser()
+            userId = user?.id || null
+        }
+
         if (!userId) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const supabase = await createClient()
-
         // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', userId)
             .single()
 
-        if (userError || !currentUser?.clinic_id) {
+        if (userError || !currentUser) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+        }
+
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: currentUser.clinic_id,
+            profileRole: currentUser.role || '',
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
+
+        if (!effectiveClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
@@ -144,7 +188,7 @@ export async function PUT(request: NextRequest) {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
-            .eq('clinic_id', currentUser.clinic_id) // Garantir que pertence à clínica
+            .eq('clinic_id', effectiveClinicId) // Garantir que pertence à clínica
             .select()
             .single()
 
@@ -167,21 +211,37 @@ export async function PUT(request: NextRequest) {
 // DELETE: Exclui um boletim
 export async function DELETE(request: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id')
+        const supabase = (await createClient()) as any
+
+        let userId = request.headers.get('x-user-id')
+        if (!userId) {
+            const { data: { user } } = await supabase.auth.getUser()
+            userId = user?.id || null
+        }
+
         if (!userId) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const supabase = await createClient()
-
         // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', userId)
             .single()
 
-        if (userError || !currentUser?.clinic_id) {
+        if (userError || !currentUser) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+        }
+
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: currentUser.clinic_id,
+            profileRole: currentUser.role || '',
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
+
+        if (!effectiveClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
@@ -196,7 +256,7 @@ export async function DELETE(request: NextRequest) {
             .from('clinic_bulletins')
             .delete()
             .eq('id', id)
-            .eq('clinic_id', currentUser.clinic_id) // Garantir que pertence à clínica
+            .eq('clinic_id', effectiveClinicId) // Garantir que pertence à clínica
 
         if (error) {
             console.error('Erro ao excluir bulletin:', error)

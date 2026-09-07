@@ -5,6 +5,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 
 /**
  * Generate all dates matching days_of_week between start and end
@@ -39,7 +40,7 @@ export async function GET(
 ) {
     try {
         const { id: seriesId } = await params
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
@@ -56,6 +57,17 @@ export async function GET(
             return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
         }
 
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: profile.clinic_id,
+            profileRole: profile.role,
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || profile.clinic_id
+
+        if (!effectiveClinicId) {
+            return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
+        }
+
         const { data: series, error } = await supabase
             .from('recurring_appointment_series')
             .select(`
@@ -64,7 +76,7 @@ export async function GET(
                 doctor:doctors(id, user:users(full_name), specialty)
             `)
             .eq('id', seriesId)
-            .eq('clinic_id', (profile as any).clinic_id)
+            .eq('clinic_id', effectiveClinicId)
             .single() as { data: any; error: any }
 
         if (error || !series) {
@@ -94,7 +106,7 @@ export async function PATCH(
 ) {
     try {
         const { id: seriesId } = await params
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
@@ -111,12 +123,23 @@ export async function PATCH(
             return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
         }
 
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: profile.clinic_id,
+            profileRole: profile.role,
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || profile.clinic_id
+
+        if (!effectiveClinicId) {
+            return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
+        }
+
         // Verify series exists and belongs to clinic - fetch full data for schedule changes
         const { data: series } = await supabase
             .from('recurring_appointment_series')
             .select('*')
             .eq('id', seriesId)
-            .eq('clinic_id', (profile as any).clinic_id)
+            .eq('clinic_id', effectiveClinicId)
             .single() as { data: any }
 
         if (!series) {
@@ -319,7 +342,7 @@ export async function DELETE(
 ) {
     try {
         const { id: seriesId } = await params
-        const supabase = await createClient()
+        const supabase = (await createClient()) as any
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
@@ -336,12 +359,23 @@ export async function DELETE(
             return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
         }
 
+        const headerClinicId = request.headers.get('x-clinic-id')
+        const { clinicId: resolvedClinicId } = await resolveClinicId({
+            profileClinicId: profile.clinic_id,
+            profileRole: profile.role,
+        })
+        const effectiveClinicId = headerClinicId || resolvedClinicId || profile.clinic_id
+
+        if (!effectiveClinicId) {
+            return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
+        }
+
         // Verify series exists
         const { data: series } = await supabase
             .from('recurring_appointment_series')
             .select('id, clinic_id')
             .eq('id', seriesId)
-            .eq('clinic_id', (profile as any).clinic_id)
+            .eq('clinic_id', effectiveClinicId)
             .single()
 
         if (!series) {
