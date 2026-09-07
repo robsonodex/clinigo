@@ -105,7 +105,10 @@ export async function PATCH(request: Request) {
         if (address_zipcode !== undefined) updatePayload.address_zipcode = address_zipcode
 
         // Atualizar dados do usuário no banco (tabela users)
-        const { data: updatedUser, error: updateError } = await supabase
+        const serviceRole = createServiceRoleClient()
+        let updatedUser: any = null
+
+        const { data: directUpdated, error: updateError } = await supabase
             .from('users')
             .update(updatePayload)
             .eq('id', authUser.id)
@@ -113,14 +116,26 @@ export async function PATCH(request: Request) {
             .single()
 
         if (updateError) {
-            console.error('Error updating users table:', updateError)
-            return NextResponse.json({ error: updateError.message }, { status: 500 })
+            console.warn('Fallback to service role for user profile update:', updateError.message)
+            const { data: adminUpdated, error: adminError } = await serviceRole
+                .from('users')
+                .update(updatePayload)
+                .eq('id', authUser.id)
+                .select()
+                .single()
+
+            if (adminError) {
+                console.error('Error updating users table via admin:', adminError)
+                return NextResponse.json({ error: adminError.message }, { status: 500 })
+            }
+            updatedUser = adminUpdated
+        } else {
+            updatedUser = directUpdated
         }
 
         // Sincronizar metadados do auth.users se o nome foi alterado
         if (sanitizedFullName) {
             try {
-                const serviceRole = createServiceRoleClient()
                 await serviceRole.auth.admin.updateUserById(authUser.id, {
                     user_metadata: { full_name: sanitizedFullName }
                 })
@@ -130,6 +145,7 @@ export async function PATCH(request: Request) {
         }
 
         return NextResponse.json({
+            success: true,
             user: {
                 ...updatedUser,
                 name: updatedUser?.full_name || '',

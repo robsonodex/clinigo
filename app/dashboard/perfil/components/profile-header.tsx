@@ -36,16 +36,41 @@ export default function ProfileHeader({ }: ProfileHeaderProps) {
         }
 
         loadUser()
+
+        const handleUpdate = (e?: any) => {
+            if (e?.detail?.full_name || e?.detail?.avatar_url) {
+                setUser((prev: any) => ({
+                    ...prev,
+                    full_name: e?.detail?.full_name ?? prev?.full_name,
+                    name: e?.detail?.full_name ?? prev?.name,
+                    avatar_url: e?.detail?.avatar_url ?? prev?.avatar_url,
+                }))
+            }
+            loadUser()
+        }
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('user-profile-updated', handleUpdate)
+        }
+
+        return () => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('user-profile-updated', handleUpdate)
+            }
+        }
     }, [])
 
     if (loading) {
         return null // Skeleton is handled by loading.tsx
     }
 
+    const displayName = user?.full_name || user?.name || 'Usuário'
+
     const getInitials = (name: string) => {
         if (!name) return '??'
         return name
             .split(' ')
+            .filter(Boolean)
             .map(n => n[0])
             .join('')
             .toUpperCase()
@@ -54,10 +79,10 @@ export default function ProfileHeader({ }: ProfileHeaderProps) {
 
     const getRoleBadge = (role: string) => {
         const roleColors: Record<string, string> = {
-            SUPER_ADMIN: 'bg-purple-100 text-purple-800',
+            SUPER_ADMIN: 'bg-primary/10 text-primary border border-primary/20',
             CLINIC_ADMIN: 'bg-blue-100 text-blue-800',
-            DOCTOR: 'bg-green-100 text-green-800',
-            SECRETARY: 'bg-yellow-100 text-yellow-800',
+            DOCTOR: 'bg-emerald-100 text-emerald-800',
+            SECRETARY: 'bg-amber-100 text-amber-800',
         }
 
         const roleLabels: Record<string, string> = {
@@ -75,28 +100,28 @@ export default function ProfileHeader({ }: ProfileHeaderProps) {
     }
 
     return (
-        <Card>
+        <Card className="border-border/60 shadow-sm">
             <CardContent className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-6">
                 {/* Avatar */}
-                <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
-                    <AvatarImage src={user?.avatar_url} alt={user?.name || 'Avatar'} />
-                    <AvatarFallback className="text-lg">
-                        {user?.name ? getInitials(user.name) : <User className="h-8 w-8" />}
+                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-primary/10 shadow-sm">
+                    <AvatarImage src={user?.avatar_url} alt={displayName} />
+                    <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                        {displayName ? getInitials(displayName) : <User className="h-8 w-8" />}
                     </AvatarFallback>
                 </Avatar>
 
                 {/* Informações Básicas */}
                 <div className="flex-1 text-center sm:text-left space-y-1">
-                    <h1 className="text-2xl font-bold">
-                        {user?.name || 'Usuário'}
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        {displayName}
                     </h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                         {user?.email}
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-2">
                         {user?.role && getRoleBadge(user.role)}
                         {user?.clinic?.name && (
-                            <Badge variant="outline">
+                            <Badge variant="outline" className="border-border">
                                 {user.clinic.name}
                             </Badge>
                         )}

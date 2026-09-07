@@ -58,12 +58,14 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
+    const headerClinicId = request.headers.get('x-clinic-id');
     const { clinicId: resolvedClinicId } = await resolveClinicId({
-      profileClinicId: profile?.clinic_id,
+      profileClinicId: headerClinicId || profile?.clinic_id,
       profileRole: profile?.role || '',
     });
+    const effectiveClinicId = headerClinicId || resolvedClinicId || profile?.clinic_id;
 
-    if (!resolvedClinicId) {
+    if (!effectiveClinicId) {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
         .from('doctors')
         .select('id')
         .eq('user_id', user.id)
-        .eq('clinic_id', resolvedClinicId)
+        .eq('clinic_id', effectiveClinicId)
         .single();
 
       if (docRecord?.id !== doctorId) {
@@ -98,7 +100,7 @@ export async function GET(request: NextRequest) {
     const { data: contracts } = await supabaseAdmin
       .from('doctor_contracts')
       .select('*')
-      .eq('clinic_id', resolvedClinicId)
+      .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', doctorId)
       .eq('is_active', true)
       .limit(1);
@@ -121,7 +123,7 @@ export async function GET(request: NextRequest) {
     const { data: appointments, error: aptError } = await supabaseAdmin
       .from('appointments')
       .select('patient_id, appointment_date, status, patient:patients(id, name)')
-      .eq('clinic_id', resolvedClinicId)
+      .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', doctorId);
 
     if (aptError) {
@@ -173,7 +175,7 @@ export async function GET(request: NextRequest) {
         fixed_value, percentage, active, notes, created_at, updated_at,
         patient:patients(id, name)
       `)
-      .eq('clinic_id', resolvedClinicId)
+      .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', doctorId)
       .eq('active', true);
 
@@ -328,21 +330,24 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from('users')
-      .select('id, clinic_id, role, full_name')
+      .select('id, clinic_id, role, full_name, is_coordinator')
       .eq('id', user.id)
       .single();
 
+    const headerClinicId = request.headers.get('x-clinic-id');
     const { clinicId: resolvedClinicId } = await resolveClinicId({
-      profileClinicId: profile?.clinic_id,
+      profileClinicId: headerClinicId || profile?.clinic_id,
       profileRole: profile?.role || '',
     });
+    const effectiveClinicId = headerClinicId || resolvedClinicId || profile?.clinic_id;
 
-    if (!resolvedClinicId) {
+    if (!effectiveClinicId) {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
     // Apenas Administradores e Coordenadores podem alterar repasses
-    const canManageRates = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile?.role || '');
+    const canManageRates =
+      ['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile?.role || '') || profile?.is_coordinator === true;
     if (!canManageRates) {
       return NextResponse.json(
         { success: false, error: 'Sem permissão — apenas administradores podem configurar repasses' },
@@ -359,7 +364,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRate } = await supabaseAdmin
       .from('doctor_patient_rates')
       .select('*')
-      .eq('clinic_id', resolvedClinicId)
+      .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', validated.doctor_id)
       .eq('patient_id', validated.patient_id)
       .eq('active', true)
@@ -402,7 +407,7 @@ export async function POST(request: NextRequest) {
       const { data: inserted, error: insertError } = await supabaseAdmin
         .from('doctor_patient_rates')
         .insert({
-          clinic_id: resolvedClinicId,
+          clinic_id: effectiveClinicId,
           doctor_id: validated.doctor_id,
           patient_id: validated.patient_id,
           rate_type: validated.rate_type,
@@ -425,7 +430,7 @@ export async function POST(request: NextRequest) {
     // 2. Gravar histórico de auditoria
     await supabaseAdmin.from('doctor_patient_rate_history').insert({
       rate_id: savedRate.id,
-      clinic_id: resolvedClinicId,
+      clinic_id: effectiveClinicId,
       doctor_id: validated.doctor_id,
       patient_id: validated.patient_id,
       previous_rate_type: previousRateType,
@@ -446,7 +451,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       const notifRes = await sendDoctorPatientRateNotification({
-        clinicId: resolvedClinicId,
+        clinicId: effectiveClinicId,
         doctorId: validated.doctor_id,
         patientName: patient?.name || 'Paciente',
         rateType: validated.rate_type,

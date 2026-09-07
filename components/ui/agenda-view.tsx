@@ -23,6 +23,7 @@ import {
     Stethoscope,
     Users,
     UserPlus,
+    Eye,
     EyeOff,
     Search,
     SlidersHorizontal,
@@ -222,6 +223,29 @@ export default function AgendaPage() {
     const [showFreeSlots, setShowFreeSlots] = useState(false)
     // Filtro de confirmacao de agendamento (Todos, Confirmados, A Confirmar)
     const [confirmationFilter, setConfirmationFilter] = useState<'ALL' | 'CONFIRMED' | 'PENDING'>('ALL')
+
+    // Ocultar agendamentos cancelados da grade (salvo no localStorage)
+    const [hideCancelled, setHideCancelled] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('clinigo_agenda_hide_cancelled')
+            return saved !== null ? saved === 'true' : false
+        }
+        return false
+    })
+
+    const toggleHideCancelled = () => {
+        setHideCancelled(prev => {
+            const next = !prev
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('clinigo_agenda_hide_cancelled', String(next))
+            }
+            return next
+        })
+    }
+
+    // Exclusão de agendamento cancelado
+    const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null)
+    const [batchCleaningOpen, setBatchCleaningOpen] = useState(false)
 
     // Mural de Recados States
     const [isMuralOpen, setIsMuralOpen] = useState(false)
@@ -532,6 +556,8 @@ export default function AgendaPage() {
                 if (searchLower && !a.patient?.full_name?.toLowerCase().includes(searchLower)) return false
                 if (confirmationFilter === 'CONFIRMED' && !(a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) return false
                 if (confirmationFilter === 'PENDING' && !(a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING')) return false
+                // Se ocultar cancelados estiver ativo, não exibe agendamentos cancelados na grade
+                if (hideCancelled && a.status === 'CANCELLED') return false
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 if (a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada') return false
                 return true
@@ -551,6 +577,7 @@ export default function AgendaPage() {
                 (confirmationFilter === 'ALL' ||
                     (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) ||
                     (confirmationFilter === 'PENDING' && (a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING'))) &&
+                (!hideCancelled || a.status !== 'CANCELLED') &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
@@ -604,6 +631,70 @@ export default function AgendaPage() {
             toast.success('Agendamento cancelado')
         },
         onError: (error: Error) => toast.error(error.message),
+    })
+
+    // Sincronização de eventos globais de atualização de agendamentos
+    useEffect(() => {
+        const handleAppointmentUpdated = () => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+        }
+        window.addEventListener('appointment-updated', handleAppointmentUpdated)
+        return () => window.removeEventListener('appointment-updated', handleAppointmentUpdated)
+    }, [queryClient])
+
+    // Exclusão individual de agendamento cancelado
+    const deleteAppointmentMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`/api/appointments/${id}`, {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao excluir agendamento')
+            return data
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+            setDeletingAppointmentId(null)
+            toast.success(data?.message || 'Agendamento removido da grade com sucesso')
+        },
+        onError: (error: Error) => {
+            toast.error(error.message)
+            setDeletingAppointmentId(null)
+        },
+    })
+
+    // Cancelados visíveis no período selecionado
+    const cancelledInCurrentPeriod = useMemo(() => {
+        if (!appointments || !Array.isArray(appointments)) return []
+        const currentDates = (view === 'week' ? days : [currentDate]).map(d => format(d, 'yyyy-MM-dd'))
+        return appointments.filter(a => 
+            a.status === 'CANCELLED' && 
+            currentDates.includes(a.appointment_date) &&
+            (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id))
+        )
+    }, [appointments, view, days, currentDate, selectedDoctorIds])
+
+    // Exclusão em lote de cancelados do período
+    const batchDeleteCancelledMutation = useMutation({
+        mutationFn: async (ids: string[]) => {
+            const res = await fetch('/api/appointments/batch-delete-cancelled', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentIds: ids }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao excluir agendamentos')
+            return data
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+            setBatchCleaningOpen(false)
+            toast.success(data?.message || 'Agendamentos cancelados removidos com sucesso')
+        },
+        onError: (error: Error) => {
+            toast.error(error.message)
+            setBatchCleaningOpen(false)
+        }
     })
 
     // Cancel recurring series logic (double confirmation)
@@ -929,6 +1020,33 @@ export default function AgendaPage() {
                         <EyeOff className="h-4 w-4" />
                         {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
                     </Button>
+
+                    <Button
+                        variant={hideCancelled ? 'default' : 'outline'}
+                        className={cn(
+                            'gap-2 h-10 text-sm rounded-xl px-4 font-semibold transition-all',
+                            hideCancelled
+                                ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-xs'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        )}
+                        onClick={toggleHideCancelled}
+                        title={hideCancelled ? 'Agendamentos cancelados estão ocultos na grade. Clique para exibir.' : 'Clique para ocultar os agendamentos cancelados da grade.'}
+                    >
+                        {hideCancelled ? <EyeOff className="h-4 w-4 text-emerald-400 shrink-0" /> : <Eye className="h-4 w-4 text-slate-500 shrink-0" />}
+                        <span>{hideCancelled ? 'Cancelados Ocultos' : 'Ocultar Cancelados'}</span>
+                    </Button>
+
+                    {cancelledInCurrentPeriod.length > 0 && (
+                        <Button
+                            variant="outline"
+                            className="gap-1.5 h-10 text-sm border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 rounded-xl px-3.5 font-semibold shrink-0"
+                            onClick={() => setBatchCleaningOpen(true)}
+                            title="Excluir todos os agendamentos cancelados visíveis neste período"
+                        >
+                            <Trash2 className="h-4 w-4 text-red-600 shrink-0" />
+                            <span>Limpar Cancelados ({cancelledInCurrentPeriod.length})</span>
+                        </Button>
+                    )}
 
                     <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
                         <Button
@@ -1306,6 +1424,20 @@ export default function AgendaPage() {
                                                                             )}
 
                                                                             <div className="flex items-center justify-end mt-1">
+                                                                                {isCancelled && (
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-5 w-5 mr-0.5 text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-950/60"
+                                                                                        title="Excluir agendamento cancelado da grade"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation()
+                                                                                            setDeletingAppointmentId(appointment.id)
+                                                                                        }}
+                                                                                    >
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    </Button>
+                                                                                )}
                                                                                 <DropdownMenu>
                                                                                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                                                                         <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-black/10">
@@ -1320,6 +1452,15 @@ export default function AgendaPage() {
                                                                                             <User className="w-4 h-4 mr-2" />
                                                                                             Ver Detalhes
                                                                                         </DropdownMenuItem>
+                                                                                        {isCancelled && (
+                                                                                            <DropdownMenuItem
+                                                                                                className="text-destructive focus:text-destructive font-semibold"
+                                                                                                onClick={() => setDeletingAppointmentId(appointment.id)}
+                                                                                            >
+                                                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                                                Excluir da Grade
+                                                                                            </DropdownMenuItem>
+                                                                                        )}
                                                                                         {appointment.status !== 'CANCELLED' && (
                                                                                             <DropdownMenuItem 
                                                                                                 onClick={() => {
@@ -1515,7 +1656,7 @@ export default function AgendaPage() {
                                                                         : "text-emerald-700 dark:text-emerald-300"
                                                                 )}>
                                                                     {status.isAllSelectedFree && selectedDoctorIds.length > 1
-                                                                        ? '⭐ Todas Livres'
+                                                                        ? 'Todas Livres'
                                                                         : `${status.freeDoctors.length} livre(s)`}
                                                                 </span>
                                                             </div>
@@ -1565,7 +1706,21 @@ export default function AgendaPage() {
                                                                                         {appointment.appointment_time.substring(0, 5)} – {endTime}
                                                                                     </div>
                                                                                     {/* Menu de ações */}
-                                                                                    <div className="absolute top-0 right-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                                                    <div className="absolute top-0 right-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center">
+                                                                                        {isCancelled && (
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="icon"
+                                                                                                className="h-5 w-5 hover:bg-red-600/80 text-white"
+                                                                                                title="Excluir agendamento cancelado"
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation()
+                                                                                                    setDeletingAppointmentId(appointment.id)
+                                                                                                }}
+                                                                                            >
+                                                                                                <Trash2 className="w-3 h-3" />
+                                                                                            </Button>
+                                                                                        )}
                                                                                         <DropdownMenu>
                                                                                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                                                                                 <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-black/20 text-white">
@@ -1580,6 +1735,15 @@ export default function AgendaPage() {
                                                                                                     <User className="w-4 h-4 mr-2" />
                                                                                                     Ver Detalhes
                                                                                                 </DropdownMenuItem>
+                                                                                                {isCancelled && (
+                                                                                                    <DropdownMenuItem
+                                                                                                        className="text-destructive focus:text-destructive font-semibold"
+                                                                                                        onClick={() => setDeletingAppointmentId(appointment.id)}
+                                                                                                    >
+                                                                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                                                                        Excluir da Grade
+                                                                                                    </DropdownMenuItem>
+                                                                                                )}
                                                                                                 {appointment.status !== 'CANCELLED' && (
                                                                                                     <DropdownMenuItem 
                                                                                                         onClick={() => {
@@ -1701,6 +1865,78 @@ export default function AgendaPage() {
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                             )}
                             Confirmar Cancelamento
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog de Exclusão Individual de Agendamento Cancelado */}
+            <Dialog open={!!deletingAppointmentId} onOpenChange={(open) => !open && setDeletingAppointmentId(null)}>
+                <DialogContent className="max-w-md rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="h-5 w-5" />
+                            <span>Excluir Agendamento Cancelado</span>
+                        </DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja remover este agendamento cancelado da grade? Esta ação liberará permanentemente o horário na agenda.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <div className="bg-red-50 dark:bg-red-950/30 p-3.5 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-800 dark:text-red-300">
+                            O agendamento cancelado será apagado do sistema e o horário voltará a ficar disponível para novos atendimentos.
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setDeletingAppointmentId(null)}>
+                            Voltar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deletingAppointmentId && deleteAppointmentMutation.mutate(deletingAppointmentId)}
+                            disabled={deleteAppointmentMutation.isPending}
+                            className="font-semibold"
+                        >
+                            {deleteAppointmentMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Confirmar Exclusão
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog de Exclusão em Lote de Cancelados */}
+            <Dialog open={batchCleaningOpen} onOpenChange={setBatchCleaningOpen}>
+                <DialogContent className="max-w-md rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="h-5 w-5" />
+                            <span>Limpar Agendamentos Cancelados</span>
+                        </DialogTitle>
+                        <DialogDescription>
+                            Você selecionou limpar todos os agendamentos cancelados deste período.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <div className="bg-red-50 dark:bg-red-950/30 p-3.5 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-800 dark:text-red-300">
+                            ATENÇÃO: Serão excluídos permanentemente <strong>{cancelledInCurrentPeriod.length}</strong> agendamento(s) cancelado(s) visíveis na grade deste período.
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setBatchCleaningOpen(false)}>
+                            Voltar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => batchDeleteCancelledMutation.mutate(cancelledInCurrentPeriod.map(a => a.id))}
+                            disabled={batchDeleteCancelledMutation.isPending}
+                            className="font-semibold"
+                        >
+                            {batchDeleteCancelledMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Excluir Todos os Cancelados
                         </Button>
                     </DialogFooter>
                 </DialogContent>

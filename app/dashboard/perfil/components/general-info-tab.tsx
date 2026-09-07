@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
@@ -10,20 +11,39 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Loader2, Upload, User } from 'lucide-react'
-import { generalInfoSchema, addressSchema, type GeneralInfoFormData, type AddressFormData } from '@/lib/validations/profile-schema'
-import { createClient } from '@/lib/supabase/client'
+import { Loader2, Upload, User, Save, MapPin, ChevronDown, ChevronUp, CheckCircle2, Phone, Mail } from 'lucide-react'
+
+const profileFormSchema = z.object({
+    name: z.string().min(2, 'O nome deve ter no mínimo 2 caracteres'),
+    email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+    phone: z.string().max(25, 'Telefone inválido').optional().or(z.literal('')),
+    cpf: z.string().max(20, 'CPF inválido').optional().or(z.literal('')),
+    birth_date: z.string().optional().or(z.literal('')),
+    gender: z.string().optional().or(z.literal('')),
+    bio: z.string().max(1000, 'Máximo 1000 caracteres').optional().or(z.literal('')),
+    address_zipcode: z.string().optional().or(z.literal('')),
+    address_street: z.string().optional().or(z.literal('')),
+    address_number: z.string().optional().or(z.literal('')),
+    address_complement: z.string().optional().or(z.literal('')),
+    address_neighborhood: z.string().optional().or(z.literal('')),
+    address_city: z.string().optional().or(z.literal('')),
+    address_state: z.string().optional().or(z.literal('')),
+})
+
+type ProfileFormData = z.infer<typeof profileFormSchema>
 
 export default function GeneralInfoTab() {
     const [loading, setLoading] = useState(false)
+    const [initialLoading, setInitialLoading] = useState(true)
     const [avatarUploading, setAvatarUploading] = useState(false)
     const [userData, setUserData] = useState<any>(null)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+    const [showAddressSection, setShowAddressSection] = useState(false)
 
-    const generalForm = useForm<GeneralInfoFormData>({
-        resolver: zodResolver(generalInfoSchema),
+    const form = useForm<ProfileFormData>({
+        resolver: zodResolver(profileFormSchema),
         defaultValues: {
             name: '',
             email: '',
@@ -32,12 +52,6 @@ export default function GeneralInfoTab() {
             birth_date: '',
             gender: undefined,
             bio: '',
-        },
-    })
-
-    const addressForm = useForm<AddressFormData>({
-        resolver: zodResolver(addressSchema),
-        defaultValues: {
             address_zipcode: '',
             address_street: '',
             address_number: '',
@@ -54,35 +68,41 @@ export default function GeneralInfoTab() {
 
     async function loadProfile() {
         try {
+            setInitialLoading(true)
             const res = await fetch('/api/profile')
             if (res.ok) {
                 const data = await res.json()
-                setUserData(data.user)
-                setAvatarPreview(data.user.avatar_url)
+                const user = data.user || {}
+                setUserData(user)
+                setAvatarPreview(user.avatar_url || null)
 
-                // Preencher formulários
-                generalForm.reset({
-                    name: data.user.name || data.user.full_name || '',
-                    email: data.user.email || '',
-                    phone: data.user.phone || '',
-                    cpf: data.user.cpf || '',
-                    birth_date: data.user.birth_date || '',
-                    gender: data.user.gender || undefined,
-                    bio: data.user.bio || '',
+                form.reset({
+                    name: user.full_name || user.name || '',
+                    email: user.email || '',
+                    phone: user.phone || '',
+                    cpf: user.cpf || '',
+                    birth_date: user.birth_date ? String(user.birth_date).split('T')[0] : '',
+                    gender: user.gender || undefined,
+                    bio: user.bio || '',
+                    address_zipcode: user.address_zipcode || '',
+                    address_street: user.address_street || '',
+                    address_number: user.address_number || '',
+                    address_complement: user.address_complement || '',
+                    address_neighborhood: user.address_neighborhood || '',
+                    address_city: user.address_city || '',
+                    address_state: user.address_state || '',
                 })
 
-                addressForm.reset({
-                    address_zipcode: data.user.address_zipcode || '',
-                    address_street: data.user.address_street || '',
-                    address_number: data.user.address_number || '',
-                    address_complement: data.user.address_complement || '',
-                    address_neighborhood: data.user.address_neighborhood || '',
-                    address_city: data.user.address_city || '',
-                    address_state: data.user.address_state || '',
-                })
+                if (user.address_zipcode || user.address_street || user.address_city) {
+                    setShowAddressSection(true)
+                }
+            } else {
+                toast.error('Não foi possível carregar os dados do perfil')
             }
         } catch (error) {
-            toast.error('Erro ao carregar perfil')
+            toast.error('Erro de conexão ao carregar perfil')
+        } finally {
+            setInitialLoading(false)
         }
     }
 
@@ -90,28 +110,25 @@ export default function GeneralInfoTab() {
         const file = e.target.files?.[0]
         if (!file) return
 
-        // Validações
         if (file.size > 5 * 1024 * 1024) {
-            toast.error('Arquivo muito grande. Máximo 5MB.')
+            toast.error('Arquivo muito grande. O limite máximo é de 5MB.')
             return
         }
 
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-            toast.error('Formato inválido. Use JPG, PNG ou WebP.')
+            toast.error('Formato de imagem inválido. Utilize JPG, PNG ou WebP.')
             return
         }
 
         setAvatarUploading(true)
 
         try {
-            // Preview local
             const reader = new FileReader()
             reader.onloadend = () => {
                 setAvatarPreview(reader.result as string)
             }
             reader.readAsDataURL(file)
 
-            // Upload
             const formData = new FormData()
             formData.append('file', file)
 
@@ -122,405 +139,522 @@ export default function GeneralInfoTab() {
 
             if (res.ok) {
                 const data = await res.json()
-                setAvatarPreview(data.avatar_url)
-                toast.success('Avatar atualizado!')
+                const newAvatarUrl = data.avatar_url
+                setAvatarPreview(newAvatarUrl)
+                toast.success('Foto de perfil atualizada com sucesso!')
+
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                        new CustomEvent('user-profile-updated', {
+                            detail: { avatar_url: newAvatarUrl },
+                        })
+                    )
+                }
             } else {
                 const error = await res.json()
-                toast.error(error.error || 'Erro ao fazer upload')
-                setAvatarPreview(userData?.avatar_url) // Reverter
+                toast.error(error.error || 'Erro ao enviar foto de perfil')
+                setAvatarPreview(userData?.avatar_url || null)
             }
         } catch (error) {
-            toast.error('Erro ao fazer upload do avatar')
-            setAvatarPreview(userData?.avatar_url) // Reverter
+            toast.error('Falha no upload da foto de perfil')
+            setAvatarPreview(userData?.avatar_url || null)
         } finally {
             setAvatarUploading(false)
         }
     }
 
-    async function onSubmitGeneral(data: GeneralInfoFormData) {
+    async function onSubmit(data: ProfileFormData) {
         setLoading(true)
         try {
+            const payload = {
+                name: data.name.trim(),
+                full_name: data.name.trim(),
+                phone: data.phone?.trim() || null,
+                cpf: data.cpf?.trim() || null,
+                birth_date: data.birth_date || null,
+                gender: data.gender || null,
+                bio: data.bio?.trim() || null,
+                address_zipcode: data.address_zipcode?.trim() || null,
+                address_street: data.address_street?.trim() || null,
+                address_number: data.address_number?.trim() || null,
+                address_complement: data.address_complement?.trim() || null,
+                address_neighborhood: data.address_neighborhood?.trim() || null,
+                address_city: data.address_city?.trim() || null,
+                address_state: data.address_state?.trim() || null,
+            }
+
             const res = await fetch('/api/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
+                body: JSON.stringify(payload),
             })
 
             if (res.ok) {
-                toast.success('Informações atualizadas!')
-                loadProfile()
+                const responseData = await res.json()
+                const updatedName = responseData?.user?.full_name || payload.name
+
+                toast.success('Perfil atualizado com sucesso!')
+
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                        new CustomEvent('user-profile-updated', {
+                            detail: { full_name: updatedName },
+                        })
+                    )
+                }
+
+                setUserData((prev: any) => ({
+                    ...prev,
+                    ...responseData.user,
+                    full_name: updatedName,
+                    name: updatedName,
+                }))
             } else {
                 const error = await res.json()
-                toast.error(error.error || 'Erro ao atualizar')
+                toast.error(error.error || 'Erro ao salvar alterações')
             }
         } catch (error) {
-            toast.error('Erro ao salvar alterações')
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    async function onSubmitAddress(data: AddressFormData) {
-        setLoading(true)
-        try {
-            const res = await fetch('/api/profile', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            })
-
-            if (res.ok) {
-                toast.success('Endereço atualizado!')
-                loadProfile()
-            } else {
-                toast.error('Erro ao atualizar endereço')
-            }
-        } catch (error) {
-            toast.error('Erro ao salvar endereço')
+            toast.error('Erro ao conectar ao servidor para salvar')
         } finally {
             setLoading(false)
         }
     }
 
     async function searchZipCode(zipcode: string) {
-        if (!zipcode || zipcode.replace(/\D/g, '').length !== 8) return
+        const clean = zipcode.replace(/\D/g, '')
+        if (clean.length !== 8) return
 
         try {
-            const res = await fetch(`https://viacep.com.br/ws/${zipcode.replace(/\D/g, '')}/json/`)
+            const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`)
             if (res.ok) {
                 const data = await res.json()
                 if (!data.erro) {
-                    addressForm.setValue('address_street', data.logradouro || '')
-                    addressForm.setValue('address_neighborhood', data.bairro || '')
-                    addressForm.setValue('address_city', data.localidade || '')
-                    addressForm.setValue('address_state', data.uf || '')
-                    toast.success('Endereço encontrado!')
+                    form.setValue('address_street', data.logradouro || '')
+                    form.setValue('address_neighborhood', data.bairro || '')
+                    form.setValue('address_city', data.localidade || '')
+                    form.setValue('address_state', data.uf || '')
+                    toast.success('Endereço localizado pelo CEP')
                 }
             }
         } catch (error) {
-            console.error('Error searching zipcode:', error)
+            // Silencioso
         }
     }
 
-    return (
-        <div className="space-y-6">
-            {/* Avatar Upload */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Foto de Perfil</CardTitle>
-                    <CardDescription>Atualize sua foto de perfil</CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center gap-6">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={avatarPreview || undefined} />
-                        <AvatarFallback>
-                            {userData?.name ? userData.name.substring(0, 2).toUpperCase() : <User />}
-                        </AvatarFallback>
-                    </Avatar>
+    const getInitials = (name: string) => {
+        if (!name) return '??'
+        return name
+            .split(' ')
+            .filter(Boolean)
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+    }
 
-                    <div className="flex-1">
-                        <input
-                            id="avatar-upload"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handleAvatarUpload}
-                            className="hidden"
-                            disabled={avatarUploading}
-                        />
-                        <label htmlFor="avatar-upload">
-                            <Button asChild disabled={avatarUploading}>
-                                <span className="cursor-pointer">
-                                    {avatarUploading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Enviando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Upload className="mr-2 h-4 w-4" />
-                                            Alterar Foto
-                                        </>
-                                    )}
-                                </span>
-                            </Button>
-                        </label>
-                        <p className="text-sm text-muted-foreground mt-2">
-                            JPG, PNG ou WebP. Máximo 5MB.
-                        </p>
-                    </div>
-                </CardContent>
+    if (initialLoading) {
+        return (
+            <Card className="border-border/60 shadow-sm p-12 text-center">
+                <div className="flex flex-col items-center justify-center space-y-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground font-medium">Carregando dados do perfil...</p>
+                </div>
             </Card>
+        )
+    }
 
-            {/* Informações Gerais */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Informações Pessoais</CardTitle>
-                    <CardDescription>Atualize seus dados pessoais</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...generalForm}>
-                        <form onSubmit={generalForm.handleSubmit(onSubmitGeneral)} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={generalForm.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Nome Completo *</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="Seu nome completo" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+    return (
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Card 1: Foto e Identificacao Rapida */}
+                <Card className="border-border/60 shadow-sm">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-lg font-semibold text-foreground">Foto de Identificação</CardTitle>
+                        <CardDescription>Esta foto é utilizada no cabeçalho do sistema, prontuários e assinaturas digitais</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col sm:flex-row items-center gap-6 pt-0">
+                        <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-primary/20 shadow-sm">
+                            <AvatarImage src={avatarPreview || undefined} />
+                            <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                                {form.watch('name') ? getInitials(form.watch('name')) : <User className="h-8 w-8" />}
+                            </AvatarFallback>
+                        </Avatar>
 
-                                <FormField
-                                    control={generalForm.control}
-                                    name="email"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email *</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} type="email" placeholder="seu@email.com" disabled />
-                                            </FormControl>
-                                            <FormDescription>Email não pode ser alterado aqui</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                        <div className="flex flex-col items-center sm:items-start gap-2">
+                            <input
+                                id="avatar-upload"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={handleAvatarUpload}
+                                className="hidden"
+                                disabled={avatarUploading}
+                            />
+                            <label htmlFor="avatar-upload">
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={avatarUploading}
+                                    className="cursor-pointer min-h-[40px] px-4 font-medium"
+                                >
+                                    <span>
+                                        {avatarUploading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-primary" />
+                                                Enviando imagem...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Upload className="mr-2 h-4 w-4 text-primary" />
+                                                Alterar Foto
+                                            </>
+                                        )}
+                                    </span>
+                                </Button>
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                                Formatos aceitos: JPG, PNG ou WebP. Tamanho máximo: 5MB.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                                <FormField
-                                    control={generalForm.control}
-                                    name="phone"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telefone</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="(00) 00000-0000" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={generalForm.control}
-                                    name="cpf"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>CPF</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="000.000.000-00" disabled={!!userData?.cpf} />
-                                            </FormControl>
-                                            {userData?.cpf && (
-                                                <FormDescription>CPF não pode ser alterado</FormDescription>
-                                            )}
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={generalForm.control}
-                                    name="birth_date"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Data de Nascimento</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} type="date" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={generalForm.control}
-                                    name="gender"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Gênero</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Selecione" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="masculino">Masculino</SelectItem>
-                                                    <SelectItem value="feminino">Feminino</SelectItem>
-                                                    <SelectItem value="outro">Outro</SelectItem>
-                                                    <SelectItem value="prefiro_nao_dizer">Prefiro não dizer</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                {/* Card 2: Dados Pessoais Principais */}
+                <Card className="border-border/60 shadow-sm">
+                    <CardHeader className="pb-4 border-b">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-lg font-semibold text-foreground">Dados Pessoais</CardTitle>
+                                <CardDescription>Altere seu nome completo e informações de contato direto</CardDescription>
                             </div>
+                            <Badge variant="outline" className="hidden sm:flex items-center gap-1 text-emerald-700 border-emerald-300 bg-emerald-50">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                Conta Ativa
+                            </Badge>
+                        </div>
+                    </CardHeader>
 
+                    <CardContent className="space-y-6 pt-6">
+                        {/* Campo Principal: Nome Completo com Maximo Destaque */}
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem className="space-y-1.5">
+                                    <FormLabel className="text-base font-semibold text-foreground flex items-center justify-between">
+                                        <span>Nome Completo *</span>
+                                        <span className="text-xs font-normal text-muted-foreground">Visível na agenda e receituários</span>
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            {...field}
+                                            placeholder="Digite seu nome completo"
+                                            className="h-11 text-base font-medium border-primary/40 focus-visible:ring-primary shadow-xs"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            {/* E-mail de Acesso */}
                             <FormField
-                                control={generalForm.control}
-                                name="bio"
+                                control={form.control}
+                                name="email"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Sobre mim / Bio</FormLabel>
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span>E-mail de Acesso</span>
+                                        </FormLabel>
                                         <FormControl>
-                                            <Textarea
+                                            <Input
                                                 {...field}
-                                                placeholder="Conte um pouco sobre você..."
-                                                rows={4}
+                                                type="email"
+                                                disabled
+                                                className="h-10 bg-muted/50 cursor-not-allowed border-dashed text-muted-foreground"
                                             />
                                         </FormControl>
-                                        <FormDescription>Máximo 500 caracteres</FormDescription>
+                                        <FormDescription className="text-xs">
+                                            Para alterar seu e-mail, acesse a aba Segurança e Senha.
+                                        </FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
-                            <div className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" onClick={() => generalForm.reset()}>
-                                    Cancelar
-                                </Button>
-                                <Button type="submit" disabled={loading}>
-                                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Salvar Alterações
-                                </Button>
-                            </div>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
+                            {/* Telefone / WhatsApp */}
+                            <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span>Telefone / WhatsApp</span>
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                placeholder="(00) 00000-0000"
+                                                className="h-10"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-            <Separator />
+                            {/* CPF */}
+                            <FormField
+                                control={form.control}
+                                name="cpf"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-sm font-medium text-foreground">CPF</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                placeholder="000.000.000-00"
+                                                className="h-10"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-            {/* Endereço */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Endereço</CardTitle>
-                    <CardDescription>Atualize seu endereço</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...addressForm}>
-                        <form onSubmit={addressForm.handleSubmit(onSubmitAddress)} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_zipcode"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>CEP</FormLabel>
+                            {/* Data de Nascimento */}
+                            <FormField
+                                control={form.control}
+                                name="birth_date"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-sm font-medium text-foreground">Data de Nascimento</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                type="date"
+                                                className="h-10"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Genero */}
+                            <FormField
+                                control={form.control}
+                                name="gender"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-1.5 md:col-span-2">
+                                        <FormLabel className="text-sm font-medium text-foreground">Gênero</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || undefined}>
                                             <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="00000-000"
-                                                    onBlur={(e) => searchZipCode(e.target.value)}
-                                                />
+                                                <SelectTrigger className="h-10">
+                                                    <SelectValue placeholder="Selecione o gênero (opcional)" />
+                                                </SelectTrigger>
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                            <SelectContent>
+                                                <SelectItem value="feminino">Feminino</SelectItem>
+                                                <SelectItem value="masculino">Masculino</SelectItem>
+                                                <SelectItem value="outro">Outro</SelectItem>
+                                                <SelectItem value="prefiro_nao_dizer">Prefiro não declarar</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_street"
-                                    render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>Rua</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="Nome da rua" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                        {/* Apresentacao / Bio */}
+                        <FormField
+                            control={form.control}
+                            name="bio"
+                            render={({ field }) => (
+                                <FormItem className="space-y-1.5 pt-2">
+                                    <FormLabel className="text-sm font-medium text-foreground flex items-center justify-between">
+                                        <span>Sobre você / Apresentação Profissional</span>
+                                        <span className="text-xs font-normal text-muted-foreground">Opcional</span>
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            {...field}
+                                            placeholder="Breve resumo da sua formação, áreas de atuação ou recado profissional..."
+                                            rows={3}
+                                            className="resize-none"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_number"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Número</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="123" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                        {/* Secao Colapsavel de Endereco */}
+                        <div className="pt-2 border-t">
+                            <button
+                                type="button"
+                                onClick={() => setShowAddressSection(!showAddressSection)}
+                                className="flex items-center justify-between w-full py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-primary" />
+                                    <span>Endereço Residencial ou Comercial (Opcional)</span>
+                                </span>
+                                {showAddressSection ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                )}
+                            </button>
 
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_complement"
-                                    render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>Complemento</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="Apto, Bloco, etc" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                            {showAddressSection && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 mt-2 bg-muted/20 p-4 rounded-xl border border-border/50">
+                                    <FormField
+                                        control={form.control}
+                                        name="address_zipcode"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-xs font-medium text-foreground">CEP</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="00000-000"
+                                                        onBlur={(e) => searchZipCode(e.target.value)}
+                                                        className="h-9 text-sm"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_neighborhood"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Bairro</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="Bairro" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                    <FormField
+                                        control={form.control}
+                                        name="address_street"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1 md:col-span-2">
+                                                <FormLabel className="text-xs font-medium text-foreground">Logradouro / Rua</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="Nome da rua ou avenida" className="h-9 text-sm" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_city"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Cidade</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="Cidade" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                    <FormField
+                                        control={form.control}
+                                        name="address_number"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-xs font-medium text-foreground">Número</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="Número" className="h-9 text-sm" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                                <FormField
-                                    control={addressForm.control}
-                                    name="address_state"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Estado</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="UF" maxLength={2} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                                    <FormField
+                                        control={form.control}
+                                        name="address_complement"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1 md:col-span-2">
+                                                <FormLabel className="text-xs font-medium text-foreground">Complemento / Sala</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="Apto, Bloco, Sala" className="h-9 text-sm" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                            <div className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" onClick={() => addressForm.reset()}>
-                                    Cancelar
-                                </Button>
-                                <Button type="submit" disabled={loading}>
-                                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Salvar Endereço
-                                </Button>
-                            </div>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
-        </div>
+                                    <FormField
+                                        control={form.control}
+                                        name="address_neighborhood"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-xs font-medium text-foreground">Bairro</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="Bairro" className="h-9 text-sm" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="address_city"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-xs font-medium text-foreground">Cidade</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="Cidade" className="h-9 text-sm" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="address_state"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-xs font-medium text-foreground">UF</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="UF" maxLength={2} className="h-9 text-sm uppercase" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+
+                    <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t pt-4 bg-muted/10">
+                        <p className="text-xs text-muted-foreground text-center sm:text-left">
+                            As alterações entram em vigor imediatamente após salvar.
+                        </p>
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => loadProfile()}
+                                disabled={loading}
+                                className="min-h-[44px] flex-1 sm:flex-none"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={loading}
+                                className="min-h-[44px] px-6 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground flex-1 sm:flex-none shadow-sm"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Salvando alterações...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Salvar Alterações
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </CardFooter>
+                </Card>
+            </form>
+        </Form>
     )
 }

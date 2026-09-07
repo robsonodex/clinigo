@@ -30,20 +30,23 @@ export async function DELETE(
 
     const { data: profile } = await supabaseAdmin
       .from('users')
-      .select('id, clinic_id, role')
+      .select('id, clinic_id, role, is_coordinator')
       .eq('id', user.id)
       .single();
 
+    const headerClinicId = request.headers.get('x-clinic-id');
     const { clinicId: resolvedClinicId } = await resolveClinicId({
-      profileClinicId: profile?.clinic_id,
+      profileClinicId: headerClinicId || profile?.clinic_id,
       profileRole: profile?.role || '',
     });
+    const effectiveClinicId = headerClinicId || resolvedClinicId || profile?.clinic_id;
 
-    if (!resolvedClinicId) {
+    if (!effectiveClinicId) {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
-    const canManage = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile?.role || '');
+    const canManage =
+      ['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile?.role || '') || profile?.is_coordinator === true;
     if (!canManage) {
       return NextResponse.json(
         { success: false, error: 'Sem permissão — apenas administradores podem alterar repasses' },
@@ -56,7 +59,7 @@ export async function DELETE(
       .from('doctor_patient_rates')
       .select('*')
       .eq('id', rateId)
-      .eq('clinic_id', resolvedClinicId)
+      .eq('clinic_id', effectiveClinicId)
       .single();
 
     if (findError || !rate) {
@@ -88,7 +91,7 @@ export async function DELETE(
 
     await supabaseAdmin.from('doctor_patient_rate_history').insert({
       rate_id: rate.id,
-      clinic_id: resolvedClinicId,
+      clinic_id: effectiveClinicId,
       doctor_id: rate.doctor_id,
       patient_id: rate.patient_id,
       previous_rate_type: rate.rate_type,

@@ -41,24 +41,23 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabaseAdmin
       .from('users')
-      .select('id, clinic_id, role')
+      .select('id, clinic_id, role, is_coordinator')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.clinic_id && profile?.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
-    }
-
+    const headerClinicId = request.headers.get('x-clinic-id');
     const { clinicId: resolvedClinicId } = await resolveClinicId({
-      profileClinicId: profile?.clinic_id,
+      profileClinicId: headerClinicId || profile?.clinic_id,
       profileRole: profile?.role || '',
     });
+    const effectiveClinicId = headerClinicId || resolvedClinicId || profile?.clinic_id;
 
-    if (!resolvedClinicId) {
+    if (!effectiveClinicId) {
       return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
     }
 
-    const canManageRates = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR'].includes(profile?.role || '');
+    const canManageRates =
+      ['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile?.role || '') || profile?.is_coordinator === true;
     if (!canManageRates) {
       return NextResponse.json(
         { success: false, error: 'Sem permissão — apenas administradores podem configurar repasses' },
@@ -78,7 +77,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRates } = await supabaseAdmin
       .from('doctor_patient_rates')
       .select('*')
-      .eq('clinic_id', resolvedClinicId)
+      .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', validated.doctor_id)
       .eq('active', true);
 
@@ -146,7 +145,7 @@ export async function POST(request: NextRequest) {
         // Gravar histórico
         await supabaseAdmin.from('doctor_patient_rate_history').insert({
           rate_id: rateId,
-          clinic_id: resolvedClinicId,
+          clinic_id: effectiveClinicId,
           doctor_id: validated.doctor_id,
           patient_id: item.patient_id,
           previous_rate_type: previousRateType,
@@ -166,7 +165,7 @@ export async function POST(request: NextRequest) {
     if (validated.notify_whatsapp && (updatedCount > 0 || insertedCount > 0)) {
       try {
         const notifRes = await sendDoctorPatientRateNotification({
-          clinicId: resolvedClinicId,
+          clinicId: effectiveClinicId,
           doctorId: validated.doctor_id,
           patientName: `${validated.rates.length} pacientes atualizados`,
           rateType: 'FIXED',

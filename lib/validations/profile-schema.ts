@@ -8,19 +8,13 @@ import { z } from 'zod'
 // ============================================
 
 export const generalInfoSchema = z.object({
-    name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-    email: z.string().email('Email inválido'),
-    phone: z.string()
-        .regex(/^\(\d{2}\) \d{4,5}-\d{4}$/, 'Formato: (00) 00000-0000')
-        .optional()
-        .or(z.literal('')),
-    cpf: z.string()
-        .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'Formato: 000.000.000-00')
-        .optional()
-        .or(z.literal('')),
+    name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
+    email: z.string().email('Email inválido').optional().or(z.literal('')),
+    phone: z.string().max(25, 'Telefone inválido').optional().or(z.literal('')),
+    cpf: z.string().max(20, 'CPF inválido').optional().or(z.literal('')),
     birth_date: z.string().optional().or(z.literal('')),
-    gender: z.enum(['masculino', 'feminino', 'outro', 'prefiro_nao_dizer']).optional(),
-    bio: z.string().max(500, 'Máximo 500 caracteres').optional().or(z.literal('')),
+    gender: z.string().optional().or(z.literal('')),
+    bio: z.string().max(1000, 'Máximo 1000 caracteres').optional().or(z.literal('')),
 })
 
 export const addressSchema = z.object({

@@ -97,7 +97,26 @@ export function useAuth() {
             }
         )
 
-        return () => subscription.unsubscribe()
+        const handleProfileUpdate = (e?: any) => {
+            if (e?.detail?.full_name) {
+                setState((prev) => ({
+                    ...prev,
+                    profile: prev.profile ? { ...prev.profile, full_name: e.detail.full_name } : prev.profile,
+                }))
+            }
+            loadUser()
+        }
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('user-profile-updated', handleProfileUpdate)
+        }
+
+        return () => {
+            subscription.unsubscribe()
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('user-profile-updated', handleProfileUpdate)
+            }
+        }
     }, [supabase.auth, loadUser])
 
     const signOut = useCallback(async () => {
@@ -172,6 +191,7 @@ export function useAuth() {
         signIn,
         signUp,
         signOut,
+        reloadUser: loadUser,
         isAuthenticated: !!state.user,
         supabase,
     }

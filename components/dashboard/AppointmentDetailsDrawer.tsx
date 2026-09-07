@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Sparkles } from 'lucide-react'
+import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Sparkles, Trash2, AlertTriangle } from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
 interface AppointmentDetailsDrawerProps {
@@ -56,6 +56,30 @@ export function AppointmentDetailsDrawer({
     const [rateType, setRateType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE')
     const [rateValue, setRateValue] = useState<number>(70)
     const [savingRate, setSavingRate] = useState(false)
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    async function handleDeleteAppointment() {
+        if (!appointment?.id) return
+        setIsDeleting(true)
+        try {
+            const res = await fetch(`/api/appointments/${appointment.id}`, {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao excluir agendamento')
+            toast.success('Agendamento removido da grade com sucesso')
+            setConfirmDeleteOpen(false)
+            onClose()
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('appointment-updated'))
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir agendamento')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
 
     async function handleSavePermanentRate() {
         if (!appointment?.doctor_id || !appointment?.patient_id) {
@@ -416,10 +440,22 @@ export function AppointmentDetailsDrawer({
                         </div>
 
                         {appointment.status === 'CANCELLED' && (
-                            <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/50 rounded-lg p-4 space-y-2.5">
-                                <h4 className="font-semibold text-sm text-red-800 dark:text-red-400 flex items-center gap-1.5">
-                                    ⚠️ Informações do Cancelamento
-                                </h4>
+                            <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/50 rounded-lg p-4 space-y-3">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <h4 className="font-semibold text-sm text-red-800 dark:text-red-400 flex items-center gap-1.5">
+                                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                                        <span>Informações do Cancelamento</span>
+                                    </h4>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => setConfirmDeleteOpen(true)}
+                                        className="h-8 text-xs font-semibold gap-1.5 rounded-lg px-2.5 shadow-xs"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Excluir da Grade</span>
+                                    </Button>
+                                </div>
                                 <div className="space-y-1.5 text-xs">
                                     <div>
                                         <span className="text-muted-foreground font-medium">Justificativa:</span>
@@ -556,7 +592,7 @@ export function AppointmentDetailsDrawer({
                             <div className="flex items-center justify-between">
                                 <Label className="text-base">QR Code Check-in</Label>
                                 <Badge variant={appointment.checked_in ? 'default' : 'outline'}>
-                                    {appointment.checked_in ? '✅ Check-in feito' : '⏳ Aguardando'}
+                                    {appointment.checked_in ? 'Check-in Realizado' : 'Aguardando'}
                                 </Badge>
                             </div>
 
@@ -675,6 +711,50 @@ export function AppointmentDetailsDrawer({
                                     </>
                                 ) : (
                                     <span>Salvar Valor Permanente</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL DE CONFIRMAÇÃO PARA EXCLUIR AGENDAMENTO CANCELADO DA GRADE */}
+                <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+                    <DialogContent className="rounded-2xl max-w-md w-[95vw] sm:w-full">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-destructive">
+                                <Trash2 className="w-5 h-5" />
+                                <span>Excluir Agendamento Cancelado</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Deseja remover permanentemente este agendamento cancelado da grade da agenda?
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-2">
+                            <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-800 dark:text-red-300">
+                                Esta ação liberará visualmente o horário na agenda e removerá o registro riscado.
+                            </div>
+                        </div>
+                        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setConfirmDeleteOpen(false)}
+                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                            >
+                                Voltar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteAppointment}
+                                disabled={isDeleting}
+                                className="min-h-[44px] rounded-xs w-full sm:w-auto font-semibold"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Excluindo...</span>
+                                    </>
+                                ) : (
+                                    <span>Confirmar Exclusão</span>
                                 )}
                             </Button>
                         </DialogFooter>

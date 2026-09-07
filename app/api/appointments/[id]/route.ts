@@ -348,3 +348,82 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 }
 
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    try {
+        const { id: appointmentId } = await params
+        const supabase = await createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        }
+
+        const { data: currentUser } = await supabase
+            .from('users')
+            .select('id, role, clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        if (!currentUser) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 })
+        }
+
+        const adminDb = createServiceRoleClient() as any
+
+        // Buscar agendamento e verificar clinic_id
+        const { data: appointment, error: fetchError } = await adminDb
+            .from('appointments')
+            .select('id, clinic_id, doctor_id, status, patient_id')
+            .eq('id', appointmentId)
+            .single()
+
+        if (fetchError || !appointment) {
+            throw new NotFoundError('Agendamento')
+        }
+
+        // Validação de segurança e isolamento multi-tenant
+        if (currentUser.role !== 'SUPER_ADMIN') {
+            const headerClinicId = request.headers.get('x-clinic-id')
+            const effectiveClinicId = headerClinicId || currentUser.clinic_id
+
+            if (appointment.clinic_id !== effectiveClinicId && appointment.clinic_id !== currentUser.clinic_id) {
+                throw new ForbiddenError('Acesso negado: agendamento pertence a outra clínica')
+            }
+
+            if (currentUser.role === 'DOCTOR') {
+                const { data: doctor } = await adminDb
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', currentUser.id)
+                    .single()
+
+                if (doctor?.id !== appointment.doctor_id) {
+                    throw new ForbiddenError('Acesso negado: profissional não autorizado')
+                }
+            }
+        }
+
+        // Limpar registros dependentes vinculados antes da exclusão
+        await adminDb.from('appointment_qr_codes').delete().eq('appointment_id', appointmentId)
+        await adminDb.from('video_rooms').delete().eq('appointment_id', appointmentId)
+
+        // Excluir agendamento do banco
+        const { error: deleteError } = await adminDb
+            .from('appointments')
+            .delete()
+            .eq('id', appointmentId)
+
+        if (deleteError) {
+            console.error('[APPOINTMENT_DELETE] Error:', deleteError)
+            return NextResponse.json({ error: 'Erro ao excluir agendamento: ' + deleteError.message }, { status: 500 })
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Agendamento removido da grade com sucesso'
+        })
+    } catch (error) {
+        return handleApiError(error)
+    }
+}
+

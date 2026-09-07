@@ -761,3 +761,43 @@
   - **Sincronização e Resiliência da Central de Recorrentes**: O modal `RecurringSeriesListModal` recebeu suporte aos props `initialDoctorId` e lista de profissionais repassada da tela de agenda, sincronizando a seleção ativa no calendário e assegurando parsing defensivo de respostas.
   - **Isolamento Absoluto Multi-Tenant e LGPD**: Todas as rotas de recados e recorrência aplicam checagem obrigatória de `effectiveClinicId`, impedindo qualquer vazamento cruzado de informações entre clínicas.
 
+#### Item 24 — Simplificação Estrutural do Perfil do Usuário e Correção da Tabela de Valores por Paciente
+- **Módulo**: Meu Perfil & Cadastros → Médicos/Profissionais → Valores por Paciente
+- **Caminho**:
+  - `app/dashboard/perfil/page.tsx` → `ProfilePage`
+  - `app/dashboard/perfil/components/profile-header.tsx` → `ProfileHeader`
+  - `app/dashboard/perfil/components/general-info-tab.tsx` → `GeneralInfoTab`
+  - `app/dashboard/perfil/components/security-tab.tsx` → `SecurityTab`
+  - `lib/validations/profile-schema.ts` → `generalInfoSchema`
+  - `lib/hooks/use-auth.ts` → `useAuth`
+  - `app/api/profile/route.ts` → `GET`, `PATCH`
+  - `app/api/doctor-patient-rates/route.ts` → `GET`, `POST`
+  - `app/api/doctor-patient-rates/[id]/route.ts` → `DELETE`
+  - `app/api/doctor-patient-rates/bulk/route.ts` → `POST`
+  - `supabase/migrations/20260902000003_doctor_patient_rates.sql`
+- **Descrição Técnica**:
+  - **Redesenho do Perfil (Pensar Fora da Caixa e Foco no Essencial)**: A página de Perfil possuía 8 abas laterais (muitas vazias ou irrelevantes para os usuários como Pagamento, Dispositivos e Privacidade) e subformulários desencontrados que travavam ao salvar o nome devido a máscaras estritas de telefone e CPF. Foi totalmente refatorada para apenas 2 abas diretas e executivas: **Dados Pessoais** e **Segurança e Senha**.
+  - **Edição Direta do Nome Completo**: O campo de Nome Completo foi colocado em destaque máximo no topo do formulário de Dados Pessoais. A validação do Zod foi flexibilizada para aceitar números de telefone e documentos com ou sem máscara, eliminando qualquer travamento silencioso.
+  - **Sincronização em Tempo Real de Identidade**: Ao salvar o nome, o endpoint `PATCH /api/profile` atualiza a tabela `users`, sincroniza os metadados em `auth.users` e dispara um evento customizado `user-profile-updated`. O cabeçalho global do sistema (`components/layout/header.tsx`) e o cabeçalho do perfil escutam o evento e atualizam o nome e as iniciais imediatamente na tela sem necessidade de recarregar a página ou deslogar.
+  - **Correção da Tabela `public.doctor_patient_rates` no Supabase**: Diagnosticado o erro `Could not find the table 'public.doctor_patient_rates' in the schema cache` ao salvar valores por paciente. A migration `20260902000003_doctor_patient_rates.sql` falhava na criação devido ao uso do valor `'COORDINATOR'` em enum de `user_role` (que suporta apenas `SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, sendo `is_coordinator` uma coluna booleana). A migration foi corrigida com suporte a `is_coordinator` e `SUPER_ADMIN` e executada no Supabase de produção via MCP. As tabelas `doctor_patient_rates`, `doctor_patient_rate_history` e as colunas em `appointments` foram criadas com sucesso.
+  - **Isolamento Multi-Tenant**: As rotas `/api/doctor-patient-rates` (individual e em lote) foram atualizadas para resolver o `effectiveClinicId` com suporte ao header `x-clinic-id`, assegurando 100% de sigilo e isolamento entre clínicas.
+
+#### Item 25 — Exclusão e Gerenciamento Inteligente de Agendamentos Cancelados na Agenda
+- **Módulo**: Recepção & Agenda → Grade de Agendamentos & Ações Rápidas
+- **Caminho**:
+  - `app/api/appointments/[id]/route.ts` → `DELETE`
+  - `app/api/appointments/batch-delete-cancelled/route.ts` → `POST`
+  - `components/ui/agenda-view.tsx` → `getAppointmentsForSlot`, `getAppointmentsForDay`, `deleteAppointmentMutation`, `batchDeleteCancelledMutation`, `toggleHideCancelled`
+  - `components/dashboard/AppointmentDetailsDrawer.tsx` → `handleDeleteAppointment`, Dialog de confirmação
+- **Descrição Técnica**:
+  - **Exclusão Definitiva de Agendamento da Grade (`DELETE /api/appointments/[id]`)**: Criado endpoint para remoção segura de agendamentos com validação estrita de permissões (`CLINIC_ADMIN`, `SUPER_ADMIN`, `RECEPTIONIST` ou próprio profissional) e isolamento multi-tenant por clínica. As dependências vinculadas (`appointment_qr_codes` e `video_rooms`) são limpas atomicamente antes da remoção do agendamento, liberando definitivamente o horário no banco e na interface.
+  - **Exclusão em Lote de Agendamentos Cancelados (`POST /api/appointments/batch-delete-cancelled`)**: Criado endpoint para purgar múltiplos agendamentos cancelados de uma vez no período ativo, limpando a grade com apenas uma confirmação.
+  - **Alternador Inteligente de Visualização ('Ocultar Cancelados')**: Pensando fora da caixa para não obrigar a usuária a apagar agendamento por agendamento quando ela desejar apenas uma visualização limpa, foi introduzido o botão 'Ocultar Cancelados' / 'Cancelados Ocultos' na barra de ferramentas. O estado é persistido no `localStorage` (`clinigo_agenda_hide_cancelled`), permitindo que a agenda abra sempre limpa e sem elementos riscados poluindo os horários, com a flexibilidade de reexibir o histórico a qualquer momento.
+  - **Ações Rápidas de Exclusão Direta no Card e no Drawer**:
+    - No menu de 3 pontinhos de qualquer card cancelado (semanal ou timeline), disponibilizada a opção 'Excluir da Grade' com ícone `Trash2`.
+    - Botão de exclusão rápida direta no próprio card riscado para agilidade operacional.
+    - No painel lateral de detalhes (`AppointmentDetailsDrawer`), adicionado botão destacado 'Excluir da Grade' com confirmação em modal.
+  - **Sincronização em Tempo Real**: Evento global `appointment-updated` garante atualização instantânea da grade do calendário logo após qualquer exclusão efetuada no painel lateral.
+  - **Isolamento Multi-Tenant e LGPD**: Ambas as rotas de exclusão validam rigorosamente o `clinic_id`, impedindo qualquer interferência entre clínicas.
+
+

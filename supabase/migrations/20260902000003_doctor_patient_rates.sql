@@ -72,6 +72,8 @@ CREATE POLICY "doctor_patient_rates_select_policy" ON doctor_patient_rates
   USING (
     clinic_id IN (
       SELECT clinic_id FROM users WHERE id = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'SUPER_ADMIN'
     )
   );
 
@@ -80,7 +82,9 @@ CREATE POLICY "doctor_patient_rates_insert_policy" ON doctor_patient_rates
   FOR INSERT
   WITH CHECK (
     clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid() AND role IN ('CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR')
+      SELECT clinic_id FROM users WHERE id = auth.uid() AND (role IN ('CLINIC_ADMIN', 'SUPER_ADMIN') OR is_coordinator = true)
+    ) OR EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'SUPER_ADMIN'
     )
   );
 
@@ -89,7 +93,9 @@ CREATE POLICY "doctor_patient_rates_update_policy" ON doctor_patient_rates
   FOR UPDATE
   USING (
     clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid() AND role IN ('CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR')
+      SELECT clinic_id FROM users WHERE id = auth.uid() AND (role IN ('CLINIC_ADMIN', 'SUPER_ADMIN') OR is_coordinator = true)
+    ) OR EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'SUPER_ADMIN'
     )
   );
 
@@ -98,7 +104,9 @@ CREATE POLICY "doctor_patient_rates_delete_policy" ON doctor_patient_rates
   FOR DELETE
   USING (
     clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid() AND role IN ('CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR')
+      SELECT clinic_id FROM users WHERE id = auth.uid() AND (role IN ('CLINIC_ADMIN', 'SUPER_ADMIN') OR is_coordinator = true)
+    ) OR EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'SUPER_ADMIN'
     )
   );
 
@@ -109,6 +117,8 @@ CREATE POLICY "doctor_patient_rate_history_select_policy" ON doctor_patient_rate
   USING (
     clinic_id IN (
       SELECT clinic_id FROM users WHERE id = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'SUPER_ADMIN'
     )
   );
 
@@ -117,6 +127,8 @@ CREATE POLICY "doctor_patient_rate_history_insert_policy" ON doctor_patient_rate
   FOR INSERT
   WITH CHECK (
     clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid() AND role IN ('CLINIC_ADMIN', 'SUPER_ADMIN', 'COORDINATOR')
+      SELECT clinic_id FROM users WHERE id = auth.uid() AND (role IN ('CLINIC_ADMIN', 'SUPER_ADMIN') OR is_coordinator = true)
+    ) OR EXISTS (
+      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'SUPER_ADMIN'
     )
   );
