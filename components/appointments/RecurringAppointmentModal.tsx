@@ -39,7 +39,7 @@ import {
 import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearchCombobox'
 import { QuickPatientForm } from './QuickPatientForm'
 import { api } from '@/lib/api-client'
-import { formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 interface Doctor {
