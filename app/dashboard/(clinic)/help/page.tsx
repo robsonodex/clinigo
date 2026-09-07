@@ -138,14 +138,25 @@ const helpItems: HelpItem[] = [
     },
     {
         id: 'horarios',
-        title: 'Horários',
+        title: 'Horários e Turnos Flexíveis',
         category: 'Agendamento',
         icon: Clock,
-        whatIsIt: 'Configuração avançada das grades de horários e turnos disponíveis de cada profissional de saúde. Define dias da semana, janelas de atendimento, pausas para almoço e bloqueios (recessos/férias).',
-        whenToUse: 'Sempre que um profissional alterar seu expediente regular de trabalho ou precisar criar uma nova escala de disponibilidade.',
+        whatIsIt: 'Configuração avançada das grades de horários e turnos de cada profissional. Permite cadastrar até 10 turnos por dia, utilizar durações flexíveis (15m a 240m para terapias breves, psicologia 50m, integração sensorial 90m ou turnos intensivos ABA de 2h a 4h), visualizar a prévia de slots gerados em tempo real e replicar turnos com 1 clique usando o botão Copiar dia.',
+        whenToUse: 'Ao configurar ou ajustar a escala regular de trabalho do médico ou terapeuta, definindo intervalos e tempos de consulta customizados por turno.',
         minPlan: 'Básico',
-        roles: ['CLINIC_ADMIN'],
-        tags: ['escala', 'turnos', 'grade', 'bloqueio']
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        tags: ['escala', 'turnos', 'grade', 'bloqueio', 'duração', 'copiar dia', 'aba']
+    },
+    {
+        id: 'co-terapeuta',
+        title: 'Co-Terapeuta e Atendimento Duplo',
+        category: 'Agendamento',
+        icon: Users,
+        whatIsIt: 'Funcionalidade clínica para atendimentos multidisciplinares simultâneos (ex: Fonoaudiologia + Terapia Ocupacional, ou Supervisor ABA + Aplicador). Permite vincular um segundo profissional titular a uma sessão ou série recorrente sem gerar colisão ou falso bloqueio na agenda. O agendamento surge automaticamente na grade de ambos os profissionais e permite que cada um emita sua respectiva evolução de sessão no prontuário eletrônico.',
+        whenToUse: 'Sempre que dois profissionais atenderem o mesmo paciente no mesmo horário na sala de terapia.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+        tags: ['co-atendimento', 'dupla', 'multidisciplinar', 'co-terapeuta', 'terapia integrada']
     },
     // Equipe
     {
