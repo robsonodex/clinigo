@@ -689,3 +689,26 @@
   - **Suíte de Testes Automatizados**: Executado `scripts/test_audit_v5_2.js` com 24/24 testes aprovados cobrindo intenções de WhatsApp, queries com enum, colunas biométricas, assinaturas digitais e conformidade visual.
   - **Validação de Build de Produção**: `next build` executado com sucesso total (Exit Code 0), compilando 443 rotas estáticas e dinâmicas do CliniGo sem erros impeditivos.
 
+#### Item 19 — Protocolo Mandatório de Deploy em Produção (Vercel CLI + Escopo Oficial)
+- **Módulo**: Deploy / DevOps / Governança
+- **Caminho**:
+  - `DOCUMENTACAO_TECNICA_V3.md`
+  - `.agents/rules/universal-rules.md`
+  - `.agent/rules/GEMINI.md`
+- **Descrição Técnica**:
+  - **Diagnóstico**: O dashboard da Vercel para o projeto `clinigo-saas` opera sob o time/organização `nodexs-projects-8a6ee1f1` (`team_ckCFlZZ8U1yS4ShoHsAgURqO`). Execuções locais simples de `vercel --prod` podem falhar por falta do comando global no PATH ou por erro de permissão ("Not authorized") ao tentar o escopo pessoal em vez do escopo do time.
+  - **Comando Oficial e Mandatório de Deploy**:
+    ```bash
+    git push origin master
+    npx vercel --prod --yes --scope nodexs-projects-8a6ee1f1
+    ```
+  - **Garantia de Visibilidade**: Esse comando aciona diretamente a pipeline de build em nuvem da Vercel, gera a URL de inspeção em tempo real e promove a versão para o domínio oficial de produção (`https://clinigo.app`).
+
+#### Item 20 — Correção Cirúrgica do ReferenceError (Camera) e Resolução de Clinic-Info (400)
+- **Módulo**: Recepção & Faturamento / Billing
+- **Caminho**:
+  - `app/dashboard/(clinic)/recepcao/page.tsx`
+  - `app/api/billing/clinic-info/route.ts`
+- **Descrição Técnica**:
+  - **Causa Raiz do Erro de Tela ("Camera is not defined")**: Na página da recepção (`app/dashboard/(clinic)/recepcao/page.tsx`), o componente `<Camera className="w-3.5 h-3.5 text-emerald-600" />` foi adicionado ao dropdown de ações rápidas para acesso ao "Check-in Facial", porém o símbolo `Camera` não havia sido importado da biblioteca `lucide-react`. Isso causava uma exceção JavaScript em tempo de renderização (`ReferenceError: Camera is not defined`), acionando o Error Boundary do Dashboard. O símbolo foi devidamente adicionado ao bloco de imports do `lucide-react`.
+  - **Causa Raiz do Erro 400 em /api/billing/clinic-info**: A rota assumia que todo usuário autenticado possuía obrigatoriamente a coluna `clinic_id` preenchida na tabela `users`. Usuários com perfil `SUPER_ADMIN` ou em sessão de impersonação recebiam resposta 400. A rota foi atualizada utilizando o utilitário `resolveClinicId`, resolvendo adequadamente a clínica a partir do perfil ou do cookie `impersonation_clinic_id`, com fallback estruturado para administradores gerais da plataforma.
