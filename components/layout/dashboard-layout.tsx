@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { SupportChatWrapper } from '@/components/support/support-chat-wrapper'
 import { ChatNotificationPopup } from '@/components/chat/ChatNotificationPopup'
 
@@ -22,6 +22,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Mobile Sidebar - Sheet Drawer */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetContent side="left" className="p-0 w-72">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Menu de Navegação</SheetTitle>
+                        <SheetDescription>Navegação principal dos módulos do CliniGo</SheetDescription>
+                    </SheetHeader>
                     <Sidebar isMobile />
                 </SheetContent>
             </Sheet>

@@ -901,6 +901,23 @@
     - Retenção: 14 dias (duas semanas de histórico completo de execuções para auditoria e conferência).
   - **Manutenção Automatizada**: A purga diária fragmentada mantém as tabelas pequenas, permitindo que o `autovacuum` nativo recicle as páginas em tempo real sem locks ou necessidade de novas intervenções manuais.
 
+#### Item 33 — Correção do Endpoint de Perfil (/api/profile) e Resolução de Relações Ambíguas
+- **Módulo**: Usuário & Perfil → Backend API e Integridade de Acesso
+- **Caminho**:
+  - `app/api/profile/route.ts` → Desambiguação de Foreign Keys no PostgREST, correção de coluna `crm_state`, fallback defensivo e suporte a `cpf`
+  - `lib/validations/profile-schema.ts` → Compatibilidade de `doctorInfoSchema` aceitando `crm_state` e `crm_uf`
+  - `components/layout/dashboard-layout.tsx` → Inclusão de `SheetHeader` com título e descrição acessíveis para conformidade com o Radix UI
+- **Descrição Técnica**:
+  - **Causa Raiz 1 (Ambiguidade de Relacionamento)**: A tabela `users` possui duas relações de chave estrangeira com a tabela `clinics`: `users.clinic_id -> clinics.id` (`users_clinic_id_fkey`) e `clinics.approved_by -> users.id` (`clinics_approved_by_fkey`). Ao solicitar `clinic:clinics(...)` sem especificar a constraint, o PostgREST retornava erro `Could not embed because more than one relationship was found for 'users' and 'clinics'`, resultando em HTTP 500 no carregamento do perfil.
+  - **Causa Raiz 2 (Inconsistência de Coluna Médica)**: A consulta solicitava `crm_uf`, mas o schema oficial do banco de dados na tabela `doctors` utiliza a coluna `crm_state` (char(2)).
+  - **Solução Implementada**:
+    - Especificação explícita das constraints de relacionamento: `clinic:clinics!users_clinic_id_fkey(...)` e `doctor:doctors!doctors_user_id_fkey(...)`.
+    - Correção do campo selecionado para `crm_state` com mapeamento automático de retrocompatibilidade para `crm_uf`.
+    - Implementação de fallback defensivo em caso de qualquer falha de join, garantindo que o usuário consiga carregar seus dados básicos essenciais sem sofrer bloqueio ou erro 500.
+    - Suporte ao campo `cpf` no handler `PATCH` da rota `/api/profile`.
+    - Resolução dos alertas de acessibilidade (`DialogContent requires a DialogTitle`) com a inserção de `SheetHeader`, `SheetTitle` e `SheetDescription` (utilizando a classe `sr-only`) na gaveta lateral mobile.
+
+
 
 
 

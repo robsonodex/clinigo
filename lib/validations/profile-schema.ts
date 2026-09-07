@@ -32,6 +32,7 @@ export const addressSchema = z.object({
 
 export const doctorInfoSchema = z.object({
     crm: z.string().optional().or(z.literal('')),
+    crm_state: z.string().length(2).optional().or(z.literal('')),
     crm_uf: z.string().length(2).optional().or(z.literal('')),
     specialty: z.string().optional().or(z.literal('')),
     consultation_price: z.number().min(0).optional(),
