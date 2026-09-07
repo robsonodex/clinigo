@@ -60,11 +60,11 @@ export async function GET(request: NextRequest) {
             .select(`
         *,
         doctor:doctors!appointments_doctor_id_fkey(
-          id, crm, specialty, consultation_price,
+          id, crm, specialty, consultation_price, consultation_duration,
           user:users(full_name, email, avatar_url)
         ),
         co_doctor:doctors!appointments_co_doctor_id_fkey(
-          id, crm, specialty, consultation_price,
+          id, crm, specialty, consultation_price, consultation_duration,
           user:users(full_name, email, avatar_url)
         ),
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),

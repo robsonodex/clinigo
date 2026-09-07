@@ -185,6 +185,66 @@ function getTimelineColor(doctorId: string): string {
     return TIMELINE_COLORS[idx % TIMELINE_COLORS.length]
 }
 
+// Helper to resolve exact appointment duration from appointment record, schedule shifts or doctor settings
+function getAppointmentDuration(appointment: any, schedulesData?: any[]): number {
+    if (!appointment) return 60
+
+    // 1. Explicit duration on appointment
+    if (appointment.duration_minutes && typeof appointment.duration_minutes === 'number' && appointment.duration_minutes > 0) {
+        return appointment.duration_minutes
+    }
+
+    const doctorId = appointment.doctor?.id || appointment.doctor_id
+    const appTime = appointment.appointment_time?.substring(0, 5)
+    const appDateStr = appointment.appointment_date
+
+    // 2. Schedule shift matching professional, day of week, and time window
+    if (schedulesData && Array.isArray(schedulesData) && doctorId && appDateStr && appTime) {
+        try {
+            const [y, m, d] = appDateStr.split('-').map(Number)
+            const dateObj = new Date(y, m - 1, d)
+            const dayOfWeek = dateObj.getDay()
+
+            // Find matching active shift that covers appTime
+            const matchingShift = schedulesData.find((s: any) => {
+                if (s.doctor_id !== doctorId || s.day_of_week !== dayOfWeek || !s.is_active) return false
+                const start = s.start_time?.substring(0, 5)
+                const end = s.end_time?.substring(0, 5)
+                if (start && end) {
+                    return appTime >= start && appTime < end
+                }
+                return true
+            })
+
+            if (matchingShift?.slot_duration_minutes && matchingShift.slot_duration_minutes > 0) {
+                return Number(matchingShift.slot_duration_minutes)
+            }
+
+            // Fallback to any active shift for this doctor on this day
+            const anyDayShift = schedulesData.find((s: any) => s.doctor_id === doctorId && s.day_of_week === dayOfWeek && s.is_active && s.slot_duration_minutes)
+            if (anyDayShift?.slot_duration_minutes && anyDayShift.slot_duration_minutes > 0) {
+                return Number(anyDayShift.slot_duration_minutes)
+            }
+
+            // Fallback to any active shift for this doctor
+            const anyDocShift = schedulesData.find((s: any) => s.doctor_id === doctorId && s.is_active && s.slot_duration_minutes)
+            if (anyDocShift?.slot_duration_minutes && anyDocShift.slot_duration_minutes > 0) {
+                return Number(anyDocShift.slot_duration_minutes)
+            }
+        } catch {
+            // Ignore date parsing errors and fallback
+        }
+    }
+
+    // 3. Doctor consultation_duration field
+    if (appointment.doctor?.consultation_duration && typeof appointment.doctor.consultation_duration === 'number' && appointment.doctor.consultation_duration > 0) {
+        return appointment.doctor.consultation_duration
+    }
+
+    // 4. Default 60 minutes
+    return 60
+}
+
 // Calculate end time from start time and duration in minutes
 function calcEndTime(startTime: string, durationMinutes: number = 60): string {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -437,7 +497,7 @@ export default function AgendaPage() {
         },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
-        enabled: showFreeSlots,
+        enabled: true,
     })
 
     // Drag and Drop
@@ -599,7 +659,7 @@ export default function AgendaPage() {
                     a.status !== 'CANCELLED' &&
                     a.status !== 'NO_SHOW' &&
                     a.appointment_time?.substring(0, 5) <= currentTime &&
-                    calcEndTime(a.appointment_time?.substring(0, 5), (a.doctor as any)?.consultation_duration || 60) > currentTime
+                    calcEndTime(a.appointment_time?.substring(0, 5), getAppointmentDuration(a, schedulesData)) > currentTime
             )
             return {
                 id: doctor.id,
@@ -609,7 +669,7 @@ export default function AgendaPage() {
                 isBusy: hasAppointmentNow,
             }
         })
-    }, [doctorsList, appointments])
+    }, [doctorsList, appointments, schedulesData])
 
     // Calculate cell height based on duration (1 slot = 1 hour)
     // For now we just show slot by slot. 
@@ -1379,7 +1439,7 @@ export default function AgendaPage() {
                                                         const isOnline = (appointment as any).appointment_type === 'online'
                                                         const isCancelled = appointment.status === 'CANCELLED'
                                                         const isCompleted = appointment.status === 'COMPLETED'
-                                                        const duration = (appointment.doctor as any).consultation_duration || 60
+                                                        const duration = getAppointmentDuration(appointment, schedulesData)
                                                         const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
 
                                                         return (
@@ -1709,14 +1769,13 @@ export default function AgendaPage() {
                                                             </div>
                                                         )
                                                     })()}
-
-                                                    {slotAppointments.length > 0 && (
+{slotAppointments.length > 0 && (
                                                         <div className="flex items-start gap-0.5 p-0.5 flex-wrap">
                                                             {slotAppointments.map((appointment) => {
                                                                 const timelineColor = getTimelineColor(appointment.doctor.id)
                                                                 const isCancelled = appointment.status === 'CANCELLED'
                                                                 const isCompleted = appointment.status === 'COMPLETED'
-                                                                const duration = (appointment.doctor as any).consultation_duration || 60
+                                                                const duration = getAppointmentDuration(appointment, schedulesData)
                                                                 const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
                                                                 const doctorName = appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'
                                                                 const coDoctorName = (appointment as any).co_doctor?.user?.full_name?.split(' ')[0]

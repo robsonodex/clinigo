@@ -976,7 +976,30 @@
       - Listagem de séries recorrentes com badge de co-terapeuta ativo.
     - **Agendamento Manual Pontual**: Modal manual adaptado com seletor opcional de 2º profissional e gravação direta.
     - **Drawer de Detalhes**: Bloco corporativo em destaque com nome completo, especialidade e número de registro do Co-Terapeuta.
-    - **Evolução Clínica / PEP**: Cada profissional pode emitir sua respectiva evolução de sessão no prontuário sem restrição, com seu próprio carimbo e número de conselho de classe.
+#### Item 36 — Sincronização Dinâmica de Duração dos Atendimentos na Grade Visual da Agenda
+- **Módulo**: Recepção & Agenda → Visualização da Grade & Configuração de Horários dos Profissionais
+- **Caminho Completo**:
+  - API de Agendamentos (Geral) → `app/api/appointments/route.ts` → `GET`
+  - API de Agendamentos (Detalhe V2) → `app/api-v2/appointments/[id]/route.ts` → `GET`
+  - API de Profissionais (Horários) → `app/api/doctors/detail/route.ts` & `app/api/doctors/[...slug]/route.ts` → `handlePostSchedules`
+  - Grade Visual da Agenda → `components/ui/agenda-view.tsx` → `getAppointmentDuration()` & `calcEndTime()`
+  - Modal de Agendamento Manual → `components/appointments/ManualAppointmentModal.tsx`
+- **Descrição Técnica**:
+  - **1. Causa-Raiz Identificada**:
+    - As consultas `SELECT` dos endpoints `/api/appointments` e `/api-v2/appointments/[id]` não incluíam o campo `consultation_duration` no join com a tabela `doctors` para `doctor` e `co_doctor`.
+    - Na grade da Agenda (`agenda-view.tsx`), o cálculo do horário de término utilizava `(appointment.doctor as any).consultation_duration || 60`. Por estar `undefined` no retorno da API, sofria fallback para `60` minutos, forçando agendamentos de 45 ou 50 minutos a ocuparem 1 hora visual (ex: 07:40 - 08:40 em vez de 07:40 - 08:25), gerando sobreposição visual artificial.
+    - Além disso, a query `schedules-for-agenda` estava condicionada a `enabled: showFreeSlots`, não carregando a disponibilidade dos turnos na visualização normal da agenda.
+  - **2. Resolução Implementada**:
+    - **Inclusão nas APIs**: Adicionado o campo `consultation_duration` na projeção das relações `doctor` e `co_doctor` em `app/api/appointments/route.ts` e `app/api-v2/appointments/[id]/route.ts`.
+    - **Sincronização Bidirecional ao Salvar Turnos**: Ao atualizar horários em `/dashboard/horarios` (`action=schedules`), os endpoints gravam no banco os registros de `schedules` e sincronizam automaticamente `doctors.consultation_duration` com o primeiro turno configurado (`slot_duration_minutes`).
+    - **Query de Turnos Ativa na Agenda**: `schedules-for-agenda` agora permanece `enabled: true`, disponibilizando a matriz de turnos e durações de cada profissional para o cálculo dinâmico da grade.
+    - **Função `getAppointmentDuration(appointment, schedulesData)`**:
+      - Prioridade 1: Duração explícita gravada no agendamento (`appointment.duration_minutes`).
+      - Prioridade 2: Minutagem exata configurada no turno do dia da semana e janela de horário (`matchingShift.slot_duration_minutes`).
+      - Prioridade 3: Duração padrão cadastrada no profissional (`doctor.consultation_duration`).
+      - Prioridade 4: Fallback seguro (60 minutos).
+    - **Ajuste na Linha do Tempo e Grade Padrão**: As chamadas a `calcEndTime` na grade semanal/diária, na linha do tempo e no cálculo de status de ocupação do profissional passam a utilizar `getAppointmentDuration`, refletindo perfeitamente a duração configurada (ex: 07:40 - 08:25 para 45 minutos).
+    - **Modal de Agendamento Manual**: Vinculado o campo `duration_minutes` do formulário à duração padrão do profissional selecionado (`selectedDoctor.consultation_duration`).
 
 
 

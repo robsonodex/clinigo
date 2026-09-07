@@ -204,6 +204,14 @@ async function handlePostSchedules(request: NextRequest, doctorId: string) {
             .insert(schedulesToInsert as any)
 
         if (insertError) throw insertError
+
+        const primaryDuration = validatedData.schedules[0]?.slot_duration_minutes
+        if (primaryDuration && primaryDuration > 0) {
+            await supabase
+                .from('doctors')
+                .update({ consultation_duration: primaryDuration })
+                .eq('id', doctorId)
+        }
     }
 
     const { data: schedules } = await supabase

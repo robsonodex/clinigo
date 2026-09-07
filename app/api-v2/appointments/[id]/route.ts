@@ -54,12 +54,14 @@ export async function GET(
                     id,
                     specialty,
                     crm,
+                    consultation_duration,
                     user:users(full_name)
                 ),
                 co_doctor:doctors!appointments_co_doctor_id_fkey(
                     id,
                     specialty,
                     crm,
+                    consultation_duration,
                     user:users(full_name)
                 ),
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug)

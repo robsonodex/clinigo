@@ -245,6 +245,9 @@ export function ManualAppointmentModal({
                 }
             }
             setValue('specialty', defaultSpec)
+            if (selectedDoctor.consultation_duration) {
+                setValue('duration_minutes', selectedDoctor.consultation_duration)
+            }
         } else {
             setValue('specialty', '')
         }
