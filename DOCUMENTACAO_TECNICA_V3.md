@@ -1001,6 +1001,28 @@
     - **Ajuste na Linha do Tempo e Grade Padrão**: As chamadas a `calcEndTime` na grade semanal/diária, na linha do tempo e no cálculo de status de ocupação do profissional passam a utilizar `getAppointmentDuration`, refletindo perfeitamente a duração configurada (ex: 07:40 - 08:25 para 45 minutos).
     - **Modal de Agendamento Manual**: Vinculado o campo `duration_minutes` do formulário à duração padrão do profissional selecionado (`selectedDoctor.consultation_duration`).
 
+#### Item 37 — Suporte a Recorrência Quinzenal (15 em 15 dias / a cada 2 semanas) e Mensal em Agendamentos Recorrentes
+- **Módulo**: Recepção & Agenda → Séries Recorrentes, Motor de Geração de Sessões e Modais de Agendamento
+- **Caminho Completo**:
+  - Banco de Dados / Migrations → `supabase/migrations/20260907_add_recurrence_interval_to_series.sql`
+  - Backend / API de Séries Recorrentes → `app/api/appointments/recurring/route.ts` & `app/api/appointments/recurring/[id]/route.ts`
+  - Modal de Criação de Série → `components/appointments/RecurringAppointmentModal.tsx`
+  - Modal de Edição de Série → `components/appointments/EditSeriesModal.tsx`
+  - Modal de Listagem de Séries → `components/appointments/RecurringSeriesListModal.tsx`
+- **Descrição Técnica**:
+  - **1. Arquitetura de Intervalo Quinzenal Clínico (A Cada 2 Semanas)**:
+    - Agendamento quinzenal no contexto clínico ambulatorial não pode ser um simples incremento de `+15 dias` corridos, pois a cada 15 dias o dia da semana se altera (ex: uma terça-feira se tornaria quarta-feira).
+    - O modelo clínico correto opera por semanas de calendário: sessões no mesmo dia da semana a cada 2 semanas (semana 1, semana 3, semana 5...), liberando as semanas alternadas (semana 2, semana 4...) para outro paciente ocupar exatamente o mesmo horário na grade sem conflitos.
+    - O banco de dados recebeu as colunas `recurrence_interval INTEGER DEFAULT 1` e `frequency TEXT DEFAULT 'weekly'` na tabela `recurring_appointment_series`.
+  - **2. Motor de Geração e Aritmética de Datas (`generateDatesForSeries`)**:
+    - Calculada a distância em semanas de calendário entre o início da série e a semana da data corrente: `diffWeeks = Math.floor(diffDays / 7)`.
+    - A sessão só é agendada se `diffWeeks % recurrenceInterval === 0`, respeitando com precisão matemática intervalos de 1 semana (Semanal), 2 semanas (Quinzenal / 15 em 15 dias) ou 4 semanas (Mensal).
+  - **3. Frontend & Experiência do Usuário**:
+    - **Modal de Criação (`RecurringAppointmentModal.tsx`)**: Seletor rápido de periodicidade ("Semanal", "Quinzenal - de 15 em 15 dias", "Mensal - a cada 4 semanas"). A calculadora dinâmica de sessões (`calculateSessions`) recalcula instantaneamente a quantidade exata de atendimentos gerados com base na periodicidade selecionada.
+    - **Modal de Edição (`EditSeriesModal.tsx`)**: Permite alterar a periodicidade de uma série existente entre Semanal, Quinzenal e Mensal. Ao alterar a periodicidade, o sistema detecta `hasScheduleChanged`, remove os agendamentos futuros pendentes e os regenera com o novo espaçamento de semanas sem afetar o histórico já realizado.
+    - **Listagem de Séries (`RecurringSeriesListModal.tsx`)**: Identificação clara de séries quinzenais com badge destacado `Quinzenal (15 em 15 dias)` e resumo de horários especificando a frequência do tratamento.
+
+
 
 
 

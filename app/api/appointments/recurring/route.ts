@@ -20,28 +20,49 @@ interface RecurringSeriesRequest {
     appointment_type?: string    // "presencial" | "online"
     health_insurance_plan_id?: string
     notes?: string
+    recurrence_interval?: number // 1 = Semanal, 2 = Quinzenal (15 em 15 dias), 4 = Mensal
+    frequency?: string           // "weekly" | "biweekly" | "monthly"
 }
 
 /**
- * Generate all dates matching days_of_week between start and end
+ * Generate all dates matching days_of_week between start and end,
+ * respecting recurrence interval (1 = weekly / toda semana, 2 = biweekly / de 15 em 15 dias, 4 = monthly).
  */
 function generateDatesForSeries(
     daysOfWeek: number[],
     startDate: string,
-    endDate: string
+    endDate: string,
+    recurrenceInterval: number = 1
 ): string[] {
     const dates: string[] = []
     const start = new Date(startDate + 'T00:00:00')
     const end = new Date(endDate + 'T00:00:00')
 
+    const interval = Math.max(1, recurrenceInterval || 1)
+
+    // Base week start (Sunday of the start date week)
+    const baseWeekStart = new Date(start)
+    baseWeekStart.setDate(start.getDate() - start.getDay())
+    baseWeekStart.setHours(0, 0, 0, 0)
+
     const current = new Date(start)
     while (current <= end) {
         const dayOfWeek = current.getDay() // 0=Sunday, 1=Monday, etc.
         if (daysOfWeek.includes(dayOfWeek)) {
-            const yyyy = current.getFullYear()
-            const mm = String(current.getMonth() + 1).padStart(2, '0')
-            const dd = String(current.getDate()).padStart(2, '0')
-            dates.push(`${yyyy}-${mm}-${dd}`)
+            // Calculate calendar week index relative to baseWeekStart
+            const currentWeekStart = new Date(current)
+            currentWeekStart.setDate(current.getDate() - current.getDay())
+            currentWeekStart.setHours(0, 0, 0, 0)
+
+            const diffDays = Math.round((currentWeekStart.getTime() - baseWeekStart.getTime()) / (1000 * 60 * 60 * 24))
+            const diffWeeks = Math.floor(diffDays / 7)
+
+            if (diffWeeks % interval === 0) {
+                const yyyy = current.getFullYear()
+                const mm = String(current.getMonth() + 1).padStart(2, '0')
+                const dd = String(current.getDate()).padStart(2, '0')
+                dates.push(`${yyyy}-${mm}-${dd}`)
+            }
         }
         current.setDate(current.getDate() + 1)
     }
@@ -169,8 +190,11 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        const recurrenceInterval = body.recurrence_interval || (body.frequency === 'biweekly' ? 2 : body.frequency === 'monthly' ? 4 : 1)
+        const frequency = body.frequency || (recurrenceInterval === 2 ? 'biweekly' : recurrenceInterval === 4 ? 'monthly' : 'weekly')
+
         // Generate all dates for the series
-        const allDates = generateDatesForSeries(body.days_of_week, body.start_date, body.end_date)
+        const allDates = generateDatesForSeries(body.days_of_week, body.start_date, body.end_date, recurrenceInterval)
 
         if (allDates.length === 0) {
             return NextResponse.json(
@@ -238,6 +262,8 @@ export async function POST(request: NextRequest) {
                 appointment_type: body.appointment_type || 'presencial',
                 health_insurance_plan_id: body.health_insurance_plan_id || null,
                 notes: body.notes || null,
+                recurrence_interval: recurrenceInterval,
+                frequency: frequency,
                 is_active: true,
                 created_by: user.id,
             })

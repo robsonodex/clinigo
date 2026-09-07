@@ -76,6 +76,8 @@ interface RecurringSeries {
     appointment_type?: string | null
     notes?: string | null
     is_active: boolean
+    recurrence_interval?: number | null
+    frequency?: string | null
     created_at: string
     patient?: {
         id: string
@@ -357,7 +359,7 @@ export function RecurringSeriesListModal({
                                         : 'Nenhuma série recorrente cadastrada'}
                                 </h3>
                                 <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-4">
-                                    Séries recorrentes criam automaticamente agendamentos semanais para tratamentos continuados na clínica.
+                                    Séries recorrentes criam automaticamente agendamentos semanais ou quinzenais para tratamentos continuados na clínica.
                                 </p>
                                 <Button
                                     onClick={onNewSeries}
@@ -372,6 +374,8 @@ export function RecurringSeriesListModal({
                                 const doctorName = item.doctor?.user?.full_name || 'Profissional'
                                 const patientName = item.patient?.full_name || 'Paciente'
                                 const timeStr = item.appointment_time?.substring(0, 5) || 'Horário'
+                                const isBiweekly = item.recurrence_interval === 2 || item.frequency === 'biweekly'
+                                const isMonthly = item.recurrence_interval === 4 || item.frequency === 'monthly'
 
                                 return (
                                     <div
@@ -406,6 +410,19 @@ export function RecurringSeriesListModal({
                                                     >
                                                         {item.is_active ? 'Ativa' : 'Pausada'}
                                                     </Badge>
+                                                    {isBiweekly ? (
+                                                        <Badge variant="outline" className="text-[10px] font-semibold bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
+                                                            Quinzenal (15 em 15 dias)
+                                                        </Badge>
+                                                    ) : isMonthly ? (
+                                                        <Badge variant="outline" className="text-[10px] font-semibold bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
+                                                            Mensal (a cada 4 sem.)
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+                                                            Semanal
+                                                        </Badge>
+                                                    )}
                                                     {item.payment_type && (
                                                         <Badge variant="outline" className="text-[10px] uppercase font-medium">
                                                             {item.payment_type}
@@ -440,6 +457,11 @@ export function RecurringSeriesListModal({
                                                 <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
                                                     <Clock className="h-3.5 w-3.5 text-emerald-600" />
                                                     <span>{formatDays(item.days_of_week)} às {timeStr}</span>
+                                                    {isBiweekly && (
+                                                        <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1 py-0.2 rounded border border-blue-200/60">
+                                                            Quinzenal
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="text-[11px] text-muted-foreground flex items-center gap-1">
                                                     <CalendarDays className="h-3 w-3" />

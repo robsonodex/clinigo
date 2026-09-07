@@ -70,6 +70,7 @@ export function EditSeriesModal({
     const queryClient = useQueryClient()
 
     // Form state
+    const [frequency, setFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly')
     const [selectedDays, setSelectedDays] = useState<number[]>([])
     const [appointmentTime, setAppointmentTime] = useState('')
     const [therapyType, setTherapyType] = useState('')
@@ -101,6 +102,9 @@ export function EditSeriesModal({
     // Populate form when series loads
     useEffect(() => {
         if (series) {
+            const seriesFreq = series.frequency ||
+                (series.recurrence_interval === 2 ? 'biweekly' : series.recurrence_interval === 4 ? 'monthly' : 'weekly')
+            setFrequency(seriesFreq)
             setSelectedDays(series.days_of_week || [])
             setAppointmentTime(series.appointment_time?.substring(0, 5) || '')
             setTherapyType(series.therapy_type || '')
@@ -117,8 +121,15 @@ export function EditSeriesModal({
         )
     }
 
-    // Detect if schedule changed
+    // Detect if schedule or frequency changed
+    const originalFreq = series ? (
+        series.frequency ||
+        (series.recurrence_interval === 2 ? 'biweekly' : series.recurrence_interval === 4 ? 'monthly' : 'weekly')
+    ) : 'weekly'
+    const hasFrequencyChanged = series && frequency !== originalFreq
+
     const hasScheduleChanged = series && (
+        hasFrequencyChanged ||
         JSON.stringify([...selectedDays].sort()) !== JSON.stringify([...(series.days_of_week || [])].sort()) ||
         appointmentTime !== (series.appointment_time?.substring(0, 5) || '')
     )
@@ -128,6 +139,7 @@ export function EditSeriesModal({
 
     const hasAnyChange = series && (
         hasScheduleChanged ||
+        hasFrequencyChanged ||
         therapyType !== (series.therapy_type || '') ||
         notes !== (series.notes || '') ||
         hasCoDoctorChanged
@@ -138,9 +150,16 @@ export function EditSeriesModal({
         mutationFn: async () => {
             const payload: Record<string, unknown> = {}
 
+            const recurrenceInterval = frequency === 'biweekly' ? 2 : frequency === 'monthly' ? 4 : 1
+
             if (hasScheduleChanged) {
                 payload.days_of_week = selectedDays
                 payload.appointment_time = appointmentTime
+                payload.recurrence_interval = recurrenceInterval
+                payload.frequency = frequency
+            } else if (hasFrequencyChanged) {
+                payload.recurrence_interval = recurrenceInterval
+                payload.frequency = frequency
             }
             if (therapyType !== (series?.therapy_type || '')) {
                 payload.therapy_type = therapyType
@@ -278,6 +297,63 @@ export function EditSeriesModal({
 
                         <Separator />
 
+                        {/* Recurrence Frequency */}
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                                <Repeat className="h-4 w-4" />
+                                Frequência da Recorrência
+                            </Label>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setFrequency('weekly')}
+                                    className={`
+                                        p-2.5 rounded-lg border text-left transition-all
+                                        ${frequency === 'weekly'
+                                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                            : 'border-border hover:border-muted-foreground/30'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium text-xs">Semanal</div>
+                                    <div className="text-[10px] text-muted-foreground">Toda semana</div>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFrequency('biweekly')}
+                                    className={`
+                                        p-2.5 rounded-lg border text-left transition-all relative
+                                        ${frequency === 'biweekly'
+                                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                            : 'border-border hover:border-muted-foreground/30'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium text-xs">Quinzenal</div>
+                                    <div className="text-[10px] text-muted-foreground">15 em 15 dias</div>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFrequency('monthly')}
+                                    className={`
+                                        p-2.5 rounded-lg border text-left transition-all
+                                        ${frequency === 'monthly'
+                                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                            : 'border-border hover:border-muted-foreground/30'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium text-xs">Mensal</div>
+                                    <div className="text-[10px] text-muted-foreground">A cada 4 sem.</div>
+                                </button>
+                            </div>
+                            {frequency === 'biweekly' && (
+                                <p className="text-xs text-muted-foreground bg-muted/40 p-2 rounded">
+                                    A cada 2 semanas (quinzenal), alternando as semanas livres para outros pacientes.
+                                </p>
+                            )}
+                        </div>
+
                         {/* Days of Week */}
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2">
@@ -372,10 +448,10 @@ export function EditSeriesModal({
                                 <div className="flex items-start gap-2">
                                     <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="font-semibold text-amber-800">Atenção: mudança de horário</p>
+                                        <p className="font-semibold text-amber-800">Atenção: alteração de frequência ou horário</p>
                                         <p className="text-sm text-amber-700 mt-1">
                                             Todos os <strong>{series.future_appointments_count || 'futuros'}</strong> agendamentos
-                                            serão <strong>removidos e recriados</strong> nos novos dias/horários.
+                                            serão <strong>removidos e recriados</strong> com a nova periodicidade e horários selecionados.
                                             Agendamentos já realizados não serão afetados.
                                         </p>
                                     </div>

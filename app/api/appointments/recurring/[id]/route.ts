@@ -13,20 +13,37 @@ import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 function generateDatesForSeries(
     daysOfWeek: number[],
     startDate: string,
-    endDate: string
+    endDate: string,
+    recurrenceInterval: number = 1
 ): string[] {
     const dates: string[] = []
     const start = new Date(startDate + 'T00:00:00')
     const end = new Date(endDate + 'T00:00:00')
 
+    const interval = Math.max(1, recurrenceInterval || 1)
+
+    // Base week start (Sunday of the start date week)
+    const baseWeekStart = new Date(start)
+    baseWeekStart.setDate(start.getDate() - start.getDay())
+    baseWeekStart.setHours(0, 0, 0, 0)
+
     const current = new Date(start)
     while (current <= end) {
         const dayOfWeek = current.getDay()
         if (daysOfWeek.includes(dayOfWeek)) {
-            const yyyy = current.getFullYear()
-            const mm = String(current.getMonth() + 1).padStart(2, '0')
-            const dd = String(current.getDate()).padStart(2, '0')
-            dates.push(`${yyyy}-${mm}-${dd}`)
+            const currentWeekStart = new Date(current)
+            currentWeekStart.setDate(current.getDate() - current.getDay())
+            currentWeekStart.setHours(0, 0, 0, 0)
+
+            const diffDays = Math.round((currentWeekStart.getTime() - baseWeekStart.getTime()) / (1000 * 60 * 60 * 24))
+            const diffWeeks = Math.floor(diffDays / 7)
+
+            if (diffWeeks % interval === 0) {
+                const yyyy = current.getFullYear()
+                const mm = String(current.getMonth() + 1).padStart(2, '0')
+                const dd = String(current.getDate()).padStart(2, '0')
+                dates.push(`${yyyy}-${mm}-${dd}`)
+            }
         }
         current.setDate(current.getDate() + 1)
     }
@@ -149,10 +166,15 @@ export async function PATCH(
 
         const body = await request.json()
 
-        // Detect if schedule is changing (day/time)
+        const newInterval = body.recurrence_interval || (body.frequency === 'biweekly' ? 2 : body.frequency === 'monthly' ? 4 : (series.recurrence_interval || 1))
+        const newFrequency = body.frequency || (newInterval === 2 ? 'biweekly' : newInterval === 4 ? 'monthly' : (series.frequency || 'weekly'))
+
+        // Detect if schedule is changing (day/time/frequency/interval)
         const isScheduleChange =
             (body.days_of_week && JSON.stringify(body.days_of_week) !== JSON.stringify(series.days_of_week)) ||
-            (body.appointment_time && body.appointment_time !== series.appointment_time)
+            (body.appointment_time && body.appointment_time !== series.appointment_time) ||
+            (body.recurrence_interval !== undefined && body.recurrence_interval !== series.recurrence_interval) ||
+            (body.frequency !== undefined && body.frequency !== series.frequency)
 
         if (isScheduleChange) {
             // === SCHEDULE CHANGE: Recalculate and regenerate future appointments ===
@@ -170,8 +192,8 @@ export async function PATCH(
                 )
             }
 
-            // Generate new dates from today to end_date
-            const newDates = generateDatesForSeries(newDays, today, series.end_date)
+            // Generate new dates from today to end_date respecting recurrence interval
+            const newDates = generateDatesForSeries(newDays, today, series.end_date, newInterval)
 
             if (newDates.length === 0) {
                 return NextResponse.json(
@@ -264,6 +286,8 @@ export async function PATCH(
             const seriesUpdate: Record<string, unknown> = {
                 days_of_week: newDays,
                 appointment_time: newTime,
+                recurrence_interval: newInterval,
+                frequency: newFrequency,
                 updated_at: new Date().toISOString(),
             }
             if (body.therapy_type !== undefined) seriesUpdate.therapy_type = body.therapy_type
@@ -302,6 +326,12 @@ export async function PATCH(
         }
         if (body.notes !== undefined) {
             updateData.notes = body.notes
+        }
+        if (body.recurrence_interval !== undefined) {
+            updateData.recurrence_interval = body.recurrence_interval
+        }
+        if (body.frequency !== undefined) {
+            updateData.frequency = body.frequency
         }
         if (body.co_doctor_id !== undefined) {
             if (body.co_doctor_id && body.co_doctor_id === series.doctor_id) {

@@ -90,6 +90,7 @@ export function RecurringAppointmentModal({
     const [doctorId, setDoctorId] = useState(defaultDoctorId || '')
     const [coDoctorId, setCoDoctorId] = useState('')
     const [selectedDays, setSelectedDays] = useState<number[]>([])
+    const [frequency, setFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly')
 
     useEffect(() => {
         if (open && defaultDoctorId) {
@@ -117,15 +118,32 @@ export function RecurringAppointmentModal({
     const selectedDoctor = doctors?.find(d => d.id === doctorId)
     const selectedCoDoctor = doctors?.find(d => d.id === coDoctorId)
 
-    // Calculate total sessions
+    // Calculate total sessions respecting frequency interval (1=Semanal, 2=Quinzenal/15 em 15 dias, 4=Mensal)
     const calculateSessions = () => {
         if (!startDate || !endDate || selectedDays.length === 0) return 0
+        const interval = frequency === 'biweekly' ? 2 : frequency === 'monthly' ? 4 : 1
         let count = 0
         const start = new Date(startDate + 'T00:00:00')
         const end = new Date(endDate + 'T00:00:00')
+
+        const baseWeekStart = new Date(start)
+        baseWeekStart.setDate(start.getDate() - start.getDay())
+        baseWeekStart.setHours(0, 0, 0, 0)
+
         const current = new Date(start)
         while (current <= end) {
-            if (selectedDays.includes(current.getDay())) count++
+            if (selectedDays.includes(current.getDay())) {
+                const currentWeekStart = new Date(current)
+                currentWeekStart.setDate(current.getDate() - current.getDay())
+                currentWeekStart.setHours(0, 0, 0, 0)
+
+                const diffDays = Math.round((currentWeekStart.getTime() - baseWeekStart.getTime()) / (1000 * 60 * 60 * 24))
+                const diffWeeks = Math.floor(diffDays / 7)
+
+                if (diffWeeks % interval === 0) {
+                    count++
+                }
+            }
             current.setDate(current.getDate() + 1)
         }
         return count
@@ -143,6 +161,7 @@ export function RecurringAppointmentModal({
     // Create mutation
     const createMutation = useMutation({
         mutationFn: async () => {
+            const recurrenceInterval = frequency === 'biweekly' ? 2 : frequency === 'monthly' ? 4 : 1
             const response = await fetch('/api/appointments/recurring', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -155,6 +174,8 @@ export function RecurringAppointmentModal({
                     therapy_type: therapyType || undefined,
                     start_date: startDate,
                     end_date: endDate,
+                    recurrence_interval: recurrenceInterval,
+                    frequency: frequency,
                     payment_type: paymentType,
                     appointment_type: 'presencial',
                     notes: notes || undefined,
@@ -350,6 +371,62 @@ export function RecurringAppointmentModal({
                             />
                         </div>
 
+                        {/* Periodicidade / Frequência */}
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                                <Repeat className="h-4 w-4" />
+                                Periodicidade da Recorrência
+                            </Label>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setFrequency('weekly')}
+                                    className={cn(
+                                        "p-2.5 rounded-lg border text-left transition-all text-xs flex flex-col gap-1",
+                                        frequency === 'weekly'
+                                            ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs ring-1 ring-emerald-600"
+                                            : "border-border bg-card hover:border-slate-300 text-muted-foreground"
+                                    )}
+                                >
+                                    <span className="font-bold text-sm">Semanal</span>
+                                    <span className="text-[11px] opacity-80">Toda semana</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setFrequency('biweekly')}
+                                    className={cn(
+                                        "p-2.5 rounded-lg border text-left transition-all text-xs flex flex-col gap-1 relative",
+                                        frequency === 'biweekly'
+                                            ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs ring-1 ring-emerald-600"
+                                            : "border-border bg-card hover:border-slate-300 text-muted-foreground"
+                                    )}
+                                >
+                                    <span className="font-bold text-sm">Quinzenal</span>
+                                    <span className="text-[11px] opacity-80">De 15 em 15 dias</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setFrequency('monthly')}
+                                    className={cn(
+                                        "p-2.5 rounded-lg border text-left transition-all text-xs flex flex-col gap-1",
+                                        frequency === 'monthly'
+                                            ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs ring-1 ring-emerald-600"
+                                            : "border-border bg-card hover:border-slate-300 text-muted-foreground"
+                                    )}
+                                >
+                                    <span className="font-bold text-sm">Mensal</span>
+                                    <span className="text-[11px] opacity-80">A cada 4 semanas</span>
+                                </button>
+                            </div>
+                            {frequency === 'biweekly' && (
+                                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-md border border-emerald-200/60 dark:border-emerald-900/40">
+                                    Atendimentos intercalados a cada 2 semanas (de 15 em 15 dias), mantendo os dias da semana selecionados e liberando as semanas alternadas para outros pacientes.
+                                </p>
+                            )}
+                        </div>
+
                         {/* Days of Week */}
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2">
@@ -454,6 +531,7 @@ export function RecurringAppointmentModal({
                                 </div>
                                 <div className="text-sm text-green-700 space-y-1">
                                     <p><strong>{totalSessions} sessões</strong> serão agendadas automaticamente</p>
+                                    <p>Periodicidade: <strong>{frequency === 'biweekly' ? 'Quinzenal (de 15 em 15 dias)' : frequency === 'monthly' ? 'Mensal (a cada 4 semanas)' : 'Semanal (toda semana)'}</strong></p>
                                     {selectedDoctor && (
                                         <p>Terapeuta Titular: <strong>{selectedDoctor.user?.full_name}</strong> ({selectedDoctor.specialty})</p>
                                     )}
