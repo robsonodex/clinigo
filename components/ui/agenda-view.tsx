@@ -491,9 +491,10 @@ export default function AgendaPage() {
             for (const schedule of relevantSchedules) {
                 if (seenDoctorIds.has(schedule.doctor_id)) continue
                 seenDoctorIds.add(schedule.doctor_id)
+                const slotHour = parseInt(time.split(':')[0], 10)
                 const doctorHasAppointment = appointments && Array.isArray(appointments) && appointments.some(
                     (a: any) => a.appointment_date === dateStr &&
-                        a.appointment_time?.substring(0, 5) === time &&
+                        parseInt(a.appointment_time?.substring(0, 2) || '-1', 10) === slotHour &&
                         a.status !== 'CANCELLED' &&
                         a.doctor?.id === schedule.doctor_id
                 )
@@ -519,18 +520,21 @@ export default function AgendaPage() {
         if (!appointments || !Array.isArray(appointments)) return []
         const dateStr = format(date, 'yyyy-MM-dd')
         const searchLower = patientSearch.trim().toLowerCase()
+        const slotHour = parseInt(time.split(':')[0], 10)
         return appointments.filter(
-            (a) =>
-                a.appointment_date === dateStr &&
-                a.appointment_time?.substring(0, 5) === time &&
-                (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id)) &&
-                (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
-                (confirmationFilter === 'ALL' ||
-                    (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) ||
-                    (confirmationFilter === 'PENDING' && (a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING'))) &&
+            (a) => {
+                if (a.appointment_date !== dateStr) return false
+                const apptHour = parseInt(a.appointment_time?.substring(0, 2) || '-1', 10)
+                if (apptHour !== slotHour) return false
+                if (selectedDoctorIds.length > 0 && !selectedDoctorIds.includes(a.doctor?.id)) return false
+                if (searchLower && !a.patient?.full_name?.toLowerCase().includes(searchLower)) return false
+                if (confirmationFilter === 'CONFIRMED' && !(a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) return false
+                if (confirmationFilter === 'PENDING' && !(a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING')) return false
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
-                !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
-        )
+                if (a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada') return false
+                return true
+            }
+        ).sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
     }
 
     // Get all appointments for a given day (for timeline view)
