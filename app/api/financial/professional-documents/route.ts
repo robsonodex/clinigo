@@ -400,6 +400,82 @@ export async function POST(request: NextRequest) {
                 message: 'Nota Fiscal enviada com sucesso para conferência!',
                 document: saved
             })
+        } else if (action === 'CONTEST_STATEMENT') {
+            // Apontar inconsistência no demonstrativo pelo profissional
+            const inconsistencyNotes = (formData.get('inconsistency_notes') as string) || ''
+            if (!inconsistencyNotes.trim()) {
+                return NextResponse.json({ error: 'Por favor, descreva a inconsistência observada' }, { status: 400 })
+            }
+
+            const updateData: any = {
+                clinic_id: userClinicId,
+                doctor_id: doctorId,
+                month_reference: monthReference,
+                year,
+                month,
+                status: 'UNDER_REVIEW',
+                inconsistency_notes: inconsistencyNotes.trim(),
+                contested_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }
+
+            const { data: saved, error: saveErr } = await supabase
+                .from('professional_financial_documents')
+                .upsert(updateData, { onConflict: 'clinic_id,doctor_id,month_reference' })
+                .select()
+                .single()
+
+            if (saveErr) {
+                console.error('Erro ao registrar inconsistência:', saveErr)
+                return NextResponse.json({ error: saveErr.message }, { status: 500 })
+            }
+
+            // Disparo de notificação para administradores e setor financeiro
+            try {
+                const { data: doctorInfo } = await supabase
+                    .from('doctors')
+                    .select('specialty, user:user_id(full_name)')
+                    .eq('id', doctorId)
+                    .single()
+
+                const doctorName = (doctorInfo as any)?.user?.full_name || 'Profissional'
+                const notificationTitle = 'Inconsistência em Demonstrativo'
+                const notificationMessage = `${doctorName} apontou inconsistência no demonstrativo (${monthReference}): "${inconsistencyNotes.slice(0, 120)}..."`
+
+                const { data: adminUsers } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('clinic_id', userClinicId)
+                    .in('role', ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'])
+
+                if (adminUsers && adminUsers.length > 0) {
+                    const notificationsToInsert = adminUsers.map((u: any) => ({
+                        user_id: u.id,
+                        clinic_id: userClinicId,
+                        title: notificationTitle,
+                        message: notificationMessage,
+                        type: 'FINANCIAL_CONTEST',
+                        read: false,
+                        link: '/dashboard/financial/notas-demonstrativos',
+                        metadata: {
+                            doctor_id: doctorId,
+                            month_reference: monthReference,
+                            document_id: (saved as any)?.id,
+                            action: 'CONTEST_STATEMENT'
+                        }
+                    }))
+
+                    await supabase.from('notifications').insert(notificationsToInsert)
+                }
+            } catch (notifException) {
+                console.error('Erro ao registrar notificação de inconsistência:', notifException)
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: 'Inconsistência encaminhada para análise da clínica!',
+                document: saved
+            })
         } else {
             return NextResponse.json({ error: 'Ação não reconhecida' }, { status: 400 })
         }

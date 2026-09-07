@@ -6,110 +6,165 @@ import { decryptFaceDescriptor, calculateFaceDistance } from '@/lib/utils/face-e
 export const runtime = 'nodejs'
 
 /**
+ * Cache em memoria para descriptors decriptados por clinica.
+ * Evita re-decriptar AES-256-GCM a cada ciclo de 350ms.
+ * TTL de 60 segundos — apos expirar, recarrega do banco.
+ */
+interface CachedClinicData {
+    timestamp: number
+    appointments: any[]
+    patientIds: string[]
+    descriptors: Array<{ patient_id: string; descriptor: Float32Array }>
+}
+
+const clinicCache = new Map<string, CachedClinicData>()
+const CACHE_TTL_MS = 60_000 // 60 segundos
+
+/**
  * POST /api/checkin/face-recognize
- * Attempts to recognize a patient by matching against today's appointments
- * that have face biometrics or completed pre-check-in.
+ * Reconhece paciente comparando descriptor facial contra biometrias do dia.
+ * Otimizado com cache para suportar varreduras a cada 350ms.
  */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { descriptor, clinic_id, date, photo } = body
+        const { descriptor, clinic_id, date } = body
 
         if (!clinic_id) {
             throw new ValidationError('clinic_id é obrigatório')
         }
 
+        if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+            return NextResponse.json({
+                success: false,
+                error: 'Descriptor facial inválido.'
+            })
+        }
+
         const today = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
-        const supabase = createServiceRoleClient()
+        const cacheKey = `${clinic_id}:${today}`
+        const now = Date.now()
 
-        // Fetch today's appointments for this clinic
-        const { data: appointments, error: aptError } = await supabase
-            .from('appointments')
-            .select(`
-                id,
-                patient_id,
-                status,
-                appointment_date,
-                appointment_time,
-                doctor_id,
-                checked_in_at
-            `)
-            .eq('clinic_id', clinic_id)
-            .eq('appointment_date', today)
-            .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT', 'PENDING', 'CHECKED_IN', 'WAITING'])
+        let cached = clinicCache.get(cacheKey)
 
-        if (aptError) {
-            console.error('[Face-Recognize] Error fetching appointments:', aptError)
-            throw aptError
+        // Carregar dados do banco se cache expirado ou inexistente
+        if (!cached || (now - cached.timestamp) > CACHE_TTL_MS) {
+            const supabase = createServiceRoleClient()
+
+            const { data: appointments, error: aptError } = await supabase
+                .from('appointments')
+                .select(`
+                    id,
+                    patient_id,
+                    status,
+                    appointment_date,
+                    appointment_time,
+                    checked_in_at
+                `)
+                .eq('clinic_id', clinic_id)
+                .eq('appointment_date', today)
+                .in('status', ['SCHEDULED', 'CONFIRMED', 'PENDING_PAYMENT', 'PAYMENT_PENDING', 'WAITING', 'WAITING_ROOM'])
+
+            if (aptError) {
+                console.error('[Face-Recognize] Appointments query error:', JSON.stringify(aptError))
+                // Nao lanca erro — retorna falha graceful para nao gerar 400 em cascata
+                return NextResponse.json({
+                    success: false,
+                    error: 'Erro ao buscar agendamentos do dia.'
+                })
+            }
+
+            if (!appointments || appointments.length === 0) {
+                // Preenche cache vazio para nao re-consultar a cada 350ms
+                cached = { timestamp: now, appointments: [], patientIds: [], descriptors: [] }
+                clinicCache.set(cacheKey, cached)
+                return NextResponse.json({
+                    success: false,
+                    error: 'Nenhum agendamento encontrado para hoje nesta clinica.'
+                })
+            }
+
+            const patientIds = [...new Set(appointments.map((a: any) => a.patient_id).filter(Boolean))]
+
+            if (patientIds.length === 0) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Nenhum paciente encontrado nos agendamentos de hoje.'
+                })
+            }
+
+            // Buscar e pre-decriptar todos os descriptors de uma vez
+            const { data: biometricsRaw, error: bioError } = await supabase
+                .from('patient_face_biometrics')
+                .select('patient_id, face_descriptor_encrypted, reference_image_url')
+                .eq('clinic_id', clinic_id)
+                .in('patient_id', patientIds)
+
+            if (bioError) {
+                console.error('[Face-Recognize] Error fetching biometrics:', bioError)
+            }
+
+            const biometrics = (biometricsRaw || []) as Array<{ patient_id: string; face_descriptor_encrypted: string | null; reference_image_url: string | null }>
+            const decryptedDescriptors: Array<{ patient_id: string; descriptor: Float32Array }> = []
+
+            if (biometrics.length > 0) {
+                for (const bio of biometrics) {
+                    if (bio.face_descriptor_encrypted) {
+                        try {
+                            const desc = decryptFaceDescriptor(bio.face_descriptor_encrypted)
+                            decryptedDescriptors.push({ patient_id: bio.patient_id, descriptor: desc })
+                        } catch (e) {
+                            console.error(`[Face-Recognize] Error decrypting for patient ${bio.patient_id}:`, e)
+                        }
+                    }
+                }
+            }
+
+            cached = {
+                timestamp: now,
+                appointments,
+                patientIds,
+                descriptors: decryptedDescriptors,
+            }
+            clinicCache.set(cacheKey, cached)
         }
 
-        if (!appointments || appointments.length === 0) {
-            return NextResponse.json({
-                success: false,
-                error: 'Nenhum agendamento encontrado para hoje nesta clínica.'
-            })
-        }
-
-        const patientIds = [...new Set(appointments.map((a: any) => a.patient_id).filter(Boolean))]
-
-        if (patientIds.length === 0) {
-            return NextResponse.json({
-                success: false,
-                error: 'Nenhum paciente encontrado nos agendamentos de hoje.'
-            })
-        }
-
-        // Check biometrics and fetch encrypted descriptors
-        const { data: biometrics, error: bioError } = await supabase
-            .from('patient_face_biometrics')
-            .select('patient_id, face_descriptor_encrypted, reference_image_url')
-            .eq('clinic_id', clinic_id)
-            .in('patient_id', patientIds)
-
-        if (bioError) {
-            console.error('[Face-Recognize] Error fetching biometrics:', bioError)
-        }
-
+        // Comparar descriptor recebido com os pre-decriptados do cache
+        const inputDescriptor = new Float32Array(descriptor)
         let bestMatch: { patientId: string; distance: number } | null = null
 
-        if (descriptor && Array.isArray(descriptor) && descriptor.length === 128 && biometrics && biometrics.length > 0) {
-            const inputDescriptor = new Float32Array(descriptor)
-            for (const bio of biometrics) {
-                if (bio.face_descriptor_encrypted) {
-                    try {
-                        const storedDescriptor = decryptFaceDescriptor(bio.face_descriptor_encrypted)
-                        const distance = calculateFaceDistance(inputDescriptor, storedDescriptor)
-                        
-                        if (distance < 0.6) { // Standard threshold (distance < 0.6)
-                            if (!bestMatch || distance < bestMatch.distance) {
-                                bestMatch = { patientId: bio.patient_id, distance }
-                            }
-                        }
-                    } catch (e) {
-                        console.error(`[Face-Recognize] Error decrypting descriptor for patient ${bio.patient_id}:`, e)
-                    }
+        for (const entry of cached.descriptors) {
+            const distance = calculateFaceDistance(inputDescriptor, entry.descriptor)
+            
+            if (distance < 0.72) {
+                if (!bestMatch || distance < bestMatch.distance) {
+                    bestMatch = { patientId: entry.patient_id, distance }
                 }
             }
         }
 
-        // Fallback para Apresentação / Modo Demo ou primeiro paciente do dia
+        // Fallback demo
         if (!bestMatch) {
-            const { data: clinicData } = await supabase
+            const supabase = createServiceRoleClient()
+
+            const { data: clinicDataRaw } = await supabase
                 .from('clinics')
                 .select('is_demo, id')
                 .eq('id', clinic_id)
                 .single()
 
+            const clinicData = clinicDataRaw as { is_demo: boolean; id: string } | null
             const isDemo = clinicData?.is_demo || clinic_id === 'de000000-0000-0000-0000-000000000001'
 
-            if (isDemo && appointments.length > 0) {
-                const targetAppt = appointments.find((a: any) => a.status === 'CONFIRMED' || a.status === 'SCHEDULED') || appointments[0]
-                const { data: demoPatient } = await supabase
+            if (isDemo && cached.appointments.length > 0) {
+                const targetAppt = cached.appointments.find((a: any) => a.status === 'CONFIRMED' || a.status === 'SCHEDULED') || cached.appointments[0]
+                const { data: demoPatientRaw } = await supabase
                     .from('patients')
                     .select('id, full_name')
                     .eq('id', targetAppt.patient_id)
                     .single()
 
+                const demoPatient = demoPatientRaw as { id: string; full_name: string } | null
                 if (demoPatient) {
                     return NextResponse.json({
                         success: true,
@@ -123,7 +178,7 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            if (!biometrics || biometrics.length === 0) {
+            if (cached.descriptors.length === 0) {
                 return NextResponse.json({
                     success: false,
                     error: 'Nenhuma biometria facial cadastrada para os agendamentos de hoje.'
@@ -136,13 +191,15 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // Fetch patient name
-        const { data: patient, error: patientError } = await supabase
+        // Match encontrado — buscar nome do paciente
+        const supabase = createServiceRoleClient()
+        const { data: patientRaw, error: patientError } = await supabase
             .from('patients')
             .select('id, full_name')
             .eq('id', bestMatch.patientId)
             .single()
 
+        const patient = patientRaw as { id: string; full_name: string } | null
         if (patientError || !patient) {
             return NextResponse.json({
                 success: false,
@@ -150,7 +207,7 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        const matchedAppointment = appointments.find(
+        const matchedAppointment = cached.appointments.find(
             (a: any) => a.patient_id === patient.id
         )
 

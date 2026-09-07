@@ -125,7 +125,7 @@ export function SignaturePad({ onSave, onClear, disabled = false }: SignaturePad
 
                 {!hasSignature && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-muted-foreground/60 text-xs sm:text-sm font-medium select-none">
-                        ✍️ Desenhe sua assinatura aqui com o dedo ou mouse
+                        Desenhe sua assinatura aqui com o dedo ou mouse
                     </div>
                 )}
             </div>
@@ -141,7 +141,7 @@ export function SignaturePad({ onSave, onClear, disabled = false }: SignaturePad
                     size="sm"
                     onClick={handleClear}
                     disabled={!hasSignature || disabled}
-                    className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                    className="min-h-[44px] px-3 text-xs text-muted-foreground hover:text-foreground gap-1.5"
                 >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Limpar

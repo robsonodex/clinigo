@@ -33,6 +33,7 @@ import {
     Plus,
     HelpCircle,
     UserCheck,
+    CheckCircle2,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -215,6 +216,8 @@ export default function AgendaPage() {
     const [patientSearch, setPatientSearch] = useState('')
     // Free slots toggle (Agenda Inversa)
     const [showFreeSlots, setShowFreeSlots] = useState(false)
+    // Filtro de confirmacao de agendamento (Todos, Confirmados, A Confirmar)
+    const [confirmationFilter, setConfirmationFilter] = useState<'ALL' | 'CONFIRMED' | 'PENDING'>('ALL')
 
     // Mural de Recados States
     const [isMuralOpen, setIsMuralOpen] = useState(false)
@@ -518,6 +521,9 @@ export default function AgendaPage() {
                 a.appointment_time?.substring(0, 5) === time &&
                 (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id)) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
+                (confirmationFilter === 'ALL' ||
+                    (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) ||
+                    (confirmationFilter === 'PENDING' && (a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING'))) &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         )
@@ -532,6 +538,9 @@ export default function AgendaPage() {
             (a) => a.appointment_date === dateStr &&
                 (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id)) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
+                (confirmationFilter === 'ALL' ||
+                    (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) ||
+                    (confirmationFilter === 'PENDING' && (a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING'))) &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
                 !(a.status === 'CANCELLED' && (a as any).cancellation_reason === 'Série recorrente cancelada')
         ).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
@@ -910,6 +919,50 @@ export default function AgendaPage() {
                         <EyeOff className="h-4 w-4" />
                         {showFreeSlots ? 'Horários Livres ✓' : 'Horários Livres'}
                     </Button>
+
+                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "h-9 px-3 text-xs font-semibold rounded-lg transition-all",
+                                confirmationFilter === 'ALL'
+                                    ? "bg-white dark:bg-slate-900 text-foreground shadow-xs"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                            onClick={() => setConfirmationFilter('ALL')}
+                        >
+                            Todos
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 transition-all",
+                                confirmationFilter === 'CONFIRMED'
+                                    ? "bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 hover:text-white"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                            onClick={() => setConfirmationFilter('CONFIRMED')}
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Confirmados
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 transition-all",
+                                confirmationFilter === 'PENDING'
+                                    ? "bg-amber-600 text-white shadow-xs hover:bg-amber-700 hover:text-white"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                            onClick={() => setConfirmationFilter('PENDING')}
+                        >
+                            <Clock className="w-3.5 h-3.5" />
+                            A Confirmar
+                        </Button>
+                    </div>
                     
                     <div className="hidden md:block w-px h-6 bg-border mx-1" />
                     
@@ -1194,7 +1247,7 @@ export default function AgendaPage() {
                                                                         >
                                                                             {/* Patient Name / Block Title */}
                                                                             <div className={cn("font-bold truncate text-sm leading-tight", isCancelled && "line-through opacity-70")}>
-                                                                                {appointment.patient?.full_name || (appointment as any).notes || '🔒 Bloqueio / Compromisso'}
+                                                                                {appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso'}
                                                                             </div>
 
                                                                             {/* Start Time - End Time */}
@@ -1213,10 +1266,32 @@ export default function AgendaPage() {
                                                                             <div className="text-[10px] font-medium mt-0.5 truncate opacity-80">
                                                                                 Dr. {appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
                                                                             </div>
+
+                                                                            {/* Status de Confirmacao */}
+                                                                            <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                                                                {appointment.status === 'CONFIRMED' && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded">
+                                                                                        <CheckCircle2 className="w-2.5 h-2.5" />
+                                                                                        Confirmado
+                                                                                    </span>
+                                                                                )}
+                                                                                {(appointment.status === 'SCHEDULED' || appointment.status === 'PENDING_PAYMENT' || appointment.status === 'PENDING') && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/70 px-1.5 py-0.5 rounded">
+                                                                                        <Clock className="w-2.5 h-2.5" />
+                                                                                        A Confirmar
+                                                                                    </span>
+                                                                                )}
+                                                                                {appointment.status === 'CHECKED_IN' && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-800 dark:text-blue-300 bg-blue-100/90 dark:bg-blue-950/70 px-1.5 py-0.5 rounded">
+                                                                                        <UserCheck className="w-2.5 h-2.5" />
+                                                                                        Na Recepção
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
                                                                             {/* No Show Reason */}
                                                                             {appointment.status === 'NO_SHOW' && (appointment as any).no_show_reason && (
                                                                                 <div className="text-[9px] mt-0.5 px-1 py-0.5 bg-red-200 text-red-800 rounded truncate">
-                                                                                    ⚠ {(appointment as any).no_show_reason}
+                                                                                    [Falta] {(appointment as any).no_show_reason}
                                                                                 </div>
                                                                             )}
 
@@ -1284,7 +1359,7 @@ export default function AgendaPage() {
                                                                     <TooltipContent side="right" className="max-w-xs">
                                                                         <div className="space-y-2">
                                                                             <div>
-                                                                                <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || '🔒 Bloqueio / Compromisso'}</p>
+                                                                                <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso'}</p>
                                                                                 <p className="text-xs text-muted-foreground">
                                                                                     {appointment.patient?.phone ? `Tel: ${appointment.patient.phone}` : 'Compromisso Interno'}
                                                                                 </p>

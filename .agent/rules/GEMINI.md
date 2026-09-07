@@ -103,12 +103,14 @@ When user's prompt is NOT in English:
 2. **Respond in user's language** - match their communication
 3. **Code comments/variables** remain in English
 
-### 🚫 PROIBIÇÃO ABSOLUTA DE EMOJIS (SaaS Médico Premium Internacional)
+### PADRÃO SAAS MÉDICO CORPORATIVO PREMIUM INTERNACIONAL (MANDATÓRIO E INVIOLÁVEL)
 
-O CliniGo é uma plataforma médica corporativa séria de padrão premium internacional:
-1. **ZERO EMOJIS**: É TERMINANTEMENTE PROIBIDO o uso de emojis na interface, botões, títulos, respostas de IA, mensagens de sistema, notificações ou qualquer componente.
-2. **Iconografia Sóbria**: Use exclusivamente ícones vetoriais neutros (Lucide Icons). Proibido ícones infantis ou efeitos espalhafatosos.
-3. **Comunicação Profissional**: Toda resposta e texto deve ser direto, técnico, formal e elegante.
+O CliniGo é uma plataforma médica corporativa séria de padrão premium internacional. Todo código, interface, layout ou resposta DEVE obedecer:
+1. **ZERO EMOJIS (Proibição Absoluta)**: É terminantemente proibido o uso de emojis na interface, botões, títulos, subtítulos, cards, badges, alertas, notificações, mensagens de sistema ou respostas da IA.
+2. **Iconografia Sóbria e Neutra**: Use exclusivamente ícones vetoriais neutros (Lucide Icons). Proibido ícones infantis, mágicos ou espalhafatosos (ex: Sparkles, PartyPopper, confetes, glitter).
+3. **Design Visual Elegante**: Padrão hospitalar e clínico de alto nível corporativo. Proibido gradientes arco-íris, neon ou estilos infantis.
+4. **Co-Branding e Logotipos Controlados**: Logotipos do CliniGo e de clínicas parceiras devem manter proporções estritas (ex: 26px de altura, travas de aspect ratio e contenção).
+5. **Comunicação Profissional**: Toda resposta e texto deve ser direto, técnico, formal, sóbrio e elegante.
 
 ### 🧹 Clean Code (Global Mandatory)
 

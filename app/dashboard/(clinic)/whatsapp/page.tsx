@@ -132,7 +132,7 @@ export default function WhatsAppPage() {
               pollingRef.current = null
               setQrData(null)
               setConnectingSector(null)
-              toast.success(`WhatsApp ${getSectorLabel(sector)} conectado! 🎉`)
+              toast.success(`WhatsApp ${getSectorLabel(sector)} conectado com sucesso!`)
               fetchAllSessions()
             }
           }
@@ -170,6 +170,25 @@ export default function WhatsAppPage() {
           <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto" />
           <p className="text-muted-foreground">Verificando conexões...</p>
         </div>
+      </div>
+    )
+  }
+
+  const userRole = profile?.role || user?.role || ''
+  const isAuthorized = ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(userRole)
+
+  if (!isAuthorized) {
+    return (
+      <div className="container mx-auto py-12 px-4 max-w-xl">
+        <Card className="border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/20 text-center p-6 space-y-3">
+          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center mx-auto text-amber-700 dark:text-amber-300">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Acesso Restrito ao Módulo de WhatsApp</h2>
+          <p className="text-sm text-muted-foreground">
+            A conexão, configuração e desconexão de instâncias do WhatsApp da clínica é permitida exclusivamente para Administradores e equipe de Recepção.
+          </p>
+        </Card>
       </div>
     )
   }

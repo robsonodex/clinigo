@@ -52,11 +52,24 @@ export function useNotifications() {
                         newNotification,
                         ...old,
                     ])
-                    toast(newNotification.title, {
-                        description: newNotification.message,
-                        duration: 86400000, 
-                        closeButton: true,
-                    })
+                    // Padrão SaaS Médico Premium Internacional:
+                    // Notificações operacionais rotineiras (recebimento em caixa, agendamento de rotina)
+                    // alimentam silenciosamente o Sino de Notificações, sem jogar popups invasivos na tela.
+                    const isSilent =
+                        newNotification.metadata?.silent === true ||
+                        newNotification.type === 'appointment' ||
+                        newNotification.title?.toLowerCase().includes('pagamento') ||
+                        newNotification.title?.toLowerCase().includes('recebimento') ||
+                        newNotification.title?.toLowerCase().includes('agendamento')
+
+                    // Apenas alertas que exigem atenção imediata exibem toast flutuante (com duração elegante de 4s)
+                    if (!isSilent) {
+                        toast(newNotification.title, {
+                            description: newNotification.message,
+                            duration: 4000,
+                            closeButton: true,
+                        })
+                    }
                     // Play sound?
                     // const audio = new Audio('/sounds/notification.mp3')
                     // audio.play().catch(() => {})

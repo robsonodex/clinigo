@@ -10,12 +10,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Save, CreditCard, Building, ShieldCheck, Zap, Mail } from 'lucide-react'
+import { Save, CreditCard, Building, ShieldCheck, Zap, Mail, Building2, Users } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 import { uploadClinicLogo } from '@/app/actions/white-label'
-import { Sparkles } from 'lucide-react'
 import { PlanAndBilling } from './components/PlanAndBilling'
 import { SMTPSettings } from './components/SMTPSettings'
 import { ConsultingRoomsSettings } from './components/ConsultingRoomsSettings'
@@ -216,6 +215,9 @@ export default function SettingsPage() {
                 setPreviewLogo(result.url)
                 setValue('logo_url', result.url, { shouldDirty: true })
                 toast.success('Logo enviado com sucesso!')
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('clinic-profile-updated'))
+                }
             } else {
                 toast.error(result.error || 'Erro ao enviar logo')
             }
@@ -264,6 +266,9 @@ export default function SettingsPage() {
             setInitialCustomLabel(customLabel)
             setInitialCouncilLabel(councilLabel)
             setInitialCustomCouncilLabel(customCouncilLabel)
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('clinic-profile-updated'))
+            }
         } catch (error) {
             console.error('Error:', error)
             toast.error('Erro ao salvar configurações')
@@ -322,8 +327,8 @@ export default function SettingsPage() {
                             <CardContent className="space-y-6">
                                 {/* Brand Identity Section */}
                                 <div className="p-4 bg-muted/30 rounded-lg space-y-4 border">
-                                    <h3 className="font-semibold flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-primary" />
+                                    <h3 className="font-semibold flex items-center gap-2 text-foreground">
+                                        <Building2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                         Identidade Visual
                                     </h3>
                                     <div className="grid md:grid-cols-2 gap-6">
@@ -389,8 +394,8 @@ export default function SettingsPage() {
 
                                 {/* Professional Label Section */}
                                 <div className="p-4 bg-muted/30 rounded-lg space-y-4 border">
-                                    <h3 className="font-semibold flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-primary" />
+                                    <h3 className="font-semibold flex items-center gap-2 text-foreground">
+                                        <Users className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                         Nomenclatura Profissional
                                     </h3>
                                     <p className="text-sm text-muted-foreground">

@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
                 appointment_date,
                 appointment_time,
                 status,
+                session_status,
                 appointment_type,
                 therapy_modality,
                 session_format,
@@ -139,11 +140,16 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Erro ao consultar atendimentos' }, { status: 500 });
         }
 
-        // Filtrar apenas atendimentos efetivamente realizados (exclui cancelados e faltas não cobradas)
+        // Regra de Negócio CliniGo / World Sensory:
+        // Apenas sessões com status 'Presente' entram no cálculo de faturamento e repasse.
+        // Faltas justificadas/injustificadas, cancelamentos e reposições ficam no prontuário, mas fora do financeiro.
         const validAppointments = (appointments || []).filter((appt: any) => {
             if (appt.no_show) return false;
+            if (appt.session_status && appt.session_status !== 'Presente') {
+                return false;
+            }
             const st = (appt.status || '').toLowerCase();
-            return !st.includes('cancel') && !st.includes('desmarcad');
+            return !st.includes('cancel') && !st.includes('desmarcad') && !st.includes('falt');
         });
 
         // 4. Buscar regras individuais de repasse por paciente (doctor_patient_rates)

@@ -57,7 +57,9 @@ import {
     Sun,
     Moon,
     ShieldCheck,
+    Plus,
 } from 'lucide-react'
+import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
 import {
@@ -510,7 +512,7 @@ const navigationSections: NavSection[] = [
                 title: 'WhatsApp',
                 href: '/dashboard/whatsapp',
                 icon: MessageCircle,
-                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 minPlan: 'AVANCADO',
             },
             {
@@ -1000,6 +1002,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const { role, isCoordinator } = useRole()
     const { planType, isLoading } = usePlan()
     const profLabel = useProfessionalLabel()
+    const { clinic } = useClinic()
 
     // Tema dinâmico da Sidebar com persistência
     const [sidebarTheme, setSidebarTheme] = useState<'dark-green' | 'light-classic'>('dark-green')
@@ -1107,21 +1110,69 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                 ? "w-full"
                 : "hidden lg:flex lg:w-64 lg:fixed lg:inset-y-0"
         )}>
-            {/* Logo */}
+            {/* Logo Co-branding (CliniGo Imutavel + Espaco/Logo da Clinica) */}
             <div className={cn(
-                "flex items-center h-16 px-6 border-b shrink-0 transition-colors duration-300",
+                "flex items-center justify-between h-16 px-4 border-b shrink-0 transition-colors duration-300 gap-2",
                 isDark ? "border-emerald-900/30" : "border-slate-200"
             )}>
-                <Link href="/dashboard" className="flex items-center gap-2">
-                    <Image
-                        src={isDark ? "/logo_white.svg" : "/logo_black.svg"}
-                        alt="CliniGo"
-                        width={130}
-                        height={34}
-                        className="h-8 w-auto"
-                        priority
-                    />
-                </Link>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {/* Logo CliniGo Imutavel */}
+                    <Link
+                        href="/dashboard"
+                        className="shrink-0 flex items-center overflow-hidden"
+                        style={{ height: '26px', maxHeight: '26px', maxWidth: '100px' }}
+                        title="CliniGo"
+                    >
+                        <Image
+                            src={isDark ? "/logo_white.svg" : "/logo_black.svg"}
+                            alt="CliniGo"
+                            width={81}
+                            height={26}
+                            style={{ height: '26px', width: 'auto', maxHeight: '26px', maxWidth: '100px' }}
+                            className="object-contain"
+                            priority
+                            unoptimized
+                        />
+                    </Link>
+
+                    {/* Divisor vertical */}
+                    <div className={cn(
+                        "w-[1px] h-5 shrink-0",
+                        isDark ? "bg-emerald-800/60" : "bg-slate-200"
+                    )} />
+
+                    {/* Logo da Clinica ou Espaco para Adicionar */}
+                    {clinic?.logo_url ? (
+                        <Link
+                            href="/dashboard/configuracoes"
+                            className="flex items-center min-w-0 py-0.5 px-1 rounded transition-opacity hover:opacity-80 shrink-0 overflow-hidden"
+                            style={{ height: '26px', maxHeight: '26px' }}
+                            title={`${clinic.name || 'Clinica'} - Configurar logotipo`}
+                        >
+                            <img
+                                src={clinic.logo_url}
+                                alt={clinic.name || "Logo da Clinica"}
+                                style={{ height: '26px', width: 'auto', maxHeight: '26px', maxWidth: '90px' }}
+                                className="object-contain rounded-xs filter drop-shadow-xs"
+                            />
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/dashboard/configuracoes"
+                            className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded border border-dashed text-[11px] font-medium transition-all group shrink-0 h-[26px]",
+                                isDark
+                                    ? "border-emerald-700/60 text-emerald-200/70 hover:text-white hover:border-emerald-400 hover:bg-emerald-900/30"
+                                    : "border-slate-300 text-slate-500 hover:text-slate-800 hover:border-slate-400 hover:bg-slate-50"
+                            )}
+                            style={{ height: '26px', maxHeight: '26px' }}
+                            title="Clique para cadastrar o logotipo da sua clinica"
+                        >
+                            <Plus className="w-3 h-3 text-emerald-500 group-hover:scale-110 transition-transform" />
+                            <span className="truncate max-w-[60px]">Sua Logo</span>
+                        </Link>
+                    )}
+                </div>
             </div>
 
             {/* Navigation */}
@@ -1130,7 +1181,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     const isPrincipal = section.title === 'Principal'
                     const isOpen = isPrincipal || (openSections[section.title] ?? false)
 
-                    const SectionIcon: Record<string, React.ComponentType<{className?: string}>> = {
+                    const sectionIcons: Record<string, any> = {
                         'Agendamento': Calendar,
                         'Equipe': Users2,
                         'Prontuário': HeartPulse,
@@ -1140,7 +1191,8 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         'Gestão': BarChart3,
                         'Configurações': Settings,
                         'Administração': Shield,
-                    }[section.title] || Layers
+                    }
+                    const SectionIcon = sectionIcons[section.title] || Layers
 
                     return (
                         <div key={section.title} className="space-y-1">

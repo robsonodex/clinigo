@@ -68,13 +68,19 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string; bor
         border: 'border-amber-200 dark:border-amber-800/40'
     },
     INVOICE_SENT: {
-        label: 'Nota Enviada (Em Análise pela Clínica)',
+        label: 'Nota Enviada (Aguardando Liberação de Pagamento)',
         color: 'text-blue-700 dark:text-blue-400',
         bg: 'bg-blue-50 dark:bg-blue-950/40',
         border: 'border-blue-200 dark:border-blue-800/40'
     },
+    UNDER_REVIEW: {
+        label: 'Inconsistência Apontada (Em Análise pela Clínica)',
+        color: 'text-orange-700 dark:text-orange-400',
+        bg: 'bg-orange-50 dark:bg-orange-950/40',
+        border: 'border-orange-200 dark:border-orange-800/40'
+    },
     INVOICE_APPROVED: {
-        label: 'Nota Fiscal Aprovada',
+        label: 'Nota Fiscal Aprovada (Liberado para Pagamento)',
         color: 'text-emerald-700 dark:text-emerald-300',
         bg: 'bg-emerald-50 dark:bg-emerald-950/40',
         border: 'border-emerald-200 dark:border-emerald-800/40'
@@ -104,8 +110,13 @@ export function DoctorFinancialDocumentsView() {
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
     const [invoiceNumber, setInvoiceNumber] = useState('')
     const [invoiceAmount, setInvoiceAmount] = useState('')
-    const [invoiceIssueDate, setInvoiceIssueDate] = useState(new Date().toISOString().split('T')[0])
+    const [invoiceIssueDate, setInvoiceIssueDate] = useState('')
     const [isUploading, setIsUploading] = useState(false)
+
+    // Modal de Apontar Inconsistência / Contestação
+    const [contestModalOpen, setContestModalOpen] = useState(false)
+    const [inconsistencyNotes, setInconsistencyNotes] = useState('')
+    const [isSubmittingContest, setIsSubmittingContest] = useState(false)
 
     // Modal de Conferência de Produção do Terapeuta
     const [productionDetailOpen, setProductionDetailOpen] = useState(false)
@@ -355,6 +366,58 @@ export function DoctorFinancialDocumentsView() {
         }
     }
 
+    const handleOpenContestModal = (doc: any) => {
+        setSelectedDoc(doc)
+        setInconsistencyNotes(doc?.inconsistency_notes || '')
+        setContestModalOpen(true)
+    }
+
+    const handleSubmitContest = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!selectedDoc) return
+        if (!inconsistencyNotes.trim()) {
+            toast({
+                title: 'Descrição obrigatória',
+                description: 'Por favor, descreva a inconsistência observada no demonstrativo.',
+                variant: 'destructive'
+            })
+            return
+        }
+
+        setIsSubmittingContest(true)
+        try {
+            const formData = new FormData()
+            formData.append('action', 'CONTEST_STATEMENT')
+            formData.append('doctor_id', selectedDoc.doctor_id)
+            formData.append('month_reference', selectedDoc.month_reference)
+            formData.append('inconsistency_notes', inconsistencyNotes.trim())
+
+            const res = await fetch('/api/financial/professional-documents', {
+                method: 'POST',
+                body: formData
+            })
+
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || 'Erro ao registrar inconsistência')
+
+            toast({
+                title: 'Inconsistência Registrada!',
+                description: 'Seu apontamento foi enviado para o setor financeiro e o demonstrativo está em análise.'
+            })
+
+            queryClient.invalidateQueries({ queryKey: ['my-professional-financial-documents', selectedYear] })
+            setContestModalOpen(false)
+        } catch (err: any) {
+            toast({
+                title: 'Erro no envio',
+                description: err.message,
+                variant: 'destructive'
+            })
+        } finally {
+            setIsSubmittingContest(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Header da Seção */}
@@ -511,24 +574,36 @@ export function DoctorFinancialDocumentsView() {
                                         </div>
 
                                         {/* Ações do Profissional */}
-                                        <div className="flex items-center gap-2 justify-end flex-wrap">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             {/* Conferir Produção do Mês */}
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleViewMyProduction(doc)}
-                                                className="h-9 px-3 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-700 hover:border-emerald-300"
+                                                className="min-h-[44px] px-3 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-700 hover:border-emerald-300"
                                                 title="Conferir todas as suas sessões realizadas e o cálculo de repasse deste mês"
                                             >
                                                 <Calculator className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
                                                 Conferir Produção
                                             </Button>
 
+                                            {/* Apontar Inconsistência / Contestação */}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleOpenContestModal(doc)}
+                                                className="min-h-[44px] px-3 text-xs font-semibold border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                                title="Apontar divergência ou inconsistência nos valores deste mês"
+                                            >
+                                                <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                                                Apontar Inconsistência
+                                            </Button>
+
                                             {canUploadInvoice && (
                                                 <Button
                                                     onClick={() => handleOpenInvoiceModal(doc)}
                                                     className={cn(
-                                                        "h-9 px-3.5 text-xs font-bold shadow-xs transition-all",
+                                                        "min-h-[44px] px-3.5 text-xs font-bold shadow-xs transition-all",
                                                         doc.status === 'PENDING_INVOICE' || doc.status === 'INVOICE_REJECTED'
                                                             ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                                             : "bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
@@ -543,7 +618,7 @@ export function DoctorFinancialDocumentsView() {
                                                 <Button
                                                     variant="outline"
                                                     asChild
-                                                    className="h-9 px-3 text-xs font-semibold border-slate-200 dark:border-slate-800"
+                                                    className="min-h-[44px] px-3 text-xs font-semibold border-slate-200 dark:border-slate-800"
                                                 >
                                                     <a href={doc.statement_file_url} target="_blank" rel="noreferrer">
                                                         <Download className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
@@ -553,6 +628,33 @@ export function DoctorFinancialDocumentsView() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Alerta de Inconsistência em Análise */}
+                                    {doc.inconsistency_notes && (
+                                        <div className="mt-3.5 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
+                                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <strong className="font-semibold">Inconsistência apontada pelo profissional (Em análise pelo financeiro):</strong>
+                                                <p className="mt-0.5">{doc.inconsistency_notes}</p>
+                                                {doc.contested_at && (
+                                                    <p className="text-[11px] text-amber-600/80 dark:text-amber-400 mt-1">
+                                                        Registrado em {formatDate(doc.contested_at)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Alerta de Nota Fiscal Enviada (Aguardando Liberação) */}
+                                    {doc.status === 'INVOICE_SENT' && (
+                                        <div className="mt-3.5 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-200">
+                                            <Clock className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <strong className="font-semibold">Nota Fiscal anexada com sucesso:</strong>
+                                                <p className="mt-0.5">Aguardando conferência e liberação do pagamento pelo setor financeiro da clínica.</p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Alerta de Correção Necessária */}
                                     {doc.status === 'INVOICE_REJECTED' && doc.rejection_reason && (

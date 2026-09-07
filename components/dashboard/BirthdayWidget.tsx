@@ -8,14 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-    Cake,
     MessageCircle,
     Calendar,
+    CalendarDays,
     ChevronRight,
-    Sparkles,
     User,
     ArrowRight,
-    PartyPopper,
 } from 'lucide-react'
 
 interface BirthdayPatient {
@@ -83,28 +81,24 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
 
     return (
         <Card className="border border-border/80 shadow-xs overflow-hidden relative">
-            {/* Destaque visual no topo */}
-            <div className="h-1 bg-gradient-to-r from-amber-400 via-rose-400 to-emerald-400" />
-
             <CardHeader className="pb-3 pt-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                            <Cake className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                            <CalendarDays className="w-4 h-4" />
                         </div>
                         <div>
                             <CardTitle className="text-base font-bold flex items-center gap-2">
                                 Aniversariantes
                                 {todayCount > 0 && (
-                                    <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                        <Sparkles className="w-3 h-3" />
+                                    <Badge variant="secondary" className="font-semibold text-[10px] px-2 py-0.5 rounded-full inline-flex items-center">
                                         {todayCount} hoje
                                     </Badge>
                                 )}
                             </CardTitle>
                             <CardDescription className="text-xs">
                                 {todayCount > 0
-                                    ? `Temos ${todayCount} paciente${todayCount > 1 ? 's' : ''} celebrando aniversário hoje!`
+                                    ? `Temos ${todayCount} paciente${todayCount > 1 ? 's' : ''} com aniversário hoje.`
                                     : 'Acompanhe os aniversários de hoje e dos próximos dias'}
                             </CardDescription>
                         </div>
@@ -144,7 +138,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                     </div>
                 ) : currentList.length === 0 ? (
                     <div className="text-center py-6 px-4 bg-muted/20 rounded-lg border border-dashed border-border/60">
-                        <PartyPopper className="w-8 h-8 mx-auto text-muted-foreground/60 mb-2" />
+                        <CalendarDays className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
                         <p className="text-xs font-semibold text-foreground">
                             {tab === 'today'
                                 ? 'Nenhum aniversariante hoje'
@@ -170,7 +164,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                 key={p.id}
                                 className={`p-3 rounded-lg border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                                     p.is_today
-                                        ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 shadow-xs'
+                                        ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-300 dark:border-slate-700 shadow-xs'
                                         : 'bg-card border-border/70 hover:border-border'
                                 }`}
                             >
@@ -178,11 +172,11 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                     <div
                                         className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
                                             p.is_today
-                                                ? 'bg-amber-500 text-white shadow-xs'
+                                                ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs'
                                                 : 'bg-muted text-muted-foreground'
                                         }`}
                                     >
-                                        {p.is_today ? <Cake className="w-4 h-4 text-white" /> : <User className="w-4 h-4" />}
+                                        {p.is_today ? <Calendar className="w-4 h-4" /> : <User className="w-4 h-4" />}
                                     </div>
 
                                     <div>
@@ -194,7 +188,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                                 {p.full_name}
                                             </Link>
                                             {p.is_today && (
-                                                <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[9px] px-1.5 py-0 h-4">
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-slate-400 text-slate-700 dark:text-slate-300">
                                                     HOJE
                                                 </Badge>
                                             )}

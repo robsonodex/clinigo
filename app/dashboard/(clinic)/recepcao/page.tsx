@@ -556,10 +556,10 @@ export default function RecepcaoPage() {
                                     className="cursor-pointer gap-2 p-2 rounded-xs hover:bg-muted transition-colors text-xs"
                                 >
                                     <Link href="/dashboard/recepcao/face-checkin">
-                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                        <Camera className="w-3.5 h-3.5 text-emerald-600" />
                                         <div>
-                                            <p className="font-medium text-foreground">Check-in Fácil</p>
-                                            <p className="text-[10px] text-muted-foreground">Iniciar atendimento</p>
+                                            <p className="font-medium text-foreground">Check-in Facial</p>
+                                            <p className="text-[10px] text-muted-foreground">Reconhecer paciente por câmera</p>
                                         </div>
                                     </Link>
                                 </DropdownMenuItem>

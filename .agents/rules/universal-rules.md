@@ -31,13 +31,29 @@ When user's prompt is NOT in English:
 
 ---
 
-## 🚫 PROIBIÇÃO ABSOLUTA DE EMOJIS (SaaS Médico Premium Internacional)
+## PADRÃO SAAS MÉDICO CORPORATIVO PREMIUM INTERNACIONAL (MANDATÓRIO E INVIOLÁVEL)
 
-O CliniGo é uma plataforma médica corporativa de padrão premium internacional. É TERMINANTEMENTE PROIBIDO o uso de emojis em qualquer parte do sistema:
-1. **Interface do Usuário (UI)**: botões, títulos, subtítulos, cards, tooltips, modais, alertas, placeholders ou badges NUNCA devem conter caracteres de emoji.
-2. **Respostas da IA / Copilot**: as respostas geradas pela IA devem ser estritamente profissionais, corporativas, diretas e objetivas, sem emojis.
-3. **Iconografia Sóbria**: utilize exclusivamente ícones vetoriais sóbrios (Lucide Icons) em cores neutras. Proibido qualquer efeito espalhafatoso de neon ou ícones infantis.
-4. **Comunicação Geral**: tom técnico, sóbrio, formal e direto.
+O CliniGo é uma plataforma médica corporativa de padrão premium internacional. Todo desenvolvimento, alteração visual, texto e resposta de IA DEVE seguir rigorosamente este padrão:
+
+1. **ZERO EMOJIS (Proibição Absoluta)**:
+   - É TERMINANTEMENTE PROIBIDO o uso de caracteres de emojis em qualquer parte do sistema: interface do usuário (UI), botões, títulos, subtítulos, cards, tooltips, modais, badges, placeholders, alertas, notificações, mensagens de sistema ou respostas da IA/Copilot.
+
+2. **Iconografia Sóbria e Profissional**:
+   - Utilize exclusivamente ícones vetoriais sóbrios (Lucide Icons) com traço fino e neutro.
+   - É proibido o uso de ícones festivos, infantis, mágicos ou espalhafatosos (ex: `Sparkles`, `PartyPopper`, varinhas, confetes ou efeitos de glitter/estrelas em recursos de sistema).
+   - Para datas e eventos, use ícones neutros como `Calendar` ou `CalendarDays`. Para instituições e empresas, use `Building2`. Para equipes e cargos, use `Users`.
+
+3. **Design Visual, Cores e Acabamento**:
+   - Padrão visual elegante, sóbrio e hospitalar/clínico de alto escalão (similar a Epic Systems, Cerner ou Stripe).
+   - Proibido o uso de gradientes arco-íris, cores de neon, bordas extravagantes ou animações desnecessárias.
+   - Use paletas neutras (Slate, Zinc, Gray) combinadas com o verde cirúrgico/esmeralda institucional (`emerald-700/800` ou `teal`), com contrastes adequados e tipografia refinada.
+
+4. **Co-Branding e Proporções de Marca**:
+   - Logotipos institucionais (CliniGo e clínicas parceiras) devem respeitar rigorosamente as proporções estéticas e travas de contenção (altura padronizada de 26px, `object-contain`, divisores neutros e sem distorção).
+
+5. **Tom de Comunicação**:
+   - Tom estritamente formal, corporativo, técnico, claro e respeitoso.
+   - Nunca use gírias, exclamações infantis ou linguagem informal. Respostas de sistema e da IA devem transmitir solidez, segurança médica e credibilidade jurídica/LGPD.
 
 ---
 

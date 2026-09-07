@@ -62,7 +62,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import ExcelJS from 'exceljs';
 
 export interface PatientRateItem {
   patient_id: string;
@@ -415,6 +414,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
   const handleExportExcel = async () => {
     try {
       toast.info('Gerando planilha Excel...');
+      const ExcelJS = (await import('exceljs')).default;
       const workbook = new ExcelJS.Workbook();
       workbook.creator = 'CliniGo Gestão Clínica';
       workbook.created = new Date();
@@ -472,6 +472,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
 
     try {
       setIsImporting(true);
+      const ExcelJS = (await import('exceljs')).default;
       const arrayBuffer = await file.arrayBuffer();
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);

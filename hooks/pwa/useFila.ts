@@ -94,10 +94,22 @@ export function useFila(): UseFilaReturn {
 
   const callNext = useCallback(async (id: string) => {
     try {
+      const res = await fetch('/api/reception/call-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: id })
+      })
+
+      if (res.ok) {
+        setQueue(prev => prev.filter(q => q.id !== id))
+        return true
+      }
+
+      // Fallback para update direto com status WAITING (aciona TV via realtime)
       const supabase = createClient()
       const { error } = await supabase
         .from('appointments')
-        .update({ status: 'IN_PROGRESS' })
+        .update({ status: 'WAITING', called_at: new Date().toISOString() })
         .eq('id', id) as any
 
       if (error) return false

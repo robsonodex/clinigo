@@ -60,8 +60,10 @@ import {
     Check,
     X,
     Trash2,
-    Calculator
+    Calculator,
+    ShieldCheck
 } from 'lucide-react'
+import { BiometricAuditDialog } from '@/components/financial/BiometricAuditDialog'
 
 // Status labels and styling
 const STATUS_CONFIG: Record<string, { label: string; color: string; border: string; bg: string }> = {
@@ -141,6 +143,7 @@ export default function CentralNotasEDemonstrativosPage() {
     const [productionDetailOpen, setProductionDetailOpen] = useState(false)
     const [productionData, setProductionData] = useState<{ summary: any; items: any[] } | null>(null)
     const [selectedDoctorForProduction, setSelectedDoctorForProduction] = useState<any>(null)
+    const [biometricAuditOpen, setBiometricAuditOpen] = useState(false)
 
     // Consulta documentos e profissionais do mês selecionado
     const { data: responseData, isLoading, refetch } = useQuery({
@@ -654,35 +657,46 @@ export default function CentralNotasEDemonstrativosPage() {
                     </div>
                 </div>
 
-                {/* Seletor de Competência com Botões Mês Anterior / Próximo */}
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                <div className="flex flex-wrap items-center gap-2.5">
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handlePrevMonth}
-                        className="h-8 w-8 rounded-lg min-w-[36px]"
-                        title="Mês anterior"
+                        variant="outline"
+                        onClick={() => setBiometricAuditOpen(true)}
+                        className="h-10 px-3.5 text-xs font-semibold rounded-xl gap-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 min-h-[44px]"
                     >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        <span>Auditoria de Biometrias</span>
                     </Button>
-                    <div className="flex items-center gap-1.5 px-2">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
-                        />
+
+                    {/* Seletor de Competência com Botões Mês Anterior / Próximo */}
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handlePrevMonth}
+                            className="h-8 w-8 rounded-lg min-w-[36px]"
+                            title="Mês anterior"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <div className="flex items-center gap-1.5 px-2">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                            />
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleNextMonth}
+                            className="h-8 w-8 rounded-lg min-w-[36px]"
+                            title="Próximo mês"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleNextMonth}
-                        className="h-8 w-8 rounded-lg min-w-[36px]"
-                        title="Próximo mês"
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </Button>
                 </div>
             </div>
 
@@ -1513,6 +1527,13 @@ export default function CentralNotasEDemonstrativosPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Auditoria Mensal de Biometrias Faciais */}
+            <BiometricAuditDialog
+                open={biometricAuditOpen}
+                onOpenChange={setBiometricAuditOpen}
+                selectedMonth={selectedMonth}
+            />
         </div>
     )
 }

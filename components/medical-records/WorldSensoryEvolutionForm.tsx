@@ -4,8 +4,19 @@ import React, { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter
+} from '@/components/ui/dialog'
+import { SignaturePad } from '@/components/signature/SignaturePad'
+import { cn } from '@/lib/utils'
 import {
     Save,
     Printer,
@@ -15,10 +26,10 @@ import {
     Loader2,
     Lock,
     FileText,
-    Sparkles,
     Calendar,
     User,
-    Stethoscope
+    Stethoscope,
+    PenLine
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -58,11 +69,19 @@ interface WorldSensoryEvolutionFormProps {
     isSaving: boolean
     isLocked: boolean
     isSigned: boolean
+    sessionStatus?: string
+    onSessionStatusChange?: (status: string) => void
+    sessionStatusNotes?: string
+    onSessionStatusNotesChange?: (notes: string) => void
+    signatureImageUrl?: string | null
+    onSaveDigitalSignature?: (dataUrl: string, meta: { signerName: string; councilNumber: string; signedAt: string; hash: string }) => Promise<void>
     signatureData?: {
         signerName: string
         specialty?: string
         councilNumber?: string
         signedAt?: string
+        signatureImageUrl?: string
+        hash?: string
     } | null
     doctor?: {
         name?: string
@@ -91,6 +110,12 @@ export function WorldSensoryEvolutionForm({
     isSaving,
     isLocked,
     isSigned,
+    sessionStatus = 'Presente',
+    onSessionStatusChange,
+    sessionStatusNotes = '',
+    onSessionStatusNotesChange,
+    signatureImageUrl,
+    onSaveDigitalSignature,
     signatureData,
     doctor,
     patient,
@@ -99,6 +124,9 @@ export function WorldSensoryEvolutionForm({
 }: WorldSensoryEvolutionFormProps) {
     const printableRef = useRef<HTMLDivElement>(null)
     const [isPrinting, setIsPrinting] = useState(false)
+    const [showSignatureModal, setShowSignatureModal] = useState(false)
+    const [pendingDataUrl, setPendingDataUrl] = useState<string | null>(null)
+    const [isSavingSignature, setIsSavingSignature] = useState(false)
 
     // Resolução dos dados do profissional para o bloco de assinatura dinâmico
     const doctorFullName = signatureData?.signerName || doctor?.name || 'Profissional'
@@ -108,6 +136,45 @@ export function WorldSensoryEvolutionForm({
     const councilNum = doctor?.crm || ''
     const councilUF = doctor?.crm_state ? `/${doctor.crm_state}` : ''
     const doctorCouncilString = signatureData?.councilNumber || (councilNum ? `${councilPrefix} - ${councilNum}${councilUF}` : '')
+
+    const generateAuditHash = async (content: string) => {
+        try {
+            const msgBuffer = new TextEncoder().encode(content)
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+            const hashArray = Array.from(new Uint8Array(hashBuffer))
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+        } catch {
+            return 'SIG-' + Math.random().toString(36).substring(2, 10).toUpperCase() + Date.now().toString(36).toUpperCase()
+        }
+    }
+
+    const handleConfirmSignature = async () => {
+        if (!pendingDataUrl) {
+            toast.error('Por favor, desenhe sua rubrica no quadro antes de confirmar')
+            return
+        }
+        setIsSavingSignature(true)
+        try {
+            const timestamp = new Date().toISOString()
+            const payloadToHash = `${patient?.full_name || ''}_${doctorFullName}_${doctorCouncilString}_${timestamp}_${pendingDataUrl.length}`
+            const hash = await generateAuditHash(payloadToHash)
+
+            if (onSaveDigitalSignature) {
+                await onSaveDigitalSignature(pendingDataUrl, {
+                    signerName: doctorFullName,
+                    councilNumber: doctorCouncilString,
+                    signedAt: timestamp,
+                    hash
+                })
+            }
+            setShowSignatureModal(false)
+            toast.success('Assinatura digital gravada com sucesso! O prontuário foi autenticado e bloqueado.')
+        } catch (e: any) {
+            toast.error(e.message || 'Erro ao gravar assinatura')
+        } finally {
+            setIsSavingSignature(false)
+        }
+    }
 
     const handlePrint = async () => {
         if (!printableRef.current) return
@@ -261,6 +328,83 @@ export function WorldSensoryEvolutionForm({
                             <span className="truncate">{doctorFullName} ({doctorSpecialty})</span>
                         </div>
                     </div>
+                </div>
+
+                {/* 0. STATUS DA SESSÃO & CONTROLE DE COMPARECIMENTO (EXCLUSÃO DE FATURAMENTO SE NÃO COMPARECEU) */}
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-emerald-600" />
+                            Status do Atendimento / Presença *
+                        </Label>
+                        {sessionStatus && sessionStatus !== 'Presente' ? (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
+                                Não Faturável (Excluído do Repasse)
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold">
+                                Atendimento Realizado (Faturável)
+                            </Badge>
+                        )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                        {[
+                            { value: 'Presente', label: 'Presente', desc: 'Faturável' },
+                            { value: 'Falta justificada', label: 'Falta justificada', desc: 'Sem repasse' },
+                            { value: 'Falta injustificada', label: 'Falta injustificada', desc: 'Sem repasse' },
+                            { value: 'Cancelamento pelo terapeuta', label: 'Canc. Terapeuta', desc: 'Sem repasse' },
+                            { value: 'Cancelamento pelo paciente', label: 'Canc. Paciente', desc: 'Sem repasse' },
+                            { value: 'Reposição', label: 'Reposição', desc: 'Histórico' },
+                        ].map((item) => {
+                            const isSelected = (sessionStatus || 'Presente') === item.value
+                            return (
+                                <button
+                                    key={item.value}
+                                    type="button"
+                                    disabled={isLocked || isSigned}
+                                    onClick={() => onSessionStatusChange && onSessionStatusChange(item.value)}
+                                    className={cn(
+                                        "p-2.5 rounded-lg border text-left flex flex-col justify-between transition-all min-h-[44px]",
+                                        isSelected 
+                                            ? item.value === 'Presente'
+                                                ? "bg-emerald-600 text-white border-emerald-600 font-semibold shadow-xs"
+                                                : "bg-amber-600 text-white border-amber-600 font-semibold shadow-xs"
+                                            : "bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900"
+                                    )}
+                                >
+                                    <span className="text-xs font-bold leading-tight">{item.label}</span>
+                                    <span className={cn(
+                                        "text-[10px] mt-1",
+                                        isSelected ? "text-white/80" : "text-muted-foreground"
+                                    )}>
+                                        {item.desc}
+                                    </span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {sessionStatus && sessionStatus !== 'Presente' && (
+                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-200 space-y-2">
+                            <p className="font-semibold">
+                                Regra de Faturamento: Como o paciente não compareceu como "Presente", esta evolução ficará registrada no histórico clínico do paciente, mas está automaticamente EXCLUÍDA de qualquer cobrança ou repasse financeiro.
+                            </p>
+                            <div className="space-y-1">
+                                <Label htmlFor="session_status_notes" className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                                    Motivo / Justificativa (opcional):
+                                </Label>
+                                <Input
+                                    id="session_status_notes"
+                                    value={sessionStatusNotes || ''}
+                                    onChange={(e) => onSessionStatusNotesChange && onSessionStatusNotesChange(e.target.value)}
+                                    placeholder="Ex: Atestado médico apresentado / aviso prévio de 24h..."
+                                    disabled={isLocked || isSigned}
+                                    className="bg-white dark:bg-slate-900 min-h-[40px] text-xs border-amber-300 dark:border-amber-800"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 1. OBJETIVO DA SESSÃO */}
@@ -430,10 +574,22 @@ export function WorldSensoryEvolutionForm({
                     />
                 </div>
 
-                {/* BLOCO DE ASSINATURA DINÂMICO */}
+                {/* BLOCO DE ASSINATURA DINÂMICO & ASSINATURA DIGITAL */}
                 <div className="pt-8 border-t border-slate-300 dark:border-slate-700">
-                    <div className="max-w-md mx-auto text-center space-y-1">
-                        <div className="w-56 h-0.5 bg-slate-400 dark:bg-slate-600 mx-auto mb-3" />
+                    <div className="max-w-md mx-auto text-center space-y-2">
+                        {/* Imagem da assinatura desenhada ou traço */}
+                        {(signatureImageUrl || signatureData?.signatureImageUrl) ? (
+                            <div className="py-2">
+                                <img
+                                    src={signatureImageUrl || signatureData?.signatureImageUrl}
+                                    alt="Assinatura Digital"
+                                    className="h-16 max-w-[220px] mx-auto object-contain border-b border-slate-400 dark:border-slate-600 pb-1"
+                                />
+                            </div>
+                        ) : (
+                            <div className="w-56 h-0.5 bg-slate-400 dark:bg-slate-600 mx-auto mb-3" />
+                        )}
+
                         <p className="font-bold text-base text-slate-900 dark:text-slate-100">
                             {doctorFullName}
                         </p>
@@ -445,10 +601,33 @@ export function WorldSensoryEvolutionForm({
                                 {doctorCouncilString}
                             </p>
                         )}
-                        {isSigned && (
-                            <div className="mt-3 pt-2 border-t border-dashed border-emerald-300 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                                Assinado Eletronicamente via Plataforma • {signatureData?.signedAt ? format(new Date(signatureData.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+
+                        {(isSigned || signatureImageUrl || signatureData?.signedAt) ? (
+                            <div className="mt-3 pt-2 border-t border-dashed border-emerald-300 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300 font-medium space-y-1">
+                                <div>
+                                    Assinado Digitalmente via Plataforma CliniGo • {signatureData?.signedAt ? format(new Date(signatureData.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </div>
+                                {signatureData?.hash && (
+                                    <div className="text-[10px] text-slate-400 font-mono">
+                                        Hash de Autenticidade: {signatureData.hash.slice(0, 24)}...
+                                    </div>
+                                )}
                             </div>
+                        ) : (
+                            !isLocked && (
+                                <div className="pt-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowSignatureModal(true)}
+                                        className="min-h-[44px] px-4 text-xs font-semibold gap-2 border-emerald-300 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs"
+                                    >
+                                        <PenLine className="w-4 h-4 text-emerald-600" />
+                                        Assinar com Rubrica Digital
+                                    </Button>
+                                </div>
+                            )
                         )}
                     </div>
                 </div>
@@ -458,6 +637,65 @@ export function WorldSensoryEvolutionForm({
                     Ficha de Evolução Terapêutica • World Sensory
                 </div>
             </div>
+
+            {/* Modal de Assinatura Digital Touch / Mouse */}
+            <Dialog open={showSignatureModal} onOpenChange={setShowSignatureModal}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                            <PenLine className="w-5 h-5 text-emerald-600" />
+                            Assinatura Digital do Profissional
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Desenhe sua rubrica no quadro abaixo. Ao confirmar, o prontuário será carimbado com seus dados profissionais, data/hora e hash de integridade, tornando-se imutável.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-2 space-y-3">
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs space-y-1 border border-slate-200 dark:border-slate-800">
+                            <div><strong>Profissional:</strong> {doctorFullName}</div>
+                            <div><strong>Especialidade:</strong> {doctorSpecialty}</div>
+                            {doctorCouncilString && <div><strong>Conselho:</strong> {doctorCouncilString}</div>}
+                        </div>
+
+                        <div className="border rounded-xl p-2 bg-white dark:bg-slate-950">
+                            <SignaturePad
+                                onSave={(dataUrl) => setPendingDataUrl(dataUrl)}
+                                onClear={() => setPendingDataUrl(null)}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowSignatureModal(false)}
+                            className="min-h-[44px]"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleConfirmSignature}
+                            disabled={!pendingDataUrl || isSavingSignature}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] gap-2"
+                        >
+                            {isSavingSignature ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Autenticando...
+                                </>
+                            ) : (
+                                <>
+                                    <ShieldCheck className="w-4 h-4" />
+                                    Confirmar e Assinar
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

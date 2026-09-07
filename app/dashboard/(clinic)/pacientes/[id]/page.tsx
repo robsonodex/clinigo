@@ -1,5 +1,5 @@
 // app/dashboard/(clinic)/pacientes/[id]/page.tsx
-// CliniGo - Página de detalhes do paciente com cadastro biométrico
+// CliniGo - Página de detalhes do paciente com cadastro biométrico (v2.1)
 
 'use client';
 
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDropdown';
 import {
     ArrowLeft,
@@ -39,13 +40,14 @@ import {
     ShieldCheck,
     Plus,
     Sparkles,
+    Copy,
+    Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn, formatCPF, formatPhone, getInitials } from '@/lib/utils';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -77,16 +79,23 @@ interface Patient {
     };
 }
 
+interface BiometricItem {
+    id: string;
+    person_type?: string;
+    person_name?: string;
+    notes?: string;
+    consent_given: boolean;
+    consent_date: string;
+    detection_score: number;
+    created_at: string;
+    reference_image_url?: string;
+}
+
 interface BiometricStatus {
     hasBiometrics: boolean;
-    biometrics?: {
-        id: string;
-        consent_given: boolean;
-        consent_date: string;
-        detection_score: number;
-        created_at: string;
-        reference_image_url?: string;
-    };
+    count?: number;
+    items?: BiometricItem[];
+    biometrics?: BiometricItem;
 }
 
 const PatientFormSchema = z.object({
@@ -152,6 +161,44 @@ export default function PatientDetailsPage() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const copyToClipboard = (text: string, fieldId: string) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopiedField(fieldId);
+        toast.success('Copiado para a área de transferência');
+        setTimeout(() => setCopiedField(null), 2000);
+    };
+
+    const getAgeInfo = (bDate: any) => {
+        if (!bDate) return null;
+        try {
+            let dateObj: Date;
+            if (typeof bDate === 'string' && bDate.includes('T')) {
+                dateObj = new Date(bDate);
+            } else if (typeof bDate === 'string' && bDate.includes('-')) {
+                const [y, m, d] = bDate.split('-').map(Number);
+                dateObj = new Date(y, m - 1, d);
+            } else if (typeof bDate === 'string' && bDate.includes('/')) {
+                const [d, m, y] = bDate.split('/').map(Number);
+                dateObj = new Date(y, m - 1, d);
+            } else {
+                dateObj = new Date(bDate);
+            }
+            if (isNaN(dateObj.getTime())) return null;
+            const formatted = dateObj.toLocaleDateString('pt-BR');
+            const today = new Date();
+            let age = today.getFullYear() - dateObj.getFullYear();
+            const monthDiff = today.getMonth() - dateObj.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dateObj.getDate())) {
+                age--;
+            }
+            return { formatted, age: age >= 0 ? age : 0 };
+        } catch {
+            return null;
+        }
+    };
     const form = useForm<PatientFormData>({
         resolver: zodResolver(PatientFormSchema),
         defaultValues: { 
@@ -578,15 +625,18 @@ export default function PatientDetailsPage() {
         }
     };
 
-    const handleDeleteBiometrics = async () => {
-        if (!confirm('Tem certeza que deseja excluir a biometria facial? Esta ação não pode ser desfeita.')) {
+    const handleDeleteBiometrics = async (biometricId?: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta biometria facial? Esta ação não pode ser desfeita.')) {
             return;
         }
 
         setIsDeleting(true);
 
         try {
-            const response = await fetch(`/api/patients/${patientId}/biometrics`, {
+            const url = biometricId
+                ? `/api/patients/${patientId}/biometrics?biometricId=${biometricId}`
+                : `/api/patients/${patientId}/biometrics`;
+            const response = await fetch(url, {
                 method: 'DELETE'
             });
 
@@ -595,7 +645,7 @@ export default function PatientDetailsPage() {
             }
 
             toast.success('Biometria excluída com sucesso');
-            setBiometricStatus({ hasBiometrics: false });
+            loadBiometricStatus();
         } catch (error) {
             toast.error('Erro ao excluir biometria');
         } finally {
@@ -635,38 +685,60 @@ export default function PatientDetailsPage() {
 
     return (
         <div className="container py-8 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                        <ArrowLeft className="w-4 h-4 mr-2" />
+            {/* Header com padrao SaaS Internacional */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => router.back()}
+                        className="h-10 px-2.5 sm:px-3 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        title="Voltar a lista de pacientes"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-1.5" />
                         Voltar
                     </Button>
-                    <div>
-                        <div className="flex flex-wrap items-center gap-2.5">
-                            <h1 className="text-2xl font-bold">{typeof patient.full_name === 'object' ? '-' : patient.full_name}</h1>
-                            {patient.billing_type === 'convenio' ? (
-                                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200">
-                                    <Shield className="w-3.5 h-3.5 mr-1" />
-                                    Convênio: {patient.health_insurances?.name || 'Convênio'}
-                                    {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
-                                </Badge>
-                            ) : patient.billing_type === 'ambos' ? (
-                                <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border-sky-200">
-                                    <Sparkles className="w-3.5 h-3.5 mr-1" />
-                                    Particular & {patient.health_insurances?.name || 'Convênio'}
-                                    {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
-                                </Badge>
-                            ) : (
-                                <Badge variant="outline" className="text-slate-600 dark:text-slate-400">
-                                    <User className="w-3.5 h-3.5 mr-1" />
-                                    Particular
-                                </Badge>
-                            )}
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-800 dark:to-slate-900 text-white font-semibold text-base shadow-xs ring-2 ring-slate-100 dark:ring-slate-800 shrink-0 flex items-center justify-center">
+                            {getInitials(typeof patient.full_name === 'string' ? patient.full_name : 'Paciente')}
                         </div>
-                        <p className="text-muted-foreground">
-                            Cadastrado em {patient.created_at && typeof patient.created_at !== 'object' ? new Date(patient.created_at).toLocaleDateString('pt-BR') : '-'}
-                        </p>
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                                    {typeof patient.full_name === 'object' ? '-' : (patient.full_name || 'Paciente')}
+                                </h1>
+                                {patient.billing_type === 'convenio' ? (
+                                    <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60 font-medium text-xs">
+                                        <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+                                        Convênio: {patient.health_insurances?.name || 'Convênio'}
+                                        {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
+                                    </Badge>
+                                ) : patient.billing_type === 'ambos' ? (
+                                    <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/80 dark:border-sky-800/60 font-medium text-xs">
+                                        <Sparkles className="w-3.5 h-3.5 mr-1 text-sky-600 dark:text-sky-400" />
+                                        Particular & {patient.health_insurances?.name || 'Convênio'}
+                                        {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline" className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300 font-medium text-xs">
+                                        <User className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                                        Particular
+                                    </Badge>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                <span className="inline-flex items-center gap-1">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                    Cadastrado em {patient.created_at && typeof patient.created_at !== 'object' ? new Date(patient.created_at).toLocaleDateString('pt-BR') : '-'}
+                                </span>
+                                {biometricStatus?.hasBiometrics && (
+                                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Biometria Ativa ({biometricStatus.count || 1})
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -674,16 +746,23 @@ export default function PatientDetailsPage() {
                     <Button 
                         variant="outline" 
                         onClick={() => setActiveTab('signatures')}
-                        className={activeTab === 'signatures' 
-                            ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 font-semibold gap-2 shadow-xs border-transparent' 
-                            : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-850 font-medium gap-2'}
+                        className={cn(
+                            "min-h-[44px] px-3.5 font-medium text-sm gap-2 border transition-all",
+                            activeTab === 'signatures' 
+                                ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 border-transparent shadow-xs' 
+                                : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        )}
                     >
-                        <ShieldCheck className={`w-4 h-4 ${activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                        <ShieldCheck className={cn("w-4 h-4", activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400')} />
                         <span>Contratos & Termos</span>
                     </Button>
-                    <Button variant="outline" onClick={() => setShowEditModal(true)}>
-                        <Edit2 className="w-4 h-4 mr-2" />
-                        Editar
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setShowEditModal(true)}
+                        className="min-h-[44px] px-3.5 font-medium text-sm gap-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                        <Edit2 className="w-4 h-4 text-slate-500" />
+                        <span>Editar</span>
                     </Button>
                 </div>
             </div>
@@ -729,164 +808,422 @@ export default function PatientDetailsPage() {
                         Reembolso
                     </TabsTrigger>
                     )}
+                    <TabsTrigger value="biometrics" className="gap-2">
+                        <Camera className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                        <span>Biometria Facial</span>
+                        {biometricStatus?.count ? (
+                            <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs font-semibold">
+                                {biometricStatus.count}
+                            </Badge>
+                        ) : null}
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* Tab: Informações */}
-                <TabsContent value="info">
-                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <User className="w-5 h-5 text-primary" />
-                                Dados Pessoais do Paciente
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Dados essenciais exigidos para relatórios semestrais */}
-                            <div className="grid gap-4 md:grid-cols-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                                <div>
-                                    <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                        Nome Completo
-                                    </span>
-                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                                        {typeof patient.full_name === 'object' ? 'Não informado' : (patient.full_name || 'Não informado')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                        Data de Nascimento
-                                    </span>
-                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                                        {(() => {
-                                            const bDate = patient.birth_date || (patient as any).date_of_birth;
-                                            if (!bDate) return 'Não informada';
-                                            try {
-                                                let dateObj: Date;
-                                                if (typeof bDate === 'string' && bDate.includes('T')) {
-                                                    dateObj = new Date(bDate);
-                                                } else if (typeof bDate === 'string' && bDate.includes('-')) {
-                                                    const [y, m, d] = bDate.split('-').map(Number);
-                                                    dateObj = new Date(y, m - 1, d);
-                                                } else if (typeof bDate === 'string' && bDate.includes('/')) {
-                                                    const [d, m, y] = bDate.split('/').map(Number);
-                                                    dateObj = new Date(y, m - 1, d);
-                                                } else {
-                                                    dateObj = new Date(bDate);
-                                                }
-                                                if (isNaN(dateObj.getTime())) return String(bDate);
-                                                const formatted = dateObj.toLocaleDateString('pt-BR');
-                                                const today = new Date();
-                                                let age = today.getFullYear() - dateObj.getFullYear();
-                                                const monthDiff = today.getMonth() - dateObj.getMonth();
-                                                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dateObj.getDate())) {
-                                                    age--;
-                                                }
-                                                return age >= 0 ? `${formatted} (${age} ${age === 1 ? 'ano' : 'anos'})` : formatted;
-                                            } catch {
-                                                return String(bDate);
-                                            }
-                                        })()}
-                                    </p>
-                                </div>
-                                <div>
-                                    <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                        Nome Completo dos Responsáveis
-                                    </span>
-                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                                        {(patient as any).insurance_holder_name || (patient as any).responsible_name || (patient as any).guardian_name || (patient as any).mother_name || 'Não informado'}
-                                    </p>
-                                </div>
-                                <div className="md:col-span-3 pt-3 border-t border-slate-200/70 dark:border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                    <div>
-                                        <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                            Modalidade
-                                        </span>
-                                        {patient.billing_type === 'ambos' ? (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40">
-                                                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                                                Particular & Convênio: {patient.health_insurances?.name || 'Convênio'}
-                                            </span>
-                                        ) : patient.billing_type === 'convenio' ? (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                                                <Shield className="w-3.5 h-3.5" />
-                                                Convênio: {patient.health_insurances?.name || 'Não informado'}
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                                <User className="w-3.5 h-3.5" />
-                                                Particular
-                                            </span>
-                                        )}
-                                    </div>
-                                    {(patient.billing_type === 'convenio' || patient.billing_type === 'ambos') && (
-                                        <>
-                                            <div>
-                                                <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                                    Nº Carteirinha
-                                                </span>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">
-                                                    {patient.insurance_card_number || 'Não informado'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                                    Plano / Categoria
-                                                </span>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">
-                                                    {patient.insurance_plan_name || 'Padrão'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <span className="text-xs text-muted-foreground font-semibold block uppercase tracking-wider mb-1">
-                                                    Validade da Carteirinha
-                                                </span>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">
-                                                    {patient.insurance_validity
-                                                        ? new Date(patient.insurance_validity + 'T12:00:00').toLocaleDateString('pt-BR')
-                                                        : 'Não informada'}
-                                                </p>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                <TabsContent value="info" className="space-y-6 mt-6">
+                    {(() => {
+                        const bDate = patient.birth_date || (patient as any).date_of_birth;
+                        const ageInfo = getAgeInfo(bDate);
 
-                            {/* Demais dados cadastrais e de contato (exibidos para administradores/recepção) */}
-                            {user?.role !== 'DOCTOR' && (
-                                <div className="grid gap-4 md:grid-cols-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                    {patient.email && (
-                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                                            <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span><strong>E-mail:</strong> {patient.email}</span>
-                                        </div>
-                                    )}
-                                    {patient.phone && (
-                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                                            <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span><strong>Telefone:</strong> {patient.phone}</span>
-                                        </div>
-                                    )}
-                                    {patient.cpf && (
-                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                                            <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span><strong>CPF Paciente:</strong> {patient.cpf}</span>
-                                        </div>
-                                    )}
-                                    {(patient as any).insurance_holder_cpf && (
-                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                                            <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span><strong>CPF Titular/Responsável:</strong> {(patient as any).insurance_holder_cpf}</span>
-                                        </div>
-                                    )}
-                                    {(patient as any).addressText && (
-                                        <div className="flex items-center gap-2 md:col-span-2 text-slate-700 dark:text-slate-300">
-                                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <span><strong>Endereço:</strong> {(patient as any).addressText}</span>
-                                        </div>
-                                    )}
+                        return (
+                            <>
+                                {/* Grid Principal: Identificação e Contato */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Card 1: Identificação do Paciente */}
+                                    <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
+                                        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                                        <User className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            Identificação do Paciente
+                                                        </CardTitle>
+                                                        <CardDescription className="text-xs">
+                                                            Dados civis e filiação
+                                                        </CardDescription>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setShowEditModal(true)}
+                                                    className="h-8 px-2.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5 mr-1" />
+                                                    Editar
+                                                </Button>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-4 space-y-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Nome Completo
+                                                    </span>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        {typeof patient.full_name === 'object' ? '-' : (patient.full_name || 'Não informado')}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Data de Nascimento
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            {ageInfo ? ageInfo.formatted : 'Não informada'}
+                                                        </p>
+                                                        {ageInfo && (
+                                                            <Badge variant="secondary" className="px-1.5 py-0 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                                                {ageInfo.age} {ageInfo.age === 1 ? 'ano' : 'anos'}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        CPF do Paciente
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                                                            {patient.cpf ? formatCPF(patient.cpf) : 'Não informado'}
+                                                        </p>
+                                                        {patient.cpf && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyToClipboard(formatCPF(patient.cpf!), 'cpf')}
+                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                title="Copiar CPF"
+                                                            >
+                                                                {copiedField === 'cpf' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Gênero
+                                                    </span>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        {(patient as any).gender === 'M' ? 'Masculino' : (patient as any).gender === 'F' ? 'Feminino' : (patient as any).gender === 'O' ? 'Outro' : 'Não informado'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Responsável / Titular
+                                                    </span>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        {(patient as any).insurance_holder_name || (patient as any).responsible_name || (patient as any).guardian_name || (patient as any).mother_name || 'Próprio paciente'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        CPF do Responsável
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                                                            {(patient as any).insurance_holder_cpf ? formatCPF((patient as any).insurance_holder_cpf) : 'Não informado'}
+                                                        </p>
+                                                        {(patient as any).insurance_holder_cpf && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyToClipboard(formatCPF((patient as any).insurance_holder_cpf), 'holder_cpf')}
+                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                title="Copiar CPF do responsável"
+                                                            >
+                                                                {copiedField === 'holder_cpf' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Card 2: Contato & Endereço */}
+                                    <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
+                                        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                                        <Phone className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            Contato & Endereço
+                                                        </CardTitle>
+                                                        <CardDescription className="text-xs">
+                                                            Canais de comunicação e residência
+                                                        </CardDescription>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-4 space-y-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Telefone / WhatsApp
+                                                    </span>
+                                                    {patient.phone ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <a
+                                                                href={`tel:${patient.phone}`}
+                                                                className="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors font-mono"
+                                                            >
+                                                                {formatPhone(patient.phone)}
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyToClipboard(formatPhone(patient.phone!), 'phone')}
+                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                title="Copiar telefone"
+                                                            >
+                                                                {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm font-semibold text-slate-400">Não informado</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        E-mail
+                                                    </span>
+                                                    {patient.email ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <a
+                                                                href={`mailto:${patient.email}`}
+                                                                className="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400 transition-colors truncate max-w-[180px]"
+                                                                title={patient.email}
+                                                            >
+                                                                {patient.email}
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyToClipboard(patient.email!, 'email')}
+                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+                                                                title="Copiar e-mail"
+                                                            >
+                                                                {copiedField === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm font-semibold text-slate-400">Não informado</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                    Endereço Residencial
+                                                </span>
+                                                <div className="flex items-start gap-2">
+                                                    <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                                                        {(patient as any).addressText || 'Nenhum endereço cadastrado para este paciente.'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
+
+                                {/* Card 3: Modalidade & Cobertura */}
+                                <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
+                                    <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                                    <ShieldCheck className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        Modalidade de Atendimento & Cobertura
+                                                    </CardTitle>
+                                                    <CardDescription className="text-xs">
+                                                        Faturamento, convênio e autorizações
+                                                    </CardDescription>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-4">
+                                        {patient.billing_type === 'particular' ? (
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                                                        <User className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                                Atendimento 100% Particular
+                                                            </h4>
+                                                            <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs">
+                                                                Particular
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                                            Cobrança direta por sessão realizada ou via plano de sessões pré-pago.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setShowEditModal(true)}
+                                                    className="min-h-[44px] text-xs font-medium border-slate-200 dark:border-slate-800"
+                                                >
+                                                    Vincular Convênio
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Modalidade
+                                                    </span>
+                                                    {patient.billing_type === 'ambos' ? (
+                                                        <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-200 text-xs font-medium">
+                                                            <Sparkles className="w-3 h-3 mr-1" />
+                                                            Particular & Convênio
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 text-xs font-medium">
+                                                            <Shield className="w-3 h-3 mr-1" />
+                                                            Convênio
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Operadora de Saúde
+                                                    </span>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        {patient.health_insurances?.name || 'Não informado'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Nº da Carteirinha
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                                                            {patient.insurance_card_number || 'Não informado'}
+                                                        </p>
+                                                        {patient.insurance_card_number && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyToClipboard(patient.insurance_card_number!, 'card_number')}
+                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800"
+                                                                title="Copiar carteirinha"
+                                                            >
+                                                                {copiedField === 'card_number' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Validade / Plano
+                                                    </span>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        {patient.insurance_validity
+                                                            ? new Date(patient.insurance_validity + 'T12:00:00').toLocaleDateString('pt-BR')
+                                                            : (patient.insurance_plan_name || 'Vigência indeterminada')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Card 4: Biometria Facial */}
+                                <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
+                                    <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                                    <Camera className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        Biometria Facial (Check-in)
+                                                    </CardTitle>
+                                                    <CardDescription className="text-xs">
+                                                        Validação biométrica por visão computacional para recepção
+                                                    </CardDescription>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                                            <div className="flex items-center gap-3.5">
+                                                <div className={cn(
+                                                    "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-xs",
+                                                    biometricStatus?.hasBiometrics 
+                                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300" 
+                                                        : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                                                )}>
+                                                    <Camera className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            Status do Reconhecimento Facial
+                                                        </h4>
+                                                        {biometricStatus?.hasBiometrics ? (
+                                                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 text-xs font-medium">
+                                                                {biometricStatus.count || 1} face(s) cadastrada(s)
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-amber-600 border-amber-300 dark:text-amber-400 text-xs font-medium">
+                                                                Pendente
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        {biometricStatus?.hasBiometrics 
+                                                            ? 'Reconhecimento facial ativo para validação instantânea de presença na recepção.'
+                                                            : 'Nenhum perfil facial cadastrado. Cadastre o paciente ou responsável para agilizar a recepção.'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setActiveTab('biometrics')}
+                                                    className="min-h-[44px] px-3.5 text-xs font-semibold gap-1.5 border-slate-200 dark:border-slate-800"
+                                                >
+                                                    <Camera className="w-3.5 h-3.5" />
+                                                    Gerenciar Biometria
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => setShowEnrollment(true)}
+                                                    className="min-h-[44px] px-3.5 text-xs font-semibold gap-1.5 bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                                                >
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    {biometricStatus?.hasBiometrics ? 'Adicionar Novo Rosto' : 'Cadastrar Agora'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        );
+                    })()}
                 </TabsContent>
 
                 {/* Tab: Agendamentos */}
@@ -1047,6 +1384,125 @@ export default function PatientDetailsPage() {
                     )}
                 </TabsContent>
                 )}
+
+                {/* Tab: Biometria Facial */}
+                <TabsContent value="biometrics" className="space-y-4">
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
+                            <div>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Camera className="w-5 h-5 text-sky-600" />
+                                    Cadastros Biométricos (Check-in Facial)
+                                </CardTitle>
+                                <CardDescription className="text-xs sm:text-sm mt-1">
+                                    Gerencie os rostos autorizados para validação de presença nas sessões deste paciente (paciente, pai, mãe ou responsáveis).
+                                </CardDescription>
+                            </div>
+                            <Button 
+                                onClick={() => setShowEnrollment(true)}
+                                className="min-h-[44px] gap-2 font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 shrink-0"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Cadastrar Nova Biometria
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {(!biometricStatus?.items || biometricStatus.items.length === 0) ? (
+                                <div className="text-center py-12 px-4 border border-dashed rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                                    <Camera className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-base">Nenhuma biometria cadastrada</h3>
+                                    <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto mt-1 mb-6">
+                                        Cadastre a face do paciente e/ou de seus responsáveis para permitir o check-in facial automatizado na recepção e confirmar a presença nas sessões.
+                                    </p>
+                                    <Button 
+                                        onClick={() => setShowEnrollment(true)}
+                                        className="min-h-[44px] gap-2 font-medium"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Cadastrar Primeiro Rosto
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {biometricStatus.items.map((bio) => {
+                                        const labelMap: Record<string, string> = {
+                                            patient: 'Paciente',
+                                            mother: 'Mãe',
+                                            father: 'Pai',
+                                            guardian: 'Responsável Legal',
+                                            other: 'Outro'
+                                        };
+                                        const typeLabel = labelMap[bio.person_type || 'patient'] || 'Paciente';
+
+                                        return (
+                                            <div 
+                                                key={bio.id} 
+                                                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col justify-between shadow-xs gap-4"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    {bio.reference_image_url ? (
+                                                        <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shrink-0 bg-slate-100">
+                                                            <img 
+                                                                src={bio.reference_image_url} 
+                                                                alt={bio.person_name || typeLabel}
+                                                                className="w-full h-full object-cover" 
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0 bg-sky-50 dark:bg-sky-950/40 flex items-center justify-center text-sky-600">
+                                                            <User className="w-7 h-7" />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <Badge variant="outline" className="text-xs font-semibold bg-sky-50 dark:bg-sky-950/40 border-sky-200 text-sky-700 dark:text-sky-300">
+                                                                {typeLabel}
+                                                            </Badge>
+                                                            {bio.detection_score ? (
+                                                                <Badge variant="secondary" className="text-xs">
+                                                                    Qualidade: {Math.round(bio.detection_score * 100)}%
+                                                                </Badge>
+                                                            ) : null}
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate text-base">
+                                                            {bio.person_name || (typeof patient.full_name === 'object' ? '' : patient.full_name)}
+                                                        </h4>
+                                                        {bio.notes && (
+                                                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                                                {bio.notes}
+                                                            </p>
+                                                        )}
+                                                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                                            <Calendar className="w-3.5 h-3.5" />
+                                                            <span>Cadastrado em {bio.created_at ? new Date(bio.created_at).toLocaleDateString('pt-BR') : '-'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-2 border-t border-slate-100 dark:border-slate-900 flex items-center justify-between">
+                                                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                        Consentimento LGPD Ativo
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteBiometrics(bio.id)}
+                                                        disabled={isDeleting}
+                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 min-h-[40px] px-2.5 gap-1.5"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Excluir
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
             </Tabs>
 
             {/* Edit Patient Modal */}
@@ -1428,6 +1884,21 @@ export default function PatientDetailsPage() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Cadastro Biométrico */}
+            <Dialog open={showEnrollment} onOpenChange={setShowEnrollment}>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+                    <DialogTitle className="sr-only">Cadastro Biométrico Facial</DialogTitle>
+                    <DialogDescription className="sr-only">Cadastro e validação de perfil biométrico facial do paciente</DialogDescription>
+                    <FaceEnrollment
+                        patientId={patientId}
+                        clinicId={user?.clinic_id || (patient as any)?.clinic_id || ''}
+                        patientName={typeof patient.full_name === 'object' ? '' : patient.full_name}
+                        onComplete={handleEnrollmentComplete}
+                        onCancel={() => setShowEnrollment(false)}
+                    />
                 </DialogContent>
             </Dialog>
         </div>

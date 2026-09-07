@@ -378,8 +378,16 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
             ''
 
           if (text) {
-            const { processIncomingWhatsAppRepasse } = await import('@/lib/services/whatsapp-repasse')
-            await processIncomingWhatsAppRepasse(clinicId, remoteJid, text, sector)
+            const { isRepasseExtractCommand, processIncomingWhatsAppRepasse } = await import('@/lib/services/whatsapp-repasse')
+            if (isRepasseExtractCommand(text)) {
+              await processIncomingWhatsAppRepasse(clinicId, remoteJid, text, sector)
+            } else {
+              const { processIncomingWhatsAppAppointment } = await import('@/lib/services/whatsapp-appointment-confirmation')
+              const result = await processIncomingWhatsAppAppointment(clinicId, remoteJid, text, sector)
+              if (result?.responseMessage && session.socket) {
+                await session.socket.sendMessage(remoteJid, { text: result.responseMessage })
+              }
+            }
           }
         } catch (msgErr: any) {
           console.error('[WhatsApp] Erro ao processar mensagem recebida:', msgErr?.message || msgErr)

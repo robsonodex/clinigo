@@ -88,6 +88,10 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false)
     const [hasWorldSensoryEvolution, setHasWorldSensoryEvolution] = useState(false)
     const [worldSensoryData, setWorldSensoryData] = useState<WorldSensoryData>(initialWorldSensoryData)
+    const [sessionStatus, setSessionStatus] = useState<string>('Presente')
+    const [sessionStatusNotes, setSessionStatusNotes] = useState<string>('')
+    const [digitalSignatureUrl, setDigitalSignatureUrl] = useState<string | null>(null)
+    const [digitalSignatureMeta, setDigitalSignatureMeta] = useState<any>(null)
 
     // Open sign modal after save completes and recordId is set
     React.useEffect(() => {
@@ -153,12 +157,29 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 1. Fetch Appointment Context
             const { data: appt, error: apptError } = await supabase
                 .from('appointments')
-                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id`)
+                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer`)
                 .eq('id', appointmentId)
                 .single()
 
             if (apptError || !appt) throw new Error('Agendamento não encontrado')
             setAppointment(appt)
+
+            if (appt.session_status) {
+                setSessionStatus(appt.session_status)
+            }
+            if (appt.session_status_notes) {
+                setSessionStatusNotes(appt.session_status_notes)
+            }
+            if (appt.digital_signature_url) {
+                setDigitalSignatureUrl(appt.digital_signature_url)
+                setIsLocked(true)
+                setSignatureData({
+                    signerName: appt.digital_signature_signer || 'Profissional',
+                    signedAt: appt.digital_signature_date,
+                    hash: appt.digital_signature_hash,
+                    signatureImageUrl: appt.digital_signature_url,
+                })
+            }
 
             // Verifica bloqueio de 24h
             let referenceTime = new Date().getTime()
@@ -429,10 +450,54 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 setRecordId(savedRecord.id)
             }
 
+            // Atualiza status do atendimento na tabela appointments
+            const isPresente = sessionStatus === 'Presente';
+            await supabase.from('appointments').update({
+                session_status: sessionStatus,
+                session_status_notes: sessionStatusNotes,
+                no_show: !isPresente && (sessionStatus === 'Falta injustificada' || sessionStatus === 'Falta justificada'),
+                updated_at: new Date().toISOString()
+            }).eq('id', appointment.id);
+
             toast({ title: 'Sucesso', description: 'Prontuário estruturado com sucesso!' })
         } catch (error: any) {
             console.error('Error saving record:', error)
             toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive'})
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleSaveDigitalSignature = async (dataUrl: string, meta: { signerName: string; councilNumber: string; signedAt: string; hash: string }) => {
+        try {
+            setIsSaving(true)
+            await handleSave()
+
+            const { error } = await supabase.from('appointments').update({
+                digital_signature_url: dataUrl,
+                digital_signature_date: meta.signedAt,
+                digital_signature_hash: meta.hash,
+                digital_signature_signer: meta.signerName,
+                status: 'COMPLETED',
+                updated_at: new Date().toISOString()
+            }).eq('id', appointment.id)
+
+            if (error) throw error
+
+            setDigitalSignatureUrl(dataUrl)
+            setDigitalSignatureMeta(meta)
+            setIsLocked(true)
+            setSignatureData({
+                signerName: meta.signerName,
+                councilNumber: meta.councilNumber,
+                signedAt: meta.signedAt,
+                signatureImageUrl: dataUrl,
+                hash: meta.hash
+            })
+            toast({ title: 'Assinatura Registrada', description: 'Evolução assinada digitalmente com integridade garantida.' })
+        } catch (e: any) {
+            toast({ title: 'Erro ao assinar', description: e.message || 'Falha ao salvar assinatura digital', variant: 'destructive' })
+            throw e
         } finally {
             setIsSaving(false)
         }
@@ -597,12 +662,20 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     }}
                     isSaving={isSaving}
                     isLocked={isLocked}
-                    isSigned={!!signatureData}
+                    isSigned={!!signatureData || !!digitalSignatureUrl}
+                    sessionStatus={sessionStatus}
+                    onSessionStatusChange={setSessionStatus}
+                    sessionStatusNotes={sessionStatusNotes}
+                    onSessionStatusNotesChange={setSessionStatusNotes}
+                    signatureImageUrl={digitalSignatureUrl}
+                    onSaveDigitalSignature={handleSaveDigitalSignature}
                     signatureData={signatureData ? {
                         signerName: signatureData.signerName,
                         specialty: doctor?.specialty,
                         councilNumber: signatureData.crm ? `${doctor?.council_name || clinic?.council_label || 'Conselho'} - ${signatureData.crm}${signatureData.crmState ? `/${signatureData.crmState}` : ''}` : undefined,
-                        signedAt: signatureData.signedAt
+                        signedAt: signatureData.signedAt,
+                        signatureImageUrl: signatureData.signatureImageUrl || digitalSignatureUrl || undefined,
+                        hash: signatureData.hash || digitalSignatureMeta?.hash || undefined
                     } : null}
                     doctor={{
                         name: doctor?.user?.full_name,

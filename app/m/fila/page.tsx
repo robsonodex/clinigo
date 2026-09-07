@@ -78,9 +78,9 @@ export default function FilaPage() {
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={() => handleCall(item.id, item.patient_name)}
-                  className="flex-1 h-10 bg-teal-600 text-white text-sm font-semibold rounded-xl active:scale-[0.98] transition"
+                  className="flex-1 min-h-[44px] h-11 bg-teal-600 active:bg-teal-700 text-white text-sm font-semibold rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2"
                 >
-                  Chamar
+                  Chamar Paciente
                 </button>
               </div>
             </div>

@@ -480,6 +480,17 @@ const helpItems: HelpItem[] = [
         roles: ['CLINIC_ADMIN', 'DOCTOR'],
         tags: ['notas fiscais', 'demonstrativos', 'repasses', 'comprovante', 'anexos', 'whatsapp']
     },
+    {
+        id: 'auditoria-biometria',
+        title: 'Auditoria Mensal de Biometria Facial',
+        category: 'Financeiro',
+        icon: ShieldCheck,
+        whatIsIt: 'Relatório mensal executivo que cruza todos os atendimentos realizados no período com a existência de biometria facial cadastrada para o paciente (ou seus pais/cuidadores). Calcula a taxa de conformidade percentual da clínica e permite exportar a planilha completa em Excel para fins de comprovação com operadoras de saúde e liberação de repasses.',
+        whenToUse: 'Antes de aprovar notas fiscais e liberar pagamentos de repasse aos profissionais, garantindo que nenhum atendimento sem biometria seja repassado indevidamente.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['biometria', 'auditoria', 'conformidade', 'repasse', 'excel', 'convênio']
+    },
     // Comunicação
     {
         id: 'chat-interno',
@@ -497,11 +508,22 @@ const helpItems: HelpItem[] = [
         title: 'WhatsApp',
         category: 'Comunicação',
         icon: MessageCircle,
-        whatIsIt: 'Módulo de conexão e parametrização do canal oficial de WhatsApp da clínica via Baileys API. Permite emitir QR Code de conexão e monitorar o status do canal.',
+        whatIsIt: 'Módulo de conexão e parametrização do canal oficial de WhatsApp da clínica via Baileys API. Permite emitir QR Code de conexão e monitorar o status do canal. Acesso restrito a Administradores e Recepção.',
         whenToUse: 'Para ativar ou reautenticar o WhatsApp da clínica responsável por disparar lembretes automáticos e receber confirmações.',
         minPlan: 'Avançado',
-        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
-        tags: ['qr code', 'baileys', 'lembrete automático', 'confirmação']
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        tags: ['qr code', 'baileys', 'lembrete automático', 'conexão whatsapp']
+    },
+    {
+        id: 'confirmacao-whatsapp',
+        title: 'Confirmação Automática via WhatsApp',
+        category: 'Comunicação',
+        icon: CheckCircle2,
+        whatIsIt: 'Sistema inteligente de leitura de respostas de pacientes no WhatsApp. Quando o paciente responde "SIM", "CONFIRMO" ou similar, o status da consulta é atualizado automaticamente para "CONFIRMED" na Agenda, o paciente recebe um comprovante de confirmação e a mensagem é sincronizada com o Chat Interno da Recepção.',
+        whenToUse: 'Opera 24/7 de forma 100% autônoma após o envio dos lembretes de 24h/1h de antecedência.',
+        minPlan: 'Avançado',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        tags: ['confirmação', 'whatsapp', 'agenda', 'automação', 'chat']
     },
     {
         id: 'mural-de-recados',
@@ -592,6 +614,17 @@ const helpItems: HelpItem[] = [
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
         tags: ['cnpj', 'logo', 'endereço', 'dados fiscais']
+    },
+    {
+        id: 'logo-clinica-co-branding',
+        title: 'Logotipo da Clínica e Co-branding',
+        category: 'Configurações',
+        icon: Building2,
+        whatIsIt: 'Espaço dedicado para upload e exibição do logotipo da clínica no topo da barra lateral do sistema, posicionado lado a lado com a marca imutável do CliniGo, reforçando a identidade corporativa da instituição.',
+        whenToUse: 'Para personalizar a interface da clínica com seu logotipo oficial, visível para todos os membros da equipe.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN'],
+        tags: ['logo', 'identidade visual', 'co-branding', 'marca', 'sidebar']
     },
     {
         id: 'pagina-publica',

@@ -8,6 +8,19 @@ export function registerServiceWorker() {
         return
     }
 
+    // Em ambiente de desenvolvimento (localhost), desregistra qualquer Service Worker e limpa caches
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations.forEach((r) => r.unregister());
+        });
+        if ('caches' in window) {
+            caches.keys().then((names) => {
+                names.forEach((name) => caches.delete(name));
+            });
+        }
+        return;
+    }
+
     window.addEventListener('load', async () => {
         try {
             const registration = await navigator.serviceWorker.register('/sw.js', {

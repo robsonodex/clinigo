@@ -41,9 +41,14 @@ interface PaymentOption {
 }
 
 const paymentOptions: PaymentOption[] = [
-    { value: 'health_insurance', label: 'Convênio', icon: <Shield className="h-4 w-4" /> },
-    { value: 'courtesy', label: 'Cortesia (Gratuito)', icon: <Gift className="h-4 w-4" /> },
-    { value: 'to_be_paid', label: 'A Pagar', icon: <Clock className="h-4 w-4" />, description: 'Sem pagamento agora' },
+    { value: 'pix_presencial', label: 'PIX Presencial', icon: <QrCode className="h-4 w-4 text-emerald-600" />, showPrice: true },
+    { value: 'credit_card', label: 'Cartão de Crédito', icon: <CreditCard className="h-4 w-4 text-sky-600" />, showPrice: true },
+    { value: 'debit_card', label: 'Cartão de Débito', icon: <CreditCard className="h-4 w-4 text-indigo-600" />, showPrice: true },
+    { value: 'cash', label: 'Dinheiro', icon: <Banknote className="h-4 w-4 text-green-600" />, showPrice: true },
+    { value: 'health_insurance', label: 'Convênio', icon: <Shield className="h-4 w-4 text-amber-600" /> },
+    { value: 'payment_link', label: 'Link de Pagamento', icon: <Link className="h-4 w-4 text-purple-600" />, showPrice: true },
+    { value: 'courtesy', label: 'Cortesia (Gratuito)', icon: <Gift className="h-4 w-4 text-teal-600" /> },
+    { value: 'to_be_paid', label: 'A Pagar', icon: <Clock className="h-4 w-4 text-slate-600" />, description: 'Sem pagamento agora' },
 ]
 
 interface HealthInsurance {
@@ -152,8 +157,9 @@ export function PaymentMethodSelector({
 
             {/* Courtesy note */}
             {selectedType === 'courtesy' && (
-                <div className="p-3 bg-purple-50 text-purple-700 rounded-lg text-sm">
-                    🎁 Consulta gratuita - nenhum valor será cobrado
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-medium flex items-center gap-2">
+                    <Gift className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span>Consulta gratuita (cortesia) - nenhum valor será cobrado no faturamento.</span>
                 </div>
             )}
 
