@@ -229,3 +229,94 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         return handleApiError(error)
     }
 }
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    try {
+        const { id: appointmentId } = await params
+        const supabase = await createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+        }
+
+        const { data: currentUser } = await supabase
+            .from('users')
+            .select('id, role, clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        if (!currentUser) {
+            return NextResponse.json({ error: 'Usuario nao encontrado' }, { status: 401 })
+        }
+
+        const adminDb = createServiceRoleClient() as any
+
+        // Buscar agendamento e verificar clinic_id
+        const { data: appointment, error: fetchError } = await adminDb
+            .from('appointments')
+            .select('id, clinic_id, doctor_id, status, patient_id')
+            .eq('id', appointmentId)
+            .single()
+
+        if (fetchError || !appointment) {
+            throw new NotFoundError('Agendamento')
+        }
+
+        // Validacao de seguranca e isolamento multi-tenant
+        if (currentUser.role !== 'SUPER_ADMIN') {
+            const headerClinicId = request.headers.get('x-clinic-id')
+            const effectiveClinicId = headerClinicId || currentUser.clinic_id
+
+            if (appointment.clinic_id !== effectiveClinicId && appointment.clinic_id !== currentUser.clinic_id) {
+                throw new ForbiddenError('Acesso negado: agendamento pertence a outra clinica')
+            }
+
+            if (currentUser.role === 'DOCTOR') {
+                const { data: doctor } = await adminDb
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', currentUser.id)
+                    .single()
+
+                if (doctor?.id !== appointment.doctor_id) {
+                    throw new ForbiddenError('Acesso negado: profissional nao autorizado')
+                }
+            }
+        }
+
+        // Desvincular e limpar registros dependentes antes da exclusao
+        await adminDb.from('appointment_qr_codes').delete().eq('appointment_id', appointmentId)
+        await adminDb.from('video_rooms').delete().eq('appointment_id', appointmentId)
+        await adminDb.from('reschedule_tokens').delete().eq('new_appointment_id', appointmentId)
+        await adminDb.from('nps_surveys').delete().eq('appointment_id', appointmentId)
+
+        // Desvincular foreign keys com restricao para nao quebrar integridade referencial
+        await adminDb.from('financial_entries').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('waiting_list').update({ scheduled_appointment_id: null }).eq('scheduled_appointment_id', appointmentId)
+        await adminDb.from('consultations').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('payments').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('tiss_guides').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('referrals').update({ converted_appointment_id: null }).eq('converted_appointment_id', appointmentId)
+
+        // Excluir agendamento do banco
+        const { error: deleteError } = await adminDb
+            .from('appointments')
+            .delete()
+            .eq('id', appointmentId)
+
+        if (deleteError) {
+            console.error('[APPOINTMENT_DELETE_V2] Error:', deleteError)
+            return NextResponse.json({ error: 'Erro ao excluir agendamento: ' + deleteError.message }, { status: 500 })
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Agendamento removido da grade com sucesso'
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        })
+    } catch (error) {
+        return handleApiError(error)
+    }
+}

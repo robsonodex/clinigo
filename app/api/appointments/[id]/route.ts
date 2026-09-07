@@ -403,9 +403,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             }
         }
 
-        // Limpar registros dependentes vinculados antes da exclusão
+        // Desvincular e limpar registros dependentes antes da exclusao
         await adminDb.from('appointment_qr_codes').delete().eq('appointment_id', appointmentId)
         await adminDb.from('video_rooms').delete().eq('appointment_id', appointmentId)
+        await adminDb.from('reschedule_tokens').delete().eq('new_appointment_id', appointmentId)
+        await adminDb.from('nps_surveys').delete().eq('appointment_id', appointmentId)
+
+        // Desvincular foreign keys com restricao para nao quebrar integridade referencial
+        await adminDb.from('financial_entries').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('waiting_list').update({ scheduled_appointment_id: null }).eq('scheduled_appointment_id', appointmentId)
+        await adminDb.from('consultations').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('payments').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('tiss_guides').update({ appointment_id: null }).eq('appointment_id', appointmentId)
+        await adminDb.from('referrals').update({ converted_appointment_id: null }).eq('converted_appointment_id', appointmentId)
 
         // Excluir agendamento do banco
         const { error: deleteError } = await adminDb
@@ -421,6 +431,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({
             success: true,
             message: 'Agendamento removido da grade com sucesso'
+        }, {
+            headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
         return handleApiError(error)

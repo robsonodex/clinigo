@@ -647,9 +647,24 @@ export default function AgendaPage() {
         mutationFn: async (id: string) => {
             const res = await fetch(`/api/appointments/${id}`, {
                 method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                },
             })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Erro ao excluir agendamento')
+            const text = await res.text()
+            let data: any = {}
+            try {
+                data = text ? JSON.parse(text) : {}
+            } catch {
+                data = { error: text || 'Falha ao processar resposta do servidor' }
+            }
+
+            if (!res.ok) {
+                const errorMessage = (typeof data?.error === 'object' ? data?.error?.message : data?.error) ||
+                    data?.message ||
+                    `Erro ${res.status} ao excluir agendamento`
+                throw new Error(errorMessage)
+            }
             return data
         },
         onSuccess: (data) => {
@@ -679,11 +694,26 @@ export default function AgendaPage() {
         mutationFn: async (ids: string[]) => {
             const res = await fetch('/api/appointments/batch-delete-cancelled', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
                 body: JSON.stringify({ appointmentIds: ids }),
             })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Erro ao excluir agendamentos')
+            const text = await res.text()
+            let data: any = {}
+            try {
+                data = text ? JSON.parse(text) : {}
+            } catch {
+                data = { error: text || 'Falha ao processar resposta do servidor' }
+            }
+
+            if (!res.ok) {
+                const errorMessage = (typeof data?.error === 'object' ? data?.error?.message : data?.error) ||
+                    data?.message ||
+                    `Erro ${res.status} ao excluir agendamentos`
+                throw new Error(errorMessage)
+            }
             return data
         },
         onSuccess: (data) => {

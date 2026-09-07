@@ -65,9 +65,24 @@ export function AppointmentDetailsDrawer({
         try {
             const res = await fetch(`/api/appointments/${appointment.id}`, {
                 method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                },
             })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Erro ao excluir agendamento')
+            const text = await res.text()
+            let data: any = {}
+            try {
+                data = text ? JSON.parse(text) : {}
+            } catch {
+                data = { error: text || 'Falha ao processar resposta do servidor' }
+            }
+
+            if (!res.ok) {
+                const errorMessage = (typeof data?.error === 'object' ? data?.error?.message : data?.error) ||
+                    data?.message ||
+                    `Erro ${res.status} ao excluir agendamento`
+                throw new Error(errorMessage)
+            }
             toast.success('Agendamento removido da grade com sucesso')
             setConfirmDeleteOpen(false)
             onClose()

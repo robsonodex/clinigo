@@ -800,4 +800,17 @@
   - **Sincronização em Tempo Real**: Evento global `appointment-updated` garante atualização instantânea da grade do calendário logo após qualquer exclusão efetuada no painel lateral.
   - **Isolamento Multi-Tenant e LGPD**: Ambas as rotas de exclusão validam rigorosamente o `clinic_id`, impedindo qualquer interferência entre clínicas.
 
+#### Item 26 — Correção do Endpoint DELETE na Rota v2 e Blindagem de Parsing HTTP
+- **Módulo**: Recepção & Agenda → Exclusão da Grade
+- **Caminho**:
+  - `app/api-v2/appointments/[id]/route.ts` → `DELETE`
+  - `app/api/appointments/[id]/route.ts` → `DELETE`
+  - `components/ui/agenda-view.tsx` → `deleteAppointmentMutation`, `batchDeleteCancelledMutation`
+  - `components/dashboard/AppointmentDetailsDrawer.tsx` → `handleDeleteAppointment`
+- **Descrição Técnica**:
+  - **Diagnóstico da Causa Raiz**: O arquivo `next.config.js` possui rewrite redirecionando `/api/appointments/:id` para `/api-v2/appointments/:id`. A rota `app/api-v2/appointments/[id]/route.ts` não continha o handler do método `DELETE`, fazendo o Next.js responder `405 Method Not Allowed` com corpo vazio. Ao executar `await res.json()` em uma resposta de corpo vazio, o navegador disparava `Failed to execute 'json' on 'Response': Unexpected end of JSON input`.
+  - **Implementação do Handler DELETE em API v2**: Adicionado o handler `DELETE` completo em `app/api-v2/appointments/[id]/route.ts` com validação de permissões por clínica/profissional e desvinculo defensivo de dependências e chaves estrangeiras (`appointment_qr_codes`, `video_rooms`, `reschedule_tokens`, `nps_surveys`, `financial_entries`, `waiting_list`, `consultations`, `payments`, `tiss_guides`, `referrals`).
+  - **Blindagem do Parsing HTTP no Frontend**: Implementada leitura resiliente com `res.text()` e fallback seguro para JSON em `agenda-view.tsx` e `AppointmentDetailsDrawer.tsx`, assegurando que nenhuma resposta de erro ou corpo inesperado do servidor quebre a execução da interface.
+
+
 
