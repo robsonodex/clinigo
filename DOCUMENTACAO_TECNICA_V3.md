@@ -858,6 +858,19 @@
   - **Segurança de Credenciais**: O upload passa pelo backend (Next.js API route), garantindo que nem o Access Key nem o Secret Key do R2 sejam expostos ao navegador.
   - **Migração com Validação Criptográfica**: O script `migrate-storage-to-r2.ts` calcula o hash SHA-256 do arquivo original no Supabase e compara com o hash do objeto lido do R2 após o upload. Apenas se os hashes forem idênticos o ponteiro do banco é atualizado. Nenhum arquivo é excluído do Supabase Storage.
 
+#### Item 30 — Execução da Migração Segura de Documentos para Cloudflare R2
+- **Módulo**: Storage & Migração de Dados → Execução Real e Auditoria
+- **Caminho**:
+  - `scripts/migrate-storage-to-r2.ts` → Execução em 17 lotes de 25 arquivos com `--execute`
+  - `scripts/manifests/manifest_migracao_r2_2026-09-07.json` → Manifesto completo de auditoria
+  - `scripts/manifests/manifest_migracao_r2_2026-09-07.csv` → Versão tabular do manifesto
+- **Resultados e Métricas**:
+  - **Total de Documentos no Banco**: 411 arquivos
+  - **Migrados com Sucesso (SHA-256 Validado)**: 396 arquivos (96,35%) transferidos para o Cloudflare R2 (bucket `clinigo`) e ponteiros atualizados com `r2://`.
+  - **Pendentes/Não Localizados na Origem**: 15 arquivos mantidos intactos no Supabase sem nenhuma alteração no banco de dados.
+  - **Arquivos Físicos Deletados no Supabase Storage**: Zero (0). Conforme regra rígida de segurança, todos os arquivos originais foram mantidos no Supabase Storage para observação de 2 semanas como garantia de redundância.
+  - **Integridade Criptográfica**: Todos os 396 arquivos migrados tiveram conferência byte-a-byte de hash SHA-256 entre o arquivo de origem e o arquivo gravado no R2 antes de qualquer alteração no banco.
+
 
 
 
