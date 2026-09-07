@@ -871,6 +871,19 @@
   - **Arquivos Físicos Deletados no Supabase Storage**: Zero (0). Conforme regra rígida de segurança, todos os arquivos originais foram mantidos no Supabase Storage para observação de 2 semanas como garantia de redundância.
   - **Integridade Criptográfica**: Todos os 396 arquivos migrados tiveram conferência byte-a-byte de hash SHA-256 entre o arquivo de origem e o arquivo gravado no R2 antes de qualquer alteração no banco.
 
+#### Item 31 — Recuperação Real de Espaço em Disco no Postgres (VACUUM e REINDEX)
+- **Módulo**: Banco de Dados & Infraestrutura → Otimização de Armazenamento
+- **Caminho**:
+  - `net._http_response` → `VACUUM (FULL, ANALYZE)` + `REINDEX TABLE`
+  - `cron.job_run_details` → `VACUUM (FULL, ANALYZE)` + `REINDEX TABLE`
+- **Resultados e Métricas**:
+  - **Tabela `net._http_response`**: Reduzida de 125 MB para **528 kB** (redução de 124,5 MB).
+  - **Tabela `cron.job_run_details`**: Reduzida de 43 MB para **3.048 kB** (redução de 40 MB).
+  - **Espaço Total Recuperado no Banco**: **164 MB** devolvidos ao disco.
+  - **Tamanho Total do Banco de Dados Postgres**: Reduzido de **266 MB** para **102 MB** (queda de 61,6% no consumo físico de disco).
+  - **Uso do Limite Free (500 MB)**: Ocupação caiu de 53,2% para apenas **20,4%**, deixando ~400 MB de margem livre.
+  - **Disponibilidade**: Ambas as tabelas são de uso exclusivo de extensões em segundo plano (`pg_net` e `pg_cron`), com tempo de execução de menos de 1 segundo e impacto zero para médicos e recepcionistas.
+
 
 
 
