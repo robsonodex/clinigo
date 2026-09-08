@@ -1050,12 +1050,21 @@
       - Tentativa de acesso cross-clínica: 0 registros retornados (bloqueio 100% eficaz).
       - Médico da Espaço Incluir (Flavia Alves): 11 agendamentos retornados, 0 de outros médicos.
 
-
-
-
-
-
-
-
-
-
+#### Item 39 — Correção de Carregamento da Fila de Recepção e Resolução de Ambiguidade de Foreign Key (Clínica Espaço Incluir & Geral)
+- **Módulo**: Recepção & Fila de Espera → Fila do Dia, Painel de Chamada e Totem
+- **Caminho Completo**:
+  - API da Fila de Espera → `app/api/reception/queue/route.ts` → `GET`
+  - Painel da Recepção → `app/dashboard/(clinic)/recepcao/page.tsx` → `loadData()`
+  - APIs Relacionadas → `app/api/reception/call-patient/route.ts`, `app/api/reception/call-patient/[id]/route.ts`, `app/dashboard/recepcao/painel/page.tsx`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa-Raiz**:
+    - Na tela de Recepção (`/dashboard/recepcao`), a coluna "Aguardando" permanecia indefinidamente com spinner "Carregando fila..." e contadores em zero para a clínica Espaço Incluir, mesmo com 39 agendamentos confirmados para o dia 08/09/2026.
+    - O diagnóstico revelou erro `PGRST201: Could not embed because more than one relationship was found for 'appointments' and 'doctors'`.
+    - Como a tabela `appointments` possui duas foreign keys apontando para `doctors(id)` (`appointments_doctor_id_fkey` para `doctor_id` e `appointments_co_doctor_id_fkey` para `co_doctor_id`), qualquer query PostgREST com sintaxe implícita `doctor:doctors(...)` era rejeitada pelo Supabase, resultando em erro 500 que era capturado e retornava lista vazia.
+  - **2. Resolução Cirúrgica Implementada**:
+    - **Especificação Explícita de FK**: A rota `app/api/reception/queue/route.ts` e demais rotas dependentes foram atualizadas para explicitar a constraint: `doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name))`.
+    - **Otimização de Concorrência e Silent Refresh**: O componente `app/dashboard/(clinic)/recepcao/page.tsx` foi aprimorado com carregamento paralelo (`Promise.all([queue, rooms])`) e silent refresh para garantir que atualizações automáticas via WebSocket/timer não recoloquem a interface em estado de spinner de carregamento durante a operação da recepção.
+  - **3. Testes Automatizados e Deploy**:
+    - Validado via teste em código que a rota `GET /api/reception/queue` retorna todos os 39 agendamentos confirmados de hoje para a clínica Espaço Incluir sem atrasos e com 100% de integridade dos dados dos pacientes e profissionais.
+    - Teste de isolamento multi-tenant confirmado sem interferência na World Sensory ou outras clínicas parceiras.
+    - Deploy publicado e ativo em produção na Vercel (`https://clinigo.app`).
