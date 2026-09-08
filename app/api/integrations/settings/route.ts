@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 import { z } from 'zod'
 
 // Validation schema for integration settings
@@ -20,14 +21,19 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        // Get user's clinic
+        // Get user's clinic and role
         const { data: profile } = await supabase
             .from('users')
             .select('clinic_id, role')
             .eq('id', user.id)
             .single()
 
-        if (!profile?.clinic_id) {
+        const { clinicId } = await resolveClinicId({
+            profileClinicId: profile?.clinic_id,
+            profileRole: profile?.role || 'CLINIC_ADMIN',
+        })
+
+        if (!clinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
         const { data: settings, error } = await supabase
             .from('clinic_settings')
             .select('*')
-            .eq('clinic_id', profile.clinic_id)
+            .eq('clinic_id', clinicId)
             .single()
 
         // If no settings exist, return empty object
@@ -48,11 +54,17 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Erro ao buscar configurações' }, { status: 500 })
         }
 
-        // Hide sensitive data (only show if configured, not the actual keys)
+        // Safe settings
+        const googleDriveData = settings?.google_drive_settings as Record<string, any> | null
         const safeSettings = {
             mercadopago_configured: !!settings?.mercadopago_access_token,
             daily_configured: !!settings?.daily_api_key,
             google_calendar_configured: !!settings?.google_calendar_token,
+            google_drive_configured: !!googleDriveData && Object.keys(googleDriveData).length > 0,
+            google_drive_info: googleDriveData ? {
+                client_id: googleDriveData.client_id ? `${googleDriveData.client_id.substring(0, 8)}...` : null,
+                folder_id: googleDriveData.folder_id || null,
+            } : null,
             smtp_configured: !!settings?.smtp_settings,
             resend_configured: !!settings?.resend_api_key,
             whatsapp_configured: !!settings?.whatsapp_api_key,
@@ -88,12 +100,17 @@ export async function POST(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!profile?.clinic_id) {
+        const { clinicId } = await resolveClinicId({
+            profileClinicId: profile?.clinic_id,
+            profileRole: profile?.role || 'CLINIC_ADMIN',
+        })
+
+        if (!clinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
         // Only CLINIC_ADMIN and SUPER_ADMIN can update settings
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile?.role || '')) {
             return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
         }
 
@@ -102,11 +119,14 @@ export async function POST(request: NextRequest) {
 
         // Build the update object based on integration_id
         const updates: Record<string, unknown> = {
-            clinic_id: profile.clinic_id,
+            clinic_id: clinicId,
             updated_at: new Date().toISOString(),
         }
 
         switch (integration_id) {
+            case 'google_drive':
+                updates.google_drive_settings = credentials || {}
+                break
             case 'mercadopago':
                 updates.mercadopago_access_token = credentials?.access_token || null
                 updates.mercadopago_webhook_secret = credentials?.webhook_secret || null
@@ -186,11 +206,16 @@ export async function DELETE(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!profile?.clinic_id) {
+        const { clinicId } = await resolveClinicId({
+            profileClinicId: profile?.clinic_id,
+            profileRole: profile?.role || 'CLINIC_ADMIN',
+        })
+
+        if (!clinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
         }
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile?.role || '')) {
             return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
         }
 
@@ -205,6 +230,9 @@ export async function DELETE(request: NextRequest) {
         const updates: Record<string, null> = {}
 
         switch (integrationId) {
+            case 'google_drive':
+                updates.google_drive_settings = null
+                break
             case 'mercadopago':
                 updates.mercadopago_access_token = null
                 updates.mercadopago_webhook_secret = null
@@ -237,7 +265,7 @@ export async function DELETE(request: NextRequest) {
         const { error } = await supabase
             .from('clinic_settings')
             .update(updates)
-            .eq('clinic_id', profile.clinic_id)
+            .eq('clinic_id', clinicId)
 
         if (error) {
             console.error('Error removing integration:', error)

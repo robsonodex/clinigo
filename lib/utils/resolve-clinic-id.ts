@@ -26,12 +26,7 @@ export async function resolveClinicId({
   profileClinicId,
   profileRole,
 }: ResolveClinicIdParams): Promise<ResolveClinicIdResult> {
-  // 1. Usuário normal com clínica associada
-  if (profileClinicId) {
-    return { clinicId: profileClinicId, isImpersonating: false };
-  }
-
-  // 2. SUPER_ADMIN sem clinic_id — tentar impersonação via cookie
+  // 1. SUPER_ADMIN impersonando via cookie tem prioridade absoluta
   if (profileRole === 'SUPER_ADMIN') {
     try {
       const cookieStore = await cookies();
@@ -42,6 +37,11 @@ export async function resolveClinicId({
     } catch {
       // cookies() pode falhar em contextos edge — silenciar
     }
+  }
+
+  // 2. Usuário normal com clínica associada (ou SUPER_ADMIN operando na própria clínica padrão)
+  if (profileClinicId) {
+    return { clinicId: profileClinicId, isImpersonating: false };
   }
 
   // 3. Sem clínica resolvível

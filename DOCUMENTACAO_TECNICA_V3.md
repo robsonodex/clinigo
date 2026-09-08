@@ -2,6 +2,28 @@
 
 ## M�dulos
 
+### Assinatura, Integrações Google Drive e Segurança de Senha
+- **Módulos**:
+  - Configurações → Assinatura → `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx` → `AssinaturaPage` / `loadData()` / `handleGeneratePayment()`
+  - Configurações → Integrações → `app/dashboard/(clinic)/integracoes/page.tsx` → `IntegracoesPage` / `handleSave()` / `handleDisconnect()`
+  - Configurações → Segurança → `app/dashboard/(clinic)/seguranca/page.tsx` → `SecuritySettingsPage` / `handleUpdatePassword()` / `handleSendResetEmail()`
+  - Faturamento / Pagamentos → `app/api/billing/generate-payment/route.ts` → `POST`
+  - Integrações API → `app/api/integrations/settings/route.ts` → `GET` / `POST` / `DELETE`
+  - Utilitários → `lib/utils/resolve-clinic-id.ts` → `resolveClinicId()`
+- **Descrição**:
+  - **Assinatura e Plano**:
+    - Ajustado o carregamento de dados para suportar o cookie `impersonation_clinic_id`. Quando uma clínica com plano ativo é impersonada (como a WorldSensory com plano Professional), a interface reflete imediatamente o plano contratado (CliniGo Professional, R$ 449/mês) e o status 'Assinatura Ativa'.
+    - Removidos os cartões de 'Fazer Upgrade'.
+    - Removidas as abas e seções de 'Histórico de Pagamentos' e 'Dados de Faturamento'.
+    - Mantidos os botões de emissão de boleto bancário 100% funcionais, transmitindo o `clinic_id` correto da clínica impersonada e realizando o tratamento refinado do endereço em string para evitar inconsistências no Banco Inter.
+  - **Integrações (Google Drive)**:
+    - Removidas todas as integrações secundárias e abas de categorias não solicitadas (RD Station, HubSpot, Zapier, PostHog, Google Calendar, Resend).
+    - Mantido exclusivamente o card de integração com o Google Drive, pronto e funcional caso a clínica opte por vincular seu Google Drive verdadeiro.
+    - Endpoints de `/api/integrations/settings` atualizados com suporte explícito ao `google_drive` e resolução de clínica via impersonation.
+  - **Segurança e Senha**:
+    - Implementado formulário in-app completo e funcional para alteração de senha (senha atual, nova senha, confirmação de senha, alternância de visibilidade de caracteres com ícones Eye/EyeOff) conectado com `/api/profile/password`.
+    - Implementado disparo direto e funcional de link de redefinição por e-mail via `supabase.auth.resetPasswordForEmail` com feedback em tempo real.
+
 ### Psicomotricidade
 - Criado m�dulo isolado para World Sensory.
 - Arquivos: app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/page.tsx, sessao/[sessao_id]/page.tsx, objetivos/page.tsx.

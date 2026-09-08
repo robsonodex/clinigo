@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
+import { cookies } from 'next/headers'
 import { addDays, format } from 'date-fns'
 
 // =============================================================================
@@ -91,14 +92,19 @@ export async function POST(req: NextRequest) {
             .single()
 
         // 3. Determinar clínica alvo
+        const cookieStore = await cookies()
+        const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value
+
         let targetClinicId = userData?.clinic_id
 
-        const body = await req.json()
+        const body = await req.json().catch(() => ({}))
 
-        // Se for Super Admin, pode especificar clinic_id no body
+        // Se for Super Admin, aceita body.clinic_id ou cookie de impersonation
         if (userData?.role === 'SUPER_ADMIN') {
             if (body.clinic_id) {
                 targetClinicId = body.clinic_id
+            } else if (impersonationClinicId) {
+                targetClinicId = impersonationClinicId
             } else if (!targetClinicId) {
                 return NextResponse.json({ error: 'clinic_id obrigatório para Super Admin' }, { status: 400 })
             }
@@ -150,21 +156,50 @@ export async function POST(req: NextRequest) {
 
             // Clean phone
             const phone = clinic.phone ? clinic.phone.replace(/\D/g, '') : ''
-            const ddd = phone.length >= 2 ? phone.substring(0, 2) : '21'
-            const number = phone.length > 2 ? phone.substring(2) : '900000000'
+            const ddd = phone.length >= 2 ? phone.substring(0, 2) : '15'
+            const number = phone.length > 2 ? phone.substring(2) : '999999999'
 
             // Parse address - can be a JSON object or a string
             const addr = clinic.address || {}
-            const parsedAddress = typeof addr === 'string'
-                ? { logradouro: addr, numero: 'S/N', bairro: 'Centro', cidade: 'Rio de Janeiro', uf: 'RJ', cep: '20000000' }
-                : {
-                    logradouro: String(addr.logradouro || addr.street || addr.rua || 'Rua nao informada'),
+            let parsedAddress = {
+                logradouro: 'Rua Principal',
+                numero: 'S/N',
+                bairro: 'Centro',
+                cidade: 'São Paulo',
+                uf: 'SP',
+                cep: '01000000',
+            }
+
+            if (typeof addr === 'string') {
+                const parts = addr.split(',').map((s: string) => s.trim())
+                const logradouro = parts[0] || 'Rua Principal'
+                const numero = parts[1] || 'S/N'
+                const bairro = parts[2] || 'Centro'
+                const cidade = parts[3] || 'São Paulo'
+                const cepMatch = addr.match(/(\d{5}-?\d{3})/)
+                const cep = cepMatch ? cepMatch[1].replace(/\D/g, '') : '18213560'
+                const ufMatch = addr.match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i)
+                const isSP = addr.toLowerCase().includes('são paulo') || addr.toLowerCase().includes('sp')
+                const uf = ufMatch ? ufMatch[1].toUpperCase() : (isSP ? 'SP' : 'SP')
+
+                parsedAddress = {
+                    logradouro,
+                    numero,
+                    bairro,
+                    cidade,
+                    uf,
+                    cep,
+                }
+            } else {
+                parsedAddress = {
+                    logradouro: String(addr.logradouro || addr.street || addr.rua || 'Rua Principal'),
                     numero: String(addr.numero || addr.number || 'S/N'),
                     bairro: String(addr.bairro || addr.neighborhood || 'Centro'),
-                    cidade: String(addr.cidade || addr.city || 'Rio de Janeiro'),
-                    uf: String(addr.uf || addr.state || 'RJ'),
-                    cep: String(addr.cep || addr.zipCode || addr.zip_code || '20000000').replace(/\D/g, ''),
+                    cidade: String(addr.cidade || addr.city || 'São Paulo'),
+                    uf: String(addr.uf || addr.state || 'SP'),
+                    cep: String(addr.cep || addr.zipCode || addr.zip_code || '01000000').replace(/\D/g, ''),
                 }
+            }
 
             const boletoData = {
                 seuNumero: (clinic.id.replace(/-/g, '').substring(0, 8) + Date.now().toString().slice(-7)).substring(0, 15),
