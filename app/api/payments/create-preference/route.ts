@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
             .from('appointments')
             .select(`
         *,
-        doctor:doctors(
+        doctor:doctors!appointments_doctor_id_fkey(
           consultation_price,
           user:users(full_name)
         ),

@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
                 status,
                 consulting_room_id,
                 patient:patients(id, full_name, phone),
-                doctor:doctors(specialty, user:users(full_name))
+                doctor:doctors!appointments_doctor_id_fkey(specialty, user:users(full_name))
             `)
             .single()
 

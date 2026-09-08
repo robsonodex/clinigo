@@ -39,7 +39,7 @@ export async function GET(request: Request) {
                 appointment_time,
                 status,
                 patient:patients(id, full_name, cpf),
-                doctor:doctors(id, user:users(full_name)),
+                doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name)),
                 health_insurance_id,
                 health_insurance:health_insurances(id, name),
                 procedure_id,

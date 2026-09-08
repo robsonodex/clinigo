@@ -126,7 +126,7 @@ async function handlePaymentConfirmed(
             .from('appointments')
             .select(`
         *,
-        doctor:doctors(
+        doctor:doctors!appointments_doctor_id_fkey(
           id, specialty,
           user:users(full_name)
         ),

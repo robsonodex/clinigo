@@ -128,7 +128,7 @@ export default function RecepcaoPage() {
 
     useEffect(() => {
         loadData()
-        const interval = setInterval(loadData, refreshInterval * 1000)
+        const interval = setInterval(() => loadData(true), refreshInterval * 1000)
         return () => clearInterval(interval)
     }, [refreshInterval])
 
@@ -211,7 +211,7 @@ export default function RecepcaoPage() {
                     table: 'appointments',
                 },
                 () => {
-                    loadData()
+                    loadData(true)
                 }
             )
             .subscribe()
@@ -227,7 +227,7 @@ export default function RecepcaoPage() {
                     table: 'appointment_checkins',
                 },
                 () => {
-                    loadData()
+                    loadData(true)
                     toast({
                         title: '📋 Pré-check-in recebido',
                         description: 'Um paciente completou o pré-check-in online.',
@@ -242,10 +242,16 @@ export default function RecepcaoPage() {
         }
     }, [])
 
-    async function loadData() {
-        setLoading(true)
+    async function loadData(isSilent = false) {
+        if (!isSilent) {
+            setLoading(true)
+        }
         try {
-            const queueRes = await fetch('/api/reception/queue')
+            const [queueRes, roomsRes] = await Promise.all([
+                fetch('/api/reception/queue'),
+                fetch('/api/consulting-rooms')
+            ])
+
             if (queueRes.ok) {
                 const data = await queueRes.json()
                 const q: QueueItem[] = data.queue || []
@@ -261,8 +267,7 @@ export default function RecepcaoPage() {
                     no_show_count: q.filter(i => i.status === 'NO_SHOW').length
                 })
             }
-            const roomsRes = await fetch('/api/consulting-rooms')
-            if (roomsRes.ok) {
+            if (roomsRes && roomsRes.ok) {
                 const data = await roomsRes.json()
                 setConsultingRooms(data.rooms || [])
             }

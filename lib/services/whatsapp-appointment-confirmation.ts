@@ -208,7 +208,7 @@ export async function processIncomingWhatsAppAppointment(
       appointment_date,
       appointment_time,
       status,
-      doctor:doctors(id, specialty, user:users(full_name)),
+      doctor:doctors!appointments_doctor_id_fkey(id, specialty, user:users(full_name)),
       patient:patients(id, full_name, phone),
       clinic:clinics(name)
     `)

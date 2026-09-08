@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         consulting_room_id,
         called_at,
         patient:patients(id, full_name, date_of_birth, gender),
-        doctor:doctors(id, user:users(full_name))
+        doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name))
       `)
                 .eq('clinic_id', clinicId)
                 .eq('appointment_date', new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }))
@@ -58,7 +58,10 @@ export async function GET(request: Request) {
                 .order('priority_level', { ascending: false })
                 .order('checked_in_at', { ascending: true, nullsFirst: false })
 
-            if (apptError) throw apptError
+            if (apptError) {
+                console.error('[Reception Queue] apptError:', apptError)
+                throw apptError
+            }
             appointments = data || []
         } catch (e) {
             console.error('[DEBUG] Error fetching queue appointments:', e)

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         .from('appointments')
         .select(`
       *,
-      doctor:doctors(id, user_id),
+      doctor:doctors!appointments_doctor_id_fkey(id, user_id),
       patient:patients(id, user_id)
     `)
         .eq('id', appointmentId)

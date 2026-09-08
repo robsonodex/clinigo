@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
                 .select(`
           *,
           patient:patients(*),
-          doctor:doctors(*, user:users(*)),
+          doctor:doctors!appointments_doctor_id_fkey(*, user:users(*)),
           consultation:consultations(*)
         `)
                 .in('id', validated.appointment_ids)

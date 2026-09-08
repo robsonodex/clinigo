@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         // 2. Get appointment stats per patient
         let appointmentQuery = supabase
             .from('appointments')
-            .select('patient_id, status, appointment_date, doctor:doctors(user:users(full_name))')
+            .select('patient_id, status, appointment_date, doctor:doctors!appointments_doctor_id_fkey(user:users(full_name))')
             .eq('clinic_id', clinicId)
 
         if (doctorFilter) {

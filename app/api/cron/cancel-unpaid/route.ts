@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const { data: unpaidAppointments } = await supabase
         .from('appointments')
-        .select('*, payment:payments(*), patient:patients(*), doctor:doctors(*)') // Joined patient/doctor for email
+        .select('*, payment:payments(*), patient:patients(*), doctor:doctors!appointments_doctor_id_fkey(*)') // Joined patient/doctor for email
         .eq('status', 'PENDING_PAYMENT')
         .lt('created_at', cutoffTime.toISOString())
 

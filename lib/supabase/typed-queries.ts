@@ -168,7 +168,7 @@ export async function getClinicAppointments(
         .from('appointments')
         .select(`
       *,
-      doctor:doctors(id, full_name, crm),
+      doctor:doctors!appointments_doctor_id_fkey(id, full_name, crm),
       patient:patients(id, full_name, phone, email)
     `)
         .eq('clinic_id', clinicId)

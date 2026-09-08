@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
                 appointment_time,
                 status,
                 appointment_type,
-                doctor:doctors(
+                doctor:doctors!appointments_doctor_id_fkey(
                     id,
                     specialty,
                     user:users(full_name)

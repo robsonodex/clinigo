@@ -650,7 +650,7 @@ export async function POST(request: NextRequest) {
             .select(`
                 *,
                 patient:patients(id, full_name, email, phone),
-                doctor:doctors(id, user:users(full_name)),
+                doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name)),
                 clinic:clinics(id, name)
             `)
             .eq('id', appointmentId)

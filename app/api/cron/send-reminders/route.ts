@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
             .select(`
         *,
         patient:patients(*),
-        doctor:doctors(*, user:users(*)),
+        doctor:doctors!appointments_doctor_id_fkey(*, user:users(*)),
         clinic:clinics(*)
       `)
             .in('status', ['SCHEDULED', 'CONFIRMED'])
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
             .select(`
         *,
         patient:patients(*),
-        doctor:doctors(*, user:users(*)),
+        doctor:doctors!appointments_doctor_id_fkey(*, user:users(*)),
         clinic:clinics(*)
       `)
             .eq('status', 'CONFIRMED')

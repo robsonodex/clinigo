@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         patient_id,
         doctor_id,
         patient:patients(id, full_name, phone, cpf),
-        doctor:doctors(id, specialty, user:users(full_name))
+        doctor:doctors!appointments_doctor_id_fkey(id, specialty, user:users(full_name))
       `)
       .eq('clinic_id', clinicId)
       .gte('appointment_date', startDate)

@@ -46,7 +46,7 @@ export default function PainelChamadasPage() {
                 .select(`
           *,
           patient:patients(full_name),
-          doctor:doctors(user:users(full_name))
+          doctor:doctors!appointments_doctor_id_fkey(user:users(full_name))
         `)
                 .eq('appointment_date', today)
                 .in('status', ['WAITING', 'IN_PROGRESS', 'COMPLETED', 'CONFIRMED'])
