@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
         const { data: appointments } = await supabase
             .from('appointments')
-            .select('status, price, appointment_date, patients(name), health_insurance_id')
+            .select('status, price, appointment_date, patients(full_name), health_insurance_id')
             .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .eq('status', 'COMPLETED')

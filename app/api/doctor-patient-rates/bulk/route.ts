@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           const { data: inserted, error: iErr } = await supabaseAdmin
             .from('doctor_patient_rates')
             .insert({
-              clinic_id: resolvedClinicId,
+              clinic_id: effectiveClinicId,
               doctor_id: validated.doctor_id,
               patient_id: item.patient_id,
               rate_type: item.rate_type,

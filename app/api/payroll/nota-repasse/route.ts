@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
             .from('appointments')
             .select(`
                 id, appointment_date, start_time, type, status, price,
-                patient:patients(id, name),
+                patient:patients(id, full_name),
                 health_insurance:health_insurances(id, name)
             `)
             .eq('doctor_id', doctor_id)
@@ -118,9 +118,11 @@ export async function POST(request: NextRequest) {
             const repasse = valor * (percentual / 100);
             total_repasse += repasse;
 
+            const pat = Array.isArray(apt.patient) ? apt.patient[0] : apt.patient;
+
             return {
                 data: `${apt.appointment_date} ${apt.start_time}`,
-                paciente: apt.patient?.name || 'Não informado',
+                paciente: pat?.full_name || pat?.name || 'Não informado',
                 convenio: apt.health_insurance?.name || 'Particular',
                 valor_bruto: valor,
                 percentual: percentual,

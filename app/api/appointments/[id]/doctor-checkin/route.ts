@@ -47,7 +47,7 @@ export async function POST(
         health_insurance_id, type, payment_type, procedure_id,
         doctor_checked_in_at, verification_level,
         doctor:doctors!appointments_doctor_id_fkey(id, user_id, percentage),
-        patient:patients(id, name)
+        patient:patients(id, full_name)
       `)
       .eq('id', appointmentId)
       .eq('clinic_id', currentUser.clinic_id)

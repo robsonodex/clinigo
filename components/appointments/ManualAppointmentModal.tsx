@@ -48,7 +48,7 @@ import { QuickPatientForm } from './QuickPatientForm'
 import { PaymentMethodSelector, type ManualPaymentType } from './PaymentMethodSelector'
 import { AppointmentSuccessModal } from '@/components/dashboard/AppointmentSuccessModal'
 import { NoShowPatientBadge } from '@/components/patients/NoShowPatientBadge'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import { api } from '@/lib/api-client'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 

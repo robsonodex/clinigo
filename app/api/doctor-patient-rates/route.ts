@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     // 2. Buscar todos os pacientes que já tiveram agendamento com esse médico
     const { data: appointments, error: aptError } = await supabaseAdmin
       .from('appointments')
-      .select('patient_id, appointment_date, status, patient:patients(id, name)')
+      .select('patient_id, appointment_date, status, patient:patients(id, full_name)')
       .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', doctorId);
 
@@ -145,8 +145,8 @@ export async function GET(request: NextRequest) {
       const patId = apt.patient_id;
       if (!patId) return;
 
-      const patName =
-        (Array.isArray(apt.patient) ? apt.patient[0]?.name : apt.patient?.name) || 'Paciente';
+      const pat = Array.isArray(apt.patient) ? apt.patient[0] : apt.patient;
+      const patName = pat?.full_name || pat?.name || 'Paciente';
 
       const existing = patientMap.get(patId);
       if (!existing) {
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id, clinic_id, doctor_id, patient_id, rate_type,
         fixed_value, percentage, active, notes, created_at, updated_at,
-        patient:patients(id, name)
+        patient:patients(id, full_name)
       `)
       .eq('clinic_id', effectiveClinicId)
       .eq('doctor_id', doctorId)
@@ -189,8 +189,8 @@ export async function GET(request: NextRequest) {
 
       // Se o paciente do override ainda não estava no mapa de appointments, inclui ele
       if (!patientMap.has(ov.patient_id)) {
-        const patName =
-          (Array.isArray(ov.patient) ? ov.patient[0]?.name : ov.patient?.name) || 'Paciente';
+        const pat = Array.isArray(ov.patient) ? ov.patient[0] : ov.patient;
+        const patName = pat?.full_name || pat?.name || 'Paciente';
         patientMap.set(ov.patient_id, {
           id: ov.patient_id,
           name: patName,
@@ -446,14 +446,14 @@ export async function POST(request: NextRequest) {
     if (validated.notify_whatsapp) {
       const { data: patient } = await supabaseAdmin
         .from('patients')
-        .select('name')
+        .select('full_name')
         .eq('id', validated.patient_id)
         .single();
 
       const notifRes = await sendDoctorPatientRateNotification({
         clinicId: effectiveClinicId,
         doctorId: validated.doctor_id,
-        patientName: patient?.name || 'Paciente',
+        patientName: patient?.full_name || 'Paciente',
         rateType: validated.rate_type,
         value: newValue,
       });

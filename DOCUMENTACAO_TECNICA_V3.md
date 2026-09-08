@@ -1114,3 +1114,26 @@
       - Validação da consulta PostgREST com resolução do nome e especialidade do profissional supervisionado via foreign key explícita.
       - Confirmação de exclusão absoluta da fila da recepção.
       - Remoção limpa do registro de teste sem efeitos colaterais.
+
+### Item 41: Correção do Utilitário cn no Modal de Agendamento Manual e Resolução de Nome de Paciente nos Repasses (doctor-patient-rates)
+- **Data**: 08/09/2026
+- **Módulos**: Recepção, Agenda, Médicos, Repasses
+- **Caminho Completo**:
+  - Modal de Agendamento Manual → `components/appointments/ManualAppointmentModal.tsx` → `import { cn }`
+  - API de Repasses por Paciente → `app/api/doctor-patient-rates/route.ts` → `GET`, `POST`
+  - API de Repasses em Lote → `app/api/doctor-patient-rates/bulk/route.ts` → `POST`
+  - API de Agendamento Manual → `app/api/appointments/manual/route.ts` → `POST`
+  - API de Check-in do Médico → `app/api/appointments/[id]/doctor-checkin/route.ts` → `POST`
+  - API de Folha / Notas → `app/api/payroll/nota-repasse/route.ts` e `app/api/payroll/my-history/route.ts`
+- **Descrição Técnica**:
+  - **1. Problema Identificado**:
+    - Ao tentar abrir o modal de "Novo Agendamento Manual", a interface disparava um ErrorBoundary exibindo `"Não foi possível carregar esta seção / cn is not defined"`, pois a função utilitária `cn` era utilizada nos seletores de categoria de agendamento/supervisão sem ter sido importada de `@/lib/utils`.
+    - Ao cadastrar repasse de valor fixo para um paciente (ex: Maria Eduarda para a profissional Eduarda), a operação de POST salvava com sucesso no banco (`doctor_patient_rates`), porém, na atualização/recarregamento da tela (`GET /api/doctor-patient-rates?doctorId=...`), a consulta falhava no backend com o erro `"column patients_1.name does not exist"`, uma vez que a coluna correta da tabela `patients` é `full_name` e não `name`. Isso fazia com que a tabela de repasses recebesse lista vazia e exibisse a mensagem `"Nenhum paciente encontrado"`.
+  - **2. Correção Cirúrgica Aplicada**:
+    - **Importação de `cn`**: Importado `cn` de `@/lib/utils` em `ManualAppointmentModal.tsx`, eliminando a interrupção de renderização.
+    - **Correção da Relação PostgREST em `doctor-patient-rates`**: Atualizadas as consultas das tabelas `appointments` e `doctor_patient_rates` para selecionar `patient:patients(id, full_name)` e mapear o nome completo do paciente de maneira resiliente.
+    - **Varredura Proativa em Rotas Afins**: Corrigidas ocorrências semelhantes de `patients(id, name)` para `patients(id, full_name)` nas rotas `doctor-checkin`, `nota-repasse` e `my-history`.
+    - **Blindagem no Agendamento Manual**: Implementado fallback com `supabaseAdmin` restrito pelo `clinic_id` na verificação de existência do paciente no agendamento manual, garantindo que inconsistências pontuais de contexto de sessão RLS não impeçam a localização do paciente.
+  - **3. Validação**:
+    - Suíte automatizada de testes executada validando a importação de `cn` e a consulta relacional de `doctor_patient_rates` para a paciente Maria Eduarda Gomes Ferreira, confirmando o carregamento correto do repasse fixo de R$ 20,00.
+

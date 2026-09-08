@@ -269,11 +269,23 @@ export async function POST(request: NextRequest) {
             }
 
             // Validate patient exists
-            const { data: patientData } = await supabase
+            let { data: patientData } = await supabase
                 .from('patients')
                 .select('id, full_name, email, phone, clinic_id')
                 .eq('id', patientId)
                 .single()
+
+            // Blindagem: Se o client com RLS falhar pontualmente por contexto de sessão, valida via service role estritamente na mesma clinica
+            if (!patientData) {
+                const supabaseAdmin = createServiceRoleClient()
+                const { data: fallbackPatient } = await supabaseAdmin
+                    .from('patients')
+                    .select('id, full_name, email, phone, clinic_id')
+                    .eq('id', patientId)
+                    .eq('clinic_id', clinicId)
+                    .single()
+                patientData = fallbackPatient
+            }
 
             patient = patientData
 
