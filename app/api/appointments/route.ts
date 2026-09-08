@@ -36,18 +36,43 @@ export async function GET(request: NextRequest) {
             offset = (page - 1) * pageSize
         }
 
-        const supabase = await createClient() as any
+        // Use service role for staff users (SUPER_ADMIN, CLINIC_ADMIN, RECEPTIONIST, DOCTOR)
+        // to prevent serverless RLS session drops and permission issues on embedded relations (e.g. payments/patients)
+        const isStaff = userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || userRole === 'DOCTOR'
+        const adminClient = createServiceRoleClient() as any
+        const supabase = isStaff ? adminClient : (await createClient() as any)
 
-        // Get user's clinic and doctor_id if applicable
-        const { data: currentUser } = await supabase
+        // Fetch user profile via adminClient to guarantee reliable role and clinic lookup
+        const { data: currentUser } = await adminClient
             .from('users')
             .select('clinic_id, role, is_coordinator')
             .eq('id', userId)
             .single()
 
+        // Resolve effective clinic id with strict priority:
+        // 1. Direct query param (allowed ONLY for SUPER_ADMIN)
+        // 2. Verified header from middleware (session or impersonation)
+        // 3. User's database profile clinic_id
+        // 4. Impersonation cookie fallback for SUPER_ADMIN
+        let effectiveClinicId: string | null = null
+        if (query.clinic_id && userRole === 'SUPER_ADMIN') {
+            effectiveClinicId = query.clinic_id
+        } else if (request.headers.get('x-clinic-id')) {
+            effectiveClinicId = request.headers.get('x-clinic-id')
+        } else if (currentUser?.clinic_id) {
+            effectiveClinicId = currentUser.clinic_id
+        } else if (userRole === 'SUPER_ADMIN') {
+            effectiveClinicId = request.cookies.get('impersonation_clinic_id')?.value || null
+        }
+
+        // Security boundary: Non-superadmin users MUST be bounded to their own clinic
+        if (userRole !== 'SUPER_ADMIN' && !effectiveClinicId) {
+            return paginatedResponse(buildPaginatedData([], 0, page, pageSize))
+        }
+
         let doctorId: string | null = null
-        if (currentUser?.role === 'DOCTOR') {
-            const { data: doctor } = await supabase
+        if (currentUser?.role === 'DOCTOR' || userRole === 'DOCTOR') {
+            const { data: doctor } = await adminClient
                 .from('doctors')
                 .select('id')
                 .eq('user_id', userId)
@@ -71,10 +96,7 @@ export async function GET(request: NextRequest) {
         payment:payments(id, status, amount, payment_method)
       `, { count: 'exact' })
 
-        // Apply role-based filtering
-        const headerClinicId = request.headers.get('x-clinic-id')
-        const effectiveClinicId = headerClinicId || currentUser?.clinic_id
-
+        // Strictly enforce clinic isolation
         if (effectiveClinicId) {
             queryBuilder = queryBuilder.eq('clinic_id', effectiveClinicId)
         }
@@ -86,8 +108,12 @@ export async function GET(request: NextRequest) {
         const isCoordinator = !!currentUser?.is_coordinator
         if (query.doctor_id && (userRole !== 'DOCTOR' || isCoordinator)) {
             queryBuilder = queryBuilder.or(`doctor_id.eq.${query.doctor_id},co_doctor_id.eq.${query.doctor_id}`)
-        } else if (userRole === 'DOCTOR' && !isCoordinator && doctorId) {
-            queryBuilder = queryBuilder.or(`doctor_id.eq.${doctorId},co_doctor_id.eq.${doctorId}`)
+        } else if (userRole === 'DOCTOR' && !isCoordinator) {
+            if (doctorId) {
+                queryBuilder = queryBuilder.or(`doctor_id.eq.${doctorId},co_doctor_id.eq.${doctorId}`)
+            } else {
+                return paginatedResponse(buildPaginatedData([], 0, page, pageSize))
+            }
         }
         if (query.patient_id) {
             queryBuilder = queryBuilder.eq('patient_id', query.patient_id)

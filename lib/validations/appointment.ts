@@ -182,6 +182,10 @@ export const listAppointmentsQuerySchema = z.object({
         .string()
         .uuid()
         .optional(),
+    clinic_id: z
+        .string()
+        .uuid()
+        .optional(),
     patient_id: z
         .string()
         .uuid()

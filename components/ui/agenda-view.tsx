@@ -1435,7 +1435,7 @@ export default function AgendaPage() {
                                             {!showFreeSlots && hasAppointments ? (
                                                 <div className="flex flex-col gap-1 h-full">
                                                     {(expandedSlots.has(`${day.toISOString()}-${time}`) ? slotAppointments : slotAppointments.slice(0, 2)).map((appointment) => {
-                                                        const doctorColor = getDoctorColor(appointment.doctor.id)
+                                                        const doctorColor = getDoctorColor(appointment.doctor?.id || 'default')
                                                         const isOnline = (appointment as any).appointment_type === 'online'
                                                         const isCancelled = appointment.status === 'CANCELLED'
                                                         const isCompleted = appointment.status === 'COMPLETED'
@@ -1485,7 +1485,7 @@ export default function AgendaPage() {
 
                                                                             {/* Doctor Name */}
                                                                             <div className="text-[10px] font-medium mt-0.5 truncate opacity-80">
-                                                                                {profLabel.singular === 'Médico' ? 'Dr. ' : ''}{appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'}
+                                                                                {profLabel.singular === 'Médico' ? 'Dr. ' : ''}{appointment.doctor?.user?.full_name?.split(' ')[0] || 'Profissional'}
                                                                                 {(appointment as any).co_doctor?.user?.full_name && (
                                                                                     <span className="text-[9px] font-semibold text-teal-800 dark:text-teal-300 ml-1">
                                                                                         + {(appointment as any).co_doctor.user.full_name.split(' ')[0]}
@@ -1769,15 +1769,15 @@ export default function AgendaPage() {
                                                             </div>
                                                         )
                                                     })()}
-{slotAppointments.length > 0 && (
+                                                    {slotAppointments.length > 0 && (
                                                         <div className="flex items-start gap-0.5 p-0.5 flex-wrap">
                                                             {slotAppointments.map((appointment) => {
-                                                                const timelineColor = getTimelineColor(appointment.doctor.id)
+                                                                const timelineColor = getTimelineColor(appointment.doctor?.id || 'default')
                                                                 const isCancelled = appointment.status === 'CANCELLED'
                                                                 const isCompleted = appointment.status === 'COMPLETED'
                                                                 const duration = getAppointmentDuration(appointment, schedulesData)
                                                                 const endTime = calcEndTime(appointment.appointment_time.substring(0, 5), duration)
-                                                                const doctorName = appointment.doctor.user?.full_name?.split(' ')[0] || 'N/A'
+                                                                const doctorName = appointment.doctor?.user?.full_name?.split(' ')[0] || 'Profissional'
                                                                 const coDoctorName = (appointment as any).co_doctor?.user?.full_name?.split(' ')[0]
                                                                 const specialty = appointment.reception_notes?.startsWith('[ESP:')
                                                                     ? appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]

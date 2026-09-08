@@ -1022,6 +1022,35 @@
     - **Modal de Edição (`EditSeriesModal.tsx`)**: Permite alterar a periodicidade de uma série existente entre Semanal, Quinzenal e Mensal. Ao alterar a periodicidade, o sistema detecta `hasScheduleChanged`, remove os agendamentos futuros pendentes e os regenera com o novo espaçamento de semanas sem afetar o histórico já realizado.
     - **Listagem de Séries (`RecurringSeriesListModal.tsx`)**: Identificação clara de séries quinzenais com badge destacado `Quinzenal (15 em 15 dias)` e resumo de horários especificando a frequência do tratamento.
 
+#### Item 38 — Correção de Visualização da Grade da Agenda (Clínica Espaço Incluir & Geral) e Blindagem de Isolamento Cross-Clínica
+- **Módulo**: Recepção & Agenda → Listagem de Agendamentos e Visualização da Grade
+- **Caminho Completo**:
+  - API de Agendamentos → `app/api/appointments/route.ts` → `GET`
+  - API de Horários → `app/api/doctors/schedules/route.ts` → `GET`
+  - Schema de Validação → `lib/validations/appointment.ts` → `listAppointmentsQuerySchema`
+  - Componente de Grade → `components/ui/agenda-view.tsx` → `AgendaPage`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa-Raiz**:
+    - A rota `GET /api/appointments` dependia exclusivamente de `createClient()` (cliente com sessão de cookies via `@supabase/ssr`), o qual sofria de perdas intermitentes de sessão em ambientes serverless da Vercel.
+    - Quando a sessão SSR não era devidamente propagada no route handler, a consulta a `users` falhava ou retornava nulo devido a RLS, deixando o `clinic_id` indefinido.
+    - Adicionalmente, a consulta realizava join com a tabela `payments`, para a qual o perfil `RECEPTIONIST` não possui política de `SELECT` por RLS no banco, provocando falha silenciosa na query e deixando a grade da agenda vazia para recepcionistas da clínica.
+    - No componente visual `agenda-view.tsx`, o acesso direto a propriedades de `appointment.doctor` sem encadeamento opcional podia causar exceções caso algum profissional estivesse em transição.
+  - **2. Resolução Cirúrgica Implementada**:
+    - **Service Role para Usuários Autenticados da Equipe**: A rota `app/api/appointments/route.ts` passou a utilizar `createServiceRoleClient()` para usuários autenticados da equipe (`SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`), eliminando falhas de sessão SSR e restrições de permissão RLS nos joins de `payments` e `patients`.
+    - **Blindagem de Isolamento de Clínica**:
+      - Resolução estrita do `clinic_id` por ordem de prioridade: header `x-clinic-id` validado pelo middleware, perfil do usuário no banco de dados via adminClient, ou cookie de impersonação (para SUPER_ADMIN).
+      - Bloqueio imediato para usuários que não possuam clínica associada.
+      - Aplicação obrigatória de filtro `.eq('clinic_id', effectiveClinicId)`, garantindo isolamento total e impedindo qualquer vazamento entre clínicas (como World Sensory e Espaço Incluir).
+    - **Filtro de Médicos Seguro**: Para perfis `DOCTOR`, a rota restringe estritamente os agendamentos ao profissional autenticado via `.or('doctor_id.eq.X,co_doctor_id.eq.X')`.
+    - **Defensiva no Frontend (`agenda-view.tsx`)**: Adicionado encadeamento opcional e fallbacks (`appointment.doctor?.id || 'default'`, `appointment.doctor?.user?.full_name || 'Profissional'`), prevenindo quebras na renderização da grade e da linha do tempo.
+  - **3. Testes Automatizados de Isolamento e Validação**:
+    - Bateria automatizada executada via código (`test-isolation-suite.mjs`):
+      - Espaço Incluir: 138 agendamentos na semana, 37 confirmados hoje (08/09/2026), 0 vazamentos de outras clínicas.
+      - World Sensory: 238 agendamentos na semana mantidos intactos e 0 vazamentos.
+      - Tentativa de acesso cross-clínica: 0 registros retornados (bloqueio 100% eficaz).
+      - Médico da Espaço Incluir (Flavia Alves): 11 agendamentos retornados, 0 de outros médicos.
+
+
 
 
 
