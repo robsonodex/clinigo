@@ -40,6 +40,8 @@ import {
     Bell,
     Video,
     Building2,
+    GraduationCap,
+    BookOpen,
 } from 'lucide-react'
 import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearchCombobox'
 import { QuickPatientForm } from './QuickPatientForm'
@@ -55,6 +57,8 @@ interface Doctor {
     id: string
     specialty: string
     consultation_price: number
+    consultation_duration?: number
+    allows_supervision?: boolean
     specialties_additional?: string[] | null
     user: {
         full_name: string
@@ -70,6 +74,9 @@ interface HealthInsurance {
 // Form schema
 const manualAppointmentSchema = z.object({
     doctor_id: z.string().min(1, 'Selecione um profissional'),
+    event_category: z.enum(['appointment', 'supervision']).default('appointment'),
+    professional_supervised_id: z.string().optional(),
+    supervision_notes: z.string().optional(),
     appointment_date: z.string().min(1, 'Selecione uma data'),
     appointment_time: z.string().min(1, 'Selecione um horário').regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido (use HH:MM)'),
     duration_minutes: z.number().default(30),
@@ -127,6 +134,9 @@ export function ManualAppointmentModal({
         resolver: zodResolver(manualAppointmentSchema),
         defaultValues: {
             doctor_id: preselectedDoctorId || '',
+            event_category: 'appointment',
+            professional_supervised_id: '',
+            supervision_notes: '',
             appointment_date: preselectedDate || format(new Date(), 'yyyy-MM-dd'),
             appointment_time: preselectedTime || '',
             duration_minutes: 30,
@@ -143,6 +153,8 @@ export function ManualAppointmentModal({
 
     const { watch, setValue, handleSubmit, reset, formState: { errors } } = form
     const selectedDoctorId = watch('doctor_id')
+    const eventCategory = watch('event_category')
+    const isSupervision = eventCategory === 'supervision'
     const paymentType = watch('payment_type') as ManualPaymentType
 
     // Initial setup for edit mode
@@ -260,32 +272,54 @@ export function ManualAppointmentModal({
                 ? data.co_doctor_id
                 : null
 
-            const payload = {
-                // ... payload construction
-                patient_id: selectedPatient?.id,
-                quick_registration: quickRegistration,
-                doctor_id: data.doctor_id,
-                co_doctor_id: cleanCoDoctorId || undefined,
-                appointment_date: data.appointment_date,
-                appointment_time: data.appointment_time,
-                duration_minutes: data.duration_minutes,
-                type: data.type,
-                payment: {
-                    type: data.payment_type,
-                    amount_paid: price,
-                    health_insurance_id: data.health_insurance_id,
-                    insurance_card_number: data.insurance_card_number,
-                },
-                overrides: data.ignore_schedule_constraints ? {
-                    ignore_schedule_constraints: true,
-                    reason: data.override_reason || 'Encaixe autorizado',
-                } : undefined,
-                notifications: {
-                    send_whatsapp: data.send_whatsapp,
-                    send_email: data.send_email,
-                },
-                notes: data.notes,
-                specialty: data.specialty,
+            let payload: any = {}
+            if (data.event_category === 'supervision') {
+                payload = {
+                    doctor_id: data.doctor_id,
+                    is_supervision: true,
+                    professional_supervised_id: data.professional_supervised_id || undefined,
+                    supervision_notes: data.supervision_notes || undefined,
+                    appointment_date: data.appointment_date,
+                    appointment_time: data.appointment_time,
+                    duration_minutes: data.duration_minutes,
+                    type: data.type,
+                    notes: data.notes || data.supervision_notes,
+                    specialty: data.specialty,
+                    payment: {
+                        type: 'particular',
+                    },
+                    overrides: data.ignore_schedule_constraints ? {
+                        ignore_schedule_constraints: true,
+                        reason: data.override_reason || 'Supervisão técnica autorizada',
+                    } : undefined,
+                }
+            } else {
+                payload = {
+                    patient_id: selectedPatient?.id,
+                    quick_registration: quickRegistration,
+                    doctor_id: data.doctor_id,
+                    co_doctor_id: cleanCoDoctorId || undefined,
+                    appointment_date: data.appointment_date,
+                    appointment_time: data.appointment_time,
+                    duration_minutes: data.duration_minutes,
+                    type: data.type,
+                    payment: {
+                        type: data.payment_type,
+                        amount_paid: price,
+                        health_insurance_id: data.health_insurance_id,
+                        insurance_card_number: data.insurance_card_number,
+                    },
+                    overrides: data.ignore_schedule_constraints ? {
+                        ignore_schedule_constraints: true,
+                        reason: data.override_reason || 'Encaixe autorizado',
+                    } : undefined,
+                    notifications: {
+                        send_whatsapp: data.send_whatsapp,
+                        send_email: data.send_email,
+                    },
+                    notes: data.notes,
+                    specialty: data.specialty,
+                }
             }
 
             let response;
@@ -386,9 +420,13 @@ export function ManualAppointmentModal({
     }
 
     const onSubmit = (data: ManualAppointmentFormData) => {
-        if (!selectedPatient && !quickRegistration && !isEditing) {
+        if (data.event_category !== 'supervision' && !selectedPatient && !quickRegistration && !isEditing) {
             toast.error('Selecione ou cadastre um paciente')
             setStep('search')
+            return
+        }
+        if (data.event_category === 'supervision' && !data.professional_supervised_id) {
+            toast.error('Selecione o profissional que receberá a supervisão')
             return
         }
         saveAppointment(data)
@@ -401,19 +439,53 @@ export function ManualAppointmentModal({
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5" />
-                            {isEditing ? 'Editar Agendamento' : isEncaixe ? 'Encaixe Extra / Emergência' : 'Novo Agendamento Manual'}
+                            {isSupervision ? <GraduationCap className="h-5 w-5 text-indigo-600" /> : <Calendar className="h-5 w-5" />}
+                            {isSupervision ? 'Nova Supervisão Técnica / Clínica' : isEditing ? 'Editar Agendamento' : isEncaixe ? 'Encaixe Extra / Emergência' : 'Novo Agendamento Manual'}
                         </DialogTitle>
                         <DialogDescription>
-                            {isEncaixe 
-                                ? `Crie um encaixe que ignora bloqueios ou limite de horários do ${profLabel.singular.toLowerCase()}. Confirme com o profissional antes de realizar o encaixe.`
-                                : `Crie um agendamento manual selecionando o paciente, ${profLabel.singular.toLowerCase()} e horário desejado.`}
+                            {isSupervision
+                                ? 'Agende uma sessão interna de mentoria ou supervisão técnica entre profissionais da clínica.'
+                                : isEncaixe 
+                                    ? `Crie um encaixe que ignora bloqueios ou limite de horários do ${profLabel.singular.toLowerCase()}. Confirme com o profissional antes de realizar o encaixe.`
+                                    : `Crie um agendamento manual selecionando o paciente, ${profLabel.singular.toLowerCase()} e horário desejado.`}
                         </DialogDescription>
                     </DialogHeader>
 
                     {/* Step: Patient Search */}
                     {step === 'search' && (
                         <div className="space-y-4">
+                            {doctors?.some(d => d.allows_supervision) && (
+                                <div className="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <GraduationCap className="h-5 w-5 text-indigo-700 dark:text-indigo-400 shrink-0" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
+                                                Supervisão Técnica / Clínica
+                                            </p>
+                                            <p className="text-[11px] text-indigo-700 dark:text-indigo-400">
+                                                Reunião técnica ou mentoria interna entre terapeutas (sem paciente).
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs font-semibold border-indigo-300 text-indigo-800 hover:bg-indigo-100/60 dark:text-indigo-300 shrink-0"
+                                        onClick={() => {
+                                            const supervisor = (selectedDoctorId && doctors.find(d => d.id === selectedDoctorId && d.allows_supervision)) || doctors.find(d => d.allows_supervision)
+                                            if (supervisor) {
+                                                setValue('doctor_id', supervisor.id)
+                                            }
+                                            setValue('event_category', 'supervision')
+                                            setStep('form')
+                                        }}
+                                    >
+                                        Registrar Supervisão
+                                    </Button>
+                                </div>
+                            )}
+
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
                                     <User className="h-4 w-4" />
@@ -447,31 +519,90 @@ export function ManualAppointmentModal({
                     {/* Step: Appointment Form */}
                     {step === 'form' && (
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            {/* Patient Info */}
-                            <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <User className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium">
-                                        {selectedPatient?.full_name || quickRegistration?.full_name}
-                                    </span>
-                                    {quickRegistration && (
-                                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                                            Novo cadastro
-                                        </span>
-                                    )}
-                                    {patientNoShowCount >= 3 && (
-                                        <NoShowPatientBadge noShowCount={patientNoShowCount} />
-                                    )}
+                            {/* Modalidade / Categoria do Evento (se o profissional permite supervisão) */}
+                            {selectedDoctor?.allows_supervision && (
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                                        Modalidade do Registro
+                                    </Label>
+                                    <RadioGroup
+                                        value={eventCategory}
+                                        onValueChange={(val: 'appointment' | 'supervision') => {
+                                            setValue('event_category', val)
+                                            if (val === 'appointment' && !selectedPatient && !quickRegistration) {
+                                                setStep('search')
+                                            }
+                                        }}
+                                        className="grid grid-cols-2 gap-2"
+                                    >
+                                        <div className={cn(
+                                            "flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer transition-colors",
+                                            eventCategory === 'appointment' ? "border-primary bg-primary/5 text-primary" : "border-slate-200 bg-white dark:bg-slate-900 text-muted-foreground"
+                                        )}>
+                                            <RadioGroupItem value="appointment" id="cat-appointment" />
+                                            <Label htmlFor="cat-appointment" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                                                <User className="h-3.5 w-3.5" />
+                                                Atendimento a Paciente
+                                            </Label>
+                                        </div>
+                                        <div className={cn(
+                                            "flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer transition-colors",
+                                            eventCategory === 'supervision' ? "border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 font-semibold" : "border-slate-200 bg-white dark:bg-slate-900 text-muted-foreground"
+                                        )}>
+                                            <RadioGroupItem value="supervision" id="cat-supervision" />
+                                            <Label htmlFor="cat-supervision" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                                                <GraduationCap className="h-3.5 w-3.5 text-indigo-600" />
+                                                Supervisão Técnica
+                                            </Label>
+                                        </div>
+                                    </RadioGroup>
                                 </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleBackToSearch}
-                                >
-                                    Trocar
-                                </Button>
-                            </div>
+                            )}
+
+                            {/* Patient Info or Supervision Banner */}
+                            {isSupervision ? (
+                                <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/25 border border-indigo-200/70 dark:border-indigo-900/40 rounded-xl flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <GraduationCap className="h-4 w-4 text-indigo-700 dark:text-indigo-400 shrink-0" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
+                                                Supervisão Técnica / Clínica
+                                            </p>
+                                            <p className="text-[11px] text-indigo-700 dark:text-indigo-400">
+                                                Sessão interna de orientação e supervisão de caso clínico. Não gera cobrança nem prontuário de paciente.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300">
+                                        Supervisão
+                                    </Badge>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <span className="font-medium">
+                                            {selectedPatient?.full_name || quickRegistration?.full_name}
+                                        </span>
+                                        {quickRegistration && (
+                                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                                                Novo cadastro
+                                            </span>
+                                        )}
+                                        {patientNoShowCount >= 3 && (
+                                            <NoShowPatientBadge noShowCount={patientNoShowCount} />
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleBackToSearch}
+                                    >
+                                        Trocar
+                                    </Button>
+                                </div>
+                            )}
 
                             <Separator />
 
@@ -556,38 +687,87 @@ export function ManualAppointmentModal({
                                  </div>
                              )}
 
-                             {/* Co-Doctor / Co-Therapist Selection (Optional) */}
-                             <div className="space-y-2">
-                                 <Label className="flex items-center gap-2 text-muted-foreground font-normal">
-                                     <Users className="h-4 w-4" />
-                                     Co-Terapeuta / 2º Profissional (Opcional)
-                                 </Label>
-                                 <Controller
-                                     name="co_doctor_id"
-                                     control={form.control}
-                                     render={({ field }) => (
-                                         <Select 
-                                             onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} 
-                                             value={field.value || 'none'}
-                                         >
-                                             <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
-                                                 <SelectValue placeholder="Nenhum (atendimento individual)" />
-                                             </SelectTrigger>
-                                             <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
-                                                 <SelectItem value="none">Nenhum (atendimento individual)</SelectItem>
-                                                 {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doctor) => (
-                                                     <SelectItem key={doctor.id} value={doctor.id}>
-                                                         {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
-                                                     </SelectItem>
-                                                 ))}
-                                             </SelectContent>
-                                         </Select>
-                                     )}
-                                 />
-                                 <p className="text-xs text-muted-foreground">
-                                     Permite que dois profissionais atendam simultaneamente na mesma sessão sem conflito de horário.
-                                 </p>
-                             </div>
+                             {/* Co-Doctor / Co-Therapist Selection (Optional, only for patient appointments) */}
+                             {!isSupervision && (
+                                 <div className="space-y-2">
+                                     <Label className="flex items-center gap-2 text-muted-foreground font-normal">
+                                         <Users className="h-4 w-4" />
+                                         Co-Terapeuta / 2º Profissional (Opcional)
+                                     </Label>
+                                     <Controller
+                                         name="co_doctor_id"
+                                         control={form.control}
+                                         render={({ field }) => (
+                                             <Select 
+                                                 onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} 
+                                                 value={field.value || 'none'}
+                                             >
+                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
+                                                     <SelectValue placeholder="Nenhum (atendimento individual)" />
+                                                 </SelectTrigger>
+                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                     <SelectItem value="none">Nenhum (atendimento individual)</SelectItem>
+                                                     {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doctor) => (
+                                                         <SelectItem key={doctor.id} value={doctor.id}>
+                                                             {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
+                                                         </SelectItem>
+                                                     ))}
+                                                 </SelectContent>
+                                             </Select>
+                                         )}
+                                     />
+                                     <p className="text-xs text-muted-foreground">
+                                         Permite que dois profissionais atendam simultaneamente na mesma sessão sem conflito de horário.
+                                     </p>
+                                 </div>
+                             )}
+
+                             {/* Profissional Supervisionado (apenas em modo Supervisão) */}
+                             {isSupervision && (
+                                 <div className="space-y-2">
+                                     <Label className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-semibold">
+                                         <Users className="h-4 w-4 text-indigo-700" />
+                                         Profissional Supervisionado (Terapeuta / Mentorando)
+                                     </Label>
+                                     <Controller
+                                         name="professional_supervised_id"
+                                         control={form.control}
+                                         render={({ field }) => (
+                                             <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm border-indigo-300">
+                                                     <SelectValue placeholder="Selecione o terapeuta supervisionado" />
+                                                 </SelectTrigger>
+                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                     {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doc) => (
+                                                         <SelectItem key={doc.id} value={doc.id}>
+                                                             {doc.user?.full_name} - {doc.specialty}
+                                                         </SelectItem>
+                                                     ))}
+                                                 </SelectContent>
+                                             </Select>
+                                         )}
+                                     />
+                                     <p className="text-xs text-muted-foreground">
+                                         Terapeuta da equipe que participará desta sessão de supervisão clínica.
+                                     </p>
+                                 </div>
+                             )}
+
+                             {/* Pauta / Anotações da Supervisão */}
+                             {isSupervision && (
+                                 <div className="space-y-2">
+                                     <Label className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-semibold">
+                                         <BookOpen className="h-4 w-4 text-indigo-700" />
+                                         Pauta / Anotações da Supervisão
+                                     </Label>
+                                     <Textarea
+                                         placeholder="Descreva a pauta, casos a discutir ou alinhamento técnico..."
+                                         {...form.register('supervision_notes')}
+                                         rows={3}
+                                         className="border-indigo-200"
+                                     />
+                                 </div>
+                             )}
 
                              {/* Date and Time */}
                             <div className="grid grid-cols-2 gap-4">
@@ -683,62 +863,68 @@ export function ManualAppointmentModal({
 
                             <Separator />
 
-                            {/* Payment Method */}
-                            <div className="space-y-2">
-                                <Label>Forma de Pagamento</Label>
-                                <PaymentMethodSelector
-                                    price={price}
-                                    selectedType={paymentType}
-                                    onTypeChange={(type) => setValue('payment_type', type)}
-                                    healthInsurances={healthInsurances}
-                                    selectedInsuranceId={watch('health_insurance_id')}
-                                    onInsuranceChange={(id) => setValue('health_insurance_id', id)}
-                                    insuranceCardNumber={watch('insurance_card_number')}
-                                    onCardNumberChange={(val) => setValue('insurance_card_number', val)}
-                                />
-                            </div>
-
-                            <Separator />
-
-                            {/* Notes */}
-                            <div className="space-y-2">
-                                <Label>Observações (opcional)</Label>
-                                <Textarea
-                                    placeholder="Motivo da consulta, observações importantes..."
-                                    {...form.register('notes')}
-                                    rows={3}
-                                />
-                            </div>
-
-                            {/* Notifications */}
-                            <div className="space-y-2">
-                                <Label className="flex items-center gap-2">
-                                    <Bell className="h-4 w-4" />
-                                    Notificações
-                                </Label>
-                                <div className="flex flex-wrap gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id="send_whatsapp"
-                                            checked={form.watch('send_whatsapp')}
-                                            onCheckedChange={(checked) => setValue('send_whatsapp', checked as boolean)}
+                            {/* Payment Method (Apenas para consultas de pacientes) */}
+                            {!isSupervision && (
+                                <>
+                                    <Separator />
+                                    <div className="space-y-2">
+                                        <Label>Forma de Pagamento</Label>
+                                        <PaymentMethodSelector
+                                            price={price}
+                                            selectedType={paymentType}
+                                            onTypeChange={(type) => setValue('payment_type', type)}
+                                            healthInsurances={healthInsurances}
+                                            selectedInsuranceId={watch('health_insurance_id')}
+                                            onInsuranceChange={(id) => setValue('health_insurance_id', id)}
+                                            insuranceCardNumber={watch('insurance_card_number')}
+                                            onCardNumberChange={(val) => setValue('insurance_card_number', val)}
                                         />
-                                        <Label htmlFor="send_whatsapp" className="cursor-pointer">
-                                            Compartilhar no WhatsApp
-                                        </Label>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id="send_email"
-                                            checked={form.watch('send_email')}
-                                            onCheckedChange={(checked) => setValue('send_email', checked as boolean)}
-                                        />
-                                        <Label htmlFor="send_email" className="cursor-pointer">
-                                            Enviar Email
-                                        </Label>
+                                </>
+                            )}
+
+                            {!isSupervision && (
+                                <div className="space-y-2">
+                                    <Label>Observações (opcional)</Label>
+                                    <Textarea
+                                        placeholder="Motivo da consulta, observações importantes..."
+                                        {...form.register('notes')}
+                                        rows={3}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Notifications (Apenas para pacientes) */}
+                            {!isSupervision && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2">
+                                        <Bell className="h-4 w-4" />
+                                        Notificações
+                                    </Label>
+                                    <div className="flex flex-wrap gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="send_whatsapp"
+                                                checked={form.watch('send_whatsapp')}
+                                                onCheckedChange={(checked) => setValue('send_whatsapp', checked as boolean)}
+                                            />
+                                            <Label htmlFor="send_whatsapp" className="cursor-pointer">
+                                                Compartilhar no WhatsApp
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="send_email"
+                                                checked={form.watch('send_email')}
+                                                onCheckedChange={(checked) => setValue('send_email', checked as boolean)}
+                                            />
+                                            <Label htmlFor="send_email" className="cursor-pointer">
+                                                Enviar Email
+                                            </Label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             <Separator />
 
@@ -747,9 +933,9 @@ export function ManualAppointmentModal({
                                 <Button type="button" variant="outline" onClick={handleClose}>
                                     Cancelar
                                 </Button>
-                                <Button type="submit" disabled={isPending}>
+                                <Button type="submit" disabled={isPending} className={isSupervision ? "bg-indigo-700 hover:bg-indigo-800 text-white" : ""}>
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Confirmar Agendamento
+                                    {isSupervision ? 'Confirmar Supervisão Técnica' : 'Confirmar Agendamento'}
                                 </Button>
                             </div>
                         </form>

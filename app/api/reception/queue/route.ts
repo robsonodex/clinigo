@@ -49,6 +49,8 @@ export async function GET(request: Request) {
         ticket_number,
         consulting_room_id,
         called_at,
+        appointment_type,
+        patient_id,
         patient:patients(id, full_name, date_of_birth, gender),
         doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name))
       `)
@@ -62,7 +64,7 @@ export async function GET(request: Request) {
                 console.error('[Reception Queue] apptError:', apptError)
                 throw apptError
             }
-            appointments = data || []
+            appointments = (data || []).filter((a: any) => a.appointment_type !== 'SUPERVISION' && a.appointment_type !== 'BLOCK' && a.patient_id != null)
         } catch (e) {
             console.error('[DEBUG] Error fetching queue appointments:', e)
             // Don't fail entire request, just return empty for this part but log deep

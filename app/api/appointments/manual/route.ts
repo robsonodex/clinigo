@@ -58,6 +58,9 @@ interface ManualAppointmentRequest {
     is_block?: boolean // Compromisso/Bloqueio interno (sem paciente)
     block_title?: string // Título do bloqueio (ex: "Reunião de Equipe")
     specialty?: string
+    is_supervision?: boolean // Supervisão Técnica/Clínica (sem paciente)
+    professional_supervised_id?: string // Profissional que receberá supervisão
+    supervision_notes?: string // Anotações e pauta da supervisão
 }
 
 export async function POST(request: NextRequest) {
@@ -116,8 +119,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Bloqueios internos não precisam de paciente
-        if (!body.is_block && !body.patient_id && !body.quick_registration) {
+        // Bloqueios internos e supervisão técnica não precisam de paciente
+        if (!body.is_block && !body.is_supervision && !body.patient_id && !body.quick_registration) {
             return NextResponse.json(
                 { error: 'Paciente ou dados para cadastro são obrigatórios' },
                 { status: 400 }
@@ -130,7 +133,7 @@ export async function POST(request: NextRequest) {
         // Validate all doctors belong to clinic
         const { data: doctorsFound, error: doctorsError } = await supabase
             .from('doctors')
-            .select('id, user_id, consultation_price, specialty, user:users(full_name)')
+            .select('id, user_id, consultation_price, specialty, allows_supervision, user:users(full_name)')
             .in('id', requestedDoctorIds)
             .eq('clinic_id', clinicId)
 
@@ -142,6 +145,32 @@ export async function POST(request: NextRequest) {
         }
 
         const doctor = doctorsFound.find(d => d.id === primaryDoctorId) || doctorsFound[0]
+
+        // Validação específica para Supervisão Técnica
+        if (body.is_supervision) {
+            if (!doctor.allows_supervision) {
+                return NextResponse.json(
+                    { error: 'O profissional selecionado não possui permissão para registrar supervisão técnica.' },
+                    { status: 403 }
+                )
+            }
+
+            if (body.professional_supervised_id) {
+                const { data: supDoc, error: supErr } = await supabase
+                    .from('doctors')
+                    .select('id, user:users(full_name)')
+                    .eq('id', body.professional_supervised_id)
+                    .eq('clinic_id', clinicId)
+                    .single()
+
+                if (supErr || !supDoc) {
+                    return NextResponse.json(
+                        { error: 'Profissional supervisionado não encontrado nesta clínica.' },
+                        { status: 404 }
+                    )
+                }
+            }
+        }
 
         // Permissão para bloqueios de agenda / compromissos:
         // SUPER_ADMIN, CLINIC_ADMIN, RECEPTIONIST e coordenadores podem agendar para qualquer profissional da clínica.
@@ -170,11 +199,11 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get or create patient (pular para bloqueios internos)
+        // Get or create patient (pular para bloqueios internos e supervisão técnica)
         let patientId: string | null = body.patient_id || null
         let patient: any = null
 
-        if (!body.is_block) {
+        if (!body.is_block && !body.is_supervision) {
             if (!patientId && body.quick_registration) {
                 // Quick registration
                 const { full_name, phone, date_of_birth, cpf, email } = body.quick_registration
@@ -424,7 +453,9 @@ export async function POST(request: NextRequest) {
         const hasMultipleDoctors = doctorsFound.length > 1
 
         let finalNotes: string | null = null
-        if (body.is_block) {
+        if (body.is_supervision) {
+            finalNotes = body.supervision_notes ? `[Supervisão Técnica] ${body.supervision_notes}` : '[Supervisão Técnica]'
+        } else if (body.is_block) {
             finalNotes = body.block_title || 'Compromisso Interno'
             if (hasMultipleDoctors) {
                 finalNotes = `${finalNotes} (Equipe: ${allDoctorNames})`
@@ -441,12 +472,14 @@ export async function POST(request: NextRequest) {
             clinic_id: clinicId,
             doctor_id: primaryDoctorId,
             co_doctor_id: body.co_doctor_id || null,
-            patient_id: body.is_block ? null : patientId,
+            patient_id: (body.is_block || body.is_supervision) ? null : patientId,
             appointment_date: appointmentDate,
             appointment_time: appointmentTime,
             status: 'CONFIRMED',
-            payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
-            appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
+            payment_type: (body.is_block || body.is_supervision) ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
+            appointment_type: body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial')),
+            professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
+            supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
             waiting_room_notes: finalNotes,
             reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
         }
@@ -486,12 +519,14 @@ export async function POST(request: NextRequest) {
                 id: uuidv4(),
                 clinic_id: clinicId,
                 doctor_id: addDocId,
-                patient_id: body.is_block ? null : patientId,
+                patient_id: (body.is_block || body.is_supervision) ? null : patientId,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',
-                payment_type: body.is_block ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
-                appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'),
+                payment_type: (body.is_block || body.is_supervision) ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
+                appointment_type: body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial')),
+                professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
+                supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
                 waiting_room_notes: finalNotes,
                 reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
                 video_link: appointmentData.video_link || null
@@ -535,8 +570,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Create financial entry if payment was made at counter (skip for blocks)
-        if (!body.is_block) {
+        // Create financial entry if payment was made at counter (skip for blocks and supervision)
+        if (!body.is_block && !body.is_supervision) {
             try {
                 const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment?.type)
 
@@ -658,8 +693,8 @@ export async function POST(request: NextRequest) {
 
         const appointmentWithRelations = fullAppointment as any
 
-        // Send email notification if enabled (skip for blocks)
-        if (!body.is_block && body.notifications?.send_email && patient?.email) {
+        // Send email notification if enabled (skip for blocks and supervision)
+        if (!body.is_block && !body.is_supervision && body.notifications?.send_email && patient?.email) {
             try {
                 const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
@@ -746,8 +781,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Send WhatsApp notification if enabled (skip for blocks)
-        if (!body.is_block && body.notifications?.send_whatsapp && patient?.phone) {
+        // Send WhatsApp notification if enabled (skip for blocks and supervision)
+        if (!body.is_block && !body.is_supervision && body.notifications?.send_whatsapp && patient?.phone) {
             try {
                 const { sendWhatsAppMessage, checkInstanceStatus } = await import('@/lib/whatsapp/service')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
@@ -809,19 +844,21 @@ export async function POST(request: NextRequest) {
             success: true,
             appointment: {
                 id: appointmentId,
-                patient_id: body.is_block ? null : patientId,
+                patient_id: (body.is_block || body.is_supervision) ? null : patientId,
                 doctor_id: body.doctor_id,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',
-                appointment_type: body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'telemedicina' : 'presencial'),
-                notes: body.is_block ? (body.block_title || 'Compromisso Interno') : (body.notes || null),
-                patient: body.is_block ? null : (appointmentWithRelations?.patient || { full_name: patient?.full_name, phone: patient?.phone, email: patient?.email }),
+                appointment_type: body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'telemedicina' : 'presencial')),
+                notes: finalNotes,
+                professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
+                supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
+                patient: (body.is_block || body.is_supervision) ? null : (appointmentWithRelations?.patient || { full_name: patient?.full_name, phone: patient?.phone, email: patient?.email }),
                 doctor: appointmentWithRelations?.doctor || { user: { full_name: (doctor as any).user?.full_name || 'Médico' } },
                 clinic: appointmentWithRelations?.clinic,
-                qr_code: body.is_block ? null : qrCodeData
+                qr_code: (body.is_block || body.is_supervision) ? null : qrCodeData
             },
-            message: body.is_block ? 'Bloqueio/Compromisso criado com sucesso' : 'Agendamento criado com sucesso',
+            message: body.is_supervision ? 'Supervisão técnica agendada com sucesso' : (body.is_block ? 'Bloqueio/Compromisso criado com sucesso' : 'Agendamento criado com sucesso'),
         })
 
     } catch (error) {

@@ -65,6 +65,12 @@ export async function GET(
                     specialty,
                     crm
                 ),
+                professional_supervised:doctors!appointments_professional_supervised_id_fkey(
+                    id,
+                    user:users(full_name),
+                    specialty,
+                    crm
+                ),
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
             `)
             .eq('id', appointmentId)

@@ -322,6 +322,8 @@ async function handlePatchDoctor(request: NextRequest, doctorId: string) {
     if (body.crm !== undefined) doctorFields.crm = body.crm
     if (body.crm_state !== undefined) doctorFields.crm_state = body.crm_state
     if (body.council_name !== undefined) doctorFields.council_name = body.council_name
+    if (body.area_of_expertise !== undefined) doctorFields.area_of_expertise = body.area_of_expertise
+    if (body.allows_supervision !== undefined) doctorFields.allows_supervision = body.allows_supervision
 
     if (body.full_name !== undefined) userFields.full_name = body.full_name
     if (body.avatar_url !== undefined) userFields.avatar_url = body.avatar_url

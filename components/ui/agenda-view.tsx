@@ -97,7 +97,7 @@ import { SlotSuggestionModal } from '@/components/appointments/SlotSuggestionMod
 import { AppointmentDetailsDrawer } from '@/components/dashboard/AppointmentDetailsDrawer'
 import { BlockScheduleModal } from '@/components/appointments/BlockScheduleModal'
 import { RoomQrModal } from '@/components/appointments/RoomQrModal'
-import { AlertTriangle, Lock } from 'lucide-react'
+import { AlertTriangle, Lock, GraduationCap } from 'lucide-react'
 import {
     Tooltip,
     TooltipContent,
@@ -1466,9 +1466,11 @@ export default function AgendaPage() {
                                                                                 setDetailsDrawerOpen(true)
                                                                             }}
                                                                         >
-                                                                            {/* Patient Name / Block Title */}
+                                                                            {/* Patient Name / Block Title / Supervision */}
                                                                             <div className={cn("font-bold truncate text-sm leading-tight", isCancelled && "line-through opacity-70")}>
-                                                                                {appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso'}
+                                                                                {(appointment as any).appointment_type === 'SUPERVISION'
+                                                                                    ? `Supervisão: ${(appointment as any).professional_supervised?.user?.full_name || (appointment as any).supervision_notes || 'Supervisão Técnica'}`
+                                                                                    : (appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso')}
                                                                             </div>
 
                                                                             {/* Start Time - End Time */}
@@ -1495,6 +1497,12 @@ export default function AgendaPage() {
 
                                                                             {/* Status de Confirmacao */}
                                                                             <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                                                                {(appointment as any).appointment_type === 'SUPERVISION' && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-indigo-800 dark:text-indigo-300 bg-indigo-100/90 dark:bg-indigo-950/70 px-1.5 py-0.5 rounded">
+                                                                                        <GraduationCap className="w-2.5 h-2.5" />
+                                                                                        Supervisão
+                                                                                    </span>
+                                                                                )}
                                                                                 {(appointment as any).co_doctor && (
                                                                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-800 dark:text-teal-300 bg-teal-100/90 dark:bg-teal-950/70 px-1.5 py-0.5 rounded">
                                                                                         <Users className="w-2.5 h-2.5" />
@@ -1806,8 +1814,11 @@ export default function AgendaPage() {
                                                                                         setDetailsDrawerOpen(true)
                                                                                     }}
                                                                                 >
-                                                                                    <div className="text-[11px] font-bold leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-                                                                                        {(appointment.patient?.full_name || (appointment as any).notes || '[BLOQUEIO]').toUpperCase()} ({doctorName.toUpperCase()}{coDoctorName ? ` + ${coDoctorName.toUpperCase()}` : ''}{specShort ? `-${specShort}` : ''})
+                                                                                    <div className="text-[11px] font-bold leading-tight whitespace-nowrap overflow-hidden text-ellipsis flex items-center gap-1">
+                                                                                        {(appointment as any).appointment_type === 'SUPERVISION' && <GraduationCap className="w-3 h-3 shrink-0" />}
+                                                                                        {(appointment as any).appointment_type === 'SUPERVISION'
+                                                                                            ? `SUPERVISÃO: ${((appointment as any).professional_supervised?.user?.full_name || (appointment as any).supervision_notes || 'TÉCNICA').toUpperCase()} (${doctorName.toUpperCase()})`
+                                                                                            : `${(appointment.patient?.full_name || (appointment as any).notes || '[BLOQUEIO]').toUpperCase()} (${doctorName.toUpperCase()}${coDoctorName ? ` + ${coDoctorName.toUpperCase()}` : ''}${specShort ? `-${specShort}` : ''})`}
                                                                                     </div>
                                                                                     <div className="text-[11px] opacity-90 leading-tight">
                                                                                         {appointment.appointment_time.substring(0, 5)} – {endTime}
@@ -2140,6 +2151,7 @@ export default function AgendaPage() {
                         setIsEncaixeMode(false)
                     }
                 }}
+                preselectedDoctorId={selectedDoctorIds.length === 1 ? selectedDoctorIds[0] : (isDoctor && user ? doctorsList?.find((d: any) => d.user_id === user.id)?.id : undefined)}
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}
                 onSuccess={(appointmentDate) => {

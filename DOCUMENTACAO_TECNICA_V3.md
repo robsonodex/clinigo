@@ -1068,3 +1068,49 @@
     - Validado via teste em código que a rota `GET /api/reception/queue` retorna todos os 39 agendamentos confirmados de hoje para a clínica Espaço Incluir sem atrasos e com 100% de integridade dos dados dos pacientes e profissionais.
     - Teste de isolamento multi-tenant confirmado sem interferência na World Sensory ou outras clínicas parceiras.
     - Deploy publicado e ativo em produção na Vercel (`https://clinigo.app`).
+
+#### Item 40 — Especialidades Multiprofissionais no Cadastro de Profissional e Módulo de Supervisão Técnica na Agenda (World Sensory & Geral)
+- **Módulo**: Gestão de Profissionais & Agenda → Cadastro de Profissionais, Agendamento Manual e Visualização da Grade
+- **Caminho Completo**:
+  - Migração de Banco de Dados → `supabase/migrations/20260908140000_add_supervision_and_expertise.sql`
+  - Validações Zod → `lib/validations/doctor.ts`, `lib/validations.ts`
+  - APIs de Profissionais → `app/api/doctors/route.ts`, `app/api/doctors/detail/route.ts`
+  - Formulário de Profissionais → `components/forms/doctor-form-dialog.tsx` → `DoctorFormDialog`
+  - APIs de Agendamento → `app/api/appointments/manual/route.ts`, `app/api/appointments/route.ts`, `app/api/appointments/[id]/route.ts`
+  - Modal de Agendamento Manual → `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal`
+  - Drawer de Detalhes → `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer`
+  - Grade da Agenda → `components/ui/agenda-view.tsx` → `AgendaPage`
+  - API da Fila da Recepção → `app/api/reception/queue/route.ts` → `GET`
+- **Descrição Técnica**:
+  - **1. Contexto e Necessidades (Demandas Dra. Patrícia Mendes / World Sensory)**:
+    - O cadastro de profissionais continha lista restrita de especialidades, impedindo o cadastramento adequado de terapeutas de "Terapia Ocupacional (T.O.)" e especialidades afins.
+    - Necessidade de inclusão de uma classificação secundária ("Área de Atuação") com pré-definição para "Equipe Multiprofissional", preservando registros existentes.
+    - Criação de um tipo de evento próprio na agenda: "Supervisão Técnica / Clínica", destinado a alinhamentos técnicos internos e mentorias entre supervisor e terapeuta orientando.
+    - O evento de supervisão técnica não possui paciente (`patient_id: null`), referencia outro profissional via `professional_supervised_id`, não abre prontuário clínico e não gera cobrança de paciente.
+    - Apenas profissionais habilitados com a permissão "Permite registrar Supervisão" (`allows_supervision = true`) podem agendar supervisões técnicas.
+  - **2. Resolução Cirúrgica Implementada**:
+    - **Banco de Dados (Schema & Migrations)**:
+      - Adicionadas as colunas `doctors.area_of_expertise` (TEXT) e `doctors.allows_supervision` (BOOLEAN DEFAULT FALSE com backfill seguro).
+      - Adicionadas as colunas `appointments.professional_supervised_id` (UUID FK para `doctors(id)`) e `appointments.supervision_notes` (TEXT), com criação de índice de busca otimizado.
+    - **Cadastro e Edição de Profissionais (`doctor-form-dialog.tsx`)**:
+      - Expandida a lista de especialidades padrão para contemplar Terapia Ocupacional, Psicologia, Psicopedagogia, Musicoterapia, Fisioterapia, Fonoaudiologia, Psicomotricidade, Aplicador(a) ABA, Nutrição e Serviço Social.
+      - Adicionado o campo "Área de Atuação" com botões de preenchimento rápido ("+ Equipe Multiprofissional", "+ Corpo Clínico").
+      - Adicionado o controle de acesso com Switch "Permite registrar Supervisão", habilitado exclusivamente para a Dra. Patrícia Mendes e controlado por administradores.
+    - **Backend de Agendamento Manual (`manual/route.ts`)**:
+      - Suporte ao payload `is_supervision: true`, ignorando a obrigatoriedade de paciente e dispensando geração de lançamentos financeiros e QR codes de paciente.
+      - Validação de segurança confirmando se o profissional supervisor possui `allows_supervision === true` e se o terapeuta supervisionado pertence à mesma clínica.
+      - Gravação com `appointment_type: 'SUPERVISION'`, `patient_id: null`, `professional_supervised_id` e `supervision_notes`.
+    - **Interface da Agenda (`agenda-view.tsx` e `ManualAppointmentModal.tsx`)**:
+      - No modal de agendamento manual, quando o profissional selecionado permite supervisão, surge o seletor entre "Atendimento a Paciente" e "Supervisão Técnica".
+      - No modo supervisão técnica, a seleção de paciente é ocultada, exibindo seletores de "Profissional Supervisionado" e "Pauta / Anotações da Supervisão".
+      - Na grade da agenda (visão padrão e visão timeline), o agendamento de supervisão exibe badge sóbrio "Supervisão" e o nome do terapeuta supervisionado.
+      - No drawer de detalhes (`AppointmentDetailsDrawer.tsx`), o evento é apresentado com destaque para Supervisor, Mentorando e Pauta, sem botões de prontuário clínico.
+    - **Isolamento da Fila de Recepção (`queue/route.ts`)**:
+      - O endpoint da recepção filtra e descarta eventos de `appointment_type === 'SUPERVISION'`, garantindo que supervisões técnicas internas nunca entrem no painel de espera de pacientes.
+  - **3. Testes Automatizados e Isolamento**:
+    - Suite de 6 testes executada com 100% de sucesso (`test-supervision-suite.mjs`):
+      - Validação de `allows_supervision = true` para Dra. Patrícia e `false` para demais médicos.
+      - Inserção e persistência de supervisão técnica com `patient_id: null` e vínculo relacional de `professional_supervised_id`.
+      - Validação da consulta PostgREST com resolução do nome e especialidade do profissional supervisionado via foreign key explícita.
+      - Confirmação de exclusão absoluta da fila da recepção.
+      - Remoção limpa do registro de teste sem efeitos colaterais.

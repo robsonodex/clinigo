@@ -92,6 +92,10 @@ export async function GET(request: NextRequest) {
           id, crm, specialty, consultation_price, consultation_duration,
           user:users(full_name, email, avatar_url)
         ),
+        professional_supervised:doctors!appointments_professional_supervised_id_fkey(
+          id, crm, specialty,
+          user:users(full_name, email, avatar_url)
+        ),
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
         payment:payments(id, status, amount, payment_method)
       `, { count: 'exact' })

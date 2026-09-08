@@ -74,6 +74,15 @@ export const createDoctorSchema = z.object({
     specialties_additional: z
         .array(z.string())
         .optional(),
+    area_of_expertise: z
+        .string()
+        .max(100)
+        .optional()
+        .nullable(),
+    allows_supervision: z
+        .boolean()
+        .default(false)
+        .optional(),
 })
 
 /**
@@ -147,6 +156,14 @@ export const updateDoctorSchema = z.object({
         .max(18, 'CNPJ inválido')
         .optional()
         .nullable(),
+    area_of_expertise: z
+        .string()
+        .max(100)
+        .optional()
+        .nullable(),
+    allows_supervision: z
+        .boolean()
+        .optional(),
 })
 
 /**

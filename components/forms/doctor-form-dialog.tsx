@@ -39,18 +39,30 @@ interface DoctorFormDialogProps {
 }
 
 const SPECIALTIES = [
+    // Terapias e Multidisciplinares
+    'Terapia Ocupacional',
+    'Fonoaudiologia',
+    'Fisioterapia',
+    'Psicologia',
+    'Psicopedagogia',
+    'Musicoterapia',
+    'Psicomotricidade',
+    'Aplicador(a) ABA',
+    'Nutrição',
+    'Serviço Social',
+    // Especialidades Médicas
+    'Pediatria',
+    'Neurologia',
+    'Psiquiatria',
+    'Clínica Geral',
     'Cardiologia',
     'Dermatologia',
     'Endocrinologia',
     'Gastroenterologia',
     'Ginecologia',
-    'Neurologia',
     'Oftalmologia',
     'Ortopedia',
-    'Pediatria',
-    'Psiquiatria',
     'Urologia',
-    'Clínica Geral',
 ]
 
 const STATES = [
@@ -81,6 +93,8 @@ const extendedDoctorFormSchema = doctorFormSchema.extend({
     show_convenio_badge: z.boolean().default(false),
     consultation_duration: z.number().min(15).max(120).optional(),
     cnpj: z.string().max(18).optional().nullable(),
+    area_of_expertise: z.string().max(100).optional().nullable(),
+    allows_supervision: z.boolean().default(false).optional(),
 })
 
 type ExtendedDoctorFormData = z.infer<typeof extendedDoctorFormSchema>
@@ -139,6 +153,8 @@ export function DoctorFormDialog({
             show_convenio_badge: (doctorToEdit as any)?.display_settings?.show_convenio ?? false,
             consultation_duration: (doctorToEdit as any)?.consultation_duration || 30,
             cnpj: (doctorToEdit as any)?.cnpj || '',
+            area_of_expertise: (doctorToEdit as any)?.area_of_expertise || '',
+            allows_supervision: (doctorToEdit as any)?.allows_supervision ?? false,
         },
     })
 
@@ -224,6 +240,8 @@ export function DoctorFormDialog({
                 show_convenio_badge: (doctorToEdit as any)?.display_settings?.show_convenio ?? false,
                 consultation_duration: (doctorToEdit as any)?.consultation_duration || 30,
                 cnpj: (doctorToEdit as any)?.cnpj || '',
+                area_of_expertise: (doctorToEdit as any)?.area_of_expertise || '',
+                allows_supervision: (doctorToEdit as any)?.allows_supervision ?? false,
             })
         }
     }, [open, doctorToEdit, reset, councilLabel])
@@ -256,6 +274,8 @@ export function DoctorFormDialog({
                         consultation_duration: data.consultation_duration,
                         display_settings: displaySettings,
                         cnpj: data.cnpj || null,
+                        area_of_expertise: data.area_of_expertise || null,
+                        allows_supervision: data.allows_supervision ?? false,
                     } as any,
                 },
                 {
@@ -476,7 +496,7 @@ export function DoctorFormDialog({
                                         </SelectItem>
                                     ))}
                                     <SelectItem value="__custom__" className="text-primary font-medium">
-                                        ➕ Cadastrar Nova Especialidade
+                                        Cadastrar Nova Especialidade (Personalizada)...
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -505,6 +525,38 @@ export function DoctorFormDialog({
                                     {errors.specialty.message}
                                 </p>
                             )}
+                        </div>
+
+                        {/* ======= ÁREA DE ATUAÇÃO (AGRUPADOR / CLASSIFICAÇÃO) ======= */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="area_of_expertise">Área de Atuação</Label>
+                                <span className="text-[11px] text-muted-foreground">Classificação / Tag</span>
+                            </div>
+                            <Input
+                                id="area_of_expertise"
+                                value={watch('area_of_expertise') || ''}
+                                onChange={(e) => setValue('area_of_expertise', e.target.value)}
+                                placeholder="Ex: Equipe Multiprofissional"
+                                className="min-h-[44px]"
+                                style={{ fontSize: '16px' }}
+                            />
+                            <div className="flex gap-1.5 flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={() => setValue('area_of_expertise', 'Equipe Multiprofissional')}
+                                    className="text-[11px] px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-colors border border-slate-200 dark:border-slate-700 min-h-[32px]"
+                                >
+                                    + Equipe Multiprofissional
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setValue('area_of_expertise', 'Corpo Clínico')}
+                                    className="text-[11px] px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-colors border border-slate-200 dark:border-slate-700 min-h-[32px]"
+                                >
+                                    + Corpo Clínico
+                                </button>
+                            </div>
                         </div>
 
                         {/* ======= OUTRAS ESPECIALIDADES & FORMAÇÕES ADICIONAIS ======= */}
@@ -546,6 +598,27 @@ export function DoctorFormDialog({
                                     ))}
                                 </div>
                             )}
+                        </div>
+
+                        {/* ======= SUPERVISÃO TÉCNICA / CLÍNICA ======= */}
+                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 md:col-span-2">
+                            <div className="space-y-0.5 pr-4">
+                                <div className="flex items-center gap-2">
+                                    <Label className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                                        Permite registrar Supervisão
+                                    </Label>
+                                    <Badge variant="outline" className="text-[10px] font-semibold text-teal-700 bg-teal-50 dark:bg-teal-950 dark:text-teal-300 border-teal-200">
+                                        Supervisão Técnica
+                                    </Badge>
+                                </div>
+                                <p className="text-xs text-slate-500">
+                                    Habilita o registro de compromissos de &quot;Supervisão Técnica/Clínica&quot; na agenda deste profissional, vinculados a outro terapeuta (sem necessidade de vincular paciente).
+                                </p>
+                            </div>
+                            <Switch
+                                checked={watch('allows_supervision') ?? false}
+                                onCheckedChange={(val) => setValue('allows_supervision', val)}
+                            />
                         </div>
 
                         <div className="space-y-2">
