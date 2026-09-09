@@ -93,6 +93,13 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     const [digitalSignatureUrl, setDigitalSignatureUrl] = useState<string | null>(null)
     const [digitalSignatureMeta, setDigitalSignatureMeta] = useState<any>(null)
 
+    const isWorldSensoryClinic = Boolean(
+        appointment?.clinic_id === '4c13e586-5390-4393-a180-2c9dd7ed81c7' ||
+        appointment?.clinic_id === '0c9ccb05-8530-4f8d-8d64-dd3eb6614e30' ||
+        clinic?.slug === 'worldsensory' ||
+        /world\s*sensory/i.test(clinic?.name || '')
+    )
+
     // Open sign modal after save completes and recordId is set
     React.useEffect(() => {
         if (pendingSign && recordId && !isSaving) {
@@ -196,7 +203,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 2. Fetch Patient, Clinic, Doctor
             const [patientRes, clinicRes, doctorRes] = await Promise.all([
                 supabase.from('patients').select('*').eq('id', appt.patient_id).single(),
-                supabase.from('clinics').select('id, name, logo_url, professional_label, council_label').eq('id', appt.clinic_id).single(),
+                supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).single(),
                 supabase.from('doctors').select('id, user:user_id(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).single()
             ])
 
@@ -219,7 +226,15 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 console.error('Error checking psicomotricidade module:', e)
             }
 
-            // Verifica se módulo Evolução World Sensory está ativo na clínica
+            // Verifica se módulo Evolução World Sensory está ativo na clínica ou se é a clínica World Sensory
+            const isWorldSensory = 
+                appt.clinic_id === '4c13e586-5390-4393-a180-2c9dd7ed81c7' ||
+                appt.clinic_id === '0c9ccb05-8530-4f8d-8d64-dd3eb6614e30' ||
+                clinicRes.data?.slug === 'worldsensory' ||
+                /world\s*sensory/i.test(clinicRes.data?.name || '')
+
+            let wsActive = isWorldSensory
+
             try {
                 const { data: wsModData } = await supabase
                     .from('clinica_modulos')
@@ -227,11 +242,16 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     .eq('clinica_id', appt.clinic_id)
                     .eq('modulo_id', 'evolucao_world_sensory')
                     .maybeSingle()
-                if (wsModData?.ativo) {
-                    setHasWorldSensoryEvolution(true)
+                if (wsModData?.ativo !== undefined) {
+                    wsActive = wsModData.ativo
                 }
             } catch (e) {
                 console.error('Error checking evolucao_world_sensory module:', e)
+            }
+
+            if (wsActive) {
+                setHasWorldSensoryEvolution(true)
+                setProfessionType('TERAPEUTA')
             }
 
             // Detecta se perfil ou clínica é de Terapia
@@ -607,36 +627,64 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                         </Button>
                     )}
 
-                    {!hasWorldSensoryEvolution && (
-                        <>
-                            <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md border">
-                                <Label htmlFor="prof-selector" className="text-sm font-medium whitespace-nowrap">Área:</Label>
-                                <Select value={professionType} onValueChange={setProfessionType}>
-                                    <SelectTrigger id="prof-selector" className="h-8 border-0 bg-transparent shadow-none focus:ring-0">
-                                        <SelectValue placeholder="Selecione" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {[
-                                            { id: 'MEDICO', label: clinic?.professional_label === 'Terapeuta' ? 'Médico' : (clinic?.professional_label || 'Médico'), icon: Stethoscope },
-                                            { id: 'PSICOLOGO', label: 'Psicologia', icon: Brain },
-                                            { id: 'TERAPEUTA', label: clinic?.professional_label === 'Terapeuta' ? 'Terapeuta' : 'Terapia / Funcional', icon: ActivitySquare },
-                                        ].map(p => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                                <div className="flex items-center gap-2">
-                                                    <p.icon className="w-4 h-4" />
-                                                    <span>{p.label}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                    {/* Seletor de Modelo de Prontuário / Área */}
+                    <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md border">
+                        <Label htmlFor="prof-selector" className="text-sm font-medium whitespace-nowrap">
+                            {isWorldSensoryClinic ? 'Modelo:' : 'Área:'}
+                        </Label>
+                        <Select 
+                            value={hasWorldSensoryEvolution ? 'WORLD_SENSORY' : professionType} 
+                            onValueChange={(val) => {
+                                if (val === 'WORLD_SENSORY') {
+                                    setHasWorldSensoryEvolution(true)
+                                    setProfessionType('TERAPEUTA')
+                                } else {
+                                    setHasWorldSensoryEvolution(false)
+                                    setProfessionType(val)
+                                }
+                            }}
+                        >
+                            <SelectTrigger id="prof-selector" className="h-8 border-0 bg-transparent shadow-none focus:ring-0">
+                                <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {isWorldSensoryClinic && (
+                                    <SelectItem value="WORLD_SENSORY">
+                                        <div className="flex items-center gap-2">
+                                            <ActivitySquare className="w-4 h-4 text-emerald-600" />
+                                            <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                                                Evolução Terapêutica (World Sensory - Padrão)
+                                            </span>
+                                        </div>
+                                    </SelectItem>
+                                )}
+                                <SelectItem value="MEDICO">
+                                    <div className="flex items-center gap-2">
+                                        <Stethoscope className="w-4 h-4" />
+                                        <span>Médico / Geral</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="PSICOLOGO">
+                                    <div className="flex items-center gap-2">
+                                        <Brain className="w-4 h-4" />
+                                        <span>Psicologia</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="TERAPEUTA">
+                                    <div className="flex items-center gap-2">
+                                        <ActivitySquare className="w-4 h-4" />
+                                        <span>Terapia Tradicional</span>
+                                    </div>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                            <Button variant="outline" onClick={handleGeneratePDF} disabled={isGeneratingPDF}>
-                                {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
-                                Imprimir
-                            </Button>
-                        </>
+                    {!hasWorldSensoryEvolution && (
+                        <Button variant="outline" onClick={handleGeneratePDF} disabled={isGeneratingPDF} className="min-h-[44px]">
+                            {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
+                            Imprimir
+                        </Button>
                     )}
                 </div>
             </div>
@@ -1022,7 +1070,10 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                         <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center mt-12 bg-white p-4">
                             <div className="w-full border-b border-slate-500 mb-2"></div>
                             <p className="font-bold text-sm text-slate-800">{doctor?.user?.full_name}</p>
-                            <p className="text-xs text-slate-500 mt-1">{PROFESSIONS.find(p => p.id === professionType)?.label} - Especialidade: {doctor?.specialty || 'Não definida'}</p>
+                            <p className="text-xs font-medium text-slate-700 mt-1">{doctor?.specialty || (clinic?.professional_label || 'Profissional')}</p>
+                            {doctor?.crm && doctor?.crm.toLowerCase() !== 'não tem' && doctor?.crm.toLowerCase() !== 'nao tem' && (
+                                <p className="text-xs text-slate-500">{doctor?.council_name ? `${doctor.council_name} – ` : ''}{doctor.crm}{doctor.crm_state ? `/${doctor.crm_state}` : ''}</p>
+                            )}
                             <p className="text-[10px] text-slate-400 mt-4 border px-2 py-1 bg-slate-50 inline-block rounded">
                                 Assinado Eletronicamente via Plataforma - {format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
                             </p>
@@ -1080,7 +1131,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                             }
                         }} disabled={isSaving}>
                             <PenLine className="w-4 h-4 mr-2" />
-                            ✍ Assinar Digitalmente
+                            Assinar Digitalmente
                         </Button>
                     )}
                     {!isLocked && (

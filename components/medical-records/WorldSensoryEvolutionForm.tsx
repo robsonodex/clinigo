@@ -137,10 +137,20 @@ export function WorldSensoryEvolutionForm({
     const doctorFullName = signatureData?.signerName || doctor?.name || 'Profissional'
     const doctorSpecialty = signatureData?.specialty || doctor?.specialty || 'Terapeuta'
     
-    const councilPrefix = doctor?.council_name || 'Conselho'
-    const councilNum = doctor?.crm || ''
-    const councilUF = doctor?.crm_state ? `/${doctor.crm_state}` : ''
-    const doctorCouncilString = signatureData?.councilNumber || (councilNum ? `${councilPrefix} - ${councilNum}${councilUF}` : '')
+    let doctorCouncilString = signatureData?.councilNumber || ''
+    if (!doctorCouncilString && doctor?.crm && doctor.crm.trim().toLowerCase() !== 'não tem' && doctor.crm.trim().toLowerCase() !== 'nao tem') {
+        const prefix = doctor.council_name || 'Conselho'
+        const crmNum = doctor.crm.trim()
+        const state = doctor.crm_state ? doctor.crm_state.trim().toUpperCase() : ''
+        
+        if (prefix.toUpperCase().includes('CREFITO')) {
+            const regiao = state === 'SP' ? '3' : (state === 'RJ' ? '2' : (state === 'MG' ? '4' : ''))
+            const regiaoStr = regiao ? ` ${regiao}` : ''
+            doctorCouncilString = `Crefito${regiaoStr} – ${crmNum}`
+        } else {
+            doctorCouncilString = `${prefix} – ${crmNum}${state ? `/${state}` : ''}`
+        }
+    }
 
     const generateAuditHash = async (content: string) => {
         try {
@@ -195,7 +205,8 @@ export function WorldSensoryEvolutionForm({
                 filename,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
             }
 
             await html2pdf().set(opt).from(printableRef.current).save()
@@ -336,7 +347,7 @@ export function WorldSensoryEvolutionForm({
                 </div>
 
                 {/* 0. STATUS DA SESSÃO & CONTROLE DE COMPARECIMENTO (EXCLUSÃO DE FATURAMENTO SE NÃO COMPARECEU) */}
-                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
+                <div data-html2canvas-ignore="true" className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 print:hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-emerald-600" />
@@ -423,9 +434,9 @@ export function WorldSensoryEvolutionForm({
                 </div>
 
                 {/* 1. OBJETIVO DA SESSÃO */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
+                <div className="space-y-1.5">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                             1. OBJETIVO DA SESSÃO
                         </Label>
                     </div>
@@ -435,130 +446,128 @@ export function WorldSensoryEvolutionForm({
                         placeholder="Sessão direcionada a..."
                         rows={3}
                         disabled={isLocked || isSigned}
-                        className="text-base sm:text-sm resize-y rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                        className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                     />
                 </div>
 
                 {/* 2. PROCEDIMENTOS REALIZADOS */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                        2. PROCEDIMENTOS REALIZADOS
-                    </Label>
+                <div className="space-y-1.5">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            2. PROCEDIMENTOS REALIZADOS
+                        </Label>
+                    </div>
                     <Textarea
                         value={data.procedimentos_realizados}
                         onChange={(e) => onChange('procedimentos_realizados', e.target.value)}
                         placeholder="Foram utilizados..."
                         rows={3}
                         disabled={isLocked || isSigned}
-                        className="text-base sm:text-sm resize-y rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                        className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                     />
                 </div>
 
                 {/* 3. RESPOSTA DO PACIENTE (COM SUB-CAMPOS) */}
-                <div className="space-y-3 p-4 bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase block">
-                        3. RESPOSTA DO PACIENTE
-                    </Label>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Apresentação e realização geral do paciente
+                <div className="space-y-2">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            3. RESPOSTA DO PACIENTE
                         </Label>
+                    </div>
+                    <div className="space-y-2 pt-1">
                         <Textarea
                             value={data.resposta_paciente_geral}
                             onChange={(e) => onChange('resposta_paciente_geral', e.target.value)}
                             placeholder="O paciente realizou/apresentou..."
                             rows={2}
                             disabled={isLocked || isSigned}
-                            className="text-base sm:text-sm resize-y rounded-lg bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                            className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                         />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Desempenho observado
-                        </Label>
                         <Textarea
                             value={data.desempenho_observado}
                             onChange={(e) => onChange('desempenho_observado', e.target.value)}
                             placeholder="O desempenho observado foi..."
                             rows={2}
                             disabled={isLocked || isSigned}
-                            className="text-base sm:text-sm resize-y rounded-lg bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                            className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                         />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Nível de ajuda necessário
-                        </Label>
                         <Textarea
                             value={data.nivel_ajuda_necessario}
                             onChange={(e) => onChange('nivel_ajuda_necessario', e.target.value)}
                             placeholder="O nível de ajuda necessário foi..."
                             rows={2}
                             disabled={isLocked || isSigned}
-                            className="text-base sm:text-sm resize-y rounded-lg bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                            className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                         />
                     </div>
                 </div>
 
                 {/* 4. INTERPRETAÇÃO CLÍNICA (COM SUB-CAMPOS) */}
-                <div className="space-y-3 p-4 bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase block">
-                        4. INTERPRETAÇÃO CLÍNICA
-                    </Label>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            O que os dados indicam
+                <div className="space-y-2">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            4. INTERPRETAÇÃO CLÍNICA
                         </Label>
+                    </div>
+                    <div className="space-y-2 pt-1">
                         <Textarea
                             value={data.interpretacao_dados_indicam}
                             onChange={(e) => onChange('interpretacao_dados_indicam', e.target.value)}
                             placeholder="Os dados indicam que..."
                             rows={2}
                             disabled={isLocked || isSigned}
-                            className="text-base sm:text-sm resize-y rounded-lg bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                            className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                         />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Comparação com sessões anteriores
-                        </Label>
                         <Textarea
                             value={data.interpretacao_comparacao_anteriores}
                             onChange={(e) => onChange('interpretacao_comparacao_anteriores', e.target.value)}
                             placeholder="Em comparação às sessões anteriores, observa-se..."
                             rows={2}
                             disabled={isLocked || isSigned}
-                            className="text-base sm:text-sm resize-y rounded-lg bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                            className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                         />
                     </div>
                 </div>
 
                 {/* 5. CONDUTA */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                        5. CONDUTA
-                    </Label>
+                <div className="space-y-1.5">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            5. CONDUTA
+                        </Label>
+                    </div>
                     <Textarea
                         value={data.conduta}
                         onChange={(e) => onChange('conduta', e.target.value)}
                         placeholder="Diante do desempenho observado, será..."
                         rows={3}
                         disabled={isLocked || isSigned}
-                        className="text-base sm:text-sm resize-y rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                        className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                     />
                 </div>
 
+                {/* Rodapé da Página 1 na Impressão/PDF */}
+                <div className="hidden print:block text-center pt-6 text-[11px] text-slate-500 border-t border-slate-200">
+                    Ficha de Evolução Terapêutica • World Sensory
+                </div>
+
+                {/* Quebra de Página Exata para o PDF (Página 2) */}
+                <div className="html2pdf__page-break" style={{ pageBreakBefore: 'always', breakBefore: 'page' }} />
+
+                {/* Cabeçalho da Página 2 na Impressão/PDF */}
+                <div className="hidden print:flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider pb-4 border-b border-slate-200">
+                    <span>WORLD SENSORY • USO INTERNO</span>
+                    <span>Ficha de Evolução Terapêutica • World Sensory</span>
+                </div>
+
                 {/* 6. INTERCORRÊNCIAS */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                        6. INTERCORRÊNCIAS
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
+                <div className="space-y-1.5 pt-2">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            6. INTERCORRÊNCIAS
+                        </Label>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 pt-1">
                         Descrição da intercorrência, manejo realizado e repercussão clínica:
                     </p>
                     <Textarea
@@ -567,16 +576,18 @@ export function WorldSensoryEvolutionForm({
                         placeholder="Descreva eventuais intercorrências, manejo adotado e repercussão clínica..."
                         rows={3}
                         disabled={isLocked || isSigned}
-                        className="text-base sm:text-sm resize-y rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                        className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                     />
                 </div>
 
                 {/* 7. ORIENTAÇÕES OU CONTATO COM FAMÍLIA/EQUIPE */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                        7. ORIENTAÇÕES OU CONTATO COM FAMÍLIA/EQUIPE
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
+                <div className="space-y-1.5">
+                    <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-sm border border-slate-200 dark:border-slate-800">
+                        <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            7. ORIENTAÇÕES OU CONTATO COM FAMÍLIA/EQUIPE
+                        </Label>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 pt-1">
                         Orientações, comunicação realizada ou encaminhamentos:
                     </p>
                     <Textarea
@@ -585,13 +596,13 @@ export function WorldSensoryEvolutionForm({
                         placeholder="Orientações aos responsáveis, comunicação com equipe multidisciplinar ou encaminhamentos..."
                         rows={3}
                         disabled={isLocked || isSigned}
-                        className="text-base sm:text-sm resize-y rounded-lg border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500"
+                        className="text-base sm:text-sm resize-y rounded-sm border-slate-300 dark:border-slate-700 focus-visible:ring-emerald-500 bg-white dark:bg-slate-950"
                     />
                 </div>
 
                 {/* BLOCO DE ASSINATURA DINÂMICO & ASSINATURA DIGITAL */}
                 <div className="pt-8 border-t border-slate-300 dark:border-slate-700">
-                    <div className="max-w-md mx-auto text-center space-y-2">
+                    <div className="max-w-md mx-auto text-center space-y-1.5">
                         {/* Imagem da assinatura desenhada ou traço */}
                         {(signatureImageUrl || signatureData?.signatureImageUrl) ? (
                             <div className="py-2">
@@ -612,7 +623,7 @@ export function WorldSensoryEvolutionForm({
                             {doctorSpecialty}
                         </p>
                         {doctorCouncilString && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
                                 {doctorCouncilString}
                             </p>
                         )}
@@ -620,7 +631,7 @@ export function WorldSensoryEvolutionForm({
                         {(isSigned || signatureImageUrl || signatureData?.signedAt) ? (
                             <div className="mt-3 pt-2 border-t border-dashed border-emerald-300 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300 font-medium space-y-1">
                                 <div>
-                                    Assinado Digitalmente via Plataforma CliniGo • {signatureData?.signedAt ? format(new Date(signatureData.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    Assinado Eletronicamente via Plataforma - {signatureData?.signedAt ? format(new Date(signatureData.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                 </div>
                                 {signatureData?.hash && (
                                     <div className="text-[10px] text-slate-400 font-mono">

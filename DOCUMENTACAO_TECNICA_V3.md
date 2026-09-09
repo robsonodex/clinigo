@@ -1197,8 +1197,24 @@
     - **Preservação de Sessões em `registerSingleSession`**: Caso o usuário autenticado pertença à exceção de suporte, a instrução SQL `UPDATE active_sessions SET is_active = false` é ignorada, criando uma nova sessão ativa para o segundo dispositivo sem revogar o registro ativo existente no primeiro computador.
     - **Validação Imediata em `validateSession` e `/api/auth/session/validate`**: A rota de validação consultada a cada 10 segundos pelo hook de frontend `useSessionGuard` retorna imediatamente `{ valid: true, concurrent_allowed: true }` para a conta liberada, impedindo qualquer disparo de `reason: 'session_replaced'` e eliminando risco de logout forçado por polling.
     - **Isolamento de Logout em `logout/route.ts`**: Atualizada a rota de logout para que, no caso da conta de suporte liberada, apenas o token do cookie daquele navegador específico seja desativado, impedindo que o fallback geral desative a sessão do outro computador.
+### Item 44: Padronização da Ficha de Evolução Terapêutica como Modelo Padrão da World Sensory
+- **Data**: 09/09/2026
+- **Módulos**: Prontuário Clínico / PEP, Evolução Terapêutica, Impressão e PDF
+- **Caminho Completo**:
+  - Página de Prontuário do Agendamento → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → `ProntuarioPage`
+  - Componente de Evolução World Sensory → `components/medical-records/WorldSensoryEvolutionForm.tsx` → `WorldSensoryEvolutionForm`
+- **Descrição Técnica**:
+  - **1. Objetivo**: Corrigir a abertura de prontuários da clínica World Sensory (ex: atendimento `ba82bb38-4198-499f-ac8d-d47648b7340a`), fixando como padrão absoluto o modelo oficial de Evolução Terapêutica em 7 seções idêntico ao documento PDF institucional da clínica, substituindo o modelo genérico anterior de anamnese médica/sinais vitais.
+  - **2. Arquitetura e Implementação Cirúrgica**:
+    - **Ativação Padrão Resiliente em `page.tsx`**: Identifica automaticamente a clínica World Sensory por UUID (`4c13e586-5390-4393-a180-2c9dd7ed81c7`), slug ou nome corporativo, ativando `hasWorldSensoryEvolution = true` por padrão mesmo se a consulta isolada à tabela `clinica_modulos` sofrer atraso ou bloqueio de contexto RLS.
+    - **Seletor de Modelo Explícito**: Inserida a opção no cabeçalho `"Evolução Terapêutica (World Sensory - Padrão)"`, permitindo navegação clara e confirmação visual do modelo em vigor.
+    - **Correspondência Visual 1:1 com o PDF Institucional em `WorldSensoryEvolutionForm.tsx`**:
+      - **Página 1**: Seções 1 a 5 (Objetivo da Sessão, Procedimentos Realizados, Resposta do Paciente, Interpretação Clínica e Conduta), com faixas de títulos padronizadas em cinza sóbrio e caixas delimitadoras correspondentes.
+      - **Página 2**: Seções 6 e 7 (Intercorrências e Orientações à Família/Equipe), separadas por quebra de página precisa (`html2pdf__page-break`), rodapé institucional e cabeçalho formal.
+      - **Bloco de Identificação e Assinatura**: Oculta termos genéricos médicos ("Médico - Especialidade:"), exibindo diretamente o nome do profissional, sua especialidade (ex: `Terapeuta Ocupacional`) e conselho de classe formatado em conformidade regional (ex: `Crefito 3 – 11193TO`).
+      - **Ocultação de Controles Operacionais no PDF**: Marcada a Seção 0 (status de presença com os 6 botões interativos) com `data-html2canvas-ignore="true"` e `print:hidden`, garantindo que o PDF gerado seja estritamente limpo e idêntico ao documento físico.
   - **3. Validação**:
-    - Testes unitários executados validando o comportamento de `isUserAllowedConcurrentSessions`, confirmando autorização para `clinicaworldsensory@gmail.com` e rejeição para quaisquer outros usuários. Auditoria sistêmica `test_audit_v5_2.js` executada com 24/24 testes aprovados e padrão corporativo com zero emojis mantido.
+    - Executada auditoria de conformidade de emojis em `page.tsx` e `WorldSensoryEvolutionForm.tsx` com 0 ocorrências detectadas. Suíte `test_audit_v5_2.js` executada com 24 testes aprovados (100% de sucesso).
 
 
 
