@@ -84,6 +84,13 @@ export async function POST(request: NextRequest) {
 
         const pinHash = await bcrypt.hash(pin.trim(), 10)
 
+        // Inativar PINs anteriores para que apenas o novo vigore
+        await (adminDb as any)
+            .from('reception_pins')
+            .update({ status: 'inactive' })
+            .eq('clinic_id', currentUser.clinic_id)
+            .eq('status', 'active')
+
         const { data: newPin, error: insertError } = await (adminDb as any)
             .from('reception_pins')
             .insert({

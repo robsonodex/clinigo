@@ -50,6 +50,7 @@ import {
     Clock,
     MonitorSmartphone,
     Building2,
+    KeyRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -94,6 +95,25 @@ export default function DevicesSettingsPage() {
     const [deviceToDelete, setDeviceToDelete] = useState<Device | null>(null)
     const [isProcessingAction, setIsProcessingAction] = useState(false)
 
+    // Gestão de PIN da Recepção
+    const [receptionPins, setReceptionPins] = useState<{ id: string; label: string; status: string; created_at: string }[]>([])
+    const [openPinModal, setOpenPinModal] = useState(false)
+    const [newPinValue, setNewPinValue] = useState('')
+    const [newPinLabel, setNewPinLabel] = useState('Recepção Principal')
+    const [isSavingPin, setIsSavingPin] = useState(false)
+
+    const fetchReceptionPins = useCallback(async () => {
+        try {
+            const res = await fetch('/api/reception/pins')
+            if (res.ok) {
+                const data = await res.json()
+                setReceptionPins(data.pins || [])
+            }
+        } catch (err) {
+            console.error('[Pins] Erro ao carregar PINs:', err)
+        }
+    }, [])
+
     const fetchDevices = useCallback(async () => {
         try {
             setIsRefreshing(true)
@@ -115,7 +135,44 @@ export default function DevicesSettingsPage() {
 
     useEffect(() => {
         fetchDevices()
-    }, [fetchDevices])
+        fetchReceptionPins()
+    }, [fetchDevices, fetchReceptionPins])
+
+    const handleSaveNewPin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const cleanPin = newPinValue.trim()
+        if (!cleanPin || cleanPin.length < 4 || !/^\d+$/.test(cleanPin)) {
+            toast.error('O PIN deve conter entre 4 e 8 dígitos numéricos.')
+            return
+        }
+
+        try {
+            setIsSavingPin(true)
+            const res = await fetch('/api/reception/pins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pin: cleanPin,
+                    label: newPinLabel.trim() || 'Recepção',
+                }),
+            })
+
+            const data = await res.json()
+            if (!res.ok || !data.success) {
+                toast.error(data.error || 'Erro ao cadastrar PIN.')
+                return
+            }
+
+            toast.success('Novo PIN da recepção configurado com sucesso.')
+            setOpenPinModal(false)
+            setNewPinValue('')
+            fetchReceptionPins()
+        } catch {
+            toast.error('Erro de conexão ao salvar PIN.')
+        } finally {
+            setIsSavingPin(false)
+        }
+    }
 
     // 1. Criar novo dispositivo
     const handleCreateDevice = async (e: React.FormEvent) => {
@@ -467,6 +524,65 @@ export default function DevicesSettingsPage() {
                 </CardContent>
             </Card>
 
+            {/* Card: Gestão de PIN do Modo Recepção */}
+            {(() => {
+                const activePin = receptionPins.find((p) => p.status === 'active')
+                return (
+                    <Card className="border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900/40">
+                        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                        <KeyRound className="w-4 h-4" />
+                                    </div>
+                                    <CardTitle className="text-base font-bold text-foreground">
+                                        PIN de Acesso — Modo Recepção
+                                    </CardTitle>
+                                </div>
+                                <CardDescription className="text-xs text-muted-foreground max-w-2xl">
+                                    Código numérico de 4 a 8 dígitos para desbloquear temporariamente (15 minutos) a busca e gestão da fila no dispositivo sem exigir login de usuário.
+                                </CardDescription>
+                            </div>
+
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    setNewPinValue('')
+                                    setOpenPinModal(true)
+                                }}
+                                className="min-h-[44px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-semibold text-xs rounded-xl gap-2 shrink-0 self-start sm:self-auto"
+                            >
+                                <KeyRound className="w-4 h-4" />
+                                <span>{activePin ? 'Alterar PIN da Recepção' : 'Configurar PIN da Recepção'}</span>
+                            </Button>
+                        </CardHeader>
+
+                        <CardContent className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-muted-foreground">Status do PIN:</span>
+                                    {activePin ? (
+                                        <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 gap-1.5 py-1 px-2.5">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>PIN Ativo configurado ({activePin.label})</span>
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 gap-1.5 py-1 px-2.5">
+                                            <span>PIN Padrão Inicial: <strong>1234</strong></span>
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Desbloqueio efêmero com expiração automática de 15 minutos</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )
+            })()}
+
             {/* Rodapé Informativo Discreto */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 px-1 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5 text-slate-500">
@@ -477,6 +593,88 @@ export default function DevicesSettingsPage() {
                     Rota do Terminal: <strong className="text-foreground">/terminal</strong>
                 </div>
             </div>
+
+            {/* Modal: Definir / Alterar PIN da Recepção */}
+            <Dialog open={openPinModal} onOpenChange={setOpenPinModal}>
+                <DialogContent className="max-w-md w-[95vw] sm:w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl">
+                    <form onSubmit={handleSaveNewPin}>
+                        <DialogHeader className="pb-3">
+                            <div className="flex items-center gap-2 text-foreground">
+                                <KeyRound className="w-5 h-5 text-emerald-600" />
+                                <DialogTitle className="text-base sm:text-lg font-bold">
+                                    Configurar PIN do Modo Recepção
+                                </DialogTitle>
+                            </div>
+                            <DialogDescription className="text-xs text-muted-foreground">
+                                Digite um código de 4 a 8 dígitos numéricos. A equipe da recepção utilizará este código para desbloquear o terminal.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="reception_pin_label" className="text-xs font-semibold">
+                                    Identificação / Rótulo
+                                </Label>
+                                <Input
+                                    id="reception_pin_label"
+                                    type="text"
+                                    placeholder="Ex: Recepção Principal, Totem Sala de Espera"
+                                    value={newPinLabel}
+                                    onChange={(e) => setNewPinLabel(e.target.value)}
+                                    className="h-11 rounded-xl text-xs"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="reception_pin_code" className="text-xs font-semibold">
+                                    Novo Código PIN (4 a 8 dígitos numéricos)
+                                </Label>
+                                <Input
+                                    id="reception_pin_code"
+                                    type="password"
+                                    maxLength={8}
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    placeholder="Ex: 5820"
+                                    value={newPinValue}
+                                    onChange={(e) => setNewPinValue(e.target.value.replace(/\D/g, ''))}
+                                    className="h-11 rounded-xl font-mono text-center tracking-widest text-lg"
+                                    autoFocus
+                                    required
+                                />
+                                <p className="text-[11px] text-muted-foreground">
+                                    Apenas números. O PIN anterior será inativado e substituído imediatamente.
+                                </p>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex-col sm:flex-row gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setOpenPinModal(false)}
+                                className="min-h-[44px] rounded-xl text-xs w-full sm:w-auto"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isSavingPin || newPinValue.length < 4}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl text-xs font-semibold w-full sm:w-auto"
+                            >
+                                {isSavingPin ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                        Salvando PIN...
+                                    </>
+                                ) : (
+                                    'Salvar Novo PIN'
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal: Parear Novo Dispositivo */}
             <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>

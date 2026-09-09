@@ -1363,8 +1363,25 @@
     - Zero ocorrências de QR Code em todas as superfícies de captura.
     - Migrations aplicadas e validadas diretamente no banco Supabase via MCP `execute_sql`.
 
-
-
-
-
-
+### Item 49: Padronização Terminológica de Dispositivos e Refinamento Visual
+- **Data**: 09/09/2026
+- **Módulos**: Configurações → Dispositivos Pareados, Recepção, Terminais
+- **Caminho Completo**:
+  - Painel Administrativo → `app/dashboard/(clinic)/configuracoes/dispositivos/page.tsx`
+  - Menu Lateral / Sidebar → `components/layout/sidebar.tsx`
+  - Terminal de Quiosque → `app/terminal/page.tsx`
+  - Seletor de Superfícies → `components/checkin/CheckinSurfacePicker.tsx`
+  - Botão de Atendimento → `components/appointments/DoctorCheckinButton.tsx`
+  - Guia de Ajuda Integrado → `app/dashboard/(clinic)/help/page.tsx`
+  - Recepção → `app/dashboard/(clinic)/recepcao/page.tsx` (resolução de import de `createClient`)
+- **Descrição Técnica**:
+  - **1. Padronização Terminológica**:
+    - Substituição completa da nomenclatura de "tablet" para "dispositivo" em todas as interfaces, menus, títulos e botões, garantindo padrão corporativo premium internacional e neutralidade de hardware.
+    - O botão principal foi ajustado para "+ Novo Dispositivo".
+    - Na barra lateral (sidebar), o item foi padronizado como "Dispositivos Pareados".
+    - Na tela de pareamento do terminal (`/terminal`), os rótulos foram atualizados para "Código do Dispositivo", "Pareamento de dispositivo para validação presencial de sala" e "Conectar Dispositivo à Sala".
+  - **2. Refinamento Visual e Despoluição**:
+    - Remoção do banner volumoso no topo de `/dashboard/configuracoes/dispositivos` ("Isolamento Total de Sessão & LGPD") que ocupava espaço desnecessário com texto longo.
+    - A informação técnica e o indicador de conformidade LGPD foram posicionados de forma discreta, compacta e elegante no rodapé da página.
+  - **3. Correção na Tela de Recepção**:
+    - Inclusão do import de `createClient` a partir de `@/lib/supabase/client` em `app/dashboard/(clinic)/recepcao/page.tsx`, sanando o erro `createClient is not defined` no carregamento da fila e alertas em tempo real.
