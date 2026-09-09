@@ -650,7 +650,9 @@ export function DoctorFormDialog({
                                     <SelectItem value="15">15 minutos</SelectItem>
                                     <SelectItem value="20">20 minutos</SelectItem>
                                     <SelectItem value="30">30 minutos</SelectItem>
+                                    <SelectItem value="40">40 minutos (Terapia)</SelectItem>
                                     <SelectItem value="45">45 minutos</SelectItem>
+                                    <SelectItem value="50">50 minutos (Terapia 2)</SelectItem>
                                     <SelectItem value="60">60 minutos (1h)</SelectItem>
                                     <SelectItem value="90">90 minutos (1h30)</SelectItem>
                                     <SelectItem value="120">120 minutos (2h)</SelectItem>

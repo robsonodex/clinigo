@@ -1442,4 +1442,15 @@
     - Constatada duplicidade no cadastro da terapeuta Dra. Eduarda do Espírito Santo Inocêncio: um perfil ativo (`188d57d9-645a-414e-8595-f0b668c7e350`) com 159 agendamentos legítimos e um perfil legado/inativo (`225a86a0-4f9b-4c70-a352-5918823ea794`) com `is_accepting_appointments = false` e 628 agendamentos que poluíam a agenda com o status "Indisponível".
     - Foi realizado backup integral em `scripts/saneamento/backup_eduarda_225a86a0_2026-09-09.json` e executada a remoção atômica via SQL das 4 séries recorrentes, 628 notificações, 628 agendamentos órfãos e do registro duplicado, limpando a grade da agenda imediatamente.
 
-
+### Item 52: Ajuste de Rótulos de Duração de Sessão (Terapia e Terapia 2)
+- **Data**: 09/09/2026
+- **Módulos**: Recepção / Horários → Configuração de Horários, Cadastros → Profissionais
+- **Caminho Completo**:
+  - Horários → Configuração de Horários → `app/dashboard/(clinic)/horarios/page.tsx` → `STANDARD_DURATIONS`
+  - Cadastros → Profissionais → `components/forms/doctor-form-dialog.tsx` → `SelectContent` de `consultation_duration`
+- **Descrição Técnica**:
+  - **1. Atualização dos Rótulos de Sessão de 40 min e 50 min**:
+    - No configurador de horários de atendimento da clínica/profissionais (`horarios/page.tsx`), a opção de 40 minutos foi alterada de `'40 min (Fono/Fisioterapia)'` para `'40 min (Terapia)'`.
+    - A opção de 50 minutos foi alterada de `'50 min (Psicologia / Terapia)'` para `'50 min (Terapia 2)'`.
+  - **2. Extensão para o Diálogo de Profissionais**:
+    - No componente `doctor-form-dialog.tsx`, foram adicionadas as opções correspondentes `40 minutos (Terapia)` e `50 minutos (Terapia 2)` no seletor de duração padrão do profissional para assegurar total coerência em todo o sistema.
