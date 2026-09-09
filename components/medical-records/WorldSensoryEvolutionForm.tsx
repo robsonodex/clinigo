@@ -103,6 +103,10 @@ interface WorldSensoryEvolutionFormProps {
         doctor_checkin_method?: string
         verification_level?: string
         session_status_notes?: string
+        checkin_confirmed_at?: string | null
+        checkin_method?: string | null
+        checked_in_at?: string | null
+        manual_checkin_unlocked_at?: string | null
     } | null
     clinicName?: string
 }
@@ -151,6 +155,20 @@ export function WorldSensoryEvolutionForm({
             doctorCouncilString = `${prefix} – ${crmNum}${state ? `/${state}` : ''}`
         }
     }
+
+    // Validacao biometrica e controle de evolucao
+    const isBiometricsValidated = Boolean(
+        appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' || 
+        appointment?.verification_level === 'DOUBLE_VERIFIED' || 
+        appointment?.verification_level === 'FACIAL_DOCTOR' ||
+        appointment?.checkin_method === 'facial' ||
+        appointment?.checkin_confirmed_at ||
+        appointment?.checked_in_at ||
+        appointment?.manual_checkin_unlocked_at ||
+        sessionStatusNotes?.toLowerCase().includes('biometria')
+    )
+    const isPresenceSession = sessionStatus === 'Presente' || sessionStatus === 'Reposição'
+    const isEvolutionBlockedByBiometrics = isPresenceSession && !isBiometricsValidated
 
     const generateAuditHash = async (content: string) => {
         try {
@@ -289,9 +307,15 @@ export function WorldSensoryEvolutionForm({
                             type="button"
                             variant="secondary"
                             size="sm"
-                            onClick={onSign}
-                            disabled={isLocked || isSaving}
-                            className="min-h-[44px] h-11 px-3 text-xs font-semibold border border-emerald-300 text-emerald-800 dark:text-emerald-200"
+                            onClick={() => {
+                                if (isEvolutionBlockedByBiometrics) {
+                                    alert('A evolução está bloqueada: é obrigatório realizar a biometria facial do paciente para atendimentos presenciais.')
+                                    return
+                                }
+                                onSign()
+                            }}
+                            disabled={isLocked || isSaving || isEvolutionBlockedByBiometrics}
+                            className="min-h-[44px] h-11 px-3 text-xs font-semibold border border-emerald-300 text-emerald-800 dark:text-emerald-200 disabled:opacity-50"
                         >
                             <ShieldCheck className="w-4 h-4 mr-1 text-emerald-600" />
                             Assinar
@@ -300,9 +324,15 @@ export function WorldSensoryEvolutionForm({
 
                     <Button
                         type="button"
-                        onClick={onSave}
-                        disabled={isLocked || isSigned || isSaving}
-                        className="min-h-[44px] h-11 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => {
+                            if (isEvolutionBlockedByBiometrics) {
+                                alert('A evolução está bloqueada: é obrigatório realizar a biometria facial do paciente para atendimentos presenciais.')
+                                return
+                            }
+                            onSave()
+                        }}
+                        disabled={isLocked || isSigned || isSaving || isEvolutionBlockedByBiometrics}
+                        className="min-h-[44px] h-11 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
                     >
                         {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
                         Salvar Evolução
@@ -354,25 +384,33 @@ export function WorldSensoryEvolutionForm({
                             Status do Atendimento / Presença *
                         </Label>
                         <div className="flex items-center gap-2 flex-wrap">
-                            {(appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' || 
-                              appointment?.verification_level === 'DOUBLE_VERIFIED' || 
-                              sessionStatusNotes?.toLowerCase().includes('biometria')) && (
+                            {isBiometricsValidated && (
                                 <Badge variant="outline" className="bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 text-xs font-semibold gap-1">
                                     <Camera className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                                     <span>Biometria Facial Validada</span>
                                 </Badge>
                             )}
-                            {sessionStatus && sessionStatus !== 'Presente' ? (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
-                                    Não Faturável (Excluído do Repasse)
+                            {isPresenceSession ? (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold">
+                                    Atendimento Faturável ({sessionStatus})
                                 </Badge>
                             ) : (
-                                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold">
-                                    Atendimento Realizado (Faturável)
+                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
+                                    Não Faturável ({sessionStatus})
                                 </Badge>
                             )}
                         </div>
                     </div>
+
+                    {isEvolutionBlockedByBiometrics && (
+                        <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 flex items-start gap-2.5 text-xs text-red-900 dark:text-red-200">
+                            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                            <div>
+                                <span className="font-bold block text-sm">Bloqueio de Evolução • Biometria Facial Obrigatória</span>
+                                O paciente ainda não realizou a biometria facial para este atendimento. A evolução clínica só pode ser salva após a confirmação biométrica do paciente na recepção ou liberação manual autorizada pela administração.
+                            </div>
+                        </div>
+                    )}
                     
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                         {[
@@ -381,9 +419,10 @@ export function WorldSensoryEvolutionForm({
                             { value: 'Falta injustificada', label: 'Falta injustificada', desc: 'Sem repasse' },
                             { value: 'Cancelamento pelo terapeuta', label: 'Canc. Terapeuta', desc: 'Sem repasse' },
                             { value: 'Cancelamento pelo paciente', label: 'Canc. Paciente', desc: 'Sem repasse' },
-                            { value: 'Reposição', label: 'Reposição', desc: 'Histórico' },
+                            { value: 'Reposição', label: 'Reposição', desc: 'Faturável' },
                         ].map((item) => {
                             const isSelected = (sessionStatus || 'Presente') === item.value
+                            const isFaturavelItem = item.value === 'Presente' || item.value === 'Reposição'
                             return (
                                 <button
                                     key={item.value}
@@ -393,7 +432,7 @@ export function WorldSensoryEvolutionForm({
                                     className={cn(
                                         "p-2.5 rounded-lg border text-left flex flex-col justify-between transition-all min-h-[44px]",
                                         isSelected 
-                                            ? item.value === 'Presente'
+                                            ? isFaturavelItem
                                                 ? "bg-emerald-600 text-white border-emerald-600 font-semibold shadow-xs"
                                                 : "bg-amber-600 text-white border-amber-600 font-semibold shadow-xs"
                                             : "bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900"
@@ -411,10 +450,10 @@ export function WorldSensoryEvolutionForm({
                         })}
                     </div>
 
-                    {sessionStatus && sessionStatus !== 'Presente' && (
+                    {!isPresenceSession && sessionStatus && (
                         <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-200 space-y-2">
                             <p className="font-semibold">
-                                Regra de Faturamento: Como o paciente não compareceu como "Presente", esta evolução ficará registrada no histórico clínico do paciente, mas está automaticamente EXCLUÍDA de qualquer cobrança ou repasse financeiro.
+                                Regra de Faturamento: Como a sessão está registrada como "{sessionStatus}", esta evolução ficará registrada no histórico clínico do paciente, mas está automaticamente EXCLUÍDA de cobrança e repasse financeiro. Apenas atendimentos com status "Presente" ou "Reposição" geram faturamento.
                             </p>
                             <div className="space-y-1">
                                 <Label htmlFor="session_status_notes" className="text-xs font-medium text-amber-900 dark:text-amber-200">

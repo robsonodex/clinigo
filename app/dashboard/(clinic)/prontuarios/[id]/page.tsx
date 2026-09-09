@@ -164,7 +164,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 1. Fetch Appointment Context
             const { data: appt, error: apptError } = await supabase
                 .from('appointments')
-                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer, digital_signature_at, digital_signature_by, doctor_checkin_method, verification_level`)
+                .select(`id, appointment_date, appointment_time, checked_in_at, checkin_confirmed_at, checkin_method, manual_checkin_unlocked_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer, digital_signature_at, digital_signature_by, doctor_checkin_method, verification_level`)
                 .eq('id', appointmentId)
                 .single()
 
@@ -401,6 +401,28 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             return
         }
         if (!appointment || !patient) return
+
+        // Validação de Biometria Facial: profissional só evolui atendimento presencial/reposição com biometria confirmada
+        const isBiometricsValidated = Boolean(
+            appointment?.verification_level === 'FACIAL_DOCTOR' ||
+            appointment?.verification_level === 'DOUBLE_VERIFIED' ||
+            appointment?.checkin_method === 'facial' ||
+            appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' ||
+            appointment?.checkin_confirmed_at ||
+            appointment?.checked_in_at ||
+            appointment?.manual_checkin_unlocked_at ||
+            sessionStatusNotes?.toLowerCase()?.includes('biometria')
+        )
+        const isPresenceSession = sessionStatus === 'Presente' || sessionStatus === 'Reposição'
+        if (isPresenceSession && !isBiometricsValidated) {
+            toast({
+                title: 'Bloqueio Biométrico',
+                description: 'A evolução clínica só pode ser salva após a confirmação da biometria facial do paciente na recepção/totem (ou desbloqueio autorizado pela administração).',
+                variant: 'destructive'
+            })
+            return
+        }
+
         setIsSaving(true)
         try {
             const customDataPayload = JSON.stringify({
@@ -476,11 +498,12 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             }
 
             // Atualiza status do atendimento na tabela appointments
-            const isPresente = sessionStatus === 'Presente';
+            // Regra CliniGo: 'Presente' e 'Reposição' são faturáveis
+            const isFaturavel = sessionStatus === 'Presente' || sessionStatus === 'Reposição';
             const appointmentUpdatePayload: any = {
                 session_status: sessionStatus,
                 session_status_notes: sessionStatusNotes,
-                no_show: !isPresente && (sessionStatus === 'Falta injustificada' || sessionStatus === 'Falta justificada'),
+                no_show: !isFaturavel && (sessionStatus === 'Falta injustificada' || sessionStatus === 'Falta justificada'),
                 updated_at: new Date().toISOString()
             }
             if (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING') {

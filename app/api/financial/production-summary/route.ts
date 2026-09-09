@@ -141,11 +141,11 @@ export async function GET(request: NextRequest) {
         }
 
         // Regra de Negócio CliniGo / World Sensory:
-        // Apenas sessões com status 'Presente' entram no cálculo de faturamento e repasse.
-        // Faltas justificadas/injustificadas, cancelamentos e reposições ficam no prontuário, mas fora do financeiro.
+        // Apenas sessões com status 'Presente' ou 'Reposição' entram no cálculo de faturamento e repasse.
+        // Faltas justificadas/injustificadas e cancelamentos ficam no prontuário, mas fora do financeiro.
         const validAppointments = (appointments || []).filter((appt: any) => {
             if (appt.no_show) return false;
-            if (appt.session_status && appt.session_status !== 'Presente') {
+            if (appt.session_status && appt.session_status !== 'Presente' && appt.session_status !== 'Reposição') {
                 return false;
             }
             const st = (appt.status || '').toLowerCase();

@@ -62,9 +62,9 @@ O CliniGo é uma plataforma médica corporativa de padrão premium internacional
 Para publicar em produção e garantir visibilidade imediata no dashboard da Vercel (time `nodexs-projects-8a6ee1f1`):
 ```bash
 git push origin master
-npx vercel --prod --yes --scope nodexs-projects-8a6ee1f1
+npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1
 ```
-Nunca utilize apenas `vercel --prod` sem npx e sem o escopo oficial, pois causará erro de permissão ("Not authorized") ou comando não encontrado no Windows.
+Nunca utilize apenas `vercel --prod` sem npx ou sem fixar a versao 59.14.0, pois a 59.15+ perde o escopo da conta ("Not authorized" / scope-not-accessible) no ambiente Windows.
 
 ---
 

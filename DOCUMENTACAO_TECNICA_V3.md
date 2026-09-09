@@ -722,7 +722,7 @@
   - **Comando Oficial e Mandatório de Deploy**:
     ```bash
     git push origin master
-    npx vercel --prod --yes --scope nodexs-projects-8a6ee1f1
+    npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1
     ```
   - **Garantia de Visibilidade**: Esse comando aciona diretamente a pipeline de build em nuvem da Vercel, gera a URL de inspeção em tempo real e promove a versão para o domínio oficial de produção (`https://clinigo.app`).
 
@@ -1417,4 +1417,29 @@
     - As colunas de compatibilidade foram adicionadas à tabela `appointments` e as queries foram corrigidas com `.maybeSingle()`.
     - No salvamento do prontuário (`handleSave`), o `patient_id` agora conta com fallback defensivo para `appointment.patient_id`, impedindo o erro de referência nula e garantindo a gravação sem falhas em `medical_records`.
     - Adicionado botão de atalho direto "Acessar Prontuário / Evolução da Sessão" no drawer de agendamento para abertura instantânea.
+
+### Item 51: Resolução de ReferenceError na Agenda, Trava de Biometria no Prontuário, Faturamento de Reposição e Saneamento de Profissional Duplicada
+- **Data**: 09/09/2026
+- **Módulos**: Recepção → Agenda, Atendimento Clínico → Prontuários (WorldSensoryEvolutionForm), Financeiro → Resumo de Produção, Banco de Dados (Saneamento)
+- **Caminho Completo**:
+  - Recepção → Agenda → `components/dashboard/AppointmentDetailsDrawer.tsx` (inclusão do import de `Input` a partir de `@/components/ui/input`)
+  - Deploy & DevOps → `.agents/rules/universal-rules.md`, `DOCUMENTACAO_TECNICA_V3.md` (fixação da versão estável `vercel@59.14.0` para comandos de produção)
+  - Atendimento Clínico → Prontuários → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → `loadInitialData`, `handleSave` (trava de biometria para salvar evolução e reconhecimento de `Reposição` como faturável)
+  - Atendimento Clínico → Prontuários → `components/medical-records/WorldSensoryEvolutionForm.tsx` → Seção 0 (status de comparecimento, badge e bloqueio de botões de salvar/assinar se biometria não realizada)
+  - Financeiro → Resumo de Produção → `app/api/financial/production-summary/route.ts` (inclusão do status `Reposição` junto a `Presente` nas sessões faturáveis para repasse)
+  - Banco de Dados → Saneamento → `scripts/saneamento/2026-09-09_remover_eduarda_duplicada.sql` (exclusão de registro inativo duplicado da Dra. Eduarda e limpeza de 628 agendamentos órfãos com status "Indisponível")
+- **Descrição Técnica**:
+  - **1. Correção do ReferenceError na Agenda ("Input is not defined")**:
+    - Identificada a causa raiz que impedia a renderização da tela de Agenda (`/dashboard/agenda`): no componente `AppointmentDetailsDrawer.tsx`, a tag `<Input>` era utilizada no campo de valor de repasse, porém o símbolo não estava importado de `@/components/ui/input`. O import foi devidamente adicionado e publicado em produção.
+  - **2. Homologação do Deploy Oficial na Vercel (Projeto `clinigo-saas`)**:
+    - O comando de deploy foi fixado com a versão estável `npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1`, superando incompatibilidade da versão `59.15.0` no Windows e garantindo promoção contínua e automatizada para `https://clinigo.app`.
+  - **3. Trava Obrigatória de Biometria Facial para Evolução de Prontuário**:
+    - O profissional clínico agora só consegue salvar e assinar a evolução da sessão (`medical_records` / `WorldSensoryEvolutionForm`) se a biometria facial do paciente tiver sido confirmada na recepção/totem (`verification_level = 'FACIAL_DOCTOR'` ou `DOUBLE_VERIFIED`, `checkin_method = 'facial'` ou `checkin_confirmed_at` preenchido) ou se houver liberação autorizada pela administração (`manual_checkin_unlocked_at`).
+    - Caso a biometria esteja pendente em uma sessão presencial ou de reposição, a interface exibe aviso corporativo de conformidade e os botões "Salvar Evolução" e "Assinar" permanecem bloqueados, impedindo evoluções sem validação biométrica.
+  - **4. Faturamento de Atendimentos de Reposição**:
+    - As sessões com status `Reposição` agora possuem a marcação `Faturável` na interface e entram ativamente no cálculo de faturamento e repasse médico na rota `app/api/financial/production-summary/route.ts`, ao lado do status `Presente`.
+  - **5. Saneamento de Profissional Duplicada e Agendamentos Órfãos**:
+    - Constatada duplicidade no cadastro da terapeuta Dra. Eduarda do Espírito Santo Inocêncio: um perfil ativo (`188d57d9-645a-414e-8595-f0b668c7e350`) com 159 agendamentos legítimos e um perfil legado/inativo (`225a86a0-4f9b-4c70-a352-5918823ea794`) com `is_accepting_appointments = false` e 628 agendamentos que poluíam a agenda com o status "Indisponível".
+    - Foi realizado backup integral em `scripts/saneamento/backup_eduarda_225a86a0_2026-09-09.json` e executada a remoção atômica via SQL das 4 séries recorrentes, 628 notificações, 628 agendamentos órfãos e do registro duplicado, limpando a grade da agenda imediatamente.
+
 
