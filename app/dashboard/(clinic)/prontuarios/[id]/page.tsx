@@ -157,7 +157,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 1. Fetch Appointment Context
             const { data: appt, error: apptError } = await supabase
                 .from('appointments')
-                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer`)
+                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer, doctor_checkin_method, verification_level`)
                 .eq('id', appointmentId)
                 .single()
 

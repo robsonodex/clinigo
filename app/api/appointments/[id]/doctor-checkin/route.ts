@@ -29,11 +29,15 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Perfil ou clínica não encontrados' }, { status: 403 });
     }
 
-    // 2. Parse opcional do body (ex: método de checkin, sala)
+    // 2. Parse opcional do body (ex: método de checkin, sala, biometria)
     let checkinMethod = 'APP';
+    let biometricVerified = false;
+    let biometricPersonName: string | null = null;
     try {
       const body = await request.json();
       if (body?.method) checkinMethod = body.method;
+      if (body?.biometric_verified) biometricVerified = true;
+      if (body?.person_name) biometricPersonName = body.person_name;
     } catch {
       // Body vazio é aceito (clique direto)
     }
@@ -65,9 +69,16 @@ export async function POST(
 
     const now = new Date().toISOString();
 
-    // 4. Determinação da Comprovação (Dupla Comprovação se recepção já confirmou)
+    // 4. Determinação da Comprovação (Dupla Comprovação se recepção já confirmou ou se houve biometria facial)
     const hasReceptionCheckin = Boolean(appointment.checked_in_at);
-    const verificationLevel = hasReceptionCheckin ? 'DOUBLE_VERIFIED' : 'DOCTOR_ONLY';
+    let verificationLevel = 'DOCTOR_ONLY';
+    if (hasReceptionCheckin && (biometricVerified || checkinMethod === 'FACIAL_DOCTOR')) {
+      verificationLevel = 'DOUBLE_VERIFIED';
+    } else if (hasReceptionCheckin) {
+      verificationLevel = 'DOUBLE_VERIFIED';
+    } else if (biometricVerified || checkinMethod === 'FACIAL_DOCTOR') {
+      verificationLevel = 'FACIAL_DOCTOR';
+    }
 
     // 5. Cálculo Centralizado do Repasse Financeiro (Snapshot Imutável)
     // Prioridade 1: doctor_patient_rates (override por paciente)
@@ -89,6 +100,12 @@ export async function POST(
       supabaseClient: supabaseAdmin,
     });
 
+    const statusNotes = biometricPersonName 
+      ? `Presença confirmada por biometria facial do consultório (${biometricPersonName})`
+      : checkinMethod === 'FACIAL_DOCTOR' 
+        ? 'Presença confirmada por biometria facial do consultório'
+        : 'Presença confirmada pelo profissional no consultório';
+
     // 6. Atualização em Cascata do Agendamento
     const { data: updatedAppointment, error: updateError } = await (supabaseAdmin
       .from('appointments') as any)
@@ -98,6 +115,8 @@ export async function POST(
         doctor_checked_in_by: user.id,
         doctor_checkin_method: checkinMethod,
         verification_level: verificationLevel,
+        session_status: 'Presente',
+        session_status_notes: statusNotes,
         in_consultation_at: now,
         repasse_amount: repasseResult.amount,
         repasse_rate_applied: repasseResult.rateApplied,

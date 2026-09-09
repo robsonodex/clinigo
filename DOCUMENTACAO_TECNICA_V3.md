@@ -1159,3 +1159,26 @@
   - **3. Validação**:
     - Suíte automatizada de testes executada validando a importação de `cn` e a consulta relacional de `doctor_patient_rates` para a paciente Maria Eduarda Gomes Ferreira, confirmando o carregamento correto do repasse fixo de R$ 20,00.
 
+### Item 42: Validação Biométrica Facial pelo Profissional no Início do Atendimento Clínico
+- **Data**: 09/09/2026
+- **Módulos**: Recepção, Atendimento Clínico, Agenda, Prontuário / PEP, Biometria
+- **Caminho Completo**:
+  - API de Verificação Facial 1:1 → `app/api/patients/[id]/biometrics/verify/route.ts` → `POST`
+  - API de Check-in do Profissional → `app/api/appointments/[id]/doctor-checkin/route.ts` → `POST`
+  - Modal de Validação Biométrica → `components/appointments/DoctorBiometricModal.tsx` → `DoctorBiometricModal`
+  - Botão de Início de Atendimento Clínico → `components/appointments/DoctorCheckinButton.tsx` → `DoctorCheckinButton`
+  - Drawer de Detalhes da Agenda → `components/dashboard/AppointmentDetailsDrawer.tsx` → props `patientId` e `clinicId`
+  - Ficha de Evolução World Sensory → `components/medical-records/WorldSensoryEvolutionForm.tsx` → badge de biometria facial validada
+  - Visualização de Prontuário do Paciente → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → select de `doctor_checkin_method` e `verification_level`
+- **Descrição Técnica**:
+  - **1. Objetivo**: Atender à solicitação da administradora Dra. Patrícia Mendes, permitindo que o terapeuta/profissional realize a validação de presença por biometria facial do paciente (ou de seus responsáveis cadastrados) diretamente no consultório antes de iniciar a sessão clínica, mantendo integralmente preservado o fluxo de check-in facial da recepção e dos totens.
+  - **2. Arquitetura e Implementação**:
+    - **Endpoint de Verificação 1:1 (`verify/route.ts`)**: Recebe o descritor facial capturado pela webcam na sala de atendimento, decripta no servidor os descritores faciais salvos em `patient_face_biometrics` para o paciente e responsáveis (mãe, pai, responsável legal), calcula a distância euclidiana (`calculateFaceDistance`) e retorna compatibilidade e confiança.
+    - **Componente `DoctorBiometricModal.tsx`**: Interface do consultório com detecção facial em tempo real via modelos neurais (`face-api.js`), identificação da pessoa (paciente ou responsável), opção de cadastro biométrico na hora via `FaceEnrollment` (caso o paciente não possua biometria prévia) e botão alternativo de início manual.
+    - **Aprimoramento em `DoctorCheckinButton.tsx`**: Ao clicar em "Paciente Compareceu", o profissional dispõe das opções claras "Validar com Biometria Facial" e "Confirmar Sem Biometria (Manual)", com área de toque mínima de 44x44px e conformidade estrita com o padrão de zero emojis.
+    - **Gravação de Presença no Banco de Dados (`doctor-checkin/route.ts`)**: Registra `doctor_checkin_method = 'FACIAL_DOCTOR'`, `verification_level = 'DOUBLE_VERIFIED'` (caso já tenha passado pela recepção) ou `'FACIAL_DOCTOR'`, e grava `session_status = 'Presente'`, garantindo o correto cômputo para repasse e faturamento.
+    - **Selo de Comprovação na Ficha de Evolução (`WorldSensoryEvolutionForm.tsx`)**: Renderiza badge visual sóbrio "Biometria Facial Validada" na seção de status do atendimento.
+  - **3. Validação**:
+    - Executada a suíte de auditoria sistêmica (`test_audit_v5_2.js`) com 24 testes aprovados (100% de sucesso), confirmando ausência de emojis e integridade de schema.
+
+

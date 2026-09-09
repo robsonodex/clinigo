@@ -40,6 +40,7 @@ import {
     HeartPulse,
     Cake,
     Repeat,
+    Camera,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -247,6 +248,17 @@ const helpItems: HelpItem[] = [
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
         tags: ['assinatura digital', 'link whatsapp', 'responsável', 'validade jurídica', 'sha256', 'rubrica']
+    },
+    {
+        id: 'biometria-consultorio',
+        title: 'Validação Biométrica Facial (Consultório & Recepção)',
+        category: 'Atendimento',
+        icon: Camera,
+        whatIsIt: 'Sistema inteligente de reconhecimento facial com inteligência artificial que permite validar a presença do paciente ou de seus responsáveis legais (mãe, pai ou responsável legal) antes de iniciar a sessão clínica. Funciona de forma integrada na recepção, nos totens e diretamente dentro do consultório do profissional ao iniciar o atendimento.',
+        whenToUse: 'No momento em que o terapeuta recebe o paciente na sala e clica em "Paciente Compareceu" para iniciar o atendimento, validando a presença e gerando a comprovação para repasses e convênios, ou na recepção/totem para check-in de chegada.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'],
+        tags: ['biometria', 'reconhecimento facial', 'check-in consultório', 'presença', 'comprovação tiss', 'lgpd']
     },
     {
         id: 'templates-prontuario',

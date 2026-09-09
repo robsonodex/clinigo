@@ -578,6 +578,8 @@ export function AppointmentDetailsDrawer({
                                     </Label>
                                     <DoctorCheckinButton
                                         appointmentId={appointment.id}
+                                        patientId={appointment.patient_id}
+                                        clinicId={appointment.clinic_id}
                                         patientName={patientName}
                                         scheduledTime={formattedDate}
                                         status={appointment.status}

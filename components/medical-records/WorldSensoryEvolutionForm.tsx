@@ -29,7 +29,8 @@ import {
     Calendar,
     User,
     Stethoscope,
-    PenLine
+    PenLine,
+    Camera
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -96,8 +97,12 @@ interface WorldSensoryEvolutionFormProps {
         cpf?: string
     } | null
     appointment?: {
+        id?: string
         appointment_date?: string
         appointment_time?: string
+        doctor_checkin_method?: string
+        verification_level?: string
+        session_status_notes?: string
     } | null
     clinicName?: string
 }
@@ -337,15 +342,25 @@ export function WorldSensoryEvolutionForm({
                             <Calendar className="w-4 h-4 text-emerald-600" />
                             Status do Atendimento / Presença *
                         </Label>
-                        {sessionStatus && sessionStatus !== 'Presente' ? (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
-                                Não Faturável (Excluído do Repasse)
-                            </Badge>
-                        ) : (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold">
-                                Atendimento Realizado (Faturável)
-                            </Badge>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {(appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' || 
+                              appointment?.verification_level === 'DOUBLE_VERIFIED' || 
+                              sessionStatusNotes?.toLowerCase().includes('biometria')) && (
+                                <Badge variant="outline" className="bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 text-xs font-semibold gap-1">
+                                    <Camera className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                                    <span>Biometria Facial Validada</span>
+                                </Badge>
+                            )}
+                            {sessionStatus && sessionStatus !== 'Presente' ? (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
+                                    Não Faturável (Excluído do Repasse)
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold">
+                                    Atendimento Realizado (Faturável)
+                                </Badge>
+                            )}
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">

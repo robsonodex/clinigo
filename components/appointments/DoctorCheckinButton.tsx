@@ -20,15 +20,19 @@ import {
   ShieldCheck,
   FileText,
   Clock,
-  Sparkles,
+  Camera,
+  AlertCircle,
   ExternalLink,
   DollarSign,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { DoctorBiometricModal } from '@/components/appointments/DoctorBiometricModal';
 
 export interface DoctorCheckinButtonProps {
   appointmentId: string;
+  patientId?: string;
+  clinicId?: string;
   patientName?: string;
   scheduledTime?: string;
   status?: string;
@@ -44,6 +48,8 @@ export interface DoctorCheckinButtonProps {
 
 export function DoctorCheckinButton({
   appointmentId,
+  patientId,
+  clinicId,
   patientName = 'Paciente',
   scheduledTime,
   status,
@@ -57,8 +63,36 @@ export function DoctorCheckinButton({
   onSuccess,
 }: DoctorCheckinButtonProps) {
   const [openDialog, setOpenDialog] = useState(false);
+  const [openBiometricModal, setOpenBiometricModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resolvedPatientId, setResolvedPatientId] = useState<string | undefined>(patientId);
+  const [resolvedClinicId, setResolvedClinicId] = useState<string | undefined>(clinicId);
   const router = useRouter();
+
+  useEffect(() => {
+    if (patientId) setResolvedPatientId(patientId);
+    if (clinicId) setResolvedClinicId(clinicId);
+  }, [patientId, clinicId]);
+
+  const ensurePatientAndClinicLoaded = async () => {
+    if (resolvedPatientId && resolvedClinicId) {
+      return { patientId: resolvedPatientId, clinicId: resolvedClinicId };
+    }
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`);
+      if (res.ok) {
+        const apt = await res.json();
+        const pId = apt.patient_id || apt.patient?.id;
+        const cId = apt.clinic_id;
+        if (pId) setResolvedPatientId(pId);
+        if (cId) setResolvedClinicId(cId);
+        return { patientId: pId, clinicId: cId };
+      }
+    } catch (e) {
+      console.warn('Falha ao resolver paciente/clínica:', e);
+    }
+    return { patientId: resolvedPatientId, clinicId: resolvedClinicId };
+  };
 
   const isAlreadyCheckedIn = Boolean(doctorCheckedInAt || status === 'IN_PROGRESS' || status === 'COMPLETED');
   const isDoubleVerified = verificationLevel === 'DOUBLE_VERIFIED' || (hasReceptionCheckin && isAlreadyCheckedIn);
@@ -151,6 +185,7 @@ export function DoctorCheckinButton({
         variant={variant}
         onClick={(e) => {
           e.stopPropagation();
+          ensurePatientAndClinicLoaded();
           setOpenDialog(true);
         }}
         className={`bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 min-h-[44px] shadow-sm transition-all font-medium ${className}`}
@@ -170,7 +205,7 @@ export function DoctorCheckinButton({
                 <AlertDialogTitle className="text-lg font-bold text-foreground">
                   Confirmar Presença & Iniciar
                 </AlertDialogTitle>
-                <p className="text-xs text-muted-foreground">Evento-gatilho de atendimento clínico</p>
+                <p className="text-xs text-muted-foreground">Validação de atendimento clínico</p>
               </div>
             </div>
 
@@ -191,64 +226,87 @@ export function DoctorCheckinButton({
                 <div className="p-3 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
                   <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block font-semibold">Dupla Comprovação Habilitada (TISS)</strong>
-                    <span>O paciente já fez o check-in na recepção/totem. Esta confirmação registrará a comprovação médica completa.</span>
+                    <strong className="block font-semibold">Check-in na Recepção Realizado</strong>
+                    <span>O paciente já passou pela recepção/totem. Você pode validar via biometria facial na sala ou confirmar diretamente.</span>
                   </div>
                 </div>
               ) : (
                 <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-                  <span className="text-base leading-none">⚠️</span>
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block font-semibold">Check-in Direto da Sala</strong>
-                    <span>O paciente ainda não passou pela recepção. A presença será confirmada pelo profissional responsável.</span>
+                    <strong className="block font-semibold">Check-in Direto no Consultório</strong>
+                    <span>O paciente ainda não passou pela recepção. A validação será realizada pelo terapeuta responsável.</span>
                   </div>
                 </div>
               )}
 
-              <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/40 text-xs text-muted-foreground space-y-1">
-                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span>Ações disparadas em cascata:</span>
-                </div>
-                <ul className="list-disc list-inside space-y-0.5 pl-1 text-[11px]">
-                  <li>Abertura imediata do <strong>Prontuário</strong></li>
-                  <li>Cálculo do <strong>Repasse Financeiro</strong> do contrato</li>
-                  <li>Registro de <strong>Auditoria com Horário Exato</strong></li>
-                </ul>
+              <div className="space-y-2 pt-2">
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    await ensurePatientAndClinicLoaded();
+                    setOpenDialog(false);
+                    setOpenBiometricModal(true);
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl font-semibold gap-2 shadow-xs text-xs sm:text-sm"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Validar com Biometria Facial</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleConfirmCheckin();
+                  }}
+                  disabled={loading}
+                  className="w-full min-h-[44px] rounded-xl font-medium gap-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <UserCheck className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                  )}
+                  <span>Confirmar Sem Biometria (Manual)</span>
+                </Button>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <AlertDialogFooter className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <AlertDialogCancel
               disabled={loading}
-              className="min-h-[44px] rounded-xl font-medium w-full sm:w-auto"
+              className="min-h-[44px] rounded-xl font-medium w-full text-xs"
             >
-              Voltar
+              Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleConfirmCheckin();
-              }}
-              disabled={loading}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl font-semibold shadow-md shadow-emerald-600/20 w-full sm:w-auto"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Iniciando Atendimento...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <UserCheck className="w-4 h-4" />
-                  <span>Confirmar & Abrir Prontuário</span>
-                </div>
-              )}
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Validação Facial pelo Profissional */}
+      {resolvedPatientId && (
+        <DoctorBiometricModal
+          open={openBiometricModal}
+          onOpenChange={setOpenBiometricModal}
+          appointmentId={appointmentId}
+          patientId={resolvedPatientId}
+          patientName={patientName}
+          clinicId={resolvedClinicId || ''}
+          onSuccess={(data) => {
+            onSuccess?.(data);
+            if (data?.prontuario_url) {
+              router.push(data.prontuario_url);
+            } else {
+              router.push(`/dashboard/prontuarios/${appointmentId}`);
+            }
+          }}
+          onConfirmManual={handleConfirmCheckin}
+        />
+      )}
     </>
   );
 }
+
