@@ -1,8 +1,8 @@
 // app/api/checkin/[token]/confirm/route.ts
-// Confirmacao Biometrica Facial via capture_token efemero
+// Confirmacao Biometrica Facial via capture_token efemero multi-superficie
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { decryptFaceDescriptor, calculateFaceDistance } from '@/lib/utils/face-encryption'
 import { sendRealtimeBroadcast } from '@/lib/realtime/broadcast'
 
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/checkin/:token/confirm
- * Body: { descriptor: number[] }
+ * Body: { descriptor?: number[], face_descriptor?: number[] }
  * Valida o descritor facial 1:1 contra patient_face_biometrics
  * Se aprovado, conclui o token de uso unico, audita em patient_checkin_events,
  * atualiza o agendamento e emite broadcast em appointment:{appointment_id}.
@@ -33,6 +33,8 @@ export async function POST(
                 device_id,
                 appointment_id,
                 patient_id,
+                surface,
+                created_by,
                 status,
                 expires_at
             `)
@@ -66,17 +68,30 @@ export async function POST(
             }, { status: 410 })
         }
 
-        const body = await request.json()
-        const { descriptor } = body
+        // Se a superfície for staff_webcam: validação estrita de posse (terapeuta logada === created_by)
+        if (tokenRecord.surface === 'staff_webcam') {
+            const supabase = await createClient()
+            const { data: { user } } = await supabase.auth.getUser()
 
-        if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+            if (!user || user.id !== tokenRecord.created_by) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Acesso não autorizado. Apenas o usuário que iniciou a captura nesta webcam pode confirmá-la.'
+                }, { status: 403 })
+            }
+        }
+
+        const body = await request.json()
+        const rawDescriptor = body.face_descriptor || body.descriptor
+
+        if (!rawDescriptor || !Array.isArray(rawDescriptor) || rawDescriptor.length !== 128) {
             return NextResponse.json({
                 success: false,
                 error: 'Descritor facial invalido. Deve conter 128 dimensoes numericas.'
             }, { status: 400 })
         }
 
-        const liveDescriptor = new Float32Array(descriptor)
+        const liveDescriptor = new Float32Array(rawDescriptor)
 
         // 2. Buscar registros biometricos cadastrados do paciente e responsaveis
         const { data: records, error: fetchError } = await (adminDb as any)
@@ -159,6 +174,7 @@ export async function POST(
         }
 
         const confirmedAt = new Date().toISOString()
+        const effectiveSurface = tokenRecord.surface || 'kiosk'
 
         // 4. Se aprovado: atualizar token de captura de uso unico
         await (adminDb as any)
@@ -178,6 +194,7 @@ export async function POST(
                 appointment_id: tokenRecord.appointment_id,
                 patient_id: tokenRecord.patient_id,
                 device_id: tokenRecord.device_id,
+                surface: effectiveSurface,
                 method: 'facial',
                 created_at: confirmedAt,
             })
@@ -201,6 +218,7 @@ export async function POST(
             {
                 type: 'checkin_confirmed',
                 method: 'facial',
+                surface: effectiveSurface,
                 confirmed_at: confirmedAt,
                 person_name: bestMatch.person_name,
                 person_type: bestMatch.person_type,
@@ -211,6 +229,7 @@ export async function POST(
             success: true,
             hasBiometrics: true,
             match: true,
+            surface: effectiveSurface,
             person_name: bestMatch.person_name,
             person_type: bestMatch.person_type,
             confidence: bestMatch.confidence,

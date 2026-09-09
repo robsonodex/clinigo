@@ -29,8 +29,13 @@ import {
     ArrowLeft,
     PhoneCall,
     Check,
+    KeyRound,
+    Lock,
+    Unlock,
+    Search,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ReceptionPinGate } from '@/components/terminal/ReceptionPinGate'
 
 const MODEL_URL = '/models/face-api'
 
@@ -83,6 +88,26 @@ export default function TerminalPage() {
 
     const scanLoopRef = useRef<NodeJS.Timeout | null>(null)
     const isProcessingFrameRef = useRef<boolean>(false)
+
+    // 6. Modo Recepção via PIN Efêmero (15 min isolado de sessões do sistema)
+    const [openPinGate, setOpenPinGate] = useState(false)
+    const [isReceptionMode, setIsReceptionMode] = useState(false)
+    const [receptionLabel, setReceptionLabel] = useState<string>('Recepção')
+    const [receptionExpiresAt, setReceptionExpiresAt] = useState<number | null>(null)
+    const [receptionSearch, setReceptionSearch] = useState('')
+
+    // Monitoramento da expiração do Modo Recepção
+    useEffect(() => {
+        if (!isReceptionMode || !receptionExpiresAt) return
+        const timer = setInterval(() => {
+            if (Date.now() >= receptionExpiresAt) {
+                setIsReceptionMode(false)
+                setReceptionExpiresAt(null)
+                toast.info('Sessão do Modo Recepção expirou após 15 minutos. Retornado ao Quiosque.')
+            }
+        }, 2000)
+        return () => clearInterval(timer)
+    }, [isReceptionMode, receptionExpiresAt])
 
     // Relogio em tempo real
     useEffect(() => {
@@ -762,17 +787,60 @@ export default function TerminalPage() {
                         <Tablet className="w-5 h-5" />
                     </div>
                     <div>
-                        <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                            {roomLabel}
-                        </h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                                {roomLabel}
+                            </h1>
+                            {isReceptionMode && (
+                                <Badge className="bg-emerald-950 text-emerald-300 border-emerald-700/60 text-[10px] font-semibold">
+                                    Modo Recepção ({receptionLabel})
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-xs text-slate-400">
-                            Fila de Atendimento do Dia
+                            {isReceptionMode
+                                ? 'Terminal Desbloqueado — Gestão Rápida e Walk-in'
+                                : 'Fila de Atendimento do Dia (Quiosque)'}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="text-right font-mono">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Botão de Ativação / Desativação do Modo Recepção */}
+                    {!isReceptionMode ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setOpenPinGate(true)}
+                            className="min-h-[44px] rounded-xl border-slate-800 hover:border-emerald-500/50 bg-slate-900/80 text-slate-200 text-xs gap-1.5"
+                        >
+                            <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Modo Recepção</span>
+                        </Button>
+                    ) : (
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2 py-1 rounded-lg">
+                                {receptionExpiresAt ? Math.max(0, Math.ceil((receptionExpiresAt - Date.now()) / 60000)) : 15} min
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    setIsReceptionMode(false)
+                                    setReceptionExpiresAt(null)
+                                    toast.info('Modo Recepção finalizado.')
+                                }}
+                                className="min-h-[44px] text-xs text-slate-400 hover:text-white"
+                            >
+                                <Lock className="w-3.5 h-3.5 mr-1" />
+                                Bloquear
+                            </Button>
+                        </div>
+                    )}
+
+                    <div className="text-right font-mono pl-1 border-l border-slate-800">
                         <span className="text-lg sm:text-xl font-bold text-white block leading-none">
                             {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -794,7 +862,30 @@ export default function TerminalPage() {
             </header>
 
             {/* Corpo: Lista da Fila de Pacientes */}
-            <main className="flex-1 py-6 overflow-y-auto">
+            <main className="flex-1 py-4 sm:py-6 overflow-y-auto space-y-4">
+                {isReceptionMode && (
+                    <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center gap-2 p-3 bg-slate-900/90 border border-emerald-500/30 rounded-2xl">
+                        <div className="relative flex-1 w-full">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input
+                                type="text"
+                                placeholder="Filtrar paciente ou terapeuta na fila do dia..."
+                                value={receptionSearch}
+                                onChange={(e) => setReceptionSearch(e.target.value)}
+                                className="pl-9 h-11 bg-slate-950 border-slate-800 text-xs rounded-xl text-white placeholder:text-slate-500"
+                            />
+                        </div>
+                        <Button
+                            type="button"
+                            onClick={() => fetchQueue()}
+                            variant="outline"
+                            className="w-full sm:w-auto min-h-[44px] text-xs border-slate-800 rounded-xl text-slate-300 gap-1.5"
+                        >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Atualizar Fila
+                        </Button>
+                    </div>
+                )}
                 {isQueueLoading && queue.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center space-y-3 py-16">
                         <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
@@ -823,7 +914,16 @@ export default function TerminalPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-w-6xl mx-auto">
-                        {queue.map((item) => {
+                        {queue
+                            .filter((item) => {
+                                if (!receptionSearch.trim()) return true
+                                const term = receptionSearch.toLowerCase()
+                                return (
+                                    (item.patient_first_name || '').toLowerCase().includes(term) ||
+                                    (item.therapist_first_name || '').toLowerCase().includes(term)
+                                )
+                            })
+                            .map((item) => {
                             const isConfirmed = item.checkin_confirmed || item.status === 'IN_PROGRESS' || item.status === 'COMPLETED'
                             return (
                                 <div
@@ -896,7 +996,7 @@ export default function TerminalPage() {
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                     <span className="font-mono text-[11px] text-slate-400">
-                        Terminal Ativo (Modo Quiosque)
+                        {isReceptionMode ? 'Terminal em Modo Recepção' : 'Terminal Ativo (Modo Quiosque)'}
                     </span>
                 </div>
 
@@ -904,6 +1004,18 @@ export default function TerminalPage() {
                     O terapeuta também pode acionar o tablet remotamente pelo computador
                 </div>
             </footer>
+
+            {/* Modal de Desbloqueio por PIN Efêmero */}
+            <ReceptionPinGate
+                open={openPinGate}
+                onOpenChange={setOpenPinGate}
+                deviceToken={deviceToken}
+                onUnlocked={(session) => {
+                    setIsReceptionMode(true)
+                    setReceptionLabel(session.label)
+                    setReceptionExpiresAt(Date.now() + session.expires_in_seconds * 1000)
+                }}
+            />
         </div>
     )
 }

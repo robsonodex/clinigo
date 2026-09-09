@@ -1313,6 +1313,57 @@
     - Zero ocorrências de QR Code no fluxo de pareamento ou check-in.
     - Suíte de testes `scripts/test_tablet_checkin_spec.mjs` executada com 8/8 testes aprovados.
 
+### Item 48: Check-in Biométrico Multi-Superfície + Verificação da Terapeuta (V4)
+- **Data**: 09/09/2026
+- **Módulos**: Recepção, Atendimento Clínico, Configurações, Terminais & Quiosques, Biometria Facial, Celular do Paciente, LGPD & Antifraude
+- **Caminho Completo**:
+  - Banco de Dados / Migrations → `supabase/migrations/20260909_multisurface_checkin_v4.sql` → `checkin_settings` em `clinics`, `surface` em `checkin_capture_tokens` e `patient_checkin_events`, criação de `therapist_start_biometric_events` e `reception_pins`, `therapist_start_verified_at` em `appointments`, `therapist_user_id` em `patient_face_biometrics`
+  - Componente Neural Central → `components/checkin/BiometricCaptureFrame.tsx` → `BiometricCaptureFrame` (agnóstico de assunto: `patient` | `therapist`)
+  - Componente Modal da Terapeuta → `components/checkin/StaffWebcamCheckinModal.tsx` → `StaffWebcamCheckinModal`
+  - Seletor de Superfície → `components/checkin/CheckinSurfacePicker.tsx` → `CheckinSurfacePicker`
+  - Modal Antifraude Terapeuta → `components/appointments/TherapistStartBiometricModal.tsx` → `TherapistStartBiometricModal`
+  - Modal PIN Tablet → `components/terminal/ReceptionPinGate.tsx` → `ReceptionPinGate`
+  - API Centralizadora Início → `app/api/checkin/start/route.ts` → `POST` (suporte a `staff_webcam`, `kiosk`, `patient_mobile`)
+  - API Confirmação Biométrica → `app/api/checkin/[token]/confirm/route.ts` → `POST` (validação de `created_by` para `staff_webcam`, auditoria de `surface` e broadcast)
+  - API Cadastro Facial Terapeuta → `app/api/therapist/biometric-enrollment/route.ts` → `POST` (criptografia AES-256-GCM com `person_type='therapist'`)
+  - API Início de Atendimento Clínico → `app/api/appointments/[id]/start/route.ts` → `POST` (antifraude da terapeuta quando ativado pela clínica)
+  - API Autenticação PIN Tablet → `app/api/reception/pin-login/route.ts` → `POST` (validação bcrypt, cookie efêmero de 15 min isolado de sessões do sistema)
+  - API Gestão de PINs → `app/api/reception/pins/route.ts` → `GET`, `POST`
+  - API Disparo de Link Mobile → `app/api/checkin/patient-mobile/send-link/route.ts` → `POST` (link de 3 min via WhatsApp)
+  - Interface Pública Mobile Paciente → `app/c/[capture_token]/page.tsx` e `PatientMobileCaptureClient.tsx` (404 estrito, zero login, zero QR)
+  - Terminal Quiosque + Modo Recepção → `app/terminal/page.tsx` → Desbloqueio temporário de 15 min via PIN, busca e gestão de fila
+  - Botão de Início de Atendimento → `components/appointments/DoctorCheckinButton.tsx` → Integração multi-superfície e validação da terapeuta
+  - Suíte de Testes da Especificação V4 → `scripts/test_v4_multisurface_spec.mjs`
+- **Descrição Técnica**:
+  - **1. Contexto e Motivação da Arquitetura V4**:
+    - A proporção real de consultórios clínicos é de cerca de 30 terapeutas para apenas 1 tablet compartilhado na recepção/quiosque. No modelo anterior de quiosque exclusivo, criavam-se gargalos físicos de atendimento e filas para o próprio check-in.
+    - A V4 resolve este desafio estrutural mantendo o modelo de tablet da V3 como fallback/exceção, e introduzindo **Superfícies de Captura Plugáveis** (Webcam da Terapeuta, Tablet Quiosque e Celular do Paciente), além de **Verificação Biométrica Antifraude da Própria Terapeuta** (Fluxo B) e **Modo Recepção com PIN Efêmero** no tablet.
+  - **2. Arquitetura e Implementação**:
+    - **Fluxo A — Check-in do Paciente (3 Superfícies Convergentes)**:
+      - *Superfície `staff_webcam` (Principal)*: A terapeuta autenticada em seu próprio computador clica para fazer check-in com sua webcam local. O sistema emite um token efêmero com `surface='staff_webcam'` e `created_by=user.id`. A captura facial via rede neural face-api.js extrai o descritor Float32Array (128 dimensões) e valida contra `patient_face_biometrics`. A confirmação exige estritamente que a terapeuta logada seja a proprietária do token (`created_by === user.id`), impedindo confirmações cruzadas não autorizadas.
+      - *Superfície `kiosk` (Tablet Compartilhado)*: Mantido integralmente da V3 para walk-ins e pacientes sem celular/câmera.
+      - *Superfície `patient_mobile` (Fase 2)*: Envio de link de uso único (`https://clinigo.app/c/:capture_token`) com validade estrita de 3 minutos via WhatsApp. O paciente abre a página no navegador do celular, vê apenas seu primeiro nome e realiza a validação facial. Tokens expirados ou inválidos retornam `404 Not Found` genérico sem expor dados do paciente ou do sistema. Sem login, sem app, sem QR Code.
+    - **Fluxo B — Verificação da Terapeuta antes de Iniciar o Atendimento**:
+      - Mecanismo antifraude controlado por clínica via flag `checkin_settings.require_therapist_biometric_on_start`.
+      - Quando ativado, o endpoint `POST /api/appointments/:id/start` exige `face_descriptor` e compara o vetor facial contra `patient_face_biometrics WHERE person_type='therapist' AND therapist_user_id=user.id`.
+      - Se a distância euclidiana for < 0.58, o sistema grava `therapist_start_biometric_events (matched=true, distance)`, preenche `appointments.therapist_start_verified_at` e altera o status para `IN_PROGRESS`.
+      - Se a biometria não conferir, registra `matched=false`, retorna erro 403 e NÃO inicia o atendimento.
+    - **Modo Recepção no Tablet via PIN Efêmero (15 minutos)**:
+      - O tablet permanece por padrão no modo quiosque passivo aguardando chamadas remotas.
+      - Ao tocar em "Modo Recepção", abre-se um teclado numérico touch grande (mínimo 44x44px) protegido por PIN com hash bcrypt gravado em `reception_pins`.
+      - Após validação, emite um cookie assinado `clinigo_reception_token` com validade estrita de 15 minutos (900s).
+      - **Isolamento Absoluto**: Não utiliza `supabase.auth`, não insere linhas em `active_sessions` e não monta `useSessionGuard`, garantindo que as sessões dos terapeutas nos computadores permaneçam intactas.
+      - No Modo Recepção, o tablet permite filtrar a fila do dia por paciente ou terapeuta e validar presença para walk-ins.
+    - **Auditoria de Emojis e Padrão Corporativo Premium**:
+      - Zero emojis em todas as interfaces, botões, modais, mensagens de retorno e formulários, utilizando exclusivamente ícones vetoriais sóbrios (Lucide Icons).
+  - **3. Validação e Testes**:
+    - Suíte de testes `scripts/test_v4_multisurface_spec.mjs` executada com 45/45 testes aprovados.
+    - Zero ocorrências de `supabase.auth` em `app/terminal`, `app/c` e `components/terminal`.
+    - Zero ocorrências de `active_sessions` no código de login de PIN e terminal.
+    - Zero ocorrências de QR Code em todas as superfícies de captura.
+    - Migrations aplicadas e validadas diretamente no banco Supabase via MCP `execute_sql`.
+
+
 
 
 
