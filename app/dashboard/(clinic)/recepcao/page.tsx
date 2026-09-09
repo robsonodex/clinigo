@@ -25,6 +25,7 @@ import { useUser } from '@/hooks/use-user'
 import { TerminalEscalationAlert } from '@/components/reception/TerminalEscalationAlert'
 import { hasFeature } from '@/lib/constants/plan-features'
 import { type PlanType } from '@/lib/constants/plans'
+import { createClient } from '@/lib/supabase/client'
 
 interface QueueItem {
     id: string
@@ -187,7 +188,7 @@ export default function RecepcaoPage() {
                         )
 
                         toast({
-                            title: '⚠️ Alerta de Escalonamento (Ausência)',
+                            title: 'Alerta de Escalonamento (Ausência)',
                             description: `Paciente ${item.patient?.full_name || 'Paciente'} chamado(a) há mais de ${tvRecallMinutes} min sem atendimento. Chamada repetida automaticamente no Painel de TV!`,
                         })
                     }
@@ -229,7 +230,7 @@ export default function RecepcaoPage() {
                 () => {
                     loadData(true)
                     toast({
-                        title: '📋 Pré-check-in recebido',
+                        title: 'Pré-check-in recebido',
                         description: 'Um paciente completou o pré-check-in online.',
                     })
                 }
