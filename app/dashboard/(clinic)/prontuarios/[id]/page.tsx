@@ -164,7 +164,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 1. Fetch Appointment Context
             const { data: appt, error: apptError } = await supabase
                 .from('appointments')
-                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer, doctor_checkin_method, verification_level`)
+                .select(`id, appointment_date, appointment_time, checked_in_at, clinic_id, doctor_id, patient_id, session_status, session_status_notes, digital_signature_url, digital_signature_date, digital_signature_hash, digital_signature_signer, digital_signature_at, digital_signature_by, doctor_checkin_method, verification_level`)
                 .eq('id', appointmentId)
                 .single()
 
@@ -182,7 +182,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 setIsLocked(true)
                 setSignatureData({
                     signerName: appt.digital_signature_signer || 'Profissional',
-                    signedAt: appt.digital_signature_date,
+                    signedAt: appt.digital_signature_date || appt.digital_signature_at,
                     hash: appt.digital_signature_hash,
                     signatureImageUrl: appt.digital_signature_url,
                 })
@@ -202,9 +202,9 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
             // 2. Fetch Patient, Clinic, Doctor
             const [patientRes, clinicRes, doctorRes] = await Promise.all([
-                supabase.from('patients').select('*').eq('id', appt.patient_id).single(),
-                supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).single(),
-                supabase.from('doctors').select('id, user:user_id(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).single()
+                supabase.from('patients').select('*').eq('id', appt.patient_id).maybeSingle(),
+                supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).maybeSingle(),
+                supabase.from('doctors').select('id, user:users(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).maybeSingle()
             ])
 
             if (patientRes.data) setPatient(patientRes.data)
@@ -441,10 +441,15 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 participacao_acompanhante: formData.participacao_acompanhante,
             })
 
+            const targetPatientId = patient?.id || appointment.patient_id
+            if (!targetPatientId) {
+                throw new Error('Paciente não identificado para vincular ao prontuário.')
+            }
+
             const payload = {
                 clinic_id: appointment.clinic_id,
                 appointment_id: appointment.id,
-                patient_id: patient.id,
+                patient_id: targetPatientId,
                 doctor_id: appointment.doctor_id,
                 chief_complaint: hasWorldSensoryEvolution ? (worldSensoryData.objetivo_sessao || '') : formData.chief_complaint,
                 history_present_illness: hasWorldSensoryEvolution ? (worldSensoryData.procedimentos_realizados || '') : formData.history_present_illness,
@@ -472,12 +477,17 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
             // Atualiza status do atendimento na tabela appointments
             const isPresente = sessionStatus === 'Presente';
-            await supabase.from('appointments').update({
+            const appointmentUpdatePayload: any = {
                 session_status: sessionStatus,
                 session_status_notes: sessionStatusNotes,
                 no_show: !isPresente && (sessionStatus === 'Falta injustificada' || sessionStatus === 'Falta justificada'),
                 updated_at: new Date().toISOString()
-            }).eq('id', appointment.id);
+            }
+            if (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING') {
+                appointmentUpdatePayload.status = 'IN_PROGRESS'
+            }
+
+            await supabase.from('appointments').update(appointmentUpdatePayload).eq('id', appointment.id);
 
             toast({ title: 'Sucesso', description: 'Prontuário estruturado com sucesso!' })
         } catch (error: any) {
@@ -496,9 +506,12 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             const { error } = await supabase.from('appointments').update({
                 digital_signature_url: dataUrl,
                 digital_signature_date: meta.signedAt,
+                digital_signature_at: meta.signedAt,
                 digital_signature_hash: meta.hash,
                 digital_signature_signer: meta.signerName,
+                digital_signature_by: user?.id,
                 status: 'COMPLETED',
+                completed_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             }).eq('id', appointment.id)
 

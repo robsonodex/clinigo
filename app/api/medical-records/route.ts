@@ -12,12 +12,26 @@ export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient()
 
-        // Get user info from headers (set by middleware)
-        const userId = request.headers.get('x-user-id')
-        const clinicId = request.headers.get('x-clinic-id')
-        const userRole = request.headers.get('x-user-role')
+        let userId = request.headers.get('x-user-id')
+        let clinicId = request.headers.get('x-clinic-id')
+        let userRole = request.headers.get('x-user-role')
 
         if (!userId || !clinicId) {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                return errorResponse('Unauthorized', { status: 401 })
+            }
+            userId = user.id
+            const { data: profile } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', user.id)
+                .maybeSingle()
+            clinicId = clinicId || profile?.clinic_id || (user.user_metadata as any)?.clinic_id
+            userRole = userRole || profile?.role || (user.user_metadata as any)?.role
+        }
+
+        if (!userId) {
             return errorResponse('Unauthorized', { status: 401 })
         }
 
@@ -33,14 +47,14 @@ export async function GET(request: NextRequest) {
                 signed_by_patient,
                 signed_at,
                 signature_url,
-                patient:patients!inner(
+                patient:patients(
                     id,
                     full_name
                 ),
-                doctor:doctors!inner(
+                doctor:doctors(
                     id,
                     specialty,
-                    user:users!inner(
+                    user:users(
                         full_name
                     )
                 ),
@@ -50,9 +64,11 @@ export async function GET(request: NextRequest) {
                     appointment_time
                 )
             `)
-            .eq('clinic_id', clinicId)
-            .order('created_at', { ascending: false })
-            .limit(100)
+
+        if (clinicId && userRole !== 'SUPER_ADMIN') {
+            query = query.eq('clinic_id', clinicId)
+        }
+        query = query.order('created_at', { ascending: false }).limit(100)
 
         // DOCTOR não-coordenador: filtrar apenas prontuários do próprio doctor
         if (userRole === 'DOCTOR') {

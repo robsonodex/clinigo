@@ -49,6 +49,8 @@ export interface DoctorCheckinButtonProps {
   doctorCheckedInAt?: string | null;
   verificationLevel?: 'UNVERIFIED' | 'FACIAL_ONLY' | 'DOCTOR_ONLY' | 'DOUBLE_VERIFIED' | string;
   repasseAmount?: number;
+  isManualUnlocked?: boolean;
+  userRole?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
   className?: string;
@@ -72,6 +74,8 @@ export function DoctorCheckinButton({
   doctorCheckedInAt,
   verificationLevel = 'UNVERIFIED',
   repasseAmount,
+  isManualUnlocked = false,
+  userRole,
   size = 'sm',
   variant = 'default',
   className = '',
@@ -239,6 +243,13 @@ export function DoctorCheckinButton({
 
   // Confirmação manual com justificativa obrigatória
   const handleConfirmManualWithReason = async () => {
+    if (userRole === 'DOCTOR' && !isManualUnlocked) {
+      toast.error('Confirmação manual bloqueada pela administração.', {
+        description: 'Solicite a um administrador o desbloqueio manual deste atendimento.'
+      });
+      return;
+    }
+
     const trimmedReason = manualReason.trim();
     if (!trimmedReason || trimmedReason.length < 3) {
       toast.error('Informe a justificativa para confirmação sem biometria (mínimo 3 caracteres).');
@@ -394,6 +405,8 @@ export function DoctorCheckinButton({
                     enabledSurfaces={['staff_webcam', 'kiosk', 'patient_mobile']}
                     patientMobileEnabled={true}
                     disabled={loading || isSendingToTablet || isSendingMobileLink}
+                    manualBlocked={userRole === 'DOCTOR' && !isManualUnlocked}
+                    manualBlockMessage="A confirmação manual está bloqueada para terapeutas. Solicite à administração a liberação deste atendimento."
                     onSelectSurface={(surface: CheckinSurfaceType) => {
                       if (surface === 'staff_webcam') {
                         setOpenDialog(false);

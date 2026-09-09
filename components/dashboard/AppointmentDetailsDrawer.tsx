@@ -26,12 +26,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Trash2, AlertTriangle, Users, GraduationCap, BookOpen, SlidersHorizontal } from 'lucide-react'
+import { 
+    Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, 
+    Send, DollarSign, Trash2, AlertTriangle, Users, GraduationCap, BookOpen, 
+    SlidersHorizontal, Lock, Unlock, CalendarX, UserX, XCircle, FileText 
+} from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
 interface AppointmentDetailsDrawerProps {
@@ -45,6 +51,10 @@ export function AppointmentDetailsDrawer({
     isOpen,
     onClose
 }: AppointmentDetailsDrawerProps) {
+    const { user, profile } = useAuth()
+    const router = useRouter()
+    const isAdmin = profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN'
+
     const [appointment, setAppointment] = useState<any>(null)
     const [qrCode, setQrCode] = useState<any>(null)
     const [videoRoom, setVideoRoom] = useState<any>(null)
@@ -58,6 +68,15 @@ export function AppointmentDetailsDrawer({
     const [savingRate, setSavingRate] = useState(false)
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+
+    // Estados para Ações Clínicas
+    const [therapistCancelModalOpen, setTherapistCancelModalOpen] = useState(false)
+    const [therapistCancelReason, setTherapistCancelReason] = useState('')
+    const [justifiedAbsenceModalOpen, setJustifiedAbsenceModalOpen] = useState(false)
+    const [justifiedAbsenceReason, setJustifiedAbsenceReason] = useState('')
+    const [unjustifiedAbsenceModalOpen, setUnjustifiedAbsenceModalOpen] = useState(false)
+    const [processingClinicalStatus, setProcessingClinicalStatus] = useState(false)
+    const [togglingManualUnlock, setTogglingManualUnlock] = useState(false)
 
     async function handleDeleteAppointment() {
         if (!appointment?.id) return
@@ -125,6 +144,57 @@ export function AppointmentDetailsDrawer({
             toast.error(err.message || 'Erro ao salvar valor do paciente')
         } finally {
             setSavingRate(false)
+        }
+    }
+
+    async function handleClinicalStatusAction(action: 'THERAPIST_CANCELLED' | 'JUSTIFIED_ABSENCE' | 'UNJUSTIFIED_ABSENCE', reason?: string) {
+        if (!appointment?.id) return
+        setProcessingClinicalStatus(true)
+        try {
+            const res = await fetch(`/api/appointments/${appointment.id}/clinical-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, reason })
+            })
+            const json = await res.json()
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Erro ao registrar status clínico')
+            }
+            toast.success(json.message || 'Status clínico atualizado com sucesso')
+            setTherapistCancelModalOpen(false)
+            setJustifiedAbsenceModalOpen(false)
+            setUnjustifiedAbsenceModalOpen(false)
+            setTherapistCancelReason('')
+            setJustifiedAbsenceReason('')
+            loadAppointment()
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('appointment-updated'))
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Falha ao atualizar status clínico')
+        } finally {
+            setProcessingClinicalStatus(false)
+        }
+    }
+
+    async function handleToggleManualUnlock() {
+        if (!appointment?.id) return
+        setTogglingManualUnlock(true)
+        const isCurrentlyUnlocked = Boolean(appointment.manual_checkin_unlocked_at)
+        try {
+            const res = await fetch(`/api/appointments/${appointment.id}/unlock-manual`, {
+                method: isCurrentlyUnlocked ? 'DELETE' : 'POST'
+            })
+            const json = await res.json()
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Erro ao alterar liberação de presença manual')
+            }
+            toast.success(json.message || (isCurrentlyUnlocked ? 'Confirmação manual bloqueada com sucesso' : 'Confirmação manual liberada com sucesso'))
+            loadAppointment()
+        } catch (err: any) {
+            toast.error(err.message || 'Falha ao atualizar liberação manual')
+        } finally {
+            setTogglingManualUnlock(false)
         }
     }
 
@@ -573,26 +643,155 @@ export function AppointmentDetailsDrawer({
                         {/* CHECK-IN DO PROFISSIONAL (EVENTO-GATILHO CENTRAL - apenas para pacientes) */}
                         {appointment.appointment_type !== 'SUPERVISION' && (
                             <>
-                                <div className="pt-3 pb-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                                        Atendimento Clínico
-                                    </Label>
-                                    <DoctorCheckinButton
-                                        appointmentId={appointment.id}
-                                        patientId={appointment.patient_id}
-                                        clinicId={appointment.clinic_id}
-                                        patientName={patientName}
-                                        scheduledTime={formattedDate}
-                                        status={appointment.status}
-                                        hasReceptionCheckin={Boolean(appointment.checked_in || appointment.checked_in_at)}
-                                        doctorCheckedInAt={appointment.doctor_checked_in_at}
-                                        verificationLevel={appointment.verification_level}
-                                        repasseAmount={appointment.repasse_amount}
-                                        className="w-full justify-center"
-                                        onSuccess={() => {
-                                            loadAppointment();
-                                        }}
-                                    />
+                                <div className="pt-3 pb-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                                            Atendimento Clínico
+                                        </Label>
+                                        {appointment.session_status && (
+                                            <Badge variant="outline" className="text-[11px] font-medium border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                Status: {appointment.session_status}
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    {/* 1. OPÇÃO: PACIENTE COMPARECEU (CONFIRMAR PRESENÇA E INICIAR) */}
+                                    <div className="space-y-1">
+                                        <span className="text-[11px] font-medium text-muted-foreground block">
+                                            Registro de Presença / Início do Atendimento:
+                                        </span>
+                                        <DoctorCheckinButton
+                                            appointmentId={appointment.id}
+                                            patientId={appointment.patient_id}
+                                            clinicId={appointment.clinic_id}
+                                            patientName={patientName}
+                                            scheduledTime={formattedDate}
+                                            status={appointment.status}
+                                            hasReceptionCheckin={Boolean(appointment.checked_in || appointment.checked_in_at)}
+                                            doctorCheckedInAt={appointment.doctor_checked_in_at}
+                                            verificationLevel={appointment.verification_level}
+                                            repasseAmount={appointment.repasse_amount}
+                                            isManualUnlocked={Boolean(appointment.manual_checkin_unlocked_at)}
+                                            userRole={profile?.role}
+                                            className="w-full justify-center min-h-[44px]"
+                                            onSuccess={() => {
+                                                loadAppointment();
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* DEMAIS OPÇÕES CLÍNICAS: TERAPEUTA DESMARCOU, FALTA JUSTIFICADA, FALTA NÃO JUSTIFICADA */}
+                                    <div className="pt-1 space-y-1.5">
+                                        <span className="text-[11px] font-medium text-muted-foreground block">
+                                            Ocorrências Clínicas e Justificativas:
+                                        </span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setTherapistCancelModalOpen(true)}
+                                                disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
+                                                className="min-h-[44px] text-xs font-semibold border-amber-300 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:hover:bg-amber-950/30 dark:hover:text-amber-300 text-amber-700 dark:text-amber-400 gap-1.5 justify-center"
+                                            >
+                                                <CalendarX className="w-3.5 h-3.5 shrink-0" />
+                                                <span>Terapeuta Desmarcou</span>
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setJustifiedAbsenceModalOpen(true)}
+                                                disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
+                                                className="min-h-[44px] text-xs font-semibold border-blue-300 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300 text-blue-700 dark:text-blue-400 gap-1.5 justify-center"
+                                            >
+                                                <UserX className="w-3.5 h-3.5 shrink-0" />
+                                                <span>Falta Justificada</span>
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setUnjustifiedAbsenceModalOpen(true)}
+                                                disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
+                                                className="min-h-[44px] text-xs font-semibold border-rose-300 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-800 dark:hover:bg-rose-950/30 dark:hover:text-rose-300 text-rose-700 dark:text-rose-400 gap-1.5 justify-center"
+                                            >
+                                                <XCircle className="w-3.5 h-3.5 shrink-0" />
+                                                <span>Falta Não Justificada</span>
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* ATALHO DIRETO PARA O PRONTUÁRIO / EVOLUÇÃO */}
+                                    <div className="pt-1">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                onClose();
+                                                router.push(`/dashboard/prontuarios/${appointment.id}`);
+                                            }}
+                                            className="w-full min-h-[44px] text-xs font-semibold bg-emerald-50/60 hover:bg-emerald-100/70 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 gap-2 justify-center"
+                                        >
+                                            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            <span>Acessar Prontuário / Evolução da Sessão</span>
+                                        </Button>
+                                    </div>
+
+                                    {/* PAINEL ADMINISTRATIVO: LIBERAÇÃO / BLOQUEIO DE CONFIRMAÇÃO MANUAL */}
+                                    {isAdmin && (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                                                    {appointment.manual_checkin_unlocked_at ? (
+                                                        <Unlock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                    ) : (
+                                                        <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                                    )}
+                                                    <span>Permissão de Presença Manual (Administração)</span>
+                                                </div>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`text-[10px] ${
+                                                        appointment.manual_checkin_unlocked_at
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                            : 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300'
+                                                    }`}
+                                                >
+                                                    {appointment.manual_checkin_unlocked_at ? 'Liberado' : 'Bloqueado'}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                                {appointment.manual_checkin_unlocked_at
+                                                    ? 'A terapeuta está autorizada a confirmar a presença manualmente para este agendamento.'
+                                                    : 'A terapeuta está impedida de confirmar presença manualmente sem autorização prévia da administração.'}
+                                            </p>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleToggleManualUnlock}
+                                                disabled={togglingManualUnlock}
+                                                className="w-full min-h-[44px] text-xs font-semibold gap-1.5"
+                                            >
+                                                {togglingManualUnlock ? (
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : appointment.manual_checkin_unlocked_at ? (
+                                                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                                                ) : (
+                                                    <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                                                )}
+                                                <span>
+                                                    {appointment.manual_checkin_unlocked_at
+                                                        ? 'Bloquear Confirmação Manual Novamente'
+                                                        : 'Desbloquear Confirmação Manual para Terapeuta'}
+                                                </span>
+                                            </Button>
+                                        </div>
+                                    )}
 
                                     {/* REPASSE & ATALHO DE VALOR PERMANENTE */}
                                     <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2 mt-2">
@@ -860,6 +1059,146 @@ export function AppointmentDetailsDrawer({
                                     </>
                                 ) : (
                                     <span>Confirmar Exclusão</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL DE DESMARCAÇÃO PELO TERAPEUTA */}
+                <Dialog open={therapistCancelModalOpen} onOpenChange={setTherapistCancelModalOpen}>
+                    <DialogContent className="rounded-2xl max-w-md w-[95vw] sm:w-full">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                                <CalendarX className="w-5 h-5 text-amber-600" />
+                                <span>Terapeuta Desmarcou</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Registre a desmarcação da sessão pela terapeuta. O registro ficará registrado no histórico do paciente.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-2 py-2">
+                            <Label className="text-xs font-semibold">Justificativa / Motivo da Desmarcação:</Label>
+                            <Textarea
+                                placeholder="Ex: Imprevisto de saúde da terapeuta / Troca de escala acordada"
+                                value={therapistCancelReason}
+                                onChange={(e) => setTherapistCancelReason(e.target.value)}
+                                className="min-h-[80px] text-xs rounded-xl"
+                            />
+                        </div>
+                        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setTherapistCancelModalOpen(false)}
+                                disabled={processingClinicalStatus}
+                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                            >
+                                Voltar
+                            </Button>
+                            <Button
+                                onClick={() => handleClinicalStatusAction('THERAPIST_CANCELLED', therapistCancelReason)}
+                                disabled={processingClinicalStatus}
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                            >
+                                {processingClinicalStatus ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Registrando...</span>
+                                    </>
+                                ) : (
+                                    <span>Confirmar Desmarcação</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL DE FALTA JUSTIFICADA */}
+                <Dialog open={justifiedAbsenceModalOpen} onOpenChange={setJustifiedAbsenceModalOpen}>
+                    <DialogContent className="rounded-2xl max-w-md w-[95vw] sm:w-full">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                                <UserX className="w-5 h-5 text-blue-600" />
+                                <span>Registrar Falta Justificada</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Registre a ausência comunicada pelo paciente ou responsável legal com justificativa.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-2 py-2">
+                            <Label className="text-xs font-semibold">Justificativa da Ausência / Atestado:</Label>
+                            <Textarea
+                                placeholder="Ex: Paciente com febre / Consulta médica externa comunicada com antecedência"
+                                value={justifiedAbsenceReason}
+                                onChange={(e) => setJustifiedAbsenceReason(e.target.value)}
+                                className="min-h-[80px] text-xs rounded-xl"
+                            />
+                        </div>
+                        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setJustifiedAbsenceModalOpen(false)}
+                                disabled={processingClinicalStatus}
+                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                            >
+                                Voltar
+                            </Button>
+                            <Button
+                                onClick={() => handleClinicalStatusAction('JUSTIFIED_ABSENCE', justifiedAbsenceReason)}
+                                disabled={processingClinicalStatus}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                            >
+                                {processingClinicalStatus ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Registrando...</span>
+                                    </>
+                                ) : (
+                                    <span>Confirmar Falta Justificada</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* MODAL DE FALTA NÃO JUSTIFICADA */}
+                <Dialog open={unjustifiedAbsenceModalOpen} onOpenChange={setUnjustifiedAbsenceModalOpen}>
+                    <DialogContent className="rounded-2xl max-w-md w-[95vw] sm:w-full">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-rose-700 dark:text-rose-400">
+                                <XCircle className="w-5 h-5 text-rose-600" />
+                                <span>Confirmar Falta Não Justificada</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                O paciente não compareceu no horário agendado e não apresentou justificativa prévia.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-2">
+                            <div className="bg-rose-50 dark:bg-rose-950/30 p-3 rounded-xl border border-rose-200 dark:border-rose-900 text-xs text-rose-800 dark:text-rose-300 leading-relaxed">
+                                Este atendimento será registrado como falta não justificada (No-Show). O status clínico e as regras de cancelamento da clínica serão aplicados.
+                            </div>
+                        </div>
+                        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setUnjustifiedAbsenceModalOpen(false)}
+                                disabled={processingClinicalStatus}
+                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                            >
+                                Voltar
+                            </Button>
+                            <Button
+                                onClick={() => handleClinicalStatusAction('UNJUSTIFIED_ABSENCE')}
+                                disabled={processingClinicalStatus}
+                                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                            >
+                                {processingClinicalStatus ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Registrando...</span>
+                                    </>
+                                ) : (
+                                    <span>Confirmar Falta Não Justificada</span>
                                 )}
                             </Button>
                         </DialogFooter>

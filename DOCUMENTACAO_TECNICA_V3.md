@@ -1385,3 +1385,36 @@
     - A informação técnica e o indicador de conformidade LGPD foram posicionados de forma discreta, compacta e elegante no rodapé da página.
   - **3. Correção na Tela de Recepção**:
     - Inclusão do import de `createClient` a partir de `@/lib/supabase/client` em `app/dashboard/(clinic)/recepcao/page.tsx`, sanando o erro `createClient is not defined` no carregamento da fila e alertas em tempo real.
+
+### Item 50: Quatro Opções Clínicas de Atendimento, Bloqueio Administrativo de Presença Manual e Blindagem de Prontuário
+- **Data**: 09/09/2026
+- **Módulos**: Recepção → Agenda (Detalhes do Agendamento), Atendimento Clínico → Prontuários (PEP), Check-in do Profissional
+- **Caminho Completo**:
+  - Recepção → Agenda → `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer` (4 opções clínicas, bloqueio/desbloqueio administrativo de presença manual e atalho direto de prontuário)
+  - Atendimento Clínico → Check-in → `components/appointments/DoctorCheckinButton.tsx` → `DoctorCheckinButton` (bloqueio de presença manual para terapeutas e verificação de desbloqueio)
+  - Atendimento Clínico → Check-in → `components/checkin/CheckinSurfacePicker.tsx` → `CheckinSurfacePicker` (renderização de aviso e trava de presença manual bloqueada)
+  - Backend → Agendamentos → `app/api/appointments/[id]/doctor-checkin/route.ts` → `POST` (correção de query com colunas existentes, cálculo de repasse e barreira 403 para presença manual sem liberação)
+  - Backend → Agendamentos → `app/api/appointments/[id]/unlock-manual/route.ts` → `POST` e `DELETE` (endpoint de liberação e bloqueio de confirmação manual exclusivo para administradores)
+  - Backend → Agendamentos → `app/api/appointments/[id]/clinical-status/route.ts` → `POST` (registro atômico de 'Terapeuta Desmarcou', 'Falta Justificada' e 'Falta Não Justificada')
+  - Atendimento Clínico → Prontuários → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → `loadInitialData`, `handleSave` e `handleSaveDigitalSignature` (correção das colunas de assinatura, relacionamento de médicos com usuários e fallback seguro de paciente)
+  - Backend → Prontuários → `app/api/medical-records/route.ts` → `GET` (resiliência de autenticação de sessão e permissividade de joins)
+  - Banco de Dados → Supabase Migrations → Colunas `manual_checkin_unlocked_at`, `manual_checkin_unlocked_by`, `digital_signature_date` e `digital_signature_signer` em `appointments`
+- **Descrição Técnica**:
+  - **1. Quatro Opções Clínicas no Atendimento**:
+    - No drawer de Detalhes do Agendamento (`AppointmentDetailsDrawer.tsx`), sob a seção "ATENDIMENTO CLÍNICO", foram implantadas 4 opções claras e acessíveis:
+      1. *Paciente Compareceu*: Confirmação de presença e início do atendimento através do botão biométrico multi-superfície (`DoctorCheckinButton`).
+      2. *Terapeuta Desmarcou*: Abre diálogo modal para inserção da justificativa da profissional, marcando o agendamento como `CANCELLED`, `session_status = 'Terapeuta desmarcou'` e arquivando a justificativa.
+      3. *Falta Justificada*: Abre diálogo modal para inserção da justificativa ou atestado do paciente/responsável, gravando `session_status = 'Falta justificada'`, `no_show = true` e atualizando o histórico.
+      4. *Falta Não Justificada*: Diálogo de confirmação que grava `session_status = 'Falta injustificada'`, `status = 'NO_SHOW'` e `no_show = true`.
+  - **2. Bloqueio de Presença Manual por Terapeuta e Desbloqueio por Administrador**:
+    - Para eliminar o risco de terapeutas confirmarem presença manualmente sem justificativa ou comprovação, a opção manual é restrita por padrão no backend e frontend quando o usuário possui perfil de terapeuta (`role === 'DOCTOR'`).
+    - Administradores da clínica (`CLINIC_ADMIN` ou `SUPER_ADMIN`) contam com um painel de controle dedicado em Atendimento Clínico no drawer, permitindo alternar entre "Desbloquear Confirmação Manual para Terapeuta" e "Bloquear Confirmação Manual".
+    - Na tentativa de envio manual sem desbloqueio, o backend bloqueia com código HTTP 403 e a interface exibe aviso corporativo elegante explicando que a liberação deve ser realizada pela administração.
+  - **3. Correção do Erro de Check-in ("Agendamento não encontrado na sua clínica")**:
+    - A rota `app/api/appointments/[id]/doctor-checkin/route.ts` executava seleção de colunas que não existiam nas tabelas `appointments` e `doctors` (`price`, `percentage`, `health_insurance_id`, `type`). O PostgreSQL retornava erro 42703, mascarado como "não encontrado". A rota foi completamente reestruturada consultando estritamente os campos existentes e integrando com o calculador de repasses oficial.
+  - **4. Resolução Definitiva da Persistência e Abertura do Prontuário**:
+    - Identificada a causa raiz que impedia a visualização e salvamento do prontuário: a página `prontuarios/[id]/page.tsx` tentava selecionar `digital_signature_date` e `digital_signature_signer` (que não existiam no schema original), disparando exceção `Agendamento não encontrado`. Além disso, a query de médicos utilizava sintaxe incorreta de relacionamento (`user:user_id(full_name)` em vez de `user:users(full_name)`).
+    - As colunas de compatibilidade foram adicionadas à tabela `appointments` e as queries foram corrigidas com `.maybeSingle()`.
+    - No salvamento do prontuário (`handleSave`), o `patient_id` agora conta com fallback defensivo para `appointment.patient_id`, impedindo o erro de referência nula e garantindo a gravação sem falhas em `medical_records`.
+    - Adicionado botão de atalho direto "Acessar Prontuário / Evolução da Sessão" no drawer de agendamento para abertura instantânea.
+

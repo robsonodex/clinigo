@@ -25,51 +25,79 @@ export async function POST(
       .eq('id', user.id)
       .single();
 
-    if (userError || !currentUser?.clinic_id) {
+    const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
+    if (userError || (!currentUser?.clinic_id && !isSuperAdmin)) {
       return NextResponse.json({ success: false, error: 'Perfil ou clínica não encontrados' }, { status: 403 });
     }
 
-    // 2. Parse opcional do body (ex: método de checkin, sala, biometria)
+    // 2. Parse opcional do body
     let checkinMethod = 'APP';
     let biometricVerified = false;
     let biometricPersonName: string | null = null;
+    let justificationReason: string | null = null;
     try {
       const body = await request.json();
       if (body?.method) checkinMethod = body.method;
       if (body?.biometric_verified) biometricVerified = true;
       if (body?.person_name) biometricPersonName = body.person_name;
+      if (body?.reason) justificationReason = body.reason;
     } catch {
-      // Body vazio é aceito (clique direto)
+      // Body vazio é aceito
     }
 
     // 3. Buscar agendamento e médico responsável
-    const { data: appointment, error: aptError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('appointments')
       .select(`
-        id, clinic_id, doctor_id, patient_id, price, status,
+        id, clinic_id, doctor_id, patient_id, status,
         appointment_date, appointment_time, checked_in_at,
-        health_insurance_id, type, payment_type, procedure_id,
+        health_insurance_plan_id, appointment_type, payment_type,
         doctor_checked_in_at, verification_level,
-        doctor:doctors!appointments_doctor_id_fkey(id, user_id, percentage),
+        manual_checkin_unlocked_at, manual_checkin_unlocked_by,
+        doctor:doctors!appointments_doctor_id_fkey(id, user_id, consultation_price),
         patient:patients(id, full_name)
       `)
-      .eq('id', appointmentId)
-      .eq('clinic_id', currentUser.clinic_id)
-      .single();
+      .eq('id', appointmentId);
 
-    if (aptError || !appointment) {
-      return NextResponse.json({ success: false, error: 'Agendamento não encontrado para esta clínica' }, { status: 404 });
+    if (!isSuperAdmin && currentUser?.clinic_id) {
+      query = query.eq('clinic_id', currentUser.clinic_id);
     }
 
-    // Validação de permissão: médico só pode dar checkin em seus próprios atendimentos (a menos que seja ADMIN ou COORDENADOR)
-    const isAdminOrCoord = currentUser.role === 'CLINIC_ADMIN' || currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'COORDINATOR';
+    const { data: appointment, error: aptError } = await query.single();
+
+    if (aptError || !appointment) {
+      return NextResponse.json({
+        success: false,
+        error: 'Agendamento não encontrado para esta clínica'
+      }, { status: 404 });
+    }
+
+    const effectiveClinicId = appointment.clinic_id || currentUser?.clinic_id;
+    const isAdminOrCoord = currentUser?.role === 'CLINIC_ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COORDINATOR';
+
+    // 4. Validação de Bloqueio de Check-in Manual por Terapeuta
+    const isManualCheckin = !biometricVerified && checkinMethod !== 'FACIAL_DOCTOR';
+    if (isManualCheckin && !isAdminOrCoord) {
+      // Terapeuta tentando confirmar manualmente sem biometria
+      if (!appointment.manual_checkin_unlocked_at) {
+        return NextResponse.json({
+          success: false,
+          error: 'A confirmação manual de presença está bloqueada para terapeutas. Solicite o desbloqueio ao administrador da clínica.'
+        }, { status: 403 });
+      }
+    }
+
+    // Validação de permissão do agendamento
     if (!isAdminOrCoord && appointment.doctor?.user_id && appointment.doctor.user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Você só pode confirmar presença para seus próprios agendamentos' }, { status: 403 });
+      return NextResponse.json({
+        success: false,
+        error: 'Você só pode confirmar presença para seus próprios agendamentos'
+      }, { status: 403 });
     }
 
     const now = new Date().toISOString();
 
-    // 4. Determinação da Comprovação (Dupla Comprovação se recepção já confirmou ou se houve biometria facial)
+    // 5. Determinação da Comprovação
     const hasReceptionCheckin = Boolean(appointment.checked_in_at);
     let verificationLevel = 'DOCTOR_ONLY';
     if (hasReceptionCheckin && (biometricVerified || checkinMethod === 'FACIAL_DOCTOR')) {
@@ -80,33 +108,33 @@ export async function POST(
       verificationLevel = 'FACIAL_DOCTOR';
     }
 
-    // 5. Cálculo Centralizado do Repasse Financeiro (Snapshot Imutável)
-    // Prioridade 1: doctor_patient_rates (override por paciente)
-    // Prioridade 2: doctor_contracts (contrato geral)
+    // 6. Cálculo Centralizado do Repasse Financeiro
     const isInsurance = Boolean(
-      appointment.health_insurance_id ||
-      appointment.type === 'convenio' ||
+      appointment.health_insurance_plan_id ||
+      appointment.appointment_type === 'convenio' ||
       appointment.payment_type === 'CONVENIO'
     );
-    const grossPrice = Number(appointment.price) || 0;
+    const grossPrice = Number(appointment.doctor?.consultation_price) || 0;
 
     const repasseResult = await resolveDoctorRepasseValue({
-      clinicId: currentUser.clinic_id,
+      clinicId: effectiveClinicId,
       doctorId: appointment.doctor_id,
       patientId: appointment.patient_id,
       appointmentValue: grossPrice,
       isInsurance,
-      healthInsuranceId: appointment.health_insurance_id,
+      healthInsuranceId: appointment.health_insurance_plan_id,
       supabaseClient: supabaseAdmin,
     });
 
     const statusNotes = biometricPersonName 
-      ? `Presença confirmada por biometria facial do consultório (${biometricPersonName})`
+      ? `Presença confirmada por biometria facial (${biometricPersonName})`
       : checkinMethod === 'FACIAL_DOCTOR' 
         ? 'Presença confirmada por biometria facial do consultório'
-        : 'Presença confirmada pelo profissional no consultório';
+        : justificationReason 
+          ? `Presença manual justificada: ${justificationReason}`
+          : 'Presença confirmada pelo profissional no consultório';
 
-    // 6. Atualização em Cascata do Agendamento
+    // 7. Atualização do Agendamento
     const { data: updatedAppointment, error: updateError } = await (supabaseAdmin
       .from('appointments') as any)
       .update({
@@ -134,7 +162,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: updateError.message }, { status: 500 });
     }
 
-    // 7. URL do Prontuário Clínico para abertura imediata
+    // 8. URL do Prontuário Clínico para abertura imediata
     const prontuarioUrl = `/dashboard/prontuarios/${appointment.id}`;
 
     return NextResponse.json({

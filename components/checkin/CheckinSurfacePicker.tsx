@@ -3,7 +3,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Camera, Tablet, Smartphone, UserCheck, ShieldCheck } from 'lucide-react'
+import { Camera, Tablet, Smartphone, UserCheck, ShieldCheck, Lock } from 'lucide-react'
 
 export type CheckinSurfaceType = 'staff_webcam' | 'kiosk' | 'patient_mobile'
 
@@ -13,6 +13,8 @@ export interface CheckinSurfacePickerProps {
     onSelectSurface: (surface: CheckinSurfaceType) => void
     onManualConfirm?: () => void
     disabled?: boolean
+    manualBlocked?: boolean
+    manualBlockMessage?: string
 }
 
 export function CheckinSurfacePicker({
@@ -21,6 +23,8 @@ export function CheckinSurfacePicker({
     onSelectSurface,
     onManualConfirm,
     disabled = false,
+    manualBlocked = false,
+    manualBlockMessage,
 }: CheckinSurfacePickerProps) {
     const isWebcamEnabled = enabledSurfaces.includes('staff_webcam')
     const isKioskEnabled = enabledSurfaces.includes('kiosk')
@@ -123,18 +127,30 @@ export function CheckinSurfacePicker({
 
             {/* Fallback Manual */}
             {onManualConfirm && (
-                <div className="pt-1">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={onManualConfirm}
-                        disabled={disabled}
-                        className="w-full min-h-[40px] text-xs text-muted-foreground hover:text-foreground font-medium gap-1.5"
-                    >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Confirmar Presença Manual (Justificativa LGPD)</span>
-                    </Button>
+                <div className="pt-1 space-y-1">
+                    {manualBlocked ? (
+                        <div className="p-3 rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 text-left space-y-1">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                                <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                <span>Confirmação Manual Bloqueada para Terapeuta</span>
+                            </div>
+                            <p className="text-[11px] text-amber-800/90 dark:text-amber-300 leading-relaxed">
+                                {manualBlockMessage || 'Por segurança e conformidade, a administração da clínica deve liberar a confirmação manual para este atendimento.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onManualConfirm}
+                            disabled={disabled}
+                            className="w-full min-h-[44px] text-xs text-muted-foreground hover:text-foreground font-medium gap-1.5"
+                        >
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>Confirmar Presença Manual (Justificativa LGPD)</span>
+                        </Button>
+                    )}
                 </div>
             )}
         </div>
