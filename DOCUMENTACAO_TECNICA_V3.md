@@ -1240,6 +1240,39 @@
     - Auditoria de ausência total de emojis executada com 100% de conformidade.
     - Suíte `test_audit_v5_2.js` reexecutada com 24/24 testes aprovados.
 
+### Item 46: Correção do Erro "ShieldCheck is not defined" e Reformulação Premium Global do Guia de Ajuda Integrado (/dashboard/help)
+- **Data**: 09/09/2026
+- **Módulos**: Ajuda / Suporte / Manual Operacional do Sistema
+- **Caminho Completo**:
+  - Página do Guia de Ajuda Integrado → `app/dashboard/(clinic)/help/page.tsx` → `HelpPage`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - Ao acessar `https://clinigo.app/dashboard/help#controle-de-faltas` (ou clicar no ícone de interrogação da barra lateral junto ao item "Controle de Faltas"), a tela apresentava falha de renderização com a mensagem `"ShieldCheck is not defined"`.
+    - No arquivo `app/dashboard/(clinic)/help/page.tsx`, o ícone `ShieldCheck` estava atribuído ao item `auditoria-biometria`, porém não constava na cláusula de importação de `lucide-react` no topo do arquivo.
+  - **2. Resolução e Reformulação Completa (Padrão Internacional SaaS)**:
+    - **Correção da Dependência**: Importado `ShieldCheck` de `lucide-react`.
+    - **Varredura e Cobertura de 100% do Menu**: Mapeados todos os itens de menu e submenus de `components/layout/sidebar.tsx`. O Guia de Ajuda foi expandido para cobrir 100% das seções da plataforma:
+      - *Principal*: Dashboard, Checklist Inicial (Onboarding).
+      - *Agendamento*: Agenda Geral, Minha Agenda, Agendamentos Recorrentes (Séries), Consultas (Teleconsulta), Recepção, Horários e Turnos Flexíveis, Co-Terapeuta (Atendimento Duplo).
+      - *Equipe*: Terapeutas/Médicos, Pacientes (Diretório A-Z), Aniversariantes de Pacientes.
+      - *Prontuário*: Prontuários (PEP), Prescrições, Documentos, Modelos de Termos & Contratos, Assinatura Digital dos Pais (Rubrica Celular), Validação Biométrica Facial, Templates Prontuário (SOAP/CIF/DAP/World Sensory), Planos Terapêuticos, Evoluções, Controle de Faltas.
+      - *Terapia*: Fila de Espera, Encaminhamentos, Supervisão, Retenção, Risco de Evasão, Aderência, Conformidade Evoluções, Desfechos, Carga de Trabalho, Demográfico, Receita por Modalidade, Sazonalidade, NPS / Satisfação.
+      - *Financeiro*: Lançamentos (Caixa), Pagamentos (Gateways), Fechamentos de Caixa, Créditos de Pacientes, Folha de Repasse, Histórico de Repasses, Produção por Profissional, Notas & Demonstrativos, Auditoria Biométrica Mensal, DRE Consolidada, DRE Centro de Custos, Análise de LTV, Mix de Receita, Projeção de Caixa, Projeção de Faturamento & Metas, Gestão de Inadimplência, Auditoria de Lançamentos, Faturamento TISS (Guias e Lotes), Gestão de Glosas, Perdas (BI), Meu Financeiro (Portal do Terapeuta), Convênios, Regras de Reembolso, Reembolso por Paciente.
+      - *Comunicação*: Chat Interno, WhatsApp (Conexão Baileys), Confirmação Automática via WhatsApp, Mural de Recados da Agenda, Notificações, FluxoMed (CRM), Pipeline (Kanban).
+      - *Gestão*: Estoque (FEFO), Relatórios (Excel/PDF), Termos Legais, Importação em Massa, Automação (Painel & Regras), Configurações de Automação, Auditoria (Logs & LGPD).
+      - *Configurações*: Minha Clínica, Logotipo da Clínica (Co-branding), Página Pública & Autoagendamento, Teleconsulta, Usuários e Permissões (RBAC), Terapias e Procedimentos, Assinatura e Planos, Segurança (2FA / Sessões Ativas), Integrações e Webhooks.
+      - *Administração*: Master Hub, Clínicas (Tenants), Planos, Cobrança Global, Grupos e Redes, Relatórios Globais, API Keys, Health Check, Super Admins.
+    - **Padrão Estético e Funcional**:
+      - Cada card exibe: Categoria, Plano Mínimo, Perfis com Acesso, "Para que serve?", "Quando usar?", "Como utilizar / Operação prática" e botão "Acessar Módulo" com link direto para a rota correspondente.
+      - Suporte a deep-linking: ao acessar via `#ancora` (ex: `#controle-de-faltas`), a página seleciona a categoria necessária, faz scroll suave até o card e aplica destaque visual ativo.
+      - Atalho de teclado `/` para busca instantânea e filtros rápidos por categoria.
+      - Zero emojis em conformidade absoluta com o padrão médico corporativo internacional.
+  - **3. Validação e Testes**:
+    - Varredura de tags JSX não importadas executada com 0 erros.
+    - Auditoria de emojis executada com 100% de conformidade.
+    - Suíte automatizada de testes `test_audit_v5_2.js` executada com 24/24 testes aprovados.
+
+
 
 
 
