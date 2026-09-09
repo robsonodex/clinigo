@@ -315,25 +315,6 @@ export default function DevicesSettingsPage() {
                 </div>
             </div>
 
-            {/* Banner de Orientação e Conformidade */}
-            <Card className="border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20">
-                <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-semibold text-sm">
-                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                            <span>Isolamento Total de Sessão & LGPD</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                            Os dispositivos operam exclusivamente via token pareado. Não utilizam senha de profissional, não derrubam a sessão ativa no computador e exibem apenas o primeiro nome do paciente na fila.
-                        </p>
-                    </div>
-
-                    <div className="text-xs text-emerald-800 dark:text-emerald-300 font-mono bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-emerald-300 dark:border-emerald-800/80 shrink-0">
-                        URL do Dispositivo: <strong>/terminal</strong>
-                    </div>
-                </CardContent>
-            </Card>
-
             {/* Listagem de Dispositivos */}
             <Card className="border border-slate-200 dark:border-slate-800 shadow-xs">
                 <CardHeader className="pb-3">
@@ -485,6 +466,17 @@ export default function DevicesSettingsPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Rodapé Informativo Discreto */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 px-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-slate-500">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Conexão por token com conformidade LGPD.</span>
+                </div>
+                <div className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                    Rota do Terminal: <strong className="text-foreground">/terminal</strong>
+                </div>
+            </div>
 
             {/* Modal: Parear Novo Dispositivo */}
             <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>
