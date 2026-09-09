@@ -192,6 +192,20 @@ export const helpItems: HelpItem[] = [
         tags: ['recepção', 'check-in', 'fila presencial', 'totem', 'painel tv', 'sala de espera']
     },
     {
+        id: 'checkin-biometrico-multisuperficie',
+        title: 'Check-in Biométrico Multi-Superfície',
+        category: 'Agendamento',
+        icon: Camera,
+        href: '/terminal',
+        whatIsIt: 'Arquitetura de conferência de presença e integridade biométrica facial em 3 superfícies independentes: Webcam do computador da terapeuta (sem filas físicas no tablet), Tablet compartilhado da recepção (modo kiosk ou recepção via PIN efêmero de 15 minutos) e Celular do paciente (link seguro de uso único de 3 minutos via WhatsApp/SMS). Inclui também a verificação biométrica antifraude da própria terapeuta antes de iniciar o atendimento.',
+        whenToUse: 'Em cada atendimento presencial para confirmar a chegada do paciente e assegurar conformidade de presença com auditoria fotométrica criptografada.',
+        howToUse: 'A terapeuta pode clicar em "Check-in Facial" no card da sessão e selecionar: "Minha Câmera" para capturar o paciente pela webcam local; "Tablet Recepção" para acionar o totem; ou "Celular do Paciente" para enviar link rápido. No tablet físico, a recepção pode alternar para Modo Recepção digitando o PIN numérico de segurança.',
+        minPlan: 'Avançado',
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+        tags: ['biometria', 'facial', 'check-in', 'webcam', 'tablet', 'terminal', 'antifraude', 'pin', 'kiosk'],
+        aliases: ['checkin-biometrico', 'biometria-facial', 'terminal-biometrico', 'verificacao-terapeuta']
+    },
+    {
         id: 'horarios',
         title: 'Horários e Turnos Flexíveis',
         category: 'Agendamento',
