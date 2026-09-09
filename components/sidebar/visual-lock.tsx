@@ -7,7 +7,7 @@
  * @module components/sidebar/visual-lock
  */
 
-import { Lock, ShieldAlert } from 'lucide-react'
+import { Lock, ShieldAlert, Crown } from 'lucide-react'
 import { useState } from 'react'
 import {
     Dialog,

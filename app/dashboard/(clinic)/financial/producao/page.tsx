@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Download, Users, TrendingUp, DollarSign, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 

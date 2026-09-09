@@ -1216,5 +1216,30 @@
   - **3. Validação**:
     - Executada auditoria de conformidade de emojis em `page.tsx` e `WorldSensoryEvolutionForm.tsx` com 0 ocorrências detectadas. Suíte `test_audit_v5_2.js` executada com 24 testes aprovados (100% de sucesso).
 
+### Item 45: Correção do Erro Fatal "Sparkles is not defined" e Saneamento Preventivo de Imports na Agenda
+- **Data**: 09/09/2026
+- **Módulos**: Recepção → Agenda → Detalhes do Agendamento / Drawer de Atendimento
+- **Caminho Completo**:
+  - Gaveta de Detalhes do Agendamento → `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer`
+  - Trava Visual de Recursos Premium → `components/sidebar/visual-lock.tsx` → `VisualLock`
+  - Modal de Agendamento Manual → `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal`
+  - Relatório de Produção Profissional → `app/dashboard/(clinic)/financial/producao/page.tsx` → `ProducaoProfissionalPage`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - Ao abrir agendamentos confirmados ou interagir com o agendamento na grade da Agenda (`/dashboard/agenda?status=CONFIRMED`), a tela apresentava a tela de erro do React com a mensagem `"Sparkles is not defined"`.
+    - No componente `AppointmentDetailsDrawer.tsx`, na linha 640 (botão "Ajustar valor permanente deste paciente"), o elemento `<Sparkles className="w-3 h-3" />` estava sendo invocado sem a respectiva importação no topo do arquivo. Além de causar o ReferenceError que travava a visualização da agenda, a utilização do ícone `Sparkles` contrariava o padrão médico corporativo estabelecido pelo protocolo v5.2.
+    - Na mesma gaveta, o componente `<Separator />` também constava sem importação nas seções de Teleconsulta e QR Code.
+  - **2. Resolução e Implementação Cirúrgica**:
+    - **Substituição por Ícone Sóbrio e Correção de Import**: No `AppointmentDetailsDrawer.tsx`, o ícone `Sparkles` foi substituído por `SlidersHorizontal`, importado adequadamente de `lucide-react`, conferindo padrão estético profissional para ajuste permanente de repasse. Importado também o componente `Separator` de `@/components/ui/separator`.
+    - **Varredura Preventiva no Repositório**: Identificadas e corrigidas ausências pontuais de importação de componentes em outras três telas:
+      - `components/sidebar/visual-lock.tsx`: importado `Crown` de `lucide-react`.
+      - `components/appointments/ManualAppointmentModal.tsx`: importado `Badge` de `@/components/ui/badge`.
+      - `app/dashboard/(clinic)/financial/producao/page.tsx`: importado `Badge` de `@/components/ui/badge`.
+  - **3. Validação e Testes**:
+    - Executada varredura automatizada com Node.js em todos os arquivos `.tsx`/`.jsx` de `components/` e `app/`, comprovando 0 erros de identificadores JSX não importados.
+    - Auditoria de ausência total de emojis executada com 100% de conformidade.
+    - Suíte `test_audit_v5_2.js` reexecutada com 24/24 testes aprovados.
+
+
 
 

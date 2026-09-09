@@ -30,7 +30,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Trash2, AlertTriangle, Users, GraduationCap, BookOpen } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, Send, DollarSign, Trash2, AlertTriangle, Users, GraduationCap, BookOpen, SlidersHorizontal } from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
 interface AppointmentDetailsDrawerProps {
@@ -637,7 +638,7 @@ export function AppointmentDetailsDrawer({
                                                     }}
                                                     className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1 min-h-[36px]"
                                                 >
-                                                    <Sparkles className="w-3 h-3" />
+                                                    <SlidersHorizontal className="w-3.5 h-3.5" />
                                                     <span>Ajustar valor permanente deste paciente</span>
                                                 </button>
                                             </div>
