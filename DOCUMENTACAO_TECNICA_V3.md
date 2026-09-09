@@ -1181,4 +1181,24 @@
   - **3. Validação**:
     - Executada a suíte de auditoria sistêmica (`test_audit_v5_2.js`) com 24 testes aprovados (100% de sucesso), confirmando ausência de emojis e integridade de schema.
 
+### Item 43: Autorização de Sessões Simultâneas para Suporte Técnico da Dra. Patrícia Mendes
+- **Data**: 09/09/2026
+- **Módulos**: Autenticação, Segurança de Sessão, Single Session Manager, Suporte Técnico
+- **Caminho Completo**:
+  - Serviço de Sessão Única → `lib/services/single-session.ts` → `isUserAllowedConcurrentSessions()`, `registerSingleSession()`, `validateSession()`
+  - Rota de Login → `app/api/auth/login/route.ts` → `POST` (parâmetro de email para registro de sessão)
+  - Rota de Registro de Sessão Client-Side → `app/api/auth/session/register/route.ts` → `POST`
+  - Rota de Validação Periódica de Sessão → `app/api/auth/session/validate/route.ts` → `GET`
+  - Rota de Logout → `app/api/auth/logout/route.ts` → `POST`
+- **Descrição Técnica**:
+  - **1. Objetivo**: Atender à necessidade operacional de suporte técnico direto ao vivo à administradora Dra. Patrícia Mendes (`clinicaworldsensory@gmail.com` / `user_id = ca412219-5039-4193-8b77-15340f1f677d`), permitindo que tanto a usuária em seu computador quanto o suporte técnico em outro dispositivo estejam logados simultaneamente com as mesmas credenciais, sem que a sessão de nenhum dos computadores seja invalidada ou derrubada por colisão de sessão única.
+  - **2. Arquitetura e Implementação Cirúrgica**:
+    - **Função `isUserAllowedConcurrentSessions(userId, email)`**: Implementada em `lib/services/single-session.ts` com validação de `Set` estrito por e-mail e UUID, garantindo que única e exclusivamente essa conta tenha o mecanismo de concorrência liberado. Todas as demais contas e clínicas permanecem com a regra rígida de sessão única mantida a 100%.
+    - **Preservação de Sessões em `registerSingleSession`**: Caso o usuário autenticado pertença à exceção de suporte, a instrução SQL `UPDATE active_sessions SET is_active = false` é ignorada, criando uma nova sessão ativa para o segundo dispositivo sem revogar o registro ativo existente no primeiro computador.
+    - **Validação Imediata em `validateSession` e `/api/auth/session/validate`**: A rota de validação consultada a cada 10 segundos pelo hook de frontend `useSessionGuard` retorna imediatamente `{ valid: true, concurrent_allowed: true }` para a conta liberada, impedindo qualquer disparo de `reason: 'session_replaced'` e eliminando risco de logout forçado por polling.
+    - **Isolamento de Logout em `logout/route.ts`**: Atualizada a rota de logout para que, no caso da conta de suporte liberada, apenas o token do cookie daquele navegador específico seja desativado, impedindo que o fallback geral desative a sessão do outro computador.
+  - **3. Validação**:
+    - Testes unitários executados validando o comportamento de `isUserAllowedConcurrentSessions`, confirmando autorização para `clinicaworldsensory@gmail.com` e rejeição para quaisquer outros usuários. Auditoria sistêmica `test_audit_v5_2.js` executada com 24/24 testes aprovados e padrão corporativo com zero emojis mantido.
+
+
 

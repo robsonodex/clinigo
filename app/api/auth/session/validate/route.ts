@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { validateSession, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
+import { validateSession, isUserAllowedConcurrentSessions, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 import { cookies } from 'next/headers'
 
 export async function GET(_request: NextRequest) {
@@ -18,6 +18,11 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ valid: false, reason: 'no_user' })
         }
 
+        // Excecao autorizada de sessao simultanea (suporte tecnico)
+        if (isUserAllowedConcurrentSessions(user.id, user.email)) {
+            return NextResponse.json({ valid: true, concurrent_allowed: true })
+        }
+
         const cookieStore = await cookies()
         const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
@@ -27,7 +32,7 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ valid: true, reason: 'no_token_legacy' })
         }
 
-        const isValid = await validateSession(supabase, user.id, sessionToken)
+        const isValid = await validateSession(supabase, user.id, sessionToken, user.email)
 
         if (!isValid) {
             console.log('[SESSION VALIDATE] Invalid session for user:', user.email, '- forcing logout')

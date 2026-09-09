@@ -143,7 +143,8 @@ export async function POST(request: NextRequest) {
                 supabase,
                 data.user.id,
                 deviceInfo,
-                ipAddress
+                ipAddress,
+                data.user.email
             )
 
             // Set session cookie

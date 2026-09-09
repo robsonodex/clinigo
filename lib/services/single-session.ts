@@ -26,22 +26,46 @@ export interface SessionRegistration {
     sessionId: string
 }
 
+// Usuários com autorização explícita para múltiplas sessões simultâneas (suporte técnico / auditoria)
+const CONCURRENT_SESSION_ALLOWED_EMAILS = new Set([
+    'clinicaworldsensory@gmail.com'
+])
+
+const CONCURRENT_SESSION_ALLOWED_USER_IDS = new Set([
+    'ca412219-5039-4193-8b77-15340f1f677d'
+])
+
+export function isUserAllowedConcurrentSessions(userId?: string | null, email?: string | null): boolean {
+    if (email && CONCURRENT_SESSION_ALLOWED_EMAILS.has(email.trim().toLowerCase())) {
+        return true
+    }
+    if (userId && CONCURRENT_SESSION_ALLOWED_USER_IDS.has(userId.trim())) {
+        return true
+    }
+    return false
+}
+
 /**
- * Registra nova sessão para o usuário, invalidando todas as anteriores
+ * Registra nova sessão para o usuário, invalidando todas as anteriores (exceto se for usuário de suporte liberado)
  * @returns Token da nova sessão para setar no cookie
  */
 export async function registerSingleSession(
     supabase: SupabaseClient,
     userId: string,
     deviceInfo?: string,
-    ipAddress?: string
+    ipAddress?: string,
+    userEmail?: string
 ): Promise<SessionRegistration> {
-    // 1. Invalidar TODAS as sessões ativas anteriores deste usuário
-    await (supabase
-        .from('active_sessions') as any)
-        .update({ is_active: false })
-        .eq('user_id', userId)
-        .eq('is_active', true)
+    const isConcurrentAllowed = isUserAllowedConcurrentSessions(userId, userEmail)
+
+    // 1. Invalidar TODAS as sessões ativas anteriores deste usuário (apenas se não for exceção autorizada)
+    if (!isConcurrentAllowed) {
+        await (supabase
+            .from('active_sessions') as any)
+            .update({ is_active: false })
+            .eq('user_id', userId)
+            .eq('is_active', true)
+    }
 
     // 2. Criar nova sessão com token único
     const sessionToken = generateSessionToken()
@@ -81,8 +105,14 @@ export async function registerSingleSession(
 export async function validateSession(
     supabase: SupabaseClient,
     userId: string,
-    sessionToken: string
+    sessionToken: string,
+    userEmail?: string
 ): Promise<boolean> {
+    // Se for usuário autorizado para sessões simultâneas (suporte), sempre considera válida
+    if (isUserAllowedConcurrentSessions(userId, userEmail)) {
+        return true
+    }
+
     const { data, error } = await (supabase
         .from('active_sessions') as any)
         .select('id')

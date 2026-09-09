@@ -7,7 +7,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { cookies } from 'next/headers'
-import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
+import { SESSION_COOKIE_NAME, isUserAllowedConcurrentSessions } from '@/lib/services/single-session'
 
 export async function POST(_request: NextRequest) {
     try {
@@ -26,7 +26,7 @@ export async function POST(_request: NextRequest) {
                         .update({ is_active: false, last_active_at: new Date().toISOString() })
                         .eq('user_id', user.id)
                         .eq('session_token', sessionToken)
-                } else {
+                } else if (!isUserAllowedConcurrentSessions(user.id, user.email)) {
                     await (supabaseAdmin
                         .from('active_sessions') as any)
                         .update({ is_active: false, last_active_at: new Date().toISOString() })
