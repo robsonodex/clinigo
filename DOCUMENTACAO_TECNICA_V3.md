@@ -1272,6 +1272,47 @@
     - Auditoria de emojis executada com 100% de conformidade.
     - Suíte automatizada de testes `test_audit_v5_2.js` executada com 24/24 testes aprovados.
 
+### Item 47: Check-in Biométrico do Paciente via Tablet Pareado em Consultório (Sem Login, Sem QR Code)
+- **Data**: 09/09/2026
+- **Módulos**: Recepção, Atendimento Clínico, Configurações, Terminais & Quiosques, Biometria Facial, LGPD
+- **Caminho Completo**:
+  - Banco de Dados / Migrations → `supabase/migrations/20260909_paired_tablet_checkin.sql` → Criação de `clinic_devices`, `checkin_capture_tokens`, `patient_checkin_events` e colunas em `appointments`
+  - Utilitário Realtime Broadcast → `lib/realtime/broadcast.ts` → `sendRealtimeBroadcast()`
+  - API Admin Dispositivos → `app/api/clinic-devices/route.ts` → `GET`, `POST`
+  - API Admin Dispositivos (Item) → `app/api/clinic-devices/[id]/route.ts` → `PATCH`, `DELETE`
+  - API Runtime Tablet (Fila) → `app/api/device/queue/route.ts` → `GET` (autenticado por `x-clinigo-device-token`)
+  - API Runtime Tablet (Início) → `app/api/device/checkin/start/route.ts` → `POST` (geração de `capture_token` de 3 min)
+  - API Push Remoto Desktop → `app/api/appointments/[id]/push-checkin/route.ts` → `POST` (envio para o tablet da sala)
+  - API Confirmação Facial → `app/api/checkin/[token]/confirm/route.ts` → `POST` (validação 1:1, status e broadcast)
+  - API Fallback Assinatura → `app/api/checkin/[token]/signature/route.ts` → `POST` (armazenamento de rubrica e broadcast)
+  - API Fallback Escalonamento → `app/api/checkin/[token]/escalate/route.ts` → `POST` (acionamento da recepção)
+  - API Fallback Manual → `app/api/checkin/[token]/manual-confirm/route.ts` → `POST` (justificativa obrigatória no computador)
+  - API Aprovação Recepção → `app/api/checkin/[token]/reception-approve/route.ts` → `POST`
+  - Interface Terminal Tablet → `app/terminal/page.tsx` → `TerminalPage` (pareamento por código, fila, câmera, assinatura touch)
+  - Painel Admin de Dispositivos → `app/dashboard/(clinic)/configuracoes/dispositivos/page.tsx` → `DevicesSettingsPage`
+  - Menu da Barra Lateral → `components/layout/sidebar.tsx` → Item "Dispositivos & Tablets"
+  - Botão de Início de Atendimento → `components/appointments/DoctorCheckinButton.tsx` → `DoctorCheckinButton` (envio para tablet e escuta broadcast)
+  - Alerta de Escalonamento na Recepção → `components/reception/TerminalEscalationAlert.tsx` e `app/dashboard/(clinic)/recepcao/page.tsx`
+  - Suíte Automatizada de Testes da Especificação → `scripts/test_tablet_checkin_spec.mjs`
+- **Descrição Técnica**:
+  - **1. Objetivo**: Atender à especificação rigorosa de permitir que tablets dedicados instalados nas salas de atendimento/consultórios realizem a validação biométrica facial do paciente antes do atendimento sem necessidade de login de usuário no tablet (`supabase.auth.*`), sem gerar linhas em `active_sessions`, sem derrubar a sessão conectada no computador do terapeuta e sem utilizar QR Codes em nenhuma etapa do processo.
+  - **2. Arquitetura e Implementação**:
+    - **Isolamento Estrutural e Segurança de Sessão**: A rota `/terminal` e seus componentes operam sem nenhum contexto de autenticação de usuário e sem montar `useSessionGuard`. O pareamento é realizado uma única vez inserindo um código criptográfico gerado no painel da clínica, armazenado estritamente em `localStorage.device_token`.
+    - **Privacidade e Conformidade LGPD**: Antes da validação biométrica, a tela do tablet exibe estritamente o primeiro nome/inicial do paciente e horário do atendimento, nunca renderizando CPF, telefone, endereço ou prontuário.
+    - **Tokens Efêmeros de Uso Único (3 minutos)**: Cada atendimento gera um registro em `checkin_capture_tokens` com expiração estrita de 3 minutos e status `pending`. Ao ser validado, o token é marcado como `confirmed` e rejeita qualquer tentativa de reutilização.
+    - **Comunicação em Tempo Real via Supabase Broadcast**: A comunicação entre servidor, tablet e computador ocorre através de canais efêmeros Broadcast (`device:{device_id}`, `appointment:{appointment_id}`, `reception:{clinic_id}`), permitindo que o terapeuta envie o paciente para o tablet e a tela do computador atualize instantaneamente para "Em Atendimento" sem recarregar a página (F5).
+    - **Contingências e Fallbacks Completos**:
+      - *Fallback (a)*: Retentativas guiadas com indicador de enquadramento dentro da janela de 3 minutos.
+      - *Fallback (b)*: Confirmação manual no computador com justificativa (`reason`) estritamente obrigatória (400 se vazia) e log de auditoria.
+      - *Fallback (c)*: Assinatura touch na tela do tablet via `SignaturePad` salvando a rubrica do paciente/responsável.
+      - *Fallback (d)*: Escalonamento para a recepção com alerta sonoro e visual em tempo real em `TerminalEscalationAlert`.
+    - **Log Imutável de Auditoria LGPD**: Toda validação (facial, assinatura, manual ou recepção) grava uma linha definitiva em `patient_checkin_events` com identificação do paciente, agendamento, método, dispositivo e responsável.
+  - **3. Validação e Testes**:
+    - Zero ocorrências de `supabase.auth` em `app/terminal`.
+    - Zero ocorrências de `active_sessions` nas rotas do tablet.
+    - Zero ocorrências de QR Code no fluxo de pareamento ou check-in.
+    - Suíte de testes `scripts/test_tablet_checkin_spec.mjs` executada com 8/8 testes aprovados.
+
 
 
 

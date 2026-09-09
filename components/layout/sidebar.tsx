@@ -57,6 +57,7 @@ import {
     Moon,
     ShieldCheck,
     Plus,
+    Tablet,
 } from 'lucide-react'
 import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
@@ -706,7 +707,12 @@ const navigationSections: NavSection[] = [
                 minPlan: 'AVANCADO',
                 featureKey: FEATURE_KEYS.INTEGRACOES,
             },
-
+            {
+                title: 'Dispositivos & Tablets',
+                href: '/dashboard/configuracoes/dispositivos',
+                icon: Tablet,
+                roles: ['CLINIC_ADMIN'],
+            },
         ],
     },
     // Admin da Plataforma (Super Admin)

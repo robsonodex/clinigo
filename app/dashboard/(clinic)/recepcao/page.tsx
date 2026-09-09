@@ -21,8 +21,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { QRScannerDialog } from '@/components/reception/qr-scanner-dialog'
 import { CheckinDocumentsModal } from './components/checkin-documents-modal'
 import { BirthdayWidget } from '@/components/dashboard/BirthdayWidget'
-import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
+import { TerminalEscalationAlert } from '@/components/reception/TerminalEscalationAlert'
 import { hasFeature } from '@/lib/constants/plan-features'
 import { type PlanType } from '@/lib/constants/plans'
 
@@ -703,6 +703,11 @@ export default function RecepcaoPage() {
                     </Dialog>
                 </div>
             </div>
+
+            {/* Alertas em Tempo Real de Apoio nos Tablets de Consultório */}
+            {currentUser?.clinic_id && (
+                <TerminalEscalationAlert clinicId={currentUser.clinic_id} />
+            )}
 
             {/* Horizontal Stats Capsules (SaaS Premium Internacional: neutros, limpos, cores suaves) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

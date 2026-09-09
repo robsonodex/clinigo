@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -13,6 +13,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   UserCheck,
   Stethoscope,
@@ -24,10 +26,14 @@ import {
   AlertCircle,
   ExternalLink,
   DollarSign,
+  Tablet,
+  Send,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { DoctorBiometricModal } from '@/components/appointments/DoctorBiometricModal';
+import { createClient } from '@/lib/supabase/client';
 
 export interface DoctorCheckinButtonProps {
   appointmentId: string;
@@ -44,6 +50,12 @@ export interface DoctorCheckinButtonProps {
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
   className?: string;
   onSuccess?: (data: any) => void;
+}
+
+interface ClinicDeviceItem {
+  id: string;
+  room_label: string;
+  status: string;
 }
 
 export function DoctorCheckinButton({
@@ -67,14 +79,32 @@ export function DoctorCheckinButton({
   const [loading, setLoading] = useState(false);
   const [resolvedPatientId, setResolvedPatientId] = useState<string | undefined>(patientId);
   const [resolvedClinicId, setResolvedClinicId] = useState<string | undefined>(clinicId);
+  const [localCheckedIn, setLocalCheckedIn] = useState(Boolean(doctorCheckedInAt || status === 'IN_PROGRESS' || status === 'COMPLETED'));
+  const [checkinMethodTag, setCheckinMethodTag] = useState<string | null>(null);
+
+  // Tablets disponíveis
+  const [devices, setDevices] = useState<ClinicDeviceItem[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [isSendingToTablet, setIsSendingToTablet] = useState(false);
+  const [isAwaitingTablet, setIsAwaitingTablet] = useState(false);
+  const [awaitingRoomLabel, setAwaitingRoomLabel] = useState<string>('');
+
+  // Fallback Manual com Motivo Obrigatório
+  const [showManualReasonForm, setShowManualReasonForm] = useState(false);
+  const [manualReason, setManualReason] = useState('');
+
   const router = useRouter();
 
   useEffect(() => {
     if (patientId) setResolvedPatientId(patientId);
     if (clinicId) setResolvedClinicId(clinicId);
-  }, [patientId, clinicId]);
+    if (doctorCheckedInAt || status === 'IN_PROGRESS' || status === 'COMPLETED') {
+      setLocalCheckedIn(true);
+    }
+  }, [patientId, clinicId, doctorCheckedInAt, status]);
 
-  const ensurePatientAndClinicLoaded = async () => {
+  // Carregar dados auxiliares se ausentes
+  const ensurePatientAndClinicLoaded = useCallback(async () => {
     if (resolvedPatientId && resolvedClinicId) {
       return { patientId: resolvedPatientId, clinicId: resolvedClinicId };
     }
@@ -92,18 +122,106 @@ export function DoctorCheckinButton({
       console.warn('Falha ao resolver paciente/clínica:', e);
     }
     return { patientId: resolvedPatientId, clinicId: resolvedClinicId };
-  };
+  }, [appointmentId, resolvedPatientId, resolvedClinicId]);
 
-  const isAlreadyCheckedIn = Boolean(doctorCheckedInAt || status === 'IN_PROGRESS' || status === 'COMPLETED');
+  // Carregar dispositivos pareados da clínica
+  const loadDevices = useCallback(async () => {
+    try {
+      const res = await fetch('/api/clinic-devices');
+      if (res.ok) {
+        const data = await res.json();
+        const activeDevs = (data.devices || []).filter((d: any) => d.status === 'active');
+        setDevices(activeDevs);
+        if (activeDevs.length > 0 && !selectedDeviceId) {
+          setSelectedDeviceId(activeDevs[0].id);
+        }
+      }
+    } catch (err) {
+      console.warn('[DoctorCheckinButton] Falha ao carregar dispositivos:', err);
+    }
+  }, [selectedDeviceId]);
+
+  // Assinatura do Supabase Realtime Broadcast no canal appointment:{appointmentId}
+  useEffect(() => {
+    if (!appointmentId || localCheckedIn) return;
+
+    const supabase = createClient();
+    const channelName = `appointment:${appointmentId}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on('broadcast', { event: 'checkin_confirmed' }, (payload: any) => {
+        const data = payload.payload || payload;
+        const method = data?.method || 'facial';
+
+        setLocalCheckedIn(true);
+        setIsAwaitingTablet(false);
+        setOpenDialog(false);
+        setCheckinMethodTag(method === 'facial' ? 'Biometria Tablet' : method === 'signature' ? 'Assinatura Touch' : 'Manual');
+
+        toast.success('Presença confirmada no tablet!', {
+          description: `Paciente ${patientName} validado com sucesso.`,
+        });
+
+        onSuccess?.(data);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [appointmentId, localCheckedIn, patientName, onSuccess]);
+
+  const isAlreadyCheckedIn = localCheckedIn;
   const isDoubleVerified = verificationLevel === 'DOUBLE_VERIFIED' || (hasReceptionCheckin && isAlreadyCheckedIn);
 
-  const handleConfirmCheckin = async () => {
+  // Enviar push remoto para o tablet
+  const handlePushToTablet = async () => {
+    if (!selectedDeviceId) {
+      toast.error('Selecione o tablet da sala de atendimento.');
+      return;
+    }
+
+    try {
+      setIsSendingToTablet(true);
+      const res = await fetch(`/api/appointments/${appointmentId}/push-checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: selectedDeviceId }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Erro ao acionar tablet da sala');
+      }
+
+      setIsAwaitingTablet(true);
+      setAwaitingRoomLabel(json.room_label || 'Tablet');
+      toast.info(`Check-in enviado para o tablet (${json.room_label}). Aguardando confirmação...`);
+    } catch (err: any) {
+      toast.error(err.message || 'Falha ao acionar tablet');
+    } finally {
+      setIsSendingToTablet(false);
+    }
+  };
+
+  // Confirmação manual com justificativa obrigatória
+  const handleConfirmManualWithReason = async () => {
+    const trimmedReason = manualReason.trim();
+    if (!trimmedReason || trimmedReason.length < 3) {
+      toast.error('Informe a justificativa para confirmação sem biometria (mínimo 3 caracteres).');
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await fetch(`/api/appointments/${appointmentId}/doctor-checkin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: 'APP' }),
+        body: JSON.stringify({
+          method: 'MANUAL',
+          reason: trimmedReason,
+        }),
       });
 
       const json = await res.json();
@@ -113,13 +231,14 @@ export function DoctorCheckinButton({
       }
 
       toast.success('Atendimento iniciado com sucesso!', {
-        description: `Prontuário de ${patientName} pronto. Redirecionando...`,
+        description: `Presença de ${patientName} confirmada com justificativa.`,
       });
 
+      setLocalCheckedIn(true);
       setOpenDialog(false);
+      setShowManualReasonForm(false);
       onSuccess?.(json.data);
 
-      // Redireciona imediatamente para o prontuário do paciente
       if (json.data?.prontuario_url) {
         router.push(json.data.prontuario_url);
       } else {
@@ -158,7 +277,7 @@ export function DoctorCheckinButton({
           ) : (
             <>
               <Stethoscope className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Em Atendimento</span>
+              <span>{checkinMethodTag ? `Em Atendimento (${checkinMethodTag})` : 'Em Atendimento'}</span>
             </>
           )}
         </Badge>
@@ -186,6 +305,7 @@ export function DoctorCheckinButton({
         onClick={(e) => {
           e.stopPropagation();
           ensurePatientAndClinicLoaded();
+          loadDevices();
           setOpenDialog(true);
         }}
         className={`bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 min-h-[44px] shadow-sm transition-all font-medium ${className}`}
@@ -222,25 +342,67 @@ export function DoctorCheckinButton({
                 )}
               </div>
 
-              {hasReceptionCheckin ? (
-                <div className="p-3 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
-                  <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-semibold">Check-in na Recepção Realizado</strong>
-                    <span>O paciente já passou pela recepção/totem. Você pode validar via biometria facial na sala ou confirmar diretamente.</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-semibold">Check-in Direto no Consultório</strong>
-                    <span>O paciente ainda não passou pela recepção. A validação será realizada pelo terapeuta responsável.</span>
+              {/* Status de aguardo do tablet */}
+              {isAwaitingTablet && (
+                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2 animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+                    <div>
+                      <strong className="block font-semibold">Aguardando confirmação no tablet</strong>
+                      <span>A tela de check-in foi aberta na {awaitingRoomLabel}.</span>
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-2 pt-2">
+              {/* SEÇÃO 1: Enviar para Tablet Pareado da Sala */}
+              {devices.length > 0 && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1.5 text-foreground">
+                      <Tablet className="w-4 h-4 text-emerald-600" />
+                      Check-in no Tablet da Sala
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      Sem login / Sem QR
+                    </Badge>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedDeviceId}
+                      onChange={(e) => setSelectedDeviceId(e.target.value)}
+                      className="flex-1 h-10 px-3 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-1 focus:ring-emerald-500"
+                    >
+                      {devices.map((dev) => (
+                        <option key={dev.id} value={dev.id}>
+                          {dev.room_label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <Button
+                      type="button"
+                      onClick={handlePushToTablet}
+                      disabled={isSendingToTablet || isAwaitingTablet}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[40px] px-3.5 text-xs font-semibold rounded-xl gap-1.5 shrink-0"
+                    >
+                      {isSendingToTablet ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>Enviar</span>
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Abre a câmera no tablet sem deslogar seu computador.
+                  </p>
+                </div>
+              )}
+
+              {/* SEÇÃO 2: Outras Opções de Validação */}
+              <div className="space-y-2 pt-1">
                 <Button
                   type="button"
                   onClick={async () => {
@@ -248,29 +410,58 @@ export function DoctorCheckinButton({
                     setOpenDialog(false);
                     setOpenBiometricModal(true);
                   }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl font-semibold gap-2 shadow-xs text-xs sm:text-sm"
+                  className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white min-h-[44px] rounded-xl font-semibold gap-2 shadow-xs text-xs sm:text-sm"
                 >
-                  <Camera className="w-4 h-4" />
-                  <span>Validar com Biometria Facial</span>
+                  <Camera className="w-4 h-4 text-emerald-400" />
+                  <span>Validar com Câmera do Computador</span>
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleConfirmCheckin();
-                  }}
-                  disabled={loading}
-                  className="w-full min-h-[44px] rounded-xl font-medium gap-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
+                {!showManualReasonForm ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowManualReasonForm(true)}
+                    className="w-full min-h-[44px] rounded-xl font-medium gap-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm"
+                  >
                     <UserCheck className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                  )}
-                  <span>Confirmar Sem Biometria (Manual)</span>
-                </Button>
+                    <span>Confirmar Sem Biometria (Manual)</span>
+                  </Button>
+                ) : (
+                  <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl space-y-2">
+                    <Label className="text-xs font-semibold text-amber-900 dark:text-amber-200 block">
+                      Motivo da Confirmação Manual (Obrigatório - LGPD)
+                    </Label>
+                    <Input
+                      type="text"
+                      placeholder="Ex: Criança com aversão sensorial / Falha de conexão"
+                      value={manualReason}
+                      onChange={(e) => setManualReason(e.target.value)}
+                      className="h-10 text-xs rounded-xl bg-white dark:bg-slate-900"
+                      autoFocus
+                    />
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowManualReasonForm(false)}
+                        className="text-xs min-h-[38px] rounded-lg"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleConfirmManualWithReason}
+                        disabled={loading || !manualReason.trim()}
+                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold min-h-[38px] rounded-lg flex-1"
+                      >
+                        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                        Confirmar Presença Manual
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -278,15 +469,19 @@ export function DoctorCheckinButton({
           <AlertDialogFooter className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <AlertDialogCancel
               disabled={loading}
+              onClick={() => {
+                setShowManualReasonForm(false);
+                setIsAwaitingTablet(false);
+              }}
               className="min-h-[44px] rounded-xl font-medium w-full text-xs"
             >
-              Cancelar
+              Fechar
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal de Validação Facial pelo Profissional */}
+      {/* Modal de Validação Facial pelo Computador */}
       {resolvedPatientId && (
         <DoctorBiometricModal
           open={openBiometricModal}
@@ -296,6 +491,7 @@ export function DoctorCheckinButton({
           patientName={patientName}
           clinicId={resolvedClinicId || ''}
           onSuccess={(data) => {
+            setLocalCheckedIn(true);
             onSuccess?.(data);
             if (data?.prontuario_url) {
               router.push(data.prontuario_url);
@@ -303,10 +499,12 @@ export function DoctorCheckinButton({
               router.push(`/dashboard/prontuarios/${appointmentId}`);
             }
           }}
-          onConfirmManual={handleConfirmCheckin}
+          onConfirmManual={() => {
+            setShowManualReasonForm(true);
+            setOpenDialog(true);
+          }}
         />
       )}
     </>
   );
 }
-

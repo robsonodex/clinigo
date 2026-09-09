@@ -63,6 +63,7 @@ import {
     Copy,
     Check,
     ArrowRight,
+    Tablet,
     Sparkles as _ForbiddenSparkles, // Not used in UI
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -1206,6 +1207,20 @@ export const helpItems: HelpItem[] = [
         minPlan: 'Avançado',
         roles: ['CLINIC_ADMIN'],
         tags: ['integrações', 'webhooks', 'api', 'google agenda', 'conectividade']
+    },
+    {
+        id: 'dispositivos-tablets',
+        title: 'Dispositivos & Tablets Pareados',
+        category: 'Configurações',
+        icon: Tablet,
+        href: '/dashboard/configuracoes/dispositivos',
+        whatIsIt: 'Gestão e pareamento de tablets dedicados instalados nos consultórios para validação biométrica facial do paciente antes do atendimento. Funciona em modo quiosque (/terminal) sem necessidade de login de usuário, sem derrubar a sessão conectada no computador do terapeuta, sem QR Code e com total conformidade LGPD.',
+        whenToUse: 'Ao instalar tablets nos consultórios para que o terapeuta ou o paciente realize a comprovação de presença via câmera do tablet ou assinatura touch.',
+        howToUse: 'Clique em "Parear Novo Tablet", informe o nome da sala (ex: Consultório 1) e copie o código gerado. No tablet da sala, abra clinigo.app/terminal e digite o código uma única vez. O tablet exibirá a fila do dia da sala e responderá instantaneamente aos disparos do computador do terapeuta.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN'],
+        tags: ['tablet', 'terminal', 'quiosque', 'biometria facial', 'dispositivos', 'sala de atendimento', 'pareamento'],
+        aliases: ['dispositivos', 'tablets', 'terminal']
     },
 
     // ==========================================
