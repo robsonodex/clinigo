@@ -197,12 +197,12 @@ export const helpItems: HelpItem[] = [
         category: 'Agendamento',
         icon: Camera,
         href: '/terminal',
-        whatIsIt: 'Arquitetura de conferência de presença e integridade biométrica facial em 3 superfícies independentes: Webcam do computador da terapeuta (sem filas físicas no tablet), Tablet compartilhado da recepção (modo kiosk ou recepção via PIN efêmero de 15 minutos) e Celular do paciente (link seguro de uso único de 3 minutos via WhatsApp/SMS). Inclui também a verificação biométrica antifraude da própria terapeuta antes de iniciar o atendimento.',
+        whatIsIt: 'Arquitetura de conferência de presença e integridade biométrica facial em 3 superfícies independentes: Webcam do computador da terapeuta (sem filas físicas), Dispositivo compartilhado da recepção (modo kiosk ou recepção via PIN efêmero de 15 minutos) e Celular do paciente (link seguro de uso único de 3 minutos via WhatsApp/SMS). Inclui também a verificação biométrica antifraude da própria terapeuta antes de iniciar o atendimento.',
         whenToUse: 'Em cada atendimento presencial para confirmar a chegada do paciente e assegurar conformidade de presença com auditoria fotométrica criptografada.',
-        howToUse: 'A terapeuta pode clicar em "Check-in Facial" no card da sessão e selecionar: "Minha Câmera" para capturar o paciente pela webcam local; "Tablet Recepção" para acionar o totem; ou "Celular do Paciente" para enviar link rápido. No tablet físico, a recepção pode alternar para Modo Recepção digitando o PIN numérico de segurança.',
+        howToUse: 'A terapeuta pode clicar em "Check-in Facial" no card da sessão e selecionar: "Minha Câmera" para capturar o paciente pela webcam local; "Dispositivo Recepção" para acionar o terminal; ou "Celular do Paciente" para enviar link rápido. No dispositivo físico, a recepção pode alternar para Modo Recepção digitando o PIN numérico de segurança.',
         minPlan: 'Avançado',
         roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
-        tags: ['biometria', 'facial', 'check-in', 'webcam', 'tablet', 'terminal', 'antifraude', 'pin', 'kiosk'],
+        tags: ['biometria', 'facial', 'check-in', 'webcam', 'dispositivo', 'terminal', 'antifraude', 'pin', 'kiosk'],
         aliases: ['checkin-biometrico', 'biometria-facial', 'terminal-biometrico', 'verificacao-terapeuta']
     },
     {
@@ -1223,18 +1223,18 @@ export const helpItems: HelpItem[] = [
         tags: ['integrações', 'webhooks', 'api', 'google agenda', 'conectividade']
     },
     {
-        id: 'dispositivos-tablets',
-        title: 'Dispositivos & Tablets Pareados',
+        id: 'dispositivos-pareados',
+        title: 'Dispositivos Pareados',
         category: 'Configurações',
         icon: Tablet,
         href: '/dashboard/configuracoes/dispositivos',
-        whatIsIt: 'Gestão e pareamento de tablets dedicados instalados nos consultórios para validação biométrica facial do paciente antes do atendimento. Funciona em modo quiosque (/terminal) sem necessidade de login de usuário, sem derrubar a sessão conectada no computador do terapeuta, sem QR Code e com total conformidade LGPD.',
-        whenToUse: 'Ao instalar tablets nos consultórios para que o terapeuta ou o paciente realize a comprovação de presença via câmera do tablet ou assinatura touch.',
-        howToUse: 'Clique em "Parear Novo Tablet", informe o nome da sala (ex: Consultório 1) e copie o código gerado. No tablet da sala, abra clinigo.app/terminal e digite o código uma única vez. O tablet exibirá a fila do dia da sala e responderá instantaneamente aos disparos do computador do terapeuta.',
+        whatIsIt: 'Gestão e pareamento de dispositivos dedicados instalados nos consultórios para validação biométrica facial do paciente antes do atendimento. Funciona em modo quiosque (/terminal) sem necessidade de login de usuário, sem derrubar a sessão conectada no computador do profissional, sem QR Code e com total conformidade LGPD.',
+        whenToUse: 'Ao instalar dispositivos nos consultórios para que o profissional ou o paciente realize a comprovação de presença via câmera do terminal ou assinatura touch.',
+        howToUse: 'Clique em "Novo Dispositivo", informe o nome da sala (ex: Consultório 1) e copie o código gerado. No dispositivo da sala, abra clinigo.app/terminal e digite o código uma única vez. O dispositivo exibirá a fila do dia da sala e responderá instantaneamente aos disparos do computador do profissional.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
-        tags: ['tablet', 'terminal', 'quiosque', 'biometria facial', 'dispositivos', 'sala de atendimento', 'pareamento'],
-        aliases: ['dispositivos', 'tablets', 'terminal']
+        tags: ['terminal', 'quiosque', 'biometria facial', 'dispositivos', 'sala de atendimento', 'pareamento'],
+        aliases: ['dispositivos', 'dispositivos-pareados', 'terminal']
     },
 
     // ==========================================

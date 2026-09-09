@@ -708,7 +708,7 @@ const navigationSections: NavSection[] = [
                 featureKey: FEATURE_KEYS.INTEGRACOES,
             },
             {
-                title: 'Dispositivos & Tablets',
+                title: 'Dispositivos Pareados',
                 href: '/dashboard/configuracoes/dispositivos',
                 icon: Tablet,
                 roles: ['CLINIC_ADMIN'],

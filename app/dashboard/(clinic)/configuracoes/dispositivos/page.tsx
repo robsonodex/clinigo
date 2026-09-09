@@ -282,7 +282,7 @@ export default function DevicesSettingsPage() {
                     <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                         <Tablet className="w-5 h-5" />
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                            Dispositivos & Tablets Pareados
+                            Dispositivos Pareados
                         </h1>
                     </div>
                     <p className="text-xs sm:text-sm text-muted-foreground">
@@ -310,7 +310,7 @@ export default function DevicesSettingsPage() {
                         className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] px-4 text-xs font-semibold rounded-xl gap-1.5 shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>Parear Novo Tablet</span>
+                        <span>Novo Dispositivo</span>
                     </Button>
                 </div>
             </div>
@@ -324,12 +324,12 @@ export default function DevicesSettingsPage() {
                             <span>Isolamento Total de Sessão & LGPD</span>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                            Os tablets operam exclusivamente via token pareado. Não utilizam senha de terapeuta, não derrubam a sessão ativa no computador e exibem apenas o primeiro nome do paciente na fila.
+                            Os dispositivos operam exclusivamente via token pareado. Não utilizam senha de profissional, não derrubam a sessão ativa no computador e exibem apenas o primeiro nome do paciente na fila.
                         </p>
                     </div>
 
                     <div className="text-xs text-emerald-800 dark:text-emerald-300 font-mono bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-emerald-300 dark:border-emerald-800/80 shrink-0">
-                        URL do Tablet: <strong>/terminal</strong>
+                        URL do Dispositivo: <strong>/terminal</strong>
                     </div>
                 </CardContent>
             </Card>
@@ -343,7 +343,7 @@ export default function DevicesSettingsPage() {
                                 Dispositivos Cadastrados
                             </CardTitle>
                             <CardDescription className="text-xs text-muted-foreground">
-                                Gerencie as salas habilitadas para check-in por tablet
+                                Gerencie as salas habilitadas para check-in por dispositivo
                             </CardDescription>
                         </div>
                         <Badge variant="outline" className="text-xs font-mono">
@@ -364,10 +364,10 @@ export default function DevicesSettingsPage() {
                                 <MonitorSmartphone className="w-6 h-6" />
                             </div>
                             <h3 className="text-sm font-bold text-foreground">
-                                Nenhum tablet pareado ainda
+                                Nenhum dispositivo pareado ainda
                             </h3>
                             <p className="text-xs text-muted-foreground">
-                                Clique no botão acima para registrar o primeiro tablet de consultório.
+                                Clique no botão acima para registrar o primeiro dispositivo de consultório.
                             </p>
                         </div>
                     ) : (
@@ -456,7 +456,7 @@ export default function DevicesSettingsPage() {
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => setDeviceToRevoke(device)}
-                                                            title={isActive ? 'Revogar acesso deste tablet' : 'Reativar tablet'}
+                                                            title={isActive ? 'Revogar acesso deste dispositivo' : 'Reativar dispositivo'}
                                                             className={`min-h-[44px] min-w-[44px] p-2 rounded-lg ${
                                                                 isActive ? 'text-slate-600 hover:text-rose-600' : 'text-emerald-600 hover:text-emerald-700'
                                                             }`}
@@ -494,11 +494,11 @@ export default function DevicesSettingsPage() {
                             <div className="flex items-center gap-2 text-emerald-600">
                                 <Tablet className="w-5 h-5" />
                                 <DialogTitle className="text-base sm:text-lg font-bold">
-                                    Parear Novo Tablet de Consultório
+                                    Novo Dispositivo de Consultório
                                 </DialogTitle>
                             </div>
                             <DialogDescription className="text-xs text-muted-foreground">
-                                Identifique a sala onde o tablet ficará instalado
+                                Identifique a sala onde o dispositivo ficará instalado
                             </DialogDescription>
                         </DialogHeader>
 
@@ -517,7 +517,7 @@ export default function DevicesSettingsPage() {
                                     autoFocus
                                 />
                                 <p className="text-[11px] text-muted-foreground">
-                                    Este nome aparecerá no topo do tablet para orientar a equipe.
+                                    Este nome aparecerá no topo do dispositivo para orientar a equipe.
                                 </p>
                             </div>
                         </div>
@@ -557,7 +557,7 @@ export default function DevicesSettingsPage() {
                         <div className="flex items-center gap-2 text-emerald-600">
                             <ShieldCheck className="w-5 h-5" />
                             <DialogTitle className="text-base sm:text-lg font-bold">
-                                Código de Pareamento do Tablet
+                                Código de Pareamento do Dispositivo
                             </DialogTitle>
                         </div>
                         <DialogDescription className="text-xs text-muted-foreground">
@@ -569,7 +569,7 @@ export default function DevicesSettingsPage() {
                         <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
                             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                             <span>
-                                Este código é exibido integralmente <strong>uma única vez</strong> por segurança. Copie e insira no tablet.
+                                Este código é exibido integralmente <strong>uma única vez</strong> por segurança. Copie e insira no dispositivo.
                             </span>
                         </div>
 
@@ -602,11 +602,11 @@ export default function DevicesSettingsPage() {
                         </div>
 
                         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1 text-muted-foreground">
-                            <strong className="text-foreground block font-semibold">Como parear no tablet:</strong>
+                            <strong className="text-foreground block font-semibold">Como parear no dispositivo:</strong>
                             <ol className="list-decimal list-inside space-y-1 pl-1">
-                                <li>No tablet da sala, abra o navegador e acesse a rota <code>/terminal</code>.</li>
+                                <li>No dispositivo da sala, abra o navegador e acesse a rota <code>/terminal</code>.</li>
                                 <li>Cole ou digite o código acima no campo exibido.</li>
-                                <li>Toque em <strong>Conectar Tablet à Sala</strong>.</li>
+                                <li>Toque em <strong>Conectar Dispositivo à Sala</strong>.</li>
                             </ol>
                         </div>
                     </div>
@@ -677,12 +677,12 @@ export default function DevicesSettingsPage() {
                 <AlertDialogContent className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-base sm:text-lg font-bold">
-                            {deviceToRevoke?.status === 'active' ? 'Revogar Acesso do Tablet?' : 'Reativar Tablet?'}
+                            {deviceToRevoke?.status === 'active' ? 'Revogar Acesso do Dispositivo?' : 'Reativar Dispositivo?'}
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-xs sm:text-sm text-muted-foreground">
                             {deviceToRevoke?.status === 'active'
-                                ? `O tablet instalado na sala "${deviceToRevoke?.room_label}" perderá o acesso à fila até ser reativado.`
-                                : `O tablet da sala "${deviceToRevoke?.room_label}" poderá retomar os check-ins normalmente.`}
+                                ? `O dispositivo instalado na sala "${deviceToRevoke?.room_label}" perderá o acesso à fila até ser reativado.`
+                                : `O dispositivo da sala "${deviceToRevoke?.room_label}" poderá retomar os check-ins normalmente.`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
@@ -712,7 +712,7 @@ export default function DevicesSettingsPage() {
                             Regenerar Código de Pareamento?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-xs sm:text-sm text-muted-foreground">
-                            Ao regenerar, o código anterior do tablet da sala &ldquo;{deviceToRegenerate?.room_label}&rdquo; deixará de funcionar imediatamente. Você precisará digitar o novo código no tablet.
+                            Ao regenerar, o código anterior do dispositivo da sala &ldquo;{deviceToRegenerate?.room_label}&rdquo; deixará de funcionar imediatamente. Você precisará digitar o novo código no dispositivo.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
@@ -738,7 +738,7 @@ export default function DevicesSettingsPage() {
                             Excluir Registro do Dispositivo?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-xs sm:text-sm text-muted-foreground">
-                            Tem certeza que deseja excluir o tablet da sala &ldquo;{deviceToDelete?.room_label}&rdquo;? Esta ação não pode ser desfeita.
+                            Tem certeza que deseja excluir o dispositivo da sala &ldquo;{deviceToDelete?.room_label}&rdquo;? Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">

@@ -503,7 +503,7 @@ export default function TerminalPage() {
                             Terminal CliniGo
                         </CardTitle>
                         <CardDescription className="text-xs text-slate-400">
-                            Pareamento de tablet para validação presencial de sala
+                            Pareamento de dispositivo para validação presencial de sala
                         </CardDescription>
                     </CardHeader>
 
@@ -529,7 +529,7 @@ export default function TerminalPage() {
                                     autoFocus
                                 />
                                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                                    Gerado no painel da clínica em: Configurações &gt; Dispositivos & Tablets.
+                                    Gerado no painel da clínica em: Configurações &gt; Dispositivos Pareados.
                                 </p>
                             </div>
 
@@ -546,7 +546,7 @@ export default function TerminalPage() {
                                 ) : (
                                     <>
                                         <Check className="w-4 h-4 mr-2" />
-                                        Conectar Tablet à Sala
+                                        Conectar Dispositivo à Sala
                                     </>
                                 )}
                             </Button>

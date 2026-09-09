@@ -374,13 +374,13 @@ export function DoctorCheckinButton({
                 )}
               </div>
 
-              {/* Status de aguardo do tablet */}
+              {/* Status de aguardo do dispositivo */}
               {isAwaitingTablet && (
                 <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2 animate-pulse">
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
                     <div>
-                      <strong className="block font-semibold">Aguardando confirmação no tablet</strong>
+                      <strong className="block font-semibold">Aguardando confirmação no dispositivo</strong>
                       <span>A tela de check-in foi aberta na {awaitingRoomLabel}.</span>
                     </div>
                   </div>
@@ -402,7 +402,7 @@ export function DoctorCheckinButton({
                         if (devices.length > 0) {
                           handlePushToTablet();
                         } else {
-                          toast.info('Nenhum tablet pareado no momento. Utilize a câmera do computador.');
+                          toast.info('Nenhum dispositivo pareado no momento. Utilize a câmera do computador.');
                         }
                       } else if (surface === 'patient_mobile') {
                         handleSendPatientMobileLink();
@@ -411,11 +411,11 @@ export function DoctorCheckinButton({
                     onManualConfirm={() => setShowManualReasonForm(true)}
                   />
 
-                  {/* Se houver mais de 1 tablet na clínica, permite selecionar a sala */}
+                  {/* Se houver mais de 1 dispositivo na clínica, permite selecionar a sala */}
                   {devices.length > 1 && (
                     <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
                       <Tablet className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="text-[11px] text-muted-foreground">Tablet Alvo:</span>
+                      <span className="text-[11px] text-muted-foreground">Dispositivo Alvo:</span>
                       <select
                         value={selectedDeviceId}
                         onChange={(e) => setSelectedDeviceId(e.target.value)}

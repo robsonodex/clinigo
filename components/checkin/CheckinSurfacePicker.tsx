@@ -60,13 +60,13 @@ export function CheckinSurfacePicker({
                                 </Badge>
                             </div>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
-                                Valide o paciente diretamente no seu computador sem fila no tablet.
+                                Valide o paciente diretamente no seu computador sem fila física.
                             </p>
                         </div>
                     </button>
                 )}
 
-                {/* 2. Tablet da Sala / Quiosque Compartilhado */}
+                {/* 2. Dispositivo da Sala / Quiosque Compartilhado */}
                 {isKioskEnabled && (
                     <button
                         type="button"
@@ -80,14 +80,14 @@ export function CheckinSurfacePicker({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1">
                                 <span className="text-xs font-bold text-foreground">
-                                    Tablet da Sala / Recepção
+                                    Dispositivo da Sala / Recepção
                                 </span>
                                 <Badge variant="outline" className="text-[10px] font-mono">
                                     Compartilhado
                                 </Badge>
                             </div>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
-                                Envia o comando remoto para o tablet da sala (sem deslogar).
+                                Envia o comando remoto para o dispositivo da sala (sem deslogar).
                             </p>
                         </div>
                     </button>
