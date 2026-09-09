@@ -76,6 +76,8 @@ const PUBLIC_ROUTES = [
     '/api/totem/', // Totem public APIs - gate de plano feito internamente na rota
     '/api/consulting-rooms', // Public TV panel access (controlled by clinicId param)
     '/api/reception/queue', // Public TV panel access (controlled by clinicId param)
+    '/api/device/', // Dispositivos pareados - autenticacao via header x-clinigo-device-token
+    '/api/reception/pin-login', // Login temporario por PIN no terminal da recepcao
 ]
 
 // Patient portal routes (JWT auth, separate from Supabase)
@@ -565,6 +567,8 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/assinar/') || // Public digital signature for parents/guardians
         pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
         pathname.startsWith('/totem/') || // Public totem for clinics (gate de plano feito nas APIs)
+        pathname === '/terminal' || // Terminal quiosque para salas
+        pathname.startsWith('/c/') || // Check-in mobile do paciente via link efemero
         pathname.match(/^\/[^/]+\/agendar/)
 
     // Public routes/pages without user = allow
