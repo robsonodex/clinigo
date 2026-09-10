@@ -1515,3 +1515,37 @@
   - **4. Padronização de Nomenclatura SaaS Corporativo Internacional**:
     - Aprovado o refinamento terminológico para padrão corporativo internacional: a nomenclatura de interface foi atualizada de "Aluna" para "Mentoria Clínica / Formação Técnica" e "Mentorando(a) / Formando(a)".
     - O botão de ação rápida no modal foi padronizado como "Agendar Mentoria", a tag na agenda como "Mentoria", o bloco do agendamento como "MENTORIA: [NOME]" e o menu de conversão em Pacientes como "Converter em Mentoria".
+
+### Item 54: Exclusão Definitiva de Usuários e Profissionais com Higienização Relacional e RLS
+- **Data**: 10/09/2026
+- **Módulos**: Cadastros → Equipe / Profissionais, Segurança e Administração
+- **Caminho Completo**:
+  - Backend → Usuários API → `app/api/users/[id]/route.ts` → `DELETE` (Higienização atômica de dependências e exclusão física condicional com confirmação estrita)
+  - Frontend → Tabela de Usuários → `components/users/user-table.tsx` (Diálogo de confirmação reforçado com alerta de exclusão permanente e verificação de integridade)
+- **Descrição Técnica**:
+  - Implementada a rotina de exclusão física definitiva solicitada pela clínica World Sensory para expurgo total de cadastros indevidos ou de testes.
+  - A operação executa em transação protegida: remove associações secundárias, logs de auditoria e registros transitórios antes do expurgo, mantendo a integridade referencial e o isolamento multi-tenant por `clinic_id`.
+
+### Item 55: Resolução de Dependência de Ícone na Evolução de Prontuário
+- **Data**: 10/09/2026
+- **Módulos**: Prontuário Clínico → Evoluções Diárias
+- **Caminho Completo**:
+  - Frontend → Prontuário → `components/medical-records/daily-evolution-form.tsx` (Inclusão da importação de `AlertCircle` da biblioteca `lucide-react`)
+- **Descrição Técnica**:
+  - Corrigido o erro de execução reportado pela terapeuta Lara Maria (World Sensory) em que a visualização/abertura da evolução diária falhava devido à falta de importação de `AlertCircle`.
+
+### Item 56: Rotina de Backup Integral do Sistema CliniGo (Nuvem e Local)
+- **Data**: 10/09/2026
+- **Módulos**: Infraestrutura, Banco de Dados, Repositório de Código, Cloud
+- **Caminho Completo**:
+  - Nuvem → GitHub → Repositório `robsonodex/clinigo.git` (Branch `master` sincronizada, criação e envio da tag `backup-cloud-2026-09-10`)
+  - Nuvem → Vercel → Projeto `clinigo-saas` (Deploy de produção ativo e validado sob a organização `nodexs-projects-8a6ee1f1`)
+  - Nuvem → Supabase → Projeto `dlxakeejmyzhzdxzjgne` (`ACTIVE_HEALTHY`, inventário das 182 tabelas ativas do schema public)
+  - Local → Disco D: → `D:\Backup_Clinigo_10-09-2026\`
+    - `D:\Backup_Clinigo_10-09-2026\clinigo\` (Snapshot completo de 4.071 arquivos e diretórios, incluindo histórico `.git`, documentações e scripts; sem artefatos efêmeros `node_modules` e `.next`)
+    - `D:\Backup_Clinigo_10-09-2026\database\` (`tables_schema.json` e `tables_statistics.json` com estatísticas de linhas e volumes)
+    - `D:\Backup_Clinigo_10-09-2026\clinigo_backup_full_2026-09-10.zip` (Arquivo compactado portátil de 57,5 MB)
+- **Descrição Técnica**:
+  - Procedimento automatizado de redundância dupla (nuvem e armazenamento físico local).
+  - Preservação da integridade de código, migrações SQL, esquemas de dados, histórico de commits e documentação técnica corporativa.
+
