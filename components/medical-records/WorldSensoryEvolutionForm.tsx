@@ -110,6 +110,9 @@ interface WorldSensoryEvolutionFormProps {
         manual_checkin_unlocked_at?: string | null
     } | null
     clinicName?: string
+    canUnlockManual?: boolean
+    onToggleManualUnlock?: () => Promise<void> | void
+    isUnlockingManual?: boolean
 }
 
 export function WorldSensoryEvolutionForm({
@@ -130,7 +133,10 @@ export function WorldSensoryEvolutionForm({
     doctor,
     patient,
     appointment,
-    clinicName = 'World Sensory'
+    clinicName = 'World Sensory',
+    canUnlockManual = false,
+    onToggleManualUnlock,
+    isUnlockingManual = false
 }: WorldSensoryEvolutionFormProps) {
     const printableRef = useRef<HTMLDivElement>(null)
     const [isPrinting, setIsPrinting] = useState(false)
@@ -157,7 +163,8 @@ export function WorldSensoryEvolutionForm({
         }
     }
 
-    // Validacao biometrica e controle de evolucao
+    // Validacao biometrica e controle de evolucao (exclusividade de liberacao pela gestao em Home Care / Excecoes)
+    const isManualUnlocked = Boolean(appointment?.manual_checkin_unlocked_at)
     const isBiometricsValidated = Boolean(
         appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' || 
         appointment?.verification_level === 'DOUBLE_VERIFIED' || 
@@ -165,8 +172,7 @@ export function WorldSensoryEvolutionForm({
         appointment?.checkin_method === 'facial' ||
         appointment?.checkin_confirmed_at ||
         appointment?.checked_in_at ||
-        appointment?.manual_checkin_unlocked_at ||
-        sessionStatusNotes?.toLowerCase().includes('biometria')
+        isManualUnlocked
     )
     const isPresenceSession = sessionStatus === 'Presente' || sessionStatus === 'Reposição'
     const isEvolutionBlockedByBiometrics = isPresenceSession && !isBiometricsValidated
@@ -385,10 +391,16 @@ export function WorldSensoryEvolutionForm({
                             Status do Atendimento / Presença *
                         </Label>
                         <div className="flex items-center gap-2 flex-wrap">
-                            {isBiometricsValidated && (
+                            {isBiometricsValidated && !isManualUnlocked && (
                                 <Badge variant="outline" className="bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 text-xs font-semibold gap-1">
                                     <Camera className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                                     <span>Biometria Facial Validada</span>
+                                </Badge>
+                            )}
+                            {isManualUnlocked && (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold gap-1">
+                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Exceção Autorizada pela Administração (Home Care)</span>
                                 </Badge>
                             )}
                             {isPresenceSession ? (
@@ -404,12 +416,70 @@ export function WorldSensoryEvolutionForm({
                     </div>
 
                     {isEvolutionBlockedByBiometrics && (
-                        <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 flex items-start gap-2.5 text-xs text-red-900 dark:text-red-200">
-                            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                            <div>
-                                <span className="font-bold block text-sm">Bloqueio de Evolução • Biometria Facial Obrigatória</span>
-                                O paciente ainda não realizou a biometria facial para este atendimento. A evolução clínica só pode ser salva após a confirmação biométrica do paciente na recepção ou liberação manual autorizada pela administração.
+                        <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 space-y-2 text-xs text-red-900 dark:text-red-200">
+                            <div className="flex items-start gap-2.5">
+                                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-bold block text-sm">Bloqueio de Evolução • Biometria Facial Obrigatória</span>
+                                    O paciente ainda não realizou a confirmação biométrica facial para este atendimento. Em atendimentos Home Care (domiciliares) ou situações excepcionais sem biometria, a evolução só pode ser liberada mediante autorização prévia da administração/coordenação para este agendamento específico.
+                                </div>
                             </div>
+
+                            {canUnlockManual && onToggleManualUnlock && (
+                                <div className="pt-1.5 flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={onToggleManualUnlock}
+                                        disabled={isUnlockingManual}
+                                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs min-h-[44px] gap-2 shadow-xs"
+                                    >
+                                        {isUnlockingManual ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <ShieldCheck className="w-4 h-4" />
+                                        )}
+                                        Autorizar Atendimento sem Biometria (Home Care / Exceção)
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {isManualUnlocked && (
+                        <div className="p-3 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-900 dark:text-emerald-200">
+                            <div className="flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>Atendimento autorizado para evolução em modo Home Care / Exceção pela gestão.</span>
+                            </div>
+                            {canUnlockManual && onToggleManualUnlock && !isSigned && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={onToggleManualUnlock}
+                                    disabled={isUnlockingManual}
+                                    className="text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 min-h-[36px] self-end sm:self-auto"
+                                >
+                                    Revogar autorização
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {isPresenceSession && isManualUnlocked && (
+                        <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 space-y-1.5 text-xs text-emerald-900 dark:text-emerald-200">
+                            <Label htmlFor="session_status_notes_homecare" className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                Justificativa do Atendimento Home Care / Exceção (Autorizado pela Gestão):
+                            </Label>
+                            <Input
+                                id="session_status_notes_homecare"
+                                value={sessionStatusNotes || ''}
+                                onChange={(e) => onSessionStatusNotesChange && onSessionStatusNotesChange(e.target.value)}
+                                placeholder="Ex: Atendimento domiciliar Home Care realizado conforme plano terapêutico autorizado pela coordenação..."
+                                disabled={isLocked || isSigned}
+                                className="bg-white dark:bg-slate-900 min-h-[40px] text-xs border-emerald-300 dark:border-emerald-800 text-slate-800 dark:text-slate-200"
+                            />
                         </div>
                     )}
                     

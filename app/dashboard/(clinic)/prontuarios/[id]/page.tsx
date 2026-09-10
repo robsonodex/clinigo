@@ -62,12 +62,13 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     const { id: appointmentId } = React.use(params)
     const { toast } = useToast()
     const router = useRouter()
-    const { supabase } = useAuth()
+    const { supabase, user, profile } = useAuth()
 
     const printableRef = useRef<HTMLDivElement>(null)
 
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
+    const [isUnlockingManual, setIsUnlockingManual] = useState(false)
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
     const [isLocked, setIsLocked] = useState(false)
     const [showSignModal, setShowSignModal] = useState(false)
@@ -395,6 +396,50 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
+    const isAdminOrCoordinator = Boolean(
+        profile?.role === 'CLINIC_ADMIN' ||
+        profile?.role === 'SUPER_ADMIN' ||
+        profile?.is_coordinator === true
+    )
+
+    const handleToggleManualUnlock = async () => {
+        if (!appointment?.id) return
+        setIsUnlockingManual(true)
+        try {
+            const isCurrentlyUnlocked = Boolean(appointment.manual_checkin_unlocked_at)
+            const method = isCurrentlyUnlocked ? 'DELETE' : 'POST'
+            const res = await fetch(`/api/appointments/${appointment.id}/unlock-manual`, { method })
+            const json = await res.json()
+            if (res.ok && json.success) {
+                const updatedUnlockedAt = isCurrentlyUnlocked ? null : (json.data?.manual_checkin_unlocked_at || new Date().toISOString())
+                setAppointment((prev: any) => ({
+                    ...prev,
+                    manual_checkin_unlocked_at: updatedUnlockedAt
+                }))
+                toast({
+                    title: isCurrentlyUnlocked ? 'Bloqueio Reativado' : 'Atendimento Autorizado',
+                    description: isCurrentlyUnlocked 
+                        ? 'A exigência de biometria facial foi restabelecida para este atendimento.' 
+                        : 'Atendimento autorizado para evolução sem biometria (Home Care / Exceção).',
+                })
+            } else {
+                toast({
+                    title: 'Ação não permitida',
+                    description: json.error || 'Apenas a administração ou coordenação pode autorizar este atendimento.',
+                    variant: 'destructive'
+                })
+            }
+        } catch (err: any) {
+            toast({
+                title: 'Erro de Comunicação',
+                description: err.message || 'Falha ao conectar ao servidor.',
+                variant: 'destructive'
+            })
+        } finally {
+            setIsUnlockingManual(false)
+        }
+    }
+
     const handleSave = async () => {
         if (isLocked) {
             toast({ title: 'Bloqueado', description: 'O prazo de 48h para evolução expirou. Não é mais possível alterar este registro.', variant: 'destructive' })
@@ -402,7 +447,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
         }
         if (!appointment || !patient) return
 
-        // Validação de Biometria Facial: profissional só evolui atendimento presencial/reposição com biometria confirmada
+        // Validação de Biometria Facial: profissional só evolui atendimento presencial/reposição com biometria confirmada ou desbloqueio autorizado pela gestão (Home Care)
         const isBiometricsValidated = Boolean(
             appointment?.verification_level === 'FACIAL_DOCTOR' ||
             appointment?.verification_level === 'DOUBLE_VERIFIED' ||
@@ -410,14 +455,13 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' ||
             appointment?.checkin_confirmed_at ||
             appointment?.checked_in_at ||
-            appointment?.manual_checkin_unlocked_at ||
-            sessionStatusNotes?.toLowerCase()?.includes('biometria')
+            appointment?.manual_checkin_unlocked_at
         )
         const isPresenceSession = sessionStatus === 'Presente' || sessionStatus === 'Reposição'
         if (isPresenceSession && !isBiometricsValidated) {
             toast({
                 title: 'Bloqueio Biométrico',
-                description: 'A evolução clínica só pode ser salva após a confirmação da biometria facial do paciente na recepção/totem (ou desbloqueio autorizado pela administração).',
+                description: 'A evolução clínica só pode ser salva após a confirmação da biometria facial do paciente na recepção/totem (ou desbloqueio autorizado pela administração para atendimentos Home Care).',
                 variant: 'destructive'
             })
             return
@@ -532,7 +576,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 digital_signature_at: meta.signedAt,
                 digital_signature_hash: meta.hash,
                 digital_signature_signer: meta.signerName,
-                digital_signature_by: user?.id,
+                digital_signature_by: user?.id || appointment?.doctor?.user_id || null,
                 status: 'COMPLETED',
                 completed_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -771,6 +815,9 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     patient={patient}
                     appointment={appointment}
                     clinicName={clinic?.name || 'World Sensory'}
+                    canUnlockManual={isAdminOrCoordinator}
+                    onToggleManualUnlock={handleToggleManualUnlock}
+                    isUnlockingManual={isUnlockingManual}
                 />
             ) : (
                 <>

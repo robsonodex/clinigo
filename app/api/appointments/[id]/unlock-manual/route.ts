@@ -24,15 +24,15 @@ export async function POST(
 
     const { data: currentUser } = await (adminDb as any)
       .from('users')
-      .select('id, role, clinic_id, full_name')
+      .select('id, role, clinic_id, full_name, is_coordinator')
       .eq('id', user.id)
       .single();
 
-    const isAdmin = currentUser?.role === 'CLINIC_ADMIN' || currentUser?.role === 'SUPER_ADMIN';
-    if (!isAdmin) {
+    const isAuthorized = currentUser?.role === 'CLINIC_ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.is_coordinator === true;
+    if (!isAuthorized) {
       return NextResponse.json({
         success: false,
-        error: 'Apenas administradores podem desbloquear o check-in manual para este agendamento.'
+        error: 'Apenas a administração ou coordenação da clínica pode autorizar o atendimento sem biometria.'
       }, { status: 403 });
     }
 
@@ -81,13 +81,13 @@ export async function DELETE(
 
     const { data: currentUser } = await (adminDb as any)
       .from('users')
-      .select('id, role')
+      .select('id, role, is_coordinator')
       .eq('id', user.id)
       .single();
 
-    const isAdmin = currentUser?.role === 'CLINIC_ADMIN' || currentUser?.role === 'SUPER_ADMIN';
-    if (!isAdmin) {
-      return NextResponse.json({ success: false, error: 'Apenas administradores podem alterar o bloqueio manual.' }, { status: 403 });
+    const isAuthorized = currentUser?.role === 'CLINIC_ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.is_coordinator === true;
+    if (!isAuthorized) {
+      return NextResponse.json({ success: false, error: 'Apenas a administração ou coordenação da clínica pode alterar o bloqueio manual.' }, { status: 403 });
     }
 
     const { data: updated, error: updateError } = await (adminDb as any)

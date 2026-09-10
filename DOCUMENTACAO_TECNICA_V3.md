@@ -2,6 +2,25 @@
 
 ## Módulos
 
+### Correção de Assinatura Digital e Blindagem de Autorização Home Care (World Sensory e Global)
+- **Módulos**:
+  - Prontuários → Página de Prontuário → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → `ProntuarioPage` / `handleSaveDigitalSignature()` / `handleToggleManualUnlock()`
+  - Prontuários → Ficha World Sensory → `components/medical-records/WorldSensoryEvolutionForm.tsx` → `WorldSensoryEvolutionForm`
+  - Agendamentos API → `app/api/appointments/[id]/unlock-manual/route.ts` → `POST` / `DELETE`
+- **Descrição**:
+  - **Correção de ReferenceError (user is not defined)**:
+    - Identificada a causa da falha reportada pela Patrícia Mendes ao carimbar a rubrica digital no modal "Assinatura Digital do Profissional".
+    - A constante `user` não havia sido desestruturada do hook `useAuth()`, provocando falha de execução ao acessar `user?.id` na gravação dos metadados de assinatura em `appointments.digital_signature_by`.
+    - Realizada a declaração de `user` via `useAuth()` e adicionado fallback de segurança com resolução pelo médico do atendimento (`appointment?.doctor?.user_id`).
+  - **Blindagem da Trava Biométrica e Eliminação de Bypass por Texto**:
+    - Removida a brecha que permitia auto-desbloqueio por terapeutas que inseriam o termo "biometria" no campo de justificativa.
+    - O desbloqueio de atendimentos sem biometria presencial passou a ser rigorosamente restrito a atendimentos autorizados previamente pela gestão (`manual_checkin_unlocked_at`).
+  - **Autorização de Atendimento Caso a Caso (Home Care / Exceção)**:
+    - Restrita exclusivamente a perfis de administração (`CLINIC_ADMIN`, `SUPER_ADMIN`) e coordenação (`is_coordinator = true`).
+    - Integrado botão contextual de ação rápida para a Patrícia no próprio prontuário: "Autorizar Atendimento sem Biometria (Home Care / Exceção)", permitindo liberar individualmente cada consulta com 1 clique.
+    - Exibição de selo verde corporativo "Exceção Autorizada pela Administração (Home Care)" e liberação do campo de justificativa formal para o terapeuta assinar.
+    - Terapeutas comuns permanecem com bloqueio rígido e sem visibilidade de botões de desbloqueio.
+
 ### Correção de Ambiguidade Relacional em Conformidade de Evoluções (Espaço Incluir e Global)
 - **Módulos**:
   - Relatórios / Terapia → Conformidade de Evoluções → `app/api/reports/evolution-compliance/route.ts` → `GET`
