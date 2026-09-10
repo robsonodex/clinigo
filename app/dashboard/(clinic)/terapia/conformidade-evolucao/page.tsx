@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import {
     FileText, AlertTriangle, CheckCircle, XCircle, Download, FileSpreadsheet,
-    ChevronDown, ChevronUp, TrendingDown, TrendingUp, Activity, Copy, Trash2, Loader2
+    ChevronDown, ChevronUp, TrendingDown, TrendingUp, Activity, Copy, Trash2, Loader2, RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -91,9 +91,19 @@ export default function ConformidadeEvolucaoPage() {
         setLoading(true)
         try {
             const res = await fetch(`/api/reports/evolution-compliance?start_date=${startDate}&end_date=${endDate}`)
-            if (res.ok) setData(await res.json())
-        } catch (e) { console.error(e) }
-        finally { setLoading(false) }
+            if (res.ok) {
+                const result = await res.json()
+                setData(result)
+            } else {
+                const err = await res.json().catch(() => ({}))
+                toast.error(err.error || 'Não foi possível carregar os dados de conformidade')
+            }
+        } catch (e: any) {
+            console.error('[Conformidade] Erro de rede ou requisição:', e)
+            toast.error('Falha de comunicação ao consultar o relatório de conformidade')
+        } finally {
+            setLoading(false)
+        }
     }, [startDate, endDate])
 
     useEffect(() => { fetchData() }, [fetchData])
@@ -245,8 +255,18 @@ export default function ConformidadeEvolucaoPage() {
                     />
                     <Button
                         variant="outline"
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        title="Atualizar dados"
+                    >
+                        <RefreshCw className={`w-4 h-4 text-slate-600 dark:text-slate-300 ${loading ? 'animate-spin' : ''}`} />
+                        <span>Atualizar</span>
+                    </Button>
+                    <Button
+                        variant="outline"
                         onClick={exportExcel}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                         <span>Excel</span>
@@ -254,7 +274,7 @@ export default function ConformidadeEvolucaoPage() {
                     <Button
                         variant="outline"
                         onClick={exportPDF}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 min-h-[44px] text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <Download className="w-4 h-4 text-blue-600" />
                         <span>PDF</span>

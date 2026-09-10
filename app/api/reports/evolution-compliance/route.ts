@@ -25,34 +25,61 @@ export async function GET(request: NextRequest) {
         const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0]
 
         // 1. Buscar agendamentos atendidos (status COMPLETED)
-        const { data: appointments, error: aptError } = await supabase
-            .from('appointments')
-            .select(`
-                id,
-                doctor_id,
-                appointment_date,
-                status,
-                doctors!inner(
+        // Desambiguado explicitamente com appointments_doctor_id_fkey devido a presenca de co_doctor_id e professional_supervised_id
+        // Paginacao em lotes de 1000 para nao truncar historicos longos
+        const CHUNK_SIZE = 1000
+        let appointments: any[] = []
+        let aptFrom = 0
+        while (true) {
+            const { data: chunk, error: aptError } = await supabase
+                .from('appointments')
+                .select(`
                     id,
-                    user:users(full_name)
-                )
-            `)
-            .eq('clinic_id', profile.clinic_id)
-            .eq('status', 'COMPLETED')
-            .gte('appointment_date', startDate)
-            .lte('appointment_date', endDate)
+                    doctor_id,
+                    appointment_date,
+                    status,
+                    doctor:doctors!appointments_doctor_id_fkey(
+                        id,
+                        user:users(full_name)
+                    )
+                `)
+                .eq('clinic_id', profile.clinic_id)
+                .eq('status', 'COMPLETED')
+                .gte('appointment_date', startDate)
+                .lte('appointment_date', endDate)
+                .range(aptFrom, aptFrom + CHUNK_SIZE - 1)
 
-        if (aptError) throw aptError
+            if (aptError) {
+                console.error('[API] evolution-compliance appointments query error:', aptError)
+                throw aptError
+            }
+            if (!chunk || chunk.length === 0) break
+            appointments.push(...chunk)
+            if (chunk.length < CHUNK_SIZE) break
+            aptFrom += CHUNK_SIZE
+        }
 
         // 2. Buscar evoluções do período (inclui patient_id para detecção de duplicatas)
-        const { data: evolutions, error: evoError } = await supabase
-            .from('session_evolutions')
-            .select('id, doctor_id, patient_id, appointment_id, evolution_date, created_at, patients(full_name)')
-            .eq('clinic_id', profile.clinic_id)
-            .gte('evolution_date', startDate)
-            .lte('evolution_date', endDate)
+        let evolutions: any[] = []
+        let evoFrom = 0
+        while (true) {
+            const { data: chunk, error: evoError } = await supabase
+                .from('session_evolutions')
+                .select('id, doctor_id, patient_id, appointment_id, evolution_date, created_at, patients(full_name)')
+                .eq('clinic_id', profile.clinic_id)
+                .gte('evolution_date', startDate)
+                .lte('evolution_date', endDate)
+                .range(evoFrom, evoFrom + CHUNK_SIZE - 1)
 
-        if (evoError) throw evoError
+            if (evoError) {
+                console.error('[API] evolution-compliance evolutions query error:', evoError)
+                throw evoError
+            }
+            if (!chunk || chunk.length === 0) break
+            evolutions.push(...chunk)
+            if (chunk.length < CHUNK_SIZE) break
+            evoFrom += CHUNK_SIZE
+        }
 
         // 2.1 Detectar possíveis duplicatas (mesmo doctor + patient + date)
         const dupMap: Record<string, any[]> = {}
@@ -101,7 +128,8 @@ export async function GET(request: NextRequest) {
         appointments?.forEach((apt: any) => {
             const did = apt.doctor_id
             if (!did) return
-            const docUser = (apt.doctors as any)?.user
+            const docObj = apt.doctor || apt.doctors
+            const docUser = (docObj as any)?.user
             const docName = docUser
                 ? (Array.isArray(docUser) ? docUser[0]?.full_name : (docUser as any)?.full_name)
                 : 'N/A'

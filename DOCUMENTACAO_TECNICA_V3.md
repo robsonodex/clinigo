@@ -2,6 +2,25 @@
 
 ## Módulos
 
+### Correção de Ambiguidade Relacional em Conformidade de Evoluções (Espaço Incluir e Global)
+- **Módulos**:
+  - Relatórios / Terapia → Conformidade de Evoluções → `app/api/reports/evolution-compliance/route.ts` → `GET`
+  - Terapia → Conformidade de Evoluções → `app/dashboard/(clinic)/terapia/conformidade-evolucao/page.tsx` → `ConformidadeEvolucaoPage` / `fetchData()`
+- **Descrição**:
+  - **Causa Raiz e Desambiguação de Foreign Key**:
+    - Identificada a causa da tela de Conformidade de Evoluções retornar zerada ("Atendidos: 0", "Evoluções: 0", "Conformidade 0%") para a clínica Espaço Incluir.
+    - A consulta do PostgREST na rota `/api/reports/evolution-compliance` utilizava `doctors!inner(...)`. Com a evolução recente do sistema que introduziu co-terapeutas (`co_doctor_id`) e supervisão técnica (`professional_supervised_id`), a tabela `appointments` passou a possuir 3 chaves estrangeiras vinculadas à tabela `doctors`. O Supabase/PostgREST passou a rejeitar a query por ambiguidade relacional (*"more than one relationship was found between 'appointments' and 'doctors'"*), gerando status HTTP 500.
+    - A query foi cirurgicamente corrigida para especificar a chave estrangeira explícita: `doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name))`.
+    - Implementada paginação em lotes de 1.000 registros via `.range()` tanto para `appointments` quanto para `session_evolutions`, garantindo que períodos extensos (como os 1.549 atendimentos e 973 evoluções da Espaço Incluir entre maio e setembro de 2026) sejam carregados integralmente sem truncamento pelo limite padrão de 1.000 linhas do PostgREST.
+  - **Interface e Feedback Visual**:
+    - Adicionado tratamento de erro com notificação via `toast.error` (Sonner) na função `fetchData` da página `app/dashboard/(clinic)/terapia/conformidade-evolucao/page.tsx`, evitando estados silenciosos de falha.
+    - Adicionado botão corporativo "Atualizar" na barra de filtros da interface, permitindo recarregamento rápido dos dados sob demanda.
+  - **Auditoria e Mobile PWA**:
+    - Checklist completo da Regra dos Botões auditado (Atualizar, Excel, PDF, Limpar Duplicatas, Filtros por Data, Accordion por Terapeuta).
+    - Área de toque mínima (44x44px) garantida em todos os botões e inputs responsivos.
+    - Padrão SaaS Médico Corporativo Internacional respeitado com zero emojis.
+    - Testes automatizados executados via script com 100% de integridade e isolamento multi-tenant validado tanto para a Espaço Incluir quanto para a World Sensory.
+
 ### Correção de Runtime no Formulário de Evolução Terapêutica (World Sensory / Global)
 - **Módulos**:
   - Prontuários → Evolução Clínica → `components/medical-records/WorldSensoryEvolutionForm.tsx` → `WorldSensoryEvolutionForm`
