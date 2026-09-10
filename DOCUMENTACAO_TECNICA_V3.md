@@ -1454,3 +1454,25 @@
     - A opção de 50 minutos foi alterada de `'50 min (Psicologia / Terapia)'` para `'50 min (Terapia 2)'`.
   - **2. Extensão para o Diálogo de Profissionais**:
     - No componente `doctor-form-dialog.tsx`, foram adicionadas as opções correspondentes `40 minutos (Terapia)` e `50 minutos (Terapia 2)` no seletor de duração padrão do profissional para assegurar total coerência em todo o sistema.
+
+### Item 53: Agendamento de Aluna/Mentoranda sem Vínculo com Paciente e Ferramenta de Promoção de Cadastros Legados
+- **Data**: 09/09/2026
+- **Módulos**: Banco de Dados (Supabase), Backend APIs (Alunas, Agendamento, Fila de Recepção), Frontend (Modal de Agendamento, Drawer de Detalhes, Agenda Visual, Pacientes)
+- **Caminho Completo**:
+  - Banco de Dados → Supabase Migrations → `supabase/migrations/20260909210000_add_student_mentoring_appointments.sql` (Criação da tabela `students`, adição de `student_id` e `mentoring_notes` em `appointments`, e constraint de exclusividade `appointments_attendee_exclusivity_chk`)
+  - Backend → Alunas API → `app/api/students/route.ts` & `app/api/students/[id]/route.ts` (CRUD de alunas com isolamento multi-tenant por `clinic_id` e soft delete com `status='archived'`)
+  - Backend → Migração de Paciente Legado → `app/api/students/promote-patient/route.ts` (Conversão atômica de paciente em aluna, migração de agendamentos futuros, preservação total de prontuários clínicos para auditoria e arquivamento do cadastro de paciente)
+  - Backend → Agendamento Manual → `app/api/appointments/manual/route.ts` (Suporte a `is_student: true`, gravação de `appointment_type = 'STUDENT'`, dispensa de cobrança e QR Code, validação de exclusividade com supervisão)
+  - Backend → Fila da Recepção → `app/api/reception/queue/route.ts` (Descarte automático de `appointment_type === 'STUDENT'` para que alunas nunca apareçam na fila de espera de atendimento clínico)
+  - Frontend → Modal de Agendamento → `components/appointments/ManualAppointmentModal.tsx` (Seletor de modalidade com 3 opções: Atendimento a Paciente, Aluna / Mentoria e Supervisão Técnica; fluxo inline de cadastro de nova aluna sem sair da tela; ocultação de campos clínicos, pagamento e notificações de paciente)
+  - Frontend → Drawer de Detalhes → `components/dashboard/AppointmentDetailsDrawer.tsx` (Card dedicado para sessões com Aluna/Mentoria com dados da mentoria e supressão de botões de prontuário, biometria e check-in clínico)
+  - Frontend → Grade da Agenda → `components/ui/agenda-view.tsx` (Renderização de `ALUNA: [NOME]` e badge sóbrio `Aluna` nos modos semanal e timeline/diário)
+  - Frontend → Cadastros de Pacientes → `app/dashboard/(clinic)/pacientes/page.tsx` (Ação "Converter em Aluna" no menu de contexto de cada paciente, abrindo modal com avisos de integridade e auditoria de prontuários)
+- **Descrição Técnica**:
+  - **1. Isolamento Estrutural e Arquitetura**:
+    - Alunas e mentorandas nunca são misturadas à tabela `patients`, mantendo imunidade completa a rotas de prontuário médico (`medical_records`) e travas biométricas (`patient_face_biometrics`).
+    - Constraint de banco de dados `appointments_attendee_exclusivity_chk` garante que para cada agendamento exista no máximo um vínculo preenchido: `patient_id` (paciente clínico), `professional_supervised_id` (supervisão técnica) ou `student_id` (aluna/mentoria).
+  - **2. Fila da Recepção Segura**:
+    - O endpoint `app/api/reception/queue/route.ts` exclui ativamente o tipo `STUDENT`, impedindo que mentorandas constem como pacientes aguardando chamada médica.
+  - **3. Promoção Segura de Cadastros Antigos**:
+    - Criada a funcionalidade para converter alunas cadastradas anteriormente como pacientes: move agendamentos a partir da data atual para o tipo `STUDENT` e preserva integralmente prontuários clínicos pré-existentes sem nenhuma exclusão de dados (garantia LGPD).

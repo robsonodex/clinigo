@@ -58,6 +58,7 @@ import {
     ShieldCheck,
     TrendingUp,
     ChevronRight,
+    BookOpen,
     ChevronLeft,
     Sparkles,
     Cake,
@@ -146,6 +147,50 @@ export default function PacientesPage() {
     const [showDetailsDialog, setShowDetailsDialog] = useState(false)
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [isLoadingCep, setIsLoadingCep] = useState(false)
+
+    // Estados para promoção de paciente em Aluna / Mentoria
+    const [patientToPromote, setPatientToPromote] = useState<Patient | null>(null)
+    const [showPromoteModal, setShowPromoteModal] = useState(false)
+    const [promoteProgram, setPromoteProgram] = useState('')
+    const [isPromoting, setIsPromoting] = useState(false)
+
+    const handlePromotePatientToStudent = async () => {
+        if (!patientToPromote) return
+        setIsPromoting(true)
+        try {
+            const res = await fetch('/api/students/promote-patient', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: patientToPromote.id,
+                    program: promoteProgram.trim() || undefined,
+                })
+            })
+
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao promover cadastro')
+            }
+
+            toast({
+                title: 'Cadastro convertido com sucesso!',
+                description: `${patientToPromote.full_name} agora é uma Aluna. ${data.future_appointments_moved || 0} agendamento(s) futuros migrados.`,
+            })
+
+            setShowPromoteModal(false)
+            setPatientToPromote(null)
+            setPromoteProgram('')
+            queryClient.invalidateQueries({ queryKey: ['patients'] })
+        } catch (err: any) {
+            toast({
+                title: 'Erro na conversão',
+                description: err.message || 'Falha ao converter paciente em aluna',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsPromoting(false)
+        }
+    }
 
     // Reset pagination when search, letter or filters change
     useEffect(() => {
@@ -811,6 +856,16 @@ export default function PacientesPage() {
                                                             <FileText className="w-4 h-4 mr-2 text-slate-450" />
                                                             Prontuários
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setPatientToPromote(patient)
+                                                                setShowPromoteModal(true)
+                                                            }}
+                                                            className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                                        >
+                                                            <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
+                                                            Converter em Aluna
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
                                                         <DropdownMenuItem
                                                             onClick={() => openWhatsApp(patient.phone, patient.full_name)}
@@ -1003,6 +1058,16 @@ export default function PacientesPage() {
                                                                 <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)} className="rounded-lg py-1.5">
                                                                     <FileText className="w-4 h-4 mr-2 text-slate-450" />
                                                                     Prontuários
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setPatientToPromote(patient)
+                                                                        setShowPromoteModal(true)
+                                                                    }}
+                                                                    className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                                                >
+                                                                    <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                    Converter em Aluna
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-lg py-1.5">
                                                                     <History className="w-4 h-4 mr-2 text-slate-450" />
@@ -1680,6 +1745,71 @@ export default function PacientesPage() {
                             disabled={deleteMutation.isPending}
                         >
                             {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Dados'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog de Promoção de Paciente para Aluna / Mentoria */}
+            <Dialog open={showPromoteModal} onOpenChange={setShowPromoteModal}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <BookOpen className="h-5 w-5 text-emerald-700" />
+                            Converter Paciente em Aluna / Mentoria
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Promove o cadastro para a tabela própria de alunas e desvincula de prontuários clínicos de pacientes.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {patientToPromote && (
+                        <div className="space-y-4 py-2">
+                            <div className="p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl space-y-1">
+                                <p className="font-semibold text-sm">{patientToPromote.full_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {[patientToPromote.phone, patientToPromote.email].filter(Boolean).join(' • ')}
+                                </p>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Curso / Programa / Estágio (Opcional)</Label>
+                                <Input
+                                    placeholder="Ex: Pós em Neuropsicologia, Mentoria 2026..."
+                                    value={promoteProgram}
+                                    onChange={(e) => setPromoteProgram(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-200">
+                                    <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" />
+                                    Preservação de Dados e Auditoria
+                                </div>
+                                <ul className="text-[11px] text-amber-800 dark:text-amber-300 space-y-1 list-disc list-inside">
+                                    <li>Os agendamentos futuros deste cadastro serão convertidos para sessão com Aluna.</li>
+                                    <li>O cadastro original de paciente será arquivado para preservar o histórico.</li>
+                                    <li>Prontuários clínicos e evoluções passadas nunca são apagados — permanecem guardados para fins de auditoria médica e LGPD.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowPromoteModal(false)}
+                            disabled={isPromoting}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
+                            onClick={handlePromotePatientToStudent}
+                            disabled={isPromoting}
+                        >
+                            {isPromoting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirmar Conversão em Aluna
                         </Button>
                     </DialogFooter>
                 </DialogContent>

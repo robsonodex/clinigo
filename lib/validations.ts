@@ -204,4 +204,16 @@ export const queueEntrySchema = z.object({
 
 export type QueueEntryData = z.infer<typeof queueEntrySchema>
 
+/**
+ * Student (Aluna / Mentoranda) schema
+ */
+export const studentSchema = z.object({
+    full_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(150, 'Nome muito longo'),
+    contact_phone: z.string().optional().nullable(),
+    contact_email: z.string().email('Email inválido').optional().nullable().or(z.literal('')),
+    program: z.string().max(150, 'Programa muito longo').optional().nullable().or(z.literal('')),
+    supervising_doctor_id: z.string().uuid('ID do supervisor inválido').optional().nullable().or(z.literal('')),
+    status: z.enum(['active', 'archived']).default('active'),
+})
 
+export type StudentFormData = z.infer<typeof studentSchema>

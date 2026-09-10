@@ -71,6 +71,13 @@ export async function GET(
                     specialty,
                     crm
                 ),
+                student:students!appointments_student_id_fkey(
+                    id,
+                    full_name,
+                    contact_phone,
+                    contact_email,
+                    program
+                ),
                 clinic:clinics!appointments_clinic_id_fkey(id, name, slug)
             `)
             .eq('id', appointmentId)

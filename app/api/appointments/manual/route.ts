@@ -61,6 +61,9 @@ interface ManualAppointmentRequest {
     is_supervision?: boolean // Supervisão Técnica/Clínica (sem paciente)
     professional_supervised_id?: string // Profissional que receberá supervisão
     supervision_notes?: string // Anotações e pauta da supervisão
+    is_student?: boolean // Aluna / Mentoria (sem paciente e sem prontuário clínico)
+    student_id?: string // ID da aluna cadastrada
+    mentoring_notes?: string // Pauta e anotações da mentoria
 }
 
 export async function POST(request: NextRequest) {
@@ -119,8 +122,23 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Bloqueios internos e supervisão técnica não precisam de paciente
-        if (!body.is_block && !body.is_supervision && !body.patient_id && !body.quick_registration) {
+        // Validação de exclusividade entre modalidades
+        if (body.is_student && body.is_supervision) {
+            return NextResponse.json(
+                { error: 'Agendamento não pode ser simultaneamente Supervisão e Aluna/Mentoria' },
+                { status: 400 }
+            )
+        }
+
+        if (body.is_student && !body.student_id) {
+            return NextResponse.json(
+                { error: 'Selecione ou cadastre uma aluna para este agendamento' },
+                { status: 400 }
+            )
+        }
+
+        // Bloqueios internos, supervisão técnica e mentoria de alunas não precisam de paciente
+        if (!body.is_block && !body.is_supervision && !body.is_student && !body.patient_id && !body.quick_registration) {
             return NextResponse.json(
                 { error: 'Paciente ou dados para cadastro são obrigatórios' },
                 { status: 400 }
@@ -199,11 +217,29 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Get or create patient (pular para bloqueios internos e supervisão técnica)
+        // Get or create patient (pular para bloqueios internos, supervisão técnica e mentoria de aluna)
         let patientId: string | null = body.patient_id || null
         let patient: any = null
+        let studentRecord: any = null
 
-        if (!body.is_block && !body.is_supervision) {
+        if (body.is_student && body.student_id) {
+            const { data: std, error: stdError } = await supabase
+                .from('students')
+                .select('id, full_name, contact_phone, contact_email, clinic_id')
+                .eq('id', body.student_id)
+                .eq('clinic_id', clinicId)
+                .single()
+
+            if (stdError || !std) {
+                return NextResponse.json(
+                    { error: 'Aluna selecionada não encontrada nesta clínica' },
+                    { status: 404 }
+                )
+            }
+            studentRecord = std
+        }
+
+        if (!body.is_block && !body.is_supervision && !body.is_student) {
             if (!patientId && body.quick_registration) {
                 // Quick registration
                 const { full_name, phone, date_of_birth, cpf, email } = body.quick_registration
@@ -465,7 +501,9 @@ export async function POST(request: NextRequest) {
         const hasMultipleDoctors = doctorsFound.length > 1
 
         let finalNotes: string | null = null
-        if (body.is_supervision) {
+        if (body.is_student) {
+            finalNotes = body.mentoring_notes ? `[Aluna / Mentoria] ${body.mentoring_notes}` : `[Aluna / Mentoria] ${studentRecord?.full_name || ''}`.trim()
+        } else if (body.is_supervision) {
             finalNotes = body.supervision_notes ? `[Supervisão Técnica] ${body.supervision_notes}` : '[Supervisão Técnica]'
         } else if (body.is_block) {
             finalNotes = body.block_title || 'Compromisso Interno'
@@ -479,19 +517,23 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        const isNonPatient = !!(body.is_block || body.is_supervision || body.is_student)
+
         const appointmentData: Record<string, unknown> = {
             id: appointmentId,
             clinic_id: clinicId,
             doctor_id: primaryDoctorId,
             co_doctor_id: body.co_doctor_id || null,
-            patient_id: (body.is_block || body.is_supervision) ? null : patientId,
+            patient_id: isNonPatient ? null : patientId,
+            student_id: body.is_student ? (body.student_id || null) : null,
             appointment_date: appointmentDate,
             appointment_time: appointmentTime,
             status: 'CONFIRMED',
-            payment_type: (body.is_block || body.is_supervision) ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
-            appointment_type: body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial')),
+            payment_type: isNonPatient ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
+            appointment_type: body.is_student ? 'STUDENT' : (body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'))),
             professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
             supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
+            mentoring_notes: body.is_student ? (body.mentoring_notes || null) : null,
             waiting_room_notes: finalNotes,
             reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
         }
@@ -531,14 +573,16 @@ export async function POST(request: NextRequest) {
                 id: uuidv4(),
                 clinic_id: clinicId,
                 doctor_id: addDocId,
-                patient_id: (body.is_block || body.is_supervision) ? null : patientId,
+                patient_id: isNonPatient ? null : patientId,
+                student_id: body.is_student ? (body.student_id || null) : null,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',
-                payment_type: (body.is_block || body.is_supervision) ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
-                appointment_type: body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial')),
+                payment_type: isNonPatient ? 'PARTICULAR' : (body.payment?.type === 'health_insurance' ? 'CONVENIO' : 'PARTICULAR'),
+                appointment_type: body.is_student ? 'STUDENT' : (body.is_supervision ? 'SUPERVISION' : (body.is_block ? 'BLOCK' : (body.type === 'telemedicina' ? 'online' : 'presencial'))),
                 professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
                 supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
+                mentoring_notes: body.is_student ? (body.mentoring_notes || null) : null,
                 waiting_room_notes: finalNotes,
                 reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
                 video_link: appointmentData.video_link || null
@@ -582,8 +626,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Create financial entry if payment was made at counter (skip for blocks and supervision)
-        if (!body.is_block && !body.is_supervision) {
+        // Create financial entry if payment was made at counter (skip for blocks, supervision and student mentoring)
+        if (!body.is_block && !body.is_supervision && !body.is_student) {
             try {
                 const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment?.type)
 
@@ -631,64 +675,66 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Generate QR Code automatically
+        // Generate QR Code automatically (apenas para consultas presenciais de pacientes)
         let qrCodeData = null
-        try {
-            const qrToken = generateQRToken(appointmentId)
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
-            const checkinUrl = `${baseUrl}/checkin/${appointmentId}`
+        if (!isNonPatient) {
+            try {
+                const qrToken = generateQRToken(appointmentId)
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+                const checkinUrl = `${baseUrl}/checkin/${appointmentId}`
 
-            // Generate QR code image as base64 data URL
-            const qrImageDataUrl = await QRCode.toDataURL(checkinUrl, {
-                width: 400,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                },
-                errorCorrectionLevel: 'M'
-            })
+                // Generate QR code image as base64 data URL
+                const qrImageDataUrl = await QRCode.toDataURL(checkinUrl, {
+                    width: 400,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    },
+                    errorCorrectionLevel: 'M'
+                })
 
-            // Build QR data payload
-            const qrData = {
-                appointmentId,
-                patientId,
-                doctorId: body.doctor_id,
-                clinicId,
-                scheduledDate: appointmentDate,
-                scheduledTime: appointmentTime,
-                checkinUrl,
-                qrCodeImage: qrImageDataUrl
-            }
-
-            // Save QR code to database
-            const scheduledDateTime = new Date(`${appointmentDate}T${appointmentTime}`)
-            const { data: qrRecord, error: qrError } = await supabase
-                .from('appointment_qr_codes')
-                .insert({
-                    appointment_id: appointmentId,
-                    clinic_id: clinicId,
-                    qr_token: qrToken,
-                    qr_data: qrData,
-                    expires_at: scheduledDateTime.toISOString() // Expires at appointment time
-                } as any)
-                .select()
-                .single()
-
-            if (!qrError && qrRecord) {
-                const qr = qrRecord as any
-                qrCodeData = {
-                    id: qr.id,
-                    token: qrToken,
-                    image: qrImageDataUrl,
-                    url: checkinUrl,
-                    expires_at: qr.expires_at
+                // Build QR data payload
+                const qrData = {
+                    appointmentId,
+                    patientId,
+                    doctorId: body.doctor_id,
+                    clinicId,
+                    scheduledDate: appointmentDate,
+                    scheduledTime: appointmentTime,
+                    checkinUrl,
+                    qrCodeImage: qrImageDataUrl
                 }
-            } else {
-                console.warn('Non-critical: Failed to create QR code', qrError)
+
+                // Save QR code to database
+                const scheduledDateTime = new Date(`${appointmentDate}T${appointmentTime}`)
+                const { data: qrRecord, error: qrError } = await supabase
+                    .from('appointment_qr_codes')
+                    .insert({
+                        appointment_id: appointmentId,
+                        clinic_id: clinicId,
+                        qr_token: qrToken,
+                        qr_data: qrData,
+                        expires_at: scheduledDateTime.toISOString() // Expires at appointment time
+                    } as any)
+                    .select()
+                    .single()
+
+                if (!qrError && qrRecord) {
+                    const qr = qrRecord as any
+                    qrCodeData = {
+                        id: qr.id,
+                        token: qrToken,
+                        image: qrImageDataUrl,
+                        url: checkinUrl,
+                        expires_at: qr.expires_at
+                    }
+                } else {
+                    console.warn('Non-critical: Failed to create QR code', qrError)
+                }
+            } catch (qrGenerationError) {
+                console.warn('Non-critical: QR code generation failed', qrGenerationError)
             }
-        } catch (qrGenerationError) {
-            console.warn('Non-critical: QR code generation failed', qrGenerationError)
         }
 
         // Fetch complete appointment data with relations for the response
@@ -697,6 +743,7 @@ export async function POST(request: NextRequest) {
             .select(`
                 *,
                 patient:patients(id, full_name, email, phone),
+                student:students(id, full_name, contact_phone, contact_email, program),
                 doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name)),
                 clinic:clinics(id, name)
             `)
@@ -705,8 +752,8 @@ export async function POST(request: NextRequest) {
 
         const appointmentWithRelations = fullAppointment as any
 
-        // Send email notification if enabled (skip for blocks and supervision)
-        if (!body.is_block && !body.is_supervision && body.notifications?.send_email && patient?.email) {
+        // Send email notification if enabled (skip for blocks, supervision and student mentoring)
+        if (!body.is_block && !body.is_supervision && !body.is_student && body.notifications?.send_email && patient?.email) {
             try {
                 const { sendEmailMultiTenant } = await import('@/lib/services/email-multi-tenant')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'
@@ -793,8 +840,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Send WhatsApp notification if enabled (skip for blocks and supervision)
-        if (!body.is_block && !body.is_supervision && body.notifications?.send_whatsapp && patient?.phone) {
+        // Send WhatsApp notification if enabled (skip for blocks, supervision and student mentoring)
+        if (!body.is_block && !body.is_supervision && !body.is_student && body.notifications?.send_whatsapp && patient?.phone) {
             try {
                 const { sendWhatsAppMessage, checkInstanceStatus } = await import('@/lib/whatsapp/service')
                 const doctorFullName = appointmentWithRelations?.doctor?.user?.full_name || (doctor as any).user?.full_name || 'Médico'

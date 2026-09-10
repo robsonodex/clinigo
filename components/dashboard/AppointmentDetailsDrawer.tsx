@@ -489,8 +489,76 @@ export function AppointmentDetailsDrawer({
 
                 {!loading && appointment && (
                     <div className="space-y-6 py-4">
-                        {/* Informações do Evento: Supervisão Técnica vs Consulta de Paciente */}
-                        {appointment.appointment_type === 'SUPERVISION' ? (
+                        {/* Informações do Evento: Aluna vs Supervisão Técnica vs Consulta de Paciente */}
+                        {appointment.appointment_type === 'STUDENT' ? (
+                            <div className="space-y-4">
+                                <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-1">
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                        <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+                                        <span>Sessão com Aluna / Mentoria Técnica</span>
+                                    </div>
+                                    <p className="text-xs text-emerald-800/80 dark:text-emerald-300">
+                                        Sessão formativa ou mentoria clínica/estágio (sem vínculo com paciente nem prontuário clínico).
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <Label>Profissional / Supervisor</Label>
+                                    <p className="font-semibold text-foreground">Dr(a). {doctorName}</p>
+                                </div>
+
+                                <div>
+                                    <Label>Aluna / Mentoranda</Label>
+                                    <p className="font-semibold text-foreground">
+                                        {appointment.student?.full_name || 'Aluna Cadastrada'}
+                                        {appointment.student?.program ? ` (${appointment.student.program})` : ''}
+                                    </p>
+                                    {(appointment.student?.contact_phone || appointment.student?.contact_email) && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            {[appointment.student?.contact_phone, appointment.student?.contact_email].filter(Boolean).join(' • ')}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Label>Data e Hora</Label>
+                                    <p className="font-medium text-foreground">{formattedDate}</p>
+                                </div>
+
+                                {appointment.mentoring_notes && (
+                                    <div>
+                                        <Label className="flex items-center gap-1.5">
+                                            <BookOpen className="h-3.5 w-3.5 text-emerald-600" />
+                                            Pauta / Anotações da Mentoria
+                                        </Label>
+                                        <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-foreground whitespace-pre-wrap">
+                                            {appointment.mentoring_notes}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <Label>Status</Label>
+                                    <div className="mt-1">
+                                        <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 font-medium">
+                                            {appointment.status === 'CANCELLED' ? 'Cancelado' : 'Confirmado'}
+                                        </Badge>
+                                    </div>
+                                </div>
+
+                                <div className="pt-2">
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => setConfirmDeleteOpen(true)}
+                                        className="w-full gap-1.5 font-semibold"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        <span>Excluir da Grade</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : appointment.appointment_type === 'SUPERVISION' ? (
                             <div className="space-y-4">
                                 <div className="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl space-y-1">
                                     <div className="flex items-center gap-2 text-xs font-semibold text-indigo-950 dark:text-indigo-200">
@@ -642,7 +710,7 @@ export function AppointmentDetailsDrawer({
                         )}
 
                         {/* CHECK-IN DO PROFISSIONAL (EVENTO-GATILHO CENTRAL - apenas para pacientes) */}
-                        {appointment.appointment_type !== 'SUPERVISION' && (
+                        {appointment.appointment_type !== 'SUPERVISION' && appointment.appointment_type !== 'STUDENT' && (
                             <>
                                 <div className="pt-3 pb-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -891,7 +959,7 @@ export function AppointmentDetailsDrawer({
                         <Separator />
 
                         {/* QR Code Section (Apenas para consultas de pacientes) */}
-                        {appointment.appointment_type !== 'SUPERVISION' && (
+                        {appointment.appointment_type !== 'SUPERVISION' && appointment.appointment_type !== 'STUDENT' && (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <Label className="text-base">QR Code Check-in</Label>

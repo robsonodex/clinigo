@@ -64,7 +64,12 @@ export async function GET(request: Request) {
                 console.error('[Reception Queue] apptError:', apptError)
                 throw apptError
             }
-            appointments = (data || []).filter((a: any) => a.appointment_type !== 'SUPERVISION' && a.appointment_type !== 'BLOCK' && a.patient_id != null)
+            appointments = (data || []).filter((a: any) => 
+                a.appointment_type !== 'SUPERVISION' && 
+                a.appointment_type !== 'STUDENT' && 
+                a.appointment_type !== 'BLOCK' && 
+                a.patient_id != null
+            )
         } catch (e) {
             console.error('[DEBUG] Error fetching queue appointments:', e)
             // Don't fail entire request, just return empty for this part but log deep

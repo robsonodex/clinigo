@@ -75,9 +75,11 @@ interface HealthInsurance {
 // Form schema
 const manualAppointmentSchema = z.object({
     doctor_id: z.string().min(1, 'Selecione um profissional'),
-    event_category: z.enum(['appointment', 'supervision']).default('appointment'),
+    event_category: z.enum(['appointment', 'supervision', 'student']).default('appointment'),
     professional_supervised_id: z.string().optional(),
     supervision_notes: z.string().optional(),
+    student_id: z.string().optional(),
+    mentoring_notes: z.string().optional(),
     appointment_date: z.string().min(1, 'Selecione uma data'),
     appointment_time: z.string().min(1, 'Selecione um horário').regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido (use HH:MM)'),
     duration_minutes: z.number().default(30),
@@ -138,6 +140,8 @@ export function ManualAppointmentModal({
             event_category: 'appointment',
             professional_supervised_id: '',
             supervision_notes: '',
+            student_id: '',
+            mentoring_notes: '',
             appointment_date: preselectedDate || format(new Date(), 'yyyy-MM-dd'),
             appointment_time: preselectedTime || '',
             duration_minutes: 30,
@@ -156,7 +160,70 @@ export function ManualAppointmentModal({
     const selectedDoctorId = watch('doctor_id')
     const eventCategory = watch('event_category')
     const isSupervision = eventCategory === 'supervision'
+    const isStudent = eventCategory === 'student'
+    const isNonPatient = isSupervision || isStudent
     const paymentType = watch('payment_type') as ManualPaymentType
+
+    // Student quick creation state
+    const [isCreateStudentOpen, setIsCreateStudentOpen] = useState(false)
+    const [newStudentName, setNewStudentName] = useState('')
+    const [newStudentPhone, setNewStudentPhone] = useState('')
+    const [newStudentEmail, setNewStudentEmail] = useState('')
+    const [newStudentProgram, setNewStudentProgram] = useState('')
+    const [isSavingStudent, setIsSavingStudent] = useState(false)
+
+    // Fetch active students for this clinic
+    const { data: students, refetch: refetchStudents } = useQuery({
+        queryKey: ['students-active'],
+        queryFn: async () => {
+            const res = await fetch('/api/students?status=active&limit=100')
+            const json = await res.json()
+            return (json.data || []) as any[]
+        },
+        enabled: open,
+        staleTime: 60 * 1000,
+    })
+
+    const handleCreateStudent = async () => {
+        const trimmedName = newStudentName.trim()
+        if (!trimmedName) {
+            toast.error('Informe o nome da aluna')
+            return
+        }
+
+        try {
+            setIsSavingStudent(true)
+            const res = await fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: trimmedName,
+                    contact_phone: newStudentPhone || undefined,
+                    contact_email: newStudentEmail || undefined,
+                    program: newStudentProgram || undefined,
+                    supervising_doctor_id: selectedDoctorId || undefined,
+                })
+            })
+
+            const json = await res.json()
+            if (!res.ok) {
+                throw new Error(json.error || 'Erro ao cadastrar aluna')
+            }
+
+            toast.success(`Aluna ${json.data.full_name} cadastrada com sucesso!`)
+            await refetchStudents()
+            setValue('student_id', json.data.id)
+            setIsCreateStudentOpen(false)
+            setNewStudentName('')
+            setNewStudentPhone('')
+            setNewStudentEmail('')
+            setNewStudentProgram('')
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao cadastrar aluna')
+        } finally {
+            setIsSavingStudent(false)
+        }
+    }
 
     // Initial setup for edit mode
     useEffect(() => {
@@ -274,7 +341,27 @@ export function ManualAppointmentModal({
                 : null
 
             let payload: any = {}
-            if (data.event_category === 'supervision') {
+            if (data.event_category === 'student') {
+                payload = {
+                    doctor_id: data.doctor_id,
+                    is_student: true,
+                    student_id: data.student_id,
+                    mentoring_notes: data.mentoring_notes || undefined,
+                    appointment_date: data.appointment_date,
+                    appointment_time: data.appointment_time,
+                    duration_minutes: data.duration_minutes,
+                    type: data.type,
+                    notes: data.notes || data.mentoring_notes,
+                    specialty: data.specialty,
+                    payment: {
+                        type: 'particular',
+                    },
+                    overrides: data.ignore_schedule_constraints ? {
+                        ignore_schedule_constraints: true,
+                        reason: data.override_reason || 'Mentoria / Aluna autorizada',
+                    } : undefined,
+                }
+            } else if (data.event_category === 'supervision') {
                 payload = {
                     doctor_id: data.doctor_id,
                     is_supervision: true,
@@ -421,13 +508,17 @@ export function ManualAppointmentModal({
     }
 
     const onSubmit = (data: ManualAppointmentFormData) => {
-        if (data.event_category !== 'supervision' && !selectedPatient && !quickRegistration && !isEditing) {
+        if (data.event_category !== 'supervision' && data.event_category !== 'student' && !selectedPatient && !quickRegistration && !isEditing) {
             toast.error('Selecione ou cadastre um paciente')
             setStep('search')
             return
         }
         if (data.event_category === 'supervision' && !data.professional_supervised_id) {
             toast.error('Selecione o profissional que receberá a supervisão')
+            return
+        }
+        if (data.event_category === 'student' && !data.student_id) {
+            toast.error('Selecione ou cadastre a aluna')
             return
         }
         saveAppointment(data)
@@ -440,21 +531,69 @@ export function ManualAppointmentModal({
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            {isSupervision ? <GraduationCap className="h-5 w-5 text-indigo-600" /> : <Calendar className="h-5 w-5" />}
-                            {isSupervision ? 'Nova Supervisão Técnica / Clínica' : isEditing ? 'Editar Agendamento' : isEncaixe ? 'Encaixe Extra / Emergência' : 'Novo Agendamento Manual'}
+                            {isStudent ? (
+                                <BookOpen className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+                            ) : isSupervision ? (
+                                <GraduationCap className="h-5 w-5 text-indigo-600" />
+                            ) : (
+                                <Calendar className="h-5 w-5" />
+                            )}
+                            {isStudent 
+                                ? 'Sessão com Aluna / Mentoria' 
+                                : isSupervision 
+                                    ? 'Nova Supervisão Técnica / Clínica' 
+                                    : isEditing 
+                                        ? 'Editar Agendamento' 
+                                        : isEncaixe 
+                                            ? 'Encaixe Extra / Emergência' 
+                                            : 'Novo Agendamento Manual'}
                         </DialogTitle>
                         <DialogDescription>
-                            {isSupervision
-                                ? 'Agende uma sessão interna de mentoria ou supervisão técnica entre profissionais da clínica.'
-                                : isEncaixe 
-                                    ? `Crie um encaixe que ignora bloqueios ou limite de horários do ${profLabel.singular.toLowerCase()}. Confirme com o profissional antes de realizar o encaixe.`
-                                    : `Crie um agendamento manual selecionando o paciente, ${profLabel.singular.toLowerCase()} e horário desejado.`}
+                            {isStudent
+                                ? 'Agende uma sessão formativa, mentoria técnica ou de estágio com aluna (sem prontuário de paciente).'
+                                : isSupervision
+                                    ? 'Agende uma sessão interna de mentoria ou supervisão técnica entre profissionais da clínica.'
+                                    : isEncaixe 
+                                        ? `Crie um encaixe que ignora bloqueios ou limite de horários do ${profLabel.singular.toLowerCase()}. Confirme com o profissional antes de realizar o encaixe.`
+                                        : `Crie um agendamento manual selecionando o paciente, ${profLabel.singular.toLowerCase()} e horário desejado.`}
                         </DialogDescription>
                     </DialogHeader>
 
                     {/* Step: Patient Search */}
                     {step === 'search' && (
                         <div className="space-y-4">
+                            {/* Banner de Aluna / Mentoria */}
+                            <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5">
+                                    <BookOpen className="h-5 w-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                            Aluna / Mentoria / Estágio
+                                        </p>
+                                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                            Sessão formativa ou mentoria técnica (sem vínculo com paciente nem prontuário clínico).
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 dark:text-emerald-300 shrink-0"
+                                    onClick={() => {
+                                        if (selectedDoctorId) {
+                                            setValue('doctor_id', selectedDoctorId)
+                                        } else if (doctors && doctors.length > 0) {
+                                            setValue('doctor_id', doctors[0].id)
+                                        }
+                                        setValue('event_category', 'student')
+                                        setStep('form')
+                                    }}
+                                >
+                                    Agendar Aluna
+                                </Button>
+                            </div>
+
                             {doctors?.some(d => d.allows_supervision) && (
                                 <div className="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-2.5">
@@ -520,32 +659,42 @@ export function ManualAppointmentModal({
                     {/* Step: Appointment Form */}
                     {step === 'form' && (
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            {/* Modalidade / Categoria do Evento (se o profissional permite supervisão) */}
-                            {selectedDoctor?.allows_supervision && (
-                                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
-                                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                                        Modalidade do Registro
-                                    </Label>
-                                    <RadioGroup
-                                        value={eventCategory}
-                                        onValueChange={(val: 'appointment' | 'supervision') => {
-                                            setValue('event_category', val)
-                                            if (val === 'appointment' && !selectedPatient && !quickRegistration) {
-                                                setStep('search')
-                                            }
-                                        }}
-                                        className="grid grid-cols-2 gap-2"
-                                    >
-                                        <div className={cn(
-                                            "flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer transition-colors",
-                                            eventCategory === 'appointment' ? "border-primary bg-primary/5 text-primary" : "border-slate-200 bg-white dark:bg-slate-900 text-muted-foreground"
-                                        )}>
-                                            <RadioGroupItem value="appointment" id="cat-appointment" />
-                                            <Label htmlFor="cat-appointment" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
-                                                <User className="h-3.5 w-3.5" />
-                                                Atendimento a Paciente
-                                            </Label>
-                                        </div>
+                            {/* Modalidade / Categoria do Evento */}
+                            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                                    Modalidade do Registro
+                                </Label>
+                                <RadioGroup
+                                    value={eventCategory}
+                                    onValueChange={(val: 'appointment' | 'supervision' | 'student') => {
+                                        setValue('event_category', val)
+                                        if (val === 'appointment' && !selectedPatient && !quickRegistration) {
+                                            setStep('search')
+                                        }
+                                    }}
+                                    className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                                >
+                                    <div className={cn(
+                                        "flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer transition-colors",
+                                        eventCategory === 'appointment' ? "border-primary bg-primary/5 text-primary font-semibold" : "border-slate-200 bg-white dark:bg-slate-900 text-muted-foreground"
+                                    )}>
+                                        <RadioGroupItem value="appointment" id="cat-appointment" />
+                                        <Label htmlFor="cat-appointment" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                                            <User className="h-3.5 w-3.5" />
+                                            Atendimento a Paciente
+                                        </Label>
+                                    </div>
+                                    <div className={cn(
+                                        "flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer transition-colors",
+                                        eventCategory === 'student' ? "border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-semibold" : "border-slate-200 bg-white dark:bg-slate-900 text-muted-foreground"
+                                    )}>
+                                        <RadioGroupItem value="student" id="cat-student" />
+                                        <Label htmlFor="cat-student" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                                            <BookOpen className="h-3.5 w-3.5 text-emerald-600" />
+                                            Aluna / Mentoria
+                                        </Label>
+                                    </div>
+                                    {selectedDoctor?.allows_supervision && (
                                         <div className={cn(
                                             "flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer transition-colors",
                                             eventCategory === 'supervision' ? "border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 font-semibold" : "border-slate-200 bg-white dark:bg-slate-900 text-muted-foreground"
@@ -556,12 +705,29 @@ export function ManualAppointmentModal({
                                                 Supervisão Técnica
                                             </Label>
                                         </div>
-                                    </RadioGroup>
-                                </div>
-                            )}
+                                    )}
+                                </RadioGroup>
+                            </div>
 
-                            {/* Patient Info or Supervision Banner */}
-                            {isSupervision ? (
+                            {/* Patient Info or Supervision/Student Banner */}
+                            {isStudent ? (
+                                <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-200/70 dark:border-emerald-900/40 rounded-xl flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                                Aluna / Mentoria Técnica
+                                            </p>
+                                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                                Sessão formativa ou mentoria de pós/estágio. Não gera cobrança nem prontuário clínico de paciente.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                        Aluna
+                                    </Badge>
+                                </div>
+                            ) : isSupervision ? (
                                 <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/25 border border-indigo-200/70 dark:border-indigo-900/40 rounded-xl flex items-center justify-between">
                                     <div className="flex items-center gap-2.5">
                                         <GraduationCap className="h-4 w-4 text-indigo-700 dark:text-indigo-400 shrink-0" />
@@ -640,7 +806,7 @@ export function ManualAppointmentModal({
                                                 {doctors?.filter(d => d.id && d.user).map((doctor) => (
                                                     <SelectItem key={doctor.id} value={doctor.id}>
                                                         {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
-                                                        {doctor.consultation_price > 0 && (
+                                                        {doctor.consultation_price > 0 && !isNonPatient && (
                                                             <span className="text-muted-foreground ml-2">
                                                                 ({formatCurrency(doctor.consultation_price)})
                                                             </span>
@@ -651,126 +817,186 @@ export function ManualAppointmentModal({
                                         </Select>
                                     )}
                                 />
-                                 {errors.doctor_id && (
-                                     <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
-                                 )}
-                             </div>
+                                {errors.doctor_id && (
+                                    <p className="text-xs text-destructive">{errors.doctor_id.message}</p>
+                                )}
+                            </div>
 
-                             {/* Specialty Selection */}
-                             {selectedDoctor && (
-                                 <div className="space-y-2">
-                                     <Label className="flex items-center gap-2">
-                                         <Stethoscope className="h-4 w-4" />
-                                         Especialidade do Atendimento
-                                     </Label>
-                                     <Controller
-                                         name="specialty"
-                                         control={form.control}
-                                         render={({ field }) => (
-                                             <Select 
-                                                 onValueChange={field.onChange} 
-                                                 value={field.value || selectedDoctor.specialty || ''}
-                                                 disabled={specialtiesList.length <= 1}
-                                             >
-                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
-                                                     <SelectValue placeholder="Selecione a especialidade" />
-                                                 </SelectTrigger>
-                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
-                                                     {specialtiesList.map((spec) => (
-                                                         <SelectItem key={spec} value={spec}>
-                                                             {spec}
-                                                         </SelectItem>
-                                                     ))}
-                                                 </SelectContent>
-                                             </Select>
-                                         )}
-                                     />
-                                 </div>
-                             )}
+                            {/* Specialty Selection */}
+                            {selectedDoctor && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2">
+                                        <Stethoscope className="h-4 w-4" />
+                                        Especialidade do Atendimento
+                                    </Label>
+                                    <Controller
+                                        name="specialty"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select 
+                                                onValueChange={field.onChange} 
+                                                value={field.value || selectedDoctor.specialty || ''}
+                                                disabled={specialtiesList.length <= 1}
+                                            >
+                                                <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
+                                                    <SelectValue placeholder="Selecione a especialidade" />
+                                                </SelectTrigger>
+                                                <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                    {specialtiesList.map((spec) => (
+                                                        <SelectItem key={spec} value={spec}>
+                                                            {spec}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </div>
+                            )}
 
-                             {/* Co-Doctor / Co-Therapist Selection (Optional, only for patient appointments) */}
-                             {!isSupervision && (
-                                 <div className="space-y-2">
-                                     <Label className="flex items-center gap-2 text-muted-foreground font-normal">
-                                         <Users className="h-4 w-4" />
-                                         Co-Terapeuta / 2º Profissional (Opcional)
-                                     </Label>
-                                     <Controller
-                                         name="co_doctor_id"
-                                         control={form.control}
-                                         render={({ field }) => (
-                                             <Select 
-                                                 onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} 
-                                                 value={field.value || 'none'}
-                                             >
-                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
-                                                     <SelectValue placeholder="Nenhum (atendimento individual)" />
-                                                 </SelectTrigger>
-                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
-                                                     <SelectItem value="none">Nenhum (atendimento individual)</SelectItem>
-                                                     {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doctor) => (
-                                                         <SelectItem key={doctor.id} value={doctor.id}>
-                                                             {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
-                                                         </SelectItem>
-                                                     ))}
-                                                 </SelectContent>
-                                             </Select>
-                                         )}
-                                     />
-                                     <p className="text-xs text-muted-foreground">
-                                         Permite que dois profissionais atendam simultaneamente na mesma sessão sem conflito de horário.
-                                     </p>
-                                 </div>
-                             )}
+                            {/* Aluna / Mentoranda Selection (apenas em modo Aluna) */}
+                            {isStudent && (
+                                <div className="space-y-3 p-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/30 rounded-xl">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="flex items-center gap-2 text-emerald-950 dark:text-emerald-200 font-semibold">
+                                            <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+                                            Aluna / Mentoranda Cadastrada *
+                                        </Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-100/70 dark:text-emerald-300"
+                                            onClick={() => setIsCreateStudentOpen(true)}
+                                        >
+                                            + Nova Aluna
+                                        </Button>
+                                    </div>
+                                    <Controller
+                                        name="student_id"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm border-emerald-300">
+                                                    <SelectValue placeholder="Selecione a aluna / mentoranda" />
+                                                </SelectTrigger>
+                                                <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                    {(!students || students.length === 0) ? (
+                                                        <div className="p-3 text-center text-xs text-muted-foreground">
+                                                            Nenhuma aluna cadastrada. Clique em &quot;+ Nova Aluna&quot; acima.
+                                                        </div>
+                                                    ) : (
+                                                        students.map((st: any) => (
+                                                            <SelectItem key={st.id} value={st.id}>
+                                                                {st.full_name} {st.program ? `(${st.program})` : ''}
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {errors.student_id && (
+                                        <p className="text-xs text-destructive">{errors.student_id.message}</p>
+                                    )}
 
-                             {/* Profissional Supervisionado (apenas em modo Supervisão) */}
-                             {isSupervision && (
-                                 <div className="space-y-2">
-                                     <Label className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-semibold">
-                                         <Users className="h-4 w-4 text-indigo-700" />
-                                         Profissional Supervisionado (Terapeuta / Mentorando)
-                                     </Label>
-                                     <Controller
-                                         name="professional_supervised_id"
-                                         control={form.control}
-                                         render={({ field }) => (
-                                             <Select onValueChange={field.onChange} value={field.value || ''}>
-                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm border-indigo-300">
-                                                     <SelectValue placeholder="Selecione o terapeuta supervisionado" />
-                                                 </SelectTrigger>
-                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
-                                                     {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doc) => (
-                                                         <SelectItem key={doc.id} value={doc.id}>
-                                                             {doc.user?.full_name} - {doc.specialty}
-                                                         </SelectItem>
-                                                     ))}
-                                                 </SelectContent>
-                                             </Select>
-                                         )}
-                                     />
-                                     <p className="text-xs text-muted-foreground">
-                                         Terapeuta da equipe que participará desta sessão de supervisão clínica.
-                                     </p>
-                                 </div>
-                             )}
+                                    <div className="space-y-1.5 pt-1">
+                                        <Label className="text-xs text-emerald-950 dark:text-emerald-200 font-medium">
+                                            Pauta / Anotações da Mentoria
+                                        </Label>
+                                        <Textarea
+                                            placeholder="Tema da mentoria, plano de estudos, dúvidas técnicas ou pauta do encontro..."
+                                            {...form.register('mentoring_notes')}
+                                            rows={3}
+                                            className="border-emerald-200 bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                             {/* Pauta / Anotações da Supervisão */}
-                             {isSupervision && (
-                                 <div className="space-y-2">
-                                     <Label className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-semibold">
-                                         <BookOpen className="h-4 w-4 text-indigo-700" />
-                                         Pauta / Anotações da Supervisão
-                                     </Label>
-                                     <Textarea
-                                         placeholder="Descreva a pauta, casos a discutir ou alinhamento técnico..."
-                                         {...form.register('supervision_notes')}
-                                         rows={3}
-                                         className="border-indigo-200"
-                                     />
-                                 </div>
-                             )}
+                            {/* Co-Doctor / Co-Therapist Selection (Optional, only for patient appointments) */}
+                            {!isNonPatient && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 text-muted-foreground font-normal">
+                                        <Users className="h-4 w-4" />
+                                        Co-Terapeuta / 2º Profissional (Opcional)
+                                    </Label>
+                                    <Controller
+                                        name="co_doctor_id"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select 
+                                                onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} 
+                                                value={field.value || 'none'}
+                                            >
+                                                <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm">
+                                                    <SelectValue placeholder="Nenhum (atendimento individual)" />
+                                                </SelectTrigger>
+                                                <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                    <SelectItem value="none">Nenhum (atendimento individual)</SelectItem>
+                                                    {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doctor) => (
+                                                        <SelectItem key={doctor.id} value={doctor.id}>
+                                                            {doctor.user?.full_name || profLabel.singular} - {doctor.specialty}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Permite que dois profissionais atendam simultaneamente na mesma sessão sem conflito de horário.
+                                    </p>
+                                </div>
+                            )}
 
-                             {/* Date and Time */}
+                            {/* Profissional Supervisionado (apenas em modo Supervisão) */}
+                            {isSupervision && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-semibold">
+                                        <Users className="h-4 w-4 text-indigo-700" />
+                                        Profissional Supervisionado (Terapeuta / Mentorando)
+                                    </Label>
+                                    <Controller
+                                        name="professional_supervised_id"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm border-indigo-300">
+                                                    <SelectValue placeholder="Selecione o terapeuta supervisionado" />
+                                                </SelectTrigger>
+                                                <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
+                                                    {doctors?.filter(d => d.id && d.user && d.id !== selectedDoctorId).map((doc) => (
+                                                        <SelectItem key={doc.id} value={doc.id}>
+                                                            {doc.user?.full_name} - {doc.specialty}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Terapeuta da equipe que participará desta sessão de supervisão clínica.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Pauta / Anotações da Supervisão */}
+                            {isSupervision && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 font-semibold">
+                                        <BookOpen className="h-4 w-4 text-indigo-700" />
+                                        Pauta / Anotações da Supervisão
+                                    </Label>
+                                    <Textarea
+                                        placeholder="Descreva a pauta, casos a discutir ou alinhamento técnico..."
+                                        {...form.register('supervision_notes')}
+                                        rows={3}
+                                        className="border-indigo-200"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Date and Time */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="flex items-center gap-2">
@@ -862,10 +1088,8 @@ export function ManualAppointmentModal({
                                 />
                             </div>
 
-                            <Separator />
-
                             {/* Payment Method (Apenas para consultas de pacientes) */}
-                            {!isSupervision && (
+                            {!isNonPatient && (
                                 <>
                                     <Separator />
                                     <div className="space-y-2">
@@ -884,7 +1108,7 @@ export function ManualAppointmentModal({
                                 </>
                             )}
 
-                            {!isSupervision && (
+                            {!isNonPatient && (
                                 <div className="space-y-2">
                                     <Label>Observações (opcional)</Label>
                                     <Textarea
@@ -896,7 +1120,7 @@ export function ManualAppointmentModal({
                             )}
 
                             {/* Notifications (Apenas para pacientes) */}
-                            {!isSupervision && (
+                            {!isNonPatient && (
                                 <div className="space-y-2">
                                     <Label className="flex items-center gap-2">
                                         <Bell className="h-4 w-4" />
@@ -934,13 +1158,101 @@ export function ManualAppointmentModal({
                                 <Button type="button" variant="outline" onClick={handleClose}>
                                     Cancelar
                                 </Button>
-                                <Button type="submit" disabled={isPending} className={isSupervision ? "bg-indigo-700 hover:bg-indigo-800 text-white" : ""}>
+                                <Button 
+                                    type="submit" 
+                                    disabled={isPending} 
+                                    className={
+                                        isStudent 
+                                            ? "bg-emerald-700 hover:bg-emerald-800 text-white" 
+                                            : isSupervision 
+                                                ? "bg-indigo-700 hover:bg-indigo-800 text-white" 
+                                                : ""
+                                    }
+                                >
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {isSupervision ? 'Confirmar Supervisão Técnica' : 'Confirmar Agendamento'}
+                                    {isStudent ? 'Confirmar Sessão com Aluna' : isSupervision ? 'Confirmar Supervisão Técnica' : 'Confirmar Agendamento'}
                                 </Button>
                             </div>
                         </form>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Inline: Nova Aluna */}
+            <Dialog open={isCreateStudentOpen} onOpenChange={setIsCreateStudentOpen}>
+                <DialogContent className="max-w-md z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base">
+                            <BookOpen className="h-4 w-4 text-emerald-700" />
+                            Cadastrar Nova Aluna / Mentoranda
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Cadastre a aluna para agendamento de mentoria ou estágio. Registro próprio e isolado de pacientes.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-3 py-2">
+                        <div className="space-y-1">
+                            <Label className="text-xs">Nome Completo *</Label>
+                            <Input
+                                placeholder="Nome da aluna"
+                                value={newStudentName}
+                                onChange={(e) => setNewStudentName(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                                <Label className="text-xs">Telefone / WhatsApp</Label>
+                                <Input
+                                    placeholder="(00) 00000-0000"
+                                    value={newStudentPhone}
+                                    onChange={(e) => setNewStudentPhone(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs">E-mail</Label>
+                                <Input
+                                    type="email"
+                                    placeholder="aluna@email.com"
+                                    value={newStudentEmail}
+                                    onChange={(e) => setNewStudentEmail(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <Label className="text-xs">Programa / Curso / Estágio (opcional)</Label>
+                            <Input
+                                placeholder="Ex: Pós-graduação em Neuropsicologia, Estágio 2026..."
+                                value={newStudentProgram}
+                                onChange={(e) => setNewStudentProgram(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsCreateStudentOpen(false)}
+                            disabled={isSavingStudent}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white"
+                            onClick={handleCreateStudent}
+                            disabled={isSavingStudent}
+                        >
+                            {isSavingStudent && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                            Salvar Aluna
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 

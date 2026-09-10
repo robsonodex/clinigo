@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
           id, crm, specialty,
           user:users(full_name, email, avatar_url)
         ),
+        student:students!appointments_student_id_fkey(id, full_name, contact_phone, contact_email, program),
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
         payment:payments(id, status, amount, payment_method)
       `, { count: 'exact' })
