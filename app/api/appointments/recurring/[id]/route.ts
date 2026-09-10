@@ -1,10 +1,5 @@
-/**
- * PATCH /api/appointments/recurring/[id] - Update/pause/resume a series (includes day/time changes)
- * DELETE /api/appointments/recurring/[id] - Cancel a series and all future appointments
- * GET /api/appointments/recurring/[id] - Get series details
- */
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 
 /**
@@ -64,7 +59,9 @@ export async function GET(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const { data: profile } = await supabase
+        const adminDb = createServiceRoleClient() as any
+
+        const { data: profile } = await adminDb
             .from('users')
             .select('role, clinic_id')
             .eq('id', user.id)
@@ -85,7 +82,7 @@ export async function GET(
             return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
         }
 
-        const { data: series, error } = await supabase
+        const { data: series, error } = await adminDb
             .from('recurring_appointment_series')
             .select(`
                 *,
@@ -103,12 +100,12 @@ export async function GET(
 
         // Count future appointments
         const today = new Date().toISOString().split('T')[0]
-        const { count } = await supabase
+        const { count } = await adminDb
             .from('appointments')
             .select('id', { count: 'exact', head: true })
             .eq('series_id', seriesId)
             .gte('appointment_date', today)
-            .not('status', 'in', '("CANCELLED")')
+            .not('status', 'in', '("CANCELLED","COMPLETED")')
 
         return NextResponse.json({ ...(series as any), future_appointments_count: count || 0 })
 
@@ -131,7 +128,9 @@ export async function PATCH(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const { data: profile } = await supabase
+        const adminDb = createServiceRoleClient() as any
+
+        const { data: profile } = await adminDb
             .from('users')
             .select('role, clinic_id')
             .eq('id', user.id)
@@ -152,8 +151,8 @@ export async function PATCH(
             return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
         }
 
-        // Verify series exists and belongs to clinic - fetch full data for schedule changes
-        const { data: series } = await supabase
+        // Verify series exists and belongs to clinic
+        const { data: series } = await adminDb
             .from('recurring_appointment_series')
             .select('*')
             .eq('id', seriesId)
@@ -203,7 +202,7 @@ export async function PATCH(
             }
 
             // Check for conflicts with OTHER appointments (not from this series)
-            const { data: conflicts } = await supabase
+            const { data: conflicts } = await adminDb
                 .from('appointments')
                 .select('appointment_date, appointment_time')
                 .eq('doctor_id', doctorId)
@@ -216,7 +215,7 @@ export async function PATCH(
                 const conflictDates = conflicts.map((c: any) => c.appointment_date)
                 return NextResponse.json(
                     {
-                        error: 'Existem conflitos de horário com outros agendamentos nas datas abaixo.',
+                        error: 'Existem conflitos de horário com outros agendamentos nas datas selecionadas.',
                         conflict: true,
                         conflicting_dates: conflictDates,
                         total_conflicts: conflictDates.length,
@@ -225,24 +224,24 @@ export async function PATCH(
                 )
             }
 
-            // Step 1: Delete all future appointments from this series (CONFIRMED/PENDING_PAYMENT)
-            const { error: deleteError } = await supabase
+            // Step 1: Remove all future appointments from this series that are not completed
+            const { error: deleteError } = await adminDb
                 .from('appointments')
                 .delete()
                 .eq('series_id', seriesId)
                 .gte('appointment_date', today)
-                .in('status', ['CONFIRMED', 'PENDING_PAYMENT'])
+                .not('status', 'in', '("COMPLETED")')
 
             if (deleteError) {
                 console.error('Error deleting old appointments:', deleteError)
                 return NextResponse.json(
-                    { error: 'Erro ao remover agendamentos antigos' },
+                    { error: 'Erro ao remover agendamentos antigos: ' + deleteError.message },
                     { status: 500 }
                 )
             }
 
             // Step 2: Also clean up any CANCELLED appointments on the new dates that would block inserts
-            await supabase
+            await adminDb
                 .from('appointments')
                 .delete()
                 .eq('doctor_id', doctorId)
@@ -253,7 +252,7 @@ export async function PATCH(
             // Step 3: Create new appointments on the correct dates
             const newAppointments = newDates.map(date => ({
                 id: crypto.randomUUID(),
-                clinic_id: (profile as any).clinic_id,
+                clinic_id: effectiveClinicId,
                 doctor_id: doctorId,
                 patient_id: series.patient_id,
                 appointment_date: date,
@@ -271,29 +270,34 @@ export async function PATCH(
 
             for (let i = 0; i < newAppointments.length; i += batchSize) {
                 const batch = newAppointments.slice(i, i + batchSize)
-                const { error: batchError } = await supabase
+                const { error: batchError } = await adminDb
                     .from('appointments')
                     .insert(batch as any)
 
                 if (batchError) {
                     console.error(`Batch error (${i}-${i + batch.length}):`, batchError)
+                    return NextResponse.json(
+                        { error: 'Erro ao gerar agendamentos futuros da série: ' + batchError.message },
+                        { status: 500 }
+                    )
                 } else {
                     totalCreated += batch.length
                 }
             }
 
-            // Step 4: Update the series record
+            // Step 4: Update the series record and ensure is_active is true upon schedule change
             const seriesUpdate: Record<string, unknown> = {
                 days_of_week: newDays,
                 appointment_time: newTime,
                 recurrence_interval: newInterval,
                 frequency: newFrequency,
+                is_active: body.is_active !== undefined ? body.is_active : true,
                 updated_at: new Date().toISOString(),
             }
             if (body.therapy_type !== undefined) seriesUpdate.therapy_type = body.therapy_type
             if (body.notes !== undefined) seriesUpdate.notes = body.notes
 
-            const { error: seriesUpdateError } = await supabase
+            const { error: seriesUpdateError } = await adminDb
                 .from('recurring_appointment_series')
                 .update(seriesUpdate as any)
                 .eq('id', seriesId)
@@ -311,11 +315,11 @@ export async function PATCH(
                 total_created: totalCreated,
                 new_days: dayLabels,
                 new_time: newTime,
-                message: `Série atualizada com sucesso! ${totalCreated} agendamentos reagendados para ${dayLabels} às ${newTime}.`,
+                message: `Série atualizada com sucesso! ${totalCreated} agendamento(s) reagendado(s) para ${dayLabels} às ${newTime}.`,
             })
         }
 
-        // === SIMPLE UPDATE: Only metadata fields ===
+        // === SIMPLE UPDATE: Metadata or Pause/Resume ===
         const updateData: Record<string, unknown> = {}
 
         if (typeof body.is_active === 'boolean') {
@@ -350,7 +354,9 @@ export async function PATCH(
             )
         }
 
-        const { error: updateError } = await supabase
+        updateData.updated_at = new Date().toISOString()
+
+        const { error: updateError } = await adminDb
             .from('recurring_appointment_series')
             .update(updateData as any)
             .eq('id', seriesId)
@@ -358,20 +364,36 @@ export async function PATCH(
         if (updateError) {
             console.error('Error updating series:', updateError)
             return NextResponse.json(
-                { error: 'Erro ao atualizar série' },
+                { error: 'Erro ao atualizar série: ' + updateError.message },
                 { status: 500 }
             )
         }
 
-        // Propagar co_doctor_id para os agendamentos futuros da série
+        const today = new Date().toISOString().split('T')[0]
+
+        // Se a série foi pausada (is_active: false), cancelar os agendamentos futuros não realizados
+        if (body.is_active === false) {
+            await adminDb
+                .from('appointments')
+                .update({
+                    status: 'CANCELLED',
+                    cancellation_reason: 'Série recorrente cancelada',
+                    cancelled_at: new Date().toISOString(),
+                    cancelled_by: user.id,
+                })
+                .eq('series_id', seriesId)
+                .gte('appointment_date', today)
+                .not('status', 'in', '("COMPLETED","CANCELLED")')
+        }
+
+        // Propagar co_doctor_id para os agendamentos futuros da série se alterado
         if (body.co_doctor_id !== undefined) {
-            const today = new Date().toISOString().split('T')[0]
-            await supabase
+            await adminDb
                 .from('appointments')
                 .update({ co_doctor_id: updateData.co_doctor_id })
                 .eq('series_id', seriesId)
                 .gte('appointment_date', today)
-                .not('status', 'in', '("CANCELLED")')
+                .not('status', 'in', '("CANCELLED","COMPLETED")')
         }
 
         const action = updateData.is_active === false ? 'pausada' : updateData.is_active === true ? 'reativada' : 'atualizada'
@@ -381,9 +403,9 @@ export async function PATCH(
             message: `Série ${action} com sucesso`,
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Update series error:', error)
-        return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+        return NextResponse.json({ error: error?.message || 'Erro interno do servidor' }, { status: 500 })
     }
 }
 
@@ -400,7 +422,9 @@ export async function DELETE(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        const { data: profile } = await supabase
+        const adminDb = createServiceRoleClient() as any
+
+        const { data: profile } = await adminDb
             .from('users')
             .select('role, clinic_id')
             .eq('id', user.id)
@@ -421,22 +445,36 @@ export async function DELETE(
             return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
         }
 
-        // Verify series exists
-        const { data: series } = await supabase
+        // Verify series exists and belongs to clinic
+        const { data: series, error: seriesError } = await adminDb
             .from('recurring_appointment_series')
-            .select('id, clinic_id')
+            .select('id, clinic_id, doctor_id')
             .eq('id', seriesId)
             .eq('clinic_id', effectiveClinicId)
             .single()
 
-        if (!series) {
+        if (seriesError || !series) {
             return NextResponse.json({ error: 'Série não encontrada' }, { status: 404 })
         }
 
-        const today = new Date().toISOString().split('T')[0]
+        if (profile.role === 'DOCTOR') {
+            const { data: doctor } = await adminDb
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
 
-        // Cancel all future CONFIRMED appointments from this series
-        const { data: cancelledAppointments, error: cancelError } = await supabase
+            if (!doctor || doctor.id !== series.doctor_id) {
+                return NextResponse.json({ error: 'Acesso negado: apenas o profissional responsável ou a gestão podem excluir a série' }, { status: 403 })
+            }
+        }
+
+        const today = new Date().toISOString().split('T')[0]
+        const url = new URL(request.url)
+        const isPermanent = url.searchParams.get('permanent') === 'true' || url.searchParams.get('delete_series') === 'true'
+
+        // 1. Cancelar TODOS os agendamentos futuros não concluídos desta série
+        const { data: cancelledAppointments, error: cancelError } = await adminDb
             .from('appointments')
             .update({
                 status: 'CANCELLED',
@@ -446,35 +484,70 @@ export async function DELETE(
             } as any)
             .eq('series_id', seriesId)
             .gte('appointment_date', today)
-            .in('status', ['CONFIRMED', 'PENDING_PAYMENT'])
+            .not('status', 'in', '("COMPLETED")')
             .select('id')
 
         if (cancelError) {
             console.error('Error cancelling series appointments:', cancelError)
+            return NextResponse.json(
+                { error: 'Erro ao cancelar agendamentos futuros da série: ' + cancelError.message },
+                { status: 500 }
+            )
         }
 
-        // Deactivate the series
-        const { error: deactivateError } = await supabase
+        const totalCancelled = cancelledAppointments?.length || 0
+
+        // 2. Se for exclusão permanente (ou padrão ao deletar série na lixeira):
+        // Exclui a série da tabela recurring_appointment_series para não poluir a listagem
+        if (isPermanent) {
+            const { error: deleteSeriesError } = await adminDb
+                .from('recurring_appointment_series')
+                .delete()
+                .eq('id', seriesId)
+                .eq('clinic_id', effectiveClinicId)
+
+            if (deleteSeriesError) {
+                console.error('Error deleting series permanently:', deleteSeriesError)
+                // Fallback: inativa a série caso haja alguma restrição
+                await adminDb
+                    .from('recurring_appointment_series')
+                    .update({ is_active: false })
+                    .eq('id', seriesId)
+            }
+
+            return NextResponse.json({
+                success: true,
+                cancelled_appointments: totalCancelled,
+                series_deleted: true,
+                message: `Série recorrente excluída permanentemente. ${totalCancelled} agendamento(s) cancelado(s) e removido(s) da grade.`,
+            })
+        }
+
+        // 3. Caso não seja permanente, apenas desativa a série
+        const { error: deactivateError } = await adminDb
             .from('recurring_appointment_series')
             .update({ is_active: false } as any)
             .eq('id', seriesId)
+            .eq('clinic_id', effectiveClinicId)
 
         if (deactivateError) {
             console.error('Error deactivating series:', deactivateError)
             return NextResponse.json(
-                { error: 'Erro ao cancelar série' },
+                { error: 'Erro ao desativar série: ' + deactivateError.message },
                 { status: 500 }
             )
         }
 
         return NextResponse.json({
             success: true,
-            cancelled_appointments: cancelledAppointments?.length || 0,
-            message: `Série cancelada. ${cancelledAppointments?.length || 0} agendamento(s) futuro(s) cancelado(s).`,
+            cancelled_appointments: totalCancelled,
+            series_deleted: false,
+            message: `Série cancelada. ${totalCancelled} agendamento(s) futuro(s) cancelado(s).`,
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Delete series error:', error)
-        return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+        return NextResponse.json({ error: error?.message || 'Erro interno do servidor' }, { status: 500 })
     }
 }
+

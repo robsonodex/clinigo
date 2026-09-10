@@ -191,22 +191,24 @@ export function RecurringSeriesListModal({
         },
     })
 
-    // Cancel series mutation
+    // Cancel / Delete series mutation
     const cancelSeries = async () => {
         if (!cancellingSeriesId) return
         setIsCancelling(true)
         try {
-            const res = await fetch(`/api/appointments/recurring/${cancellingSeriesId}`, {
+            const res = await fetch(`/api/appointments/recurring/${cancellingSeriesId}?permanent=true`, {
                 method: 'DELETE',
             })
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Erro ao cancelar série recorrente')
-            toast.success(data.message || 'Série recorrente cancelada com sucesso')
-            queryClient.invalidateQueries({ queryKey: ['recurring-series-list'], exact: false })
-            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+            if (!res.ok) throw new Error(data.error || 'Erro ao excluir série recorrente')
+            toast.success(data.message || 'Série recorrente excluída com sucesso')
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['recurring-series-list'], exact: false }),
+                queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false }),
+            ])
             setCancellingSeriesId(null)
         } catch (err: any) {
-            toast.error(err.message || 'Erro ao cancelar série')
+            toast.error(err.message || 'Erro ao excluir série')
         } finally {
             setIsCancelling(false)
         }
@@ -529,7 +531,7 @@ export function RecurringSeriesListModal({
                                                     )}
                                                 </Button>
 
-                                                {/* Botão Cancelar Série */}
+                                                {/* Botão Excluir Série */}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -538,10 +540,10 @@ export function RecurringSeriesListModal({
                                                         setSeriesToCancelName(`${patientName} (${formatDays(item.days_of_week)} às ${timeStr})`)
                                                     }}
                                                     className="h-9 px-2 text-xs gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 min-h-[44px] sm:min-h-[36px]"
-                                                    title="Cancelar toda a série recorrente e seus agendamentos futuros"
+                                                    title="Excluir toda a série recorrente e seus agendamentos futuros"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
-                                                    <span className="hidden sm:inline">Cancelar</span>
+                                                    <span className="hidden sm:inline">Excluir</span>
                                                 </Button>
                                             </div>
                                         </div>
@@ -567,20 +569,20 @@ export function RecurringSeriesListModal({
                 </DialogContent>
             </Dialog>
 
-            {/* Confirmação de Cancelamento de Série */}
+            {/* Confirmação de Exclusão de Série */}
             <AlertDialog open={!!cancellingSeriesId} onOpenChange={(open) => !open && setCancellingSeriesId(null)}>
                 <AlertDialogContent className="max-w-md">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2 text-red-600 font-bold">
                             <Trash2 className="h-5 w-5" />
-                            Cancelar Série Recorrente
+                            Excluir Série Recorrente
                         </AlertDialogTitle>
                         <AlertDialogDescription className="space-y-2 text-sm text-foreground">
                             <p>
-                                Tem certeza que deseja cancelar a série recorrente de <strong>{seriesToCancelName}</strong>?
+                                Tem certeza que deseja excluir a série recorrente de <strong>{seriesToCancelName}</strong>?
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                Esta ação cancelará permanentemente todos os agendamentos futuros não realizados desta série. As sessões que já foram concluídas ou realizadas no passado serão mantidas no histórico.
+                                Esta ação cancelará e removerá todos os agendamentos futuros não realizados desta série da grade da agenda e expurgará a série do cadastro. Sessões que já foram concluídas no passado serão mantidas intactas no histórico.
                             </p>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -602,10 +604,10 @@ export function RecurringSeriesListModal({
                             {isCancelling ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                                    Cancelando...
+                                    Excluindo...
                                 </>
                             ) : (
-                                'Confirmar Cancelamento'
+                                'Confirmar Exclusão'
                             )}
                         </AlertDialogAction>
                     </AlertDialogFooter>

@@ -799,18 +799,19 @@ export default function AgendaPage() {
     const cancelSeriesMutation = useMutation({
         mutationFn: async () => {
             if (!cancellingSeriesId) return
-            const res = await fetch(`/api/appointments/recurring/${cancellingSeriesId}`, {
+            const res = await fetch(`/api/appointments/recurring/${cancellingSeriesId}?permanent=true`, {
                 method: 'DELETE',
             })
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Erro ao cancelar série')
+            if (!res.ok) throw new Error(data.error || 'Erro ao excluir série')
             return data
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+            queryClient.invalidateQueries({ queryKey: ['recurring-series-list'], exact: false })
             setCancellingSeriesId(null)
             setCancelSeriesStep(1)
-            toast.success(data?.message || 'Série recorrente cancelada com sucesso')
+            toast.success(data?.message || 'Série recorrente excluída com sucesso')
         },
         onError: (error: Error) => {
             toast.error(error.message)

@@ -116,6 +116,34 @@ export function AppointmentDetailsDrawer({
         }
     }
 
+    async function handleDeleteEntireSeries() {
+        if (!appointment?.series_id) return
+        setIsDeleting(true)
+        try {
+            const res = await fetch(`/api/appointments/recurring/${appointment.series_id}?permanent=true`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data?.error || 'Erro ao excluir série recorrente')
+            }
+            toast.success(data?.message || 'Série recorrente excluída com sucesso')
+            setConfirmDeleteOpen(false)
+            onClose()
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('appointment-updated'))
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir série recorrente')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+
     async function handleSavePermanentRate() {
         if (!appointment?.doctor_id || !appointment?.patient_id) {
             toast.error('Dados do médico ou paciente não disponíveis')
@@ -1090,46 +1118,83 @@ export function AppointmentDetailsDrawer({
                     </DialogContent>
                 </Dialog>
 
-                {/* MODAL DE CONFIRMAÇÃO PARA EXCLUIR AGENDAMENTO CANCELADO DA GRADE */}
+                {/* MODAL DE CONFIRMAÇÃO PARA EXCLUIR AGENDAMENTO / SÉRIE RECORRENTE */}
                 <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
                     <DialogContent className="rounded-2xl max-w-md w-[95vw] sm:w-full">
                         <DialogHeader>
                             <DialogTitle className="text-lg font-bold flex items-center gap-2 text-destructive">
                                 <Trash2 className="w-5 h-5" />
-                                <span>Excluir Agendamento Cancelado</span>
+                                <span>{appointment?.series_id ? 'Excluir Agendamento / Série' : 'Excluir Agendamento da Grade'}</span>
                             </DialogTitle>
                             <DialogDescription className="text-xs">
-                                Deseja remover permanentemente este agendamento cancelado da grade da agenda?
+                                {appointment?.series_id
+                                    ? 'Este agendamento faz parte de uma série recorrente. Escolha como deseja prosseguir:'
+                                    : 'Deseja remover permanentemente este agendamento da grade da agenda?'}
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="py-2">
-                            <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-800 dark:text-red-300">
-                                Esta ação liberará visualmente o horário na agenda e removerá o registro riscado.
-                            </div>
+                        <div className="py-2 space-y-2">
+                            {appointment?.series_id ? (
+                                <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300">
+                                    Você pode excluir apenas este agendamento específico ou excluir toda a série recorrente e seus agendamentos futuros.
+                                </div>
+                            ) : (
+                                <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-800 dark:text-red-300">
+                                    Esta ação liberará o horário na agenda e removerá o agendamento da grade.
+                                </div>
+                            )}
                         </div>
                         <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
                             <Button
                                 variant="outline"
                                 onClick={() => setConfirmDeleteOpen(false)}
+                                disabled={isDeleting}
                                 className="min-h-[44px] rounded-xl w-full sm:w-auto"
                             >
                                 Voltar
                             </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleDeleteAppointment}
-                                disabled={isDeleting}
-                                className="min-h-[44px] rounded-xs w-full sm:w-auto font-semibold"
-                            >
-                                {isDeleting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                                        <span>Excluindo...</span>
-                                    </>
-                                ) : (
-                                    <span>Confirmar Exclusão</span>
-                                )}
-                            </Button>
+                            {appointment?.series_id ? (
+                                <>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleDeleteAppointment}
+                                        disabled={isDeleting}
+                                        className="min-h-[44px] rounded-xl w-full sm:w-auto text-xs font-semibold"
+                                    >
+                                        Excluir apenas este
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={handleDeleteEntireSeries}
+                                        disabled={isDeleting}
+                                        className="min-h-[44px] rounded-xl w-full sm:w-auto text-xs font-semibold"
+                                    >
+                                        {isDeleting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                                <span>Excluindo...</span>
+                                            </>
+                                        ) : (
+                                            <span>Excluir toda a série</span>
+                                        )}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleDeleteAppointment}
+                                    disabled={isDeleting}
+                                    className="min-h-[44px] rounded-xs w-full sm:w-auto font-semibold"
+                                >
+                                    {isDeleting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                                            <span>Excluindo...</span>
+                                        </>
+                                    ) : (
+                                        <span>Confirmar Exclusão</span>
+                                    )}
+                                </Button>
+                            )}
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
