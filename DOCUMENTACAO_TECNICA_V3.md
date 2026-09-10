@@ -1,6 +1,28 @@
-# Documenta��o T�cnica V3
+# Documentao Tcnica V3
 
-## M�dulos
+## Módulos
+
+### Exclusão Definitiva de Usuários e Profissionais (World Sensory e Global)
+- **Módulos**:
+  - Configurações → Usuários e Permissões → `app/dashboard/(clinic)/configuracoes/usuarios/page.tsx` → `UsuariosPermissoesPage` / `handleConfirmDeleteUser()` / `Dialog`
+  - Cadastros → Profissionais → `app/dashboard/(clinic)/medicos/page.tsx` → `DoctorsPage` / `deleteMutation` / `Dialog`
+  - Usuários API → `app/api/users/[id]/route.ts` → `DELETE`
+  - Médicos API → `app/api/doctors/detail/route.ts` → `handleDeleteDoctor()`
+  - Serviços de Sistema → `lib/services/user-cleanup.ts` → `permanentlyDeleteUser()`
+- **Descrição**:
+  - **Exclusão Física Definitiva**:
+    - Implementada a possibilidade de exclusão permanente de usuários e profissionais diretamente pela interface de gerenciamento de usuários e na tela de profissionais.
+    - Criado o serviço de desvinculação cirúrgica relacional (`lib/services/user-cleanup.ts`), higienizando e desvinculando registros de `therapist_capacity`, `supervision_records`, `waiting_list`, `recurring_appointment_series`, `appointments`, `patient_checkin_events`, `prescriptions`, `consultations`, `financial_entries` e outras tabelas dependentes, prevenindo violação de chave estrangeira (`23503`).
+    - Exclusão sequencial garantida em `public.doctors`, `public.users` e no Supabase Auth (`auth.users`), liberando o e-mail e as licenças da clínica.
+  - **Segurança e Isolamento**:
+    - Permissão restrita a administradores (`CLINIC_ADMIN` e `SUPER_ADMIN`).
+    - Validação de isolamento por `clinic_id` (impossível excluir usuários de outras clínicas).
+    - Trava ativa contra auto-exclusão do usuário logado.
+  - **Interface e PWA**:
+    - Campo de busca em tempo real na tabela de Usuários e Permissões.
+    - Diálogo de confirmação corporativo estilizado com aviso de ação irreversível e feedback visual de carregamento.
+    - Toque acessível (touch target >= 44x44px) e total compatibilidade com Mobile PWA.
+    - Zero emojis em conformidade com o Padrão SaaS Médico Corporativo Internacional.
 
 ### Assinatura, Integrações Google Drive e Segurança de Senha
 - **Módulos**:

@@ -50,12 +50,14 @@ import {
     Copy,
     Eye,
     EyeOff,
-    Lock
+    Lock,
+    Search
 } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { createClient } from '@/lib/supabase/client'
@@ -136,9 +138,12 @@ const PERMISSION_MODULES = [
 export default function UsuariosPermissoesPage() {
     const [loading, setLoading] = useState(true)
     const [users, setUsers] = useState<User[]>([])
+    const [searchTerm, setSearchTerm] = useState('')
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<User | null>(null)
+    const [userToDelete, setUserToDelete] = useState<User | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
     const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null)
     const [resetPassword, setResetPassword] = useState('')
     const [showResetPassword, setShowResetPassword] = useState(false)
@@ -150,6 +155,27 @@ export default function UsuariosPermissoesPage() {
         role: 'RECEPTIONIST' as User['role'],
         permissions: {} as Record<string, boolean>
     })
+
+    async function handleConfirmDeleteUser() {
+        if (!userToDelete) return
+        setIsDeleting(true)
+        try {
+            const response = await fetch(`/api/users/${userToDelete.id}`, {
+                method: 'DELETE'
+            })
+            const data = await response.json()
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao excluir usuário em definitivo')
+            }
+            toast.success(`Usuário ${userToDelete.name} excluído em definitivo`)
+            setUserToDelete(null)
+            loadUsers()
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao excluir usuário')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
 
     useEffect(() => {
         loadUsers()
@@ -177,8 +203,8 @@ export default function UsuariosPermissoesPage() {
 
             if (!user) return
 
-            const { data: userData } = await supabase
-                .from('users')
+            const { data: userData } = await (supabase
+                .from('users') as any)
                 .select('clinic_id')
                 .eq('id', user.id)
                 .single()
@@ -187,14 +213,14 @@ export default function UsuariosPermissoesPage() {
             setClinicId(userData.clinic_id)
 
             // Load users from clinic
-            const { data: clinicUsers } = await supabase
-                .from('users')
+            const { data: clinicUsers } = await (supabase
+                .from('users') as any)
                 .select('*')
                 .eq('clinic_id', userData.clinic_id)
                 .order('created_at', { ascending: false })
 
             if (clinicUsers) {
-                setUsers(clinicUsers.map(u => ({
+                setUsers(clinicUsers.map((u: any) => ({
                     id: u.id,
                     email: u.email || '',
                     name: u.full_name || u.name || u.email?.split('@')[0] || 'Sem nome',
@@ -274,8 +300,8 @@ export default function UsuariosPermissoesPage() {
         try {
             const supabase = createClient()
 
-            const { error } = await supabase
-                .from('users')
+            const { error } = await (supabase
+                .from('users') as any)
                 .update({ is_active: active })
                 .eq('id', userId)
 
@@ -495,11 +521,23 @@ export default function UsuariosPermissoesPage() {
                 {/* TAB: Usuários */}
                 <TabsContent value="usuarios">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Usuários da Clínica</CardTitle>
-                            <CardDescription>
-                                {users.length} usuário(s) cadastrado(s)
-                            </CardDescription>
+                        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <CardTitle>Usuários da Clínica</CardTitle>
+                                <CardDescription>
+                                    {users.length} usuário(s) cadastrado(s)
+                                    {searchTerm && ` · ${users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).length} encontrado(s)`}
+                                </CardDescription>
+                            </div>
+                            <div className="relative w-full sm:w-72">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar por nome ou e-mail..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 min-h-[40px]"
+                                />
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -513,7 +551,17 @@ export default function UsuariosPermissoesPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {users.map((user) => (
+                                    {users
+                                        .filter(u => {
+                                            if (!searchTerm.trim()) return true
+                                            const term = searchTerm.toLowerCase()
+                                            return (
+                                                u.name.toLowerCase().includes(term) ||
+                                                u.email.toLowerCase().includes(term) ||
+                                                (ROLES[u.role]?.label || u.role).toLowerCase().includes(term)
+                                            )
+                                        })
+                                        .map((user) => (
                                         <TableRow key={user.id}>
                                             <TableCell>
                                                 <div>
@@ -553,7 +601,7 @@ export default function UsuariosPermissoesPage() {
                                             <TableCell>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
+                                                        <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
                                                             <MoreHorizontal className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -588,6 +636,14 @@ export default function UsuariosPermissoesPage() {
                                                                     Ativar
                                                                 </>
                                                             )}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
+                                                            onClick={() => setUserToDelete(user)}
+                                                        >
+                                                            <Trash2 className="w-4 h-4 mr-2" />
+                                                            Excluir Definitivamente
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -810,6 +866,54 @@ export default function UsuariosPermissoesPage() {
                                 <Key className="w-4 h-4 mr-2" />
                             )}
                             Redefinir Senha
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Excluir Usuário em Definitivo */}
+            <Dialog open={!!userToDelete} onOpenChange={(open) => !open && !isDeleting && setUserToDelete(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                            <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            Excluir Usuário em Definitivo
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 text-sm text-foreground">
+                            Tem certeza que deseja excluir permanentemente o usuário <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
+                        Esta ação é permanente e irreversível. O acesso do usuário será revogado, os registros serão desvinculados com segurança, o cadastro no Supabase Auth será removido e o e-mail será liberado.
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            className="min-h-[44px]"
+                            onClick={() => setUserToDelete(null)}
+                            disabled={isDeleting}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white"
+                            onClick={handleConfirmDeleteUser}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                    Excluindo...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir Definitivamente
+                                </>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

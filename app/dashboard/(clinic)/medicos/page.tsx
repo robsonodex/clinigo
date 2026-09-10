@@ -24,6 +24,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -56,6 +64,7 @@ export default function DoctorsPage() {
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+    const [doctorToDelete, setDoctorToDelete] = useState<Doctor | null>(null)
     const profLabel = useProfessionalLabel()
     const searchParams = useSearchParams()
 
@@ -123,6 +132,7 @@ export default function DoctorsPage() {
             api.delete(`/doctors/detail?id=${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
+            setDoctorToDelete(null)
             toast.success(`${profLabel.singular} excluído com sucesso`)
         },
         onError: (err: any) => {
@@ -431,11 +441,7 @@ export default function DoctorsPage() {
                                                         )}
                                                         <DropdownMenuItem
                                                             className="text-destructive"
-                                                            onClick={() => {
-                                                                if (confirm(`Deseja realmente excluir o ${profLabel.singular.toLowerCase()} ${doctor.user?.full_name}?`)) {
-                                                                    deleteMutation.mutate(doctor.id)
-                                                                }
-                                                            }}
+                                                            onClick={() => setDoctorToDelete(doctor)}
                                                         >
                                                             <Trash2 className="w-4 h-4 mr-2" />
                                                             Excluir
@@ -457,6 +463,44 @@ export default function DoctorsPage() {
                 onOpenChange={setIsDialogOpen}
                 doctorToEdit={editingDoctor}
             />
+
+            {/* Modal de Confirmação de Exclusão de Profissional */}
+            <Dialog open={!!doctorToDelete} onOpenChange={(open) => !open && !deleteMutation.isPending && setDoctorToDelete(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                            <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            Excluir {profLabel.singular}
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 text-sm text-foreground">
+                            Tem certeza que deseja excluir permanentemente o {profLabel.singular.toLowerCase()} <strong>{doctorToDelete?.user?.full_name}</strong>?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
+                        Esta ação é permanente e irreversível. O perfil profissional será removido, as dependências de agenda desvinculadas e o usuário correspondente será excluído do sistema.
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            className="min-h-[44px]"
+                            onClick={() => setDoctorToDelete(null)}
+                            disabled={deleteMutation.isPending}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => doctorToDelete && deleteMutation.mutate(doctorToDelete.id)}
+                            disabled={deleteMutation.isPending}
+                        >
+                            {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Definitivamente'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
