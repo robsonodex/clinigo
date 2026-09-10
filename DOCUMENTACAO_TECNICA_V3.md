@@ -2,6 +2,20 @@
 
 ## Módulos
 
+### Correção de Runtime no Formulário de Evolução Terapêutica (World Sensory / Global)
+- **Módulos**:
+  - Prontuários → Evolução Clínica → `components/medical-records/WorldSensoryEvolutionForm.tsx` → `WorldSensoryEvolutionForm`
+  - Prontuários → Página de Prontuário → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`
+- **Descrição**:
+  - **Correção de ReferenceError (AlertCircle)**:
+    - Identificada a causa do erro `"Can't find variable: AlertCircle"` capturado pelo Error Boundary (`app/dashboard/(clinic)/error.tsx`) quando terapeutas (ex: Lara Maria) abriam a evolução clínica no aplicativo móvel/PWA.
+    - O componente `WorldSensoryEvolutionForm` utilizava o ícone `<AlertCircle />` no bloco de notificação de biometria facial pendente (`isEvolutionBlockedByBiometrics`), porém o identificador `AlertCircle` não estava incluído no `import` de `lucide-react`.
+    - Adicionado o ícone `AlertCircle` aos imports de `lucide-react` e ajustada a tipagem do gerador de PDF (`html2pdf`).
+  - **Validação e Mobile**:
+    - Verificação de tipos via TypeScript estático com zero erros no componente.
+    - Preservados todos os botões corporativos (Salvar Evolução, Limpar Campos, Imprimir PDF, Coleta de Rubrica/Assinatura Digital) e checklist de touch target (min 44x44px) e responsividade mobile-first para telas PWA.
+    - Padrão SaaS médico internacional rigorosamente seguido (zero emojis).
+
 ### Exclusão Definitiva de Usuários e Profissionais (World Sensory e Global)
 - **Módulos**:
   - Configurações → Usuários e Permissões → `app/dashboard/(clinic)/configuracoes/usuarios/page.tsx` → `UsuariosPermissoesPage` / `handleConfirmDeleteUser()` / `Dialog`

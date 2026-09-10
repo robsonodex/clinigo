@@ -30,7 +30,8 @@ import {
     User,
     Stethoscope,
     PenLine,
-    Camera
+    Camera,
+    AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -227,7 +228,7 @@ export function WorldSensoryEvolutionForm({
                 pagebreak: { mode: ['css', 'legacy'] }
             }
 
-            await html2pdf().set(opt).from(printableRef.current).save()
+            await (html2pdf() as any).set(opt).from(printableRef.current).save()
             toast.success('Documento PDF gerado com sucesso')
         } catch (error) {
             console.error('Erro ao gerar PDF:', error)
