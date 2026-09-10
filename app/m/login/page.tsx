@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function PWALoginPage() {
@@ -78,7 +79,15 @@ export default function PWALoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-400">Senha</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-zinc-400">Senha</label>
+              <Link
+                href="/recuperar-senha?portal=m"
+                className="text-xs text-teal-400 hover:text-teal-300 transition"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
             <input
               type="password"
               value={password}

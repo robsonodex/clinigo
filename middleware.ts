@@ -45,6 +45,9 @@ const PUBLIC_ROUTES = [
     '/api/auth/register',
     '/api/auth/pre-register', // Self-registration with Banco Inter boleto - public for new clinics
     '/api/auth/boleto-pdf', // Boleto PDF download for registration - public
+    '/api/auth/forgot-password', // Recuperação de senha pública
+    '/api/auth/reset-password', // Redefinição de senha pública via token
+    '/api/auth/activate-account', // Ativação pública de conta via token
     '/api/webhooks/bancointer', // Banco Inter webhook - CRITICAL for payment confirmation
     '/api/doctors',
     '/api/doctors/', // Allow dynamic doctor routes (profile, schedules)
@@ -568,7 +571,9 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
         pathname.startsWith('/totem/') || // Public totem for clinics (gate de plano feito nas APIs)
         pathname === '/terminal' || // Terminal quiosque para salas
-        pathname.startsWith('/c/') || // Check-in mobile do paciente via link efemero
+        pathname.startsWith('/recuperar-senha') || // Recuperação de senha
+        pathname.startsWith('/redefinir-senha') || // Redefinição de senha com token
+        pathname.startsWith('/ativar-conta') || // Ativação de conta com token
         pathname.match(/^\/[^/]+\/agendar/)
 
     // Public routes/pages without user = allow

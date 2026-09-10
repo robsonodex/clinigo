@@ -2,8 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { Stethoscope, Lock, Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react'
+import Image from 'next/image'
+import { Lock, Eye, EyeOff, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 const portalMap: Record<string, string> = {
@@ -11,6 +11,8 @@ const portalMap: Record<string, string> = {
     medico: '/medico',
     paciente: '/paciente',
     login: '/login',
+    m: '/m/login',
+    pwa: '/m/login',
 }
 
 function getLoginUrl(portal: string | null): string {
@@ -123,12 +125,18 @@ function RedefinirSenhaContent() {
         return (
             <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
                 <div className="w-full max-w-md text-center">
-                    <Link href="/" className="inline-flex items-center gap-3 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
-                    </Link>
+                    <div className="flex justify-center mb-8">
+                        <Link href="/" className="inline-flex items-center">
+                            <Image
+                                src="/logo_black.svg"
+                                alt="CliniGo"
+                                width={180}
+                                height={46}
+                                priority
+                                className="h-11 w-auto"
+                            />
+                        </Link>
+                    </div>
 
                     <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
                         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -145,7 +153,7 @@ function RedefinirSenhaContent() {
 
                         <Link
                             href={`/recuperar-senha${portalParam}`}
-                            className="inline-flex items-center justify-center w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 rounded-xl transition-all"
+                            className="inline-flex items-center justify-center w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition-all"
                         >
                             Solicitar novo link
                         </Link>
@@ -158,14 +166,20 @@ function RedefinirSenhaContent() {
     // Success state
     if (isSuccess) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                 <div className="w-full max-w-md text-center">
-                    <Link href="/" className="inline-flex items-center gap-3 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
-                    </Link>
+                    <div className="flex justify-center mb-8">
+                        <Link href="/" className="inline-flex items-center">
+                            <Image
+                                src="/logo_black.svg"
+                                alt="CliniGo"
+                                width={180}
+                                height={46}
+                                priority
+                                className="h-11 w-auto"
+                            />
+                        </Link>
+                    </div>
 
                     <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
                         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -189,15 +203,19 @@ function RedefinirSenhaContent() {
 
     // Reset form
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo */}
-                <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
+                <div className="text-center mb-8 flex justify-center">
+                    <Link href="/" className="inline-flex items-center">
+                        <Image
+                            src="/logo_black.svg"
+                            alt="CliniGo"
+                            width={180}
+                            height={46}
+                            priority
+                            className="h-11 w-auto"
+                        />
                     </Link>
                 </div>
 

@@ -60,12 +60,17 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
+        const hasPassword = Boolean(data.password && data.password.trim().length >= 6)
+
         // Create auth user first (required by FK constraint users_id_fkey -> auth.users)
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: data.email.toLowerCase(),
             password: data.password || undefined,
             email_confirm: true,
-            user_metadata: { full_name: data.name }
+            user_metadata: {
+                full_name: data.name,
+                role: data.role
+            }
         })
 
         if (authError) {
@@ -86,8 +91,8 @@ export async function POST(request: NextRequest) {
                 full_name: data.name,
                 role: data.role,
                 clinic_id: currentUser.clinic_id,
-                is_active: false,
-                activation_status: 'pending_activation'
+                is_active: true,
+                activation_status: hasPassword ? 'active' : 'pending_activation'
             })
 
         if (userError) {
@@ -100,85 +105,145 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
-        // Generate activation token (7 days)
-        const activationToken = crypto.randomBytes(32).toString('hex')
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        // Se o perfil for DOCTOR / Terapeuta, assegurar registro inicial na tabela doctors
+        if (data.role === 'DOCTOR') {
+            const { data: existingDoctor } = await supabaseAdmin
+                .from('doctors')
+                .select('id')
+                .eq('user_id', tempUserId)
+                .maybeSingle()
 
-        const { error: tokenError } = await supabaseAdmin
-            .from('activation_tokens')
-            .insert({
-                user_id: tempUserId,
-                clinic_id: currentUser.clinic_id,
-                email: data.email.toLowerCase(),
-                token: activationToken,
-                type: 'team_invite',
-                expires_at: expiresAt.toISOString()
-            })
-
-        if (tokenError) {
-            // Rollback user
-            await supabaseAdmin.from('users').delete().eq('id', tempUserId)
-            await supabaseAdmin.auth.admin.deleteUser(tempUserId)
-            console.error('[InviteUser] Token creation error:', tokenError)
-            return NextResponse.json({
-                success: false,
-                error: { message: 'Erro ao gerar link de convite: ' + tokenError.message }
-            }, { status: 400 })
+            if (!existingDoctor) {
+                await supabaseAdmin
+                    .from('doctors')
+                    .insert({
+                        user_id: tempUserId,
+                        clinic_id: currentUser.clinic_id,
+                        specialty: 'Geral',
+                        is_active: true,
+                        is_accepting_appointments: true
+                    })
+            }
         }
-
-        // Send invitation email
-        const { sendMail } = await import('@/lib/services/mail-service')
-        const activationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/ativar-conta/${activationToken}`
 
         const roleTranslates: Record<string, string> = {
             'CLINIC_ADMIN': 'Administrador',
             'RECEPTIONIST': 'Recepção',
-            'DOCTOR': 'Médico(a)',
+            'DOCTOR': 'Profissional de Saúde',
             'FINANCIAL': 'Financeiro',
             'READONLY': 'Apenas Leitura'
         }
 
-        await sendMail({
-            to: data.email,
-            subject: `Você foi convidado para a clínica ${clinic.name} no CliniGo`,
-            html: `
-                <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
-                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-                        <h1 style="color: white; margin: 0; font-size: 24px;">Bem-vindo ao CliniGo!</h1>
-                    </div>
-                    <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
-                        <p style="font-size: 18px; color: #1f2937;">Olá, <strong>${data.name}</strong>!</p>
-                        <p style="color: #4b5563; line-height: 1.6;">
-                            Você foi convidado pela clínica <strong>${clinic.name}</strong> para acessar o sistema com o perfil de <strong>${roleTranslates[data.role] || data.role}</strong>.
-                        </p>
-                        
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="${activationLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
-                                👉 CRIAR SUA SENHA E ACESSAR
-                            </a>
+        const { sendMail } = await import('@/lib/services/mail-service')
+
+        if (hasPassword) {
+            // Usuário já possui senha cadastrada pela administração
+            const loginUrl = data.role === 'DOCTOR' 
+                ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/medico`
+                : `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/clinica`
+
+            await sendMail({
+                to: data.email,
+                subject: `Acesso ao CliniGo - ${clinic.name}`,
+                html: `
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+                        <div style="background: #0f766e; padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 24px;">Bem-vindo ao CliniGo</h1>
                         </div>
-                        
-                        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                            <p style="margin: 0; color: #92400e; font-size: 14px;">
-                                ⚠️ <strong>Este link expira em 7 dias.</strong>
+                        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 18px; color: #1e293b;">Olá, <strong>${data.name}</strong>!</p>
+                            <p style="color: #475569; line-height: 1.6;">
+                                Seu acesso foi cadastrado pela clínica <strong>${clinic.name}</strong> com o perfil de <strong>${roleTranslates[data.role] || data.role}</strong>.
+                            </p>
+                            <p style="color: #475569; line-height: 1.6;">
+                                Sua conta já se encontra ativa. Você pode acessar o sistema utilizando seu e-mail e a senha informada pela administração da sua clínica.
+                            </p>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${loginUrl}" style="background: #0f766e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px; display: inline-block;">
+                                    Acessar o Sistema
+                                </a>
+                            </div>
+                            
+                            <p style="color: #64748b; font-size: 13px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 25px;">
+                                <strong>E-mail de acesso:</strong> ${data.email}<br>
+                                Caso precise redefinir sua senha no futuro, utilize o link "Esqueci minha senha" na tela de login.
                             </p>
                         </div>
-                        
-                        <p style="color: #6b7280; font-size: 14px;">
-                            <strong>E-mail de login:</strong> ${data.email}
-                        </p>
                     </div>
-                </div>
-            `
-        })
+                `
+            })
+        } else {
+            // Gerar token de ativação (7 dias)
+            const activationToken = crypto.randomBytes(32).toString('hex')
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+            const { error: tokenError } = await supabaseAdmin
+                .from('activation_tokens')
+                .insert({
+                    user_id: tempUserId,
+                    clinic_id: currentUser.clinic_id,
+                    email: data.email.toLowerCase(),
+                    token: activationToken,
+                    type: 'team_invite',
+                    expires_at: expiresAt.toISOString()
+                })
+
+            if (tokenError) {
+                // Rollback user
+                await supabaseAdmin.from('users').delete().eq('id', tempUserId)
+                await supabaseAdmin.auth.admin.deleteUser(tempUserId)
+                console.error('[InviteUser] Token creation error:', tokenError)
+                return NextResponse.json({
+                    success: false,
+                    error: { message: 'Erro ao gerar link de convite: ' + tokenError.message }
+                }, { status: 400 })
+            }
+
+            const activationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clinigo.app'}/ativar-conta/${activationToken}`
+
+            await sendMail({
+                to: data.email,
+                subject: `Convite CliniGo - ${clinic.name}`,
+                html: `
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+                        <div style="background: #0f766e; padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 24px;">Bem-vindo ao CliniGo</h1>
+                        </div>
+                        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 18px; color: #1e293b;">Olá, <strong>${data.name}</strong>!</p>
+                            <p style="color: #475569; line-height: 1.6;">
+                                Você foi convidado pela clínica <strong>${clinic.name}</strong> para acessar o sistema com o perfil de <strong>${roleTranslates[data.role] || data.role}</strong>.
+                            </p>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${activationLink}" style="background: #0f766e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px; display: inline-block;">
+                                    Criar Senha e Acessar
+                                </a>
+                            </div>
+                            
+                            <div style="background: #f8fafc; border-left: 3px solid #0f766e; padding: 12px 16px; margin: 20px 0;">
+                                <p style="margin: 0; color: #334155; font-size: 13px;">
+                                    Este link é válido por 7 dias.
+                                </p>
+                            </div>
+                            
+                            <p style="color: #64748b; font-size: 13px;">
+                                <strong>E-mail de login:</strong> ${data.email}
+                            </p>
+                        </div>
+                    </div>
+                `
+            })
+        }
 
         // Log email
         await supabaseAdmin
             .from('email_logs')
             .insert({
                 recipient: data.email,
-                subject: `Convite CliniGo - ${clinic.name}`,
-                template_used: 'USER_INVITE',
+                subject: hasPassword ? `Acesso CliniGo - ${clinic.name}` : `Convite CliniGo - ${clinic.name}`,
+                template_used: hasPassword ? 'USER_ACTIVE_ACCESS' : 'USER_INVITE',
                 status: 'sent',
                 sent_at: new Date().toISOString(),
                 clinic_id: currentUser.clinic_id,
@@ -187,7 +252,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: `Convite enviado para ${data.email}!`
+            message: hasPassword 
+                ? `Usuário ${data.name} cadastrado e ativado com sucesso!` 
+                : `Convite enviado para ${data.email}!`
         })
 
     } catch (error) {

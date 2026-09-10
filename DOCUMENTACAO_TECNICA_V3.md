@@ -1549,3 +1549,17 @@
   - Procedimento automatizado de redundância dupla (nuvem e armazenamento físico local).
   - Preservação da integridade de código, migrações SQL, esquemas de dados, histórico de commits e documentação técnica corporativa.
 
+
+### Item 57: Correção do Fluxo de Recuperação de Senha, Padronização Visual e Cadastro de Usuários com Senha Imediata
+- **Data**: 10/09/2026
+- **Módulos**: Autenticação, Usuários e Permissões, Segurança de Acesso, PWA Mobile
+- **Caminho Completo**:
+  - Middleware de Segurança -> middleware.ts (Inclusão de /api/auth/forgot-password, /api/auth/reset-password, /api/auth/activate-account na lista PUBLIC_ROUTES e rotas de página /recuperar-senha, /redefinir-senha, /ativar-conta em isPublicPage)
+  - Interface Web Autenticação -> pp/(auth)/recuperar-senha/page.tsx (Substituição de ícone genérico pelo logotipo oficial /logo_black.svg, remoção de emojis, mensagens claras de retorno e links de navegação para portais de acesso: Médico, Mobile e Clínica)
+  - Interface Web Autenticação -> pp/(auth)/redefinir-senha/[token]/page.tsx (Substituição de ícone pelo logotipo oficial /logo_black.svg, remoção de emojis e redirecionamento conforme perfil)
+  - Interface Mobile PWA -> pp/m/login/page.tsx (Adição do link de ação rápida Esqueci minha senha com direcionamento contextualizado)
+  - Backend API Usuários -> pp/api/users/invite/route.ts (Sincronização imediata: ao cadastrar usuário com senha definida pela administração, o status é gravado como is_active: true e ctivation_status: 'active', sem exigir ativação prévia pendente; o papel ole é persistido em aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado automaticamente o registro correspondente na tabela doctors com vínculo de especialidade e dados profissionais)
+- **Descrição Técnica**:
+  - **1. Causa Raiz do Erro de Recuperação de Senha**: O middleware.ts interceptava chamadas não autenticadas à API /api/auth/forgot-password e retornava código HTTP 401 Unauthorized, gerando no cliente o alerta genérico Erro ao processar solicitação. A liberação explícita destas rotas públicas restaurou o fluxo end-to-end de emissão de tokens de redefinição com envio via serviço SMTP Hostinger.
+  - **2. Ativação de Usuários no Módulo Usuários e Permissões**: Corrigido o fluxo de provisionamento manual de credenciais pela clínica (ex: administração cadastrando login/senha e repassando ao profissional). O usuário agora é criado diretamente como ativo no Supabase Auth e em public.users, com o vínculo profissional em public.doctors garantido, permitindo login imediato ou redefinição de senha sem bloqueios.
+  - **3. Caso Ana Carolina Urciuoli (World Sensory)**: Cadastro ativado, registros sincronizados entre users e doctors, e e-mail com link seguro de redefinição de senha despachado com sucesso via Hostinger SMTP.
