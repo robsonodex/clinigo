@@ -1163,12 +1163,13 @@ export const helpItems: HelpItem[] = [
         category: 'Configurações',
         icon: Users,
         href: '/dashboard/configuracoes/usuarios',
-        whatIsIt: 'Gerenciamento de contas de acesso da equipe com controle de acesso granular baseado em papéis (Role-Based Access Control): Administradores, Médicos/Terapeutas, Recepção, Enfermagem e Financeiro.',
-        whenToUse: 'Ao admitir novos colaboradores, redefinir senhas ou revogar acessos de funcionários desligados.',
-        howToUse: 'Clique em "Convidar Usuário", insira o e-mail corporativo, atribua o perfil correspondente e defina as permissões específicas.',
+        whatIsIt: 'Gerenciamento de contas de acesso da equipe com controle de acesso granular baseado em papéis (Role-Based Access Control): Administradores, Médicos/Terapeutas, Recepção, Enfermagem e Financeiro. Permite exclusão definitiva de contas desligadas com higienização relacional completa e liberação imediata de e-mail.',
+        whenToUse: 'Ao admitir novos colaboradores, redefinir senhas, desativar acessos temporários ou excluir definitivamente usuários e profissionais desligados.',
+        howToUse: 'Clique em "Convidar Usuário" para cadastrar. No menu de ações de cada usuário, use "Editar", "Forçar Nova Senha", "Ativar/Desativar" ou "Excluir Definitivamente" (com confirmação de segurança) para remoção permanente do sistema.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
-        tags: ['usuários', 'permissões', 'rbac', 'controle de acesso', 'segurança', 'perfis']
+        tags: ['usuários', 'permissões', 'rbac', 'controle de acesso', 'segurança', 'perfis', 'exclusão definitiva', 'excluir usuário'],
+        aliases: ['usuarios-e-permissoes', 'permissoes', 'excluir-usuario']
     },
     {
         id: 'terapias',
