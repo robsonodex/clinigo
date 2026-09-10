@@ -562,13 +562,13 @@ export function ManualAppointmentModal({
                     {/* Step: Patient Search */}
                     {step === 'search' && (
                         <div className="space-y-4">
-                            {/* Banner de Aluna / Mentoria */}
+                            {/* Banner de Mentoria / Formacao */}
                             <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2.5">
                                     <BookOpen className="h-5 w-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                     <div>
                                         <p className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
-                                            Aluna / Mentoria / Estágio
+                                            Mentoria Clínica / Formação Técnica
                                         </p>
                                         <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                                             Sessão formativa ou mentoria técnica (sem vínculo com paciente nem prontuário clínico).
@@ -590,7 +590,7 @@ export function ManualAppointmentModal({
                                         setStep('form')
                                     }}
                                 >
-                                    Agendar Aluna
+                                    Agendar Mentoria
                                 </Button>
                             </div>
 
@@ -691,7 +691,7 @@ export function ManualAppointmentModal({
                                         <RadioGroupItem value="student" id="cat-student" />
                                         <Label htmlFor="cat-student" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
                                             <BookOpen className="h-3.5 w-3.5 text-emerald-600" />
-                                            Aluna / Mentoria
+                                            Mentoria / Formação
                                         </Label>
                                     </div>
                                     {selectedDoctor?.allows_supervision && (
@@ -716,7 +716,7 @@ export function ManualAppointmentModal({
                                         <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                         <div>
                                             <p className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
-                                                Aluna / Mentoria Técnica
+                                                Mentoria Clínica / Formação Técnica
                                             </p>
                                             <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                                                 Sessão formativa ou mentoria de pós/estágio. Não gera cobrança nem prontuário clínico de paciente.
@@ -724,7 +724,7 @@ export function ManualAppointmentModal({
                                         </div>
                                     </div>
                                     <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300">
-                                        Aluna
+                                        Mentoria
                                     </Badge>
                                 </div>
                             ) : isSupervision ? (
@@ -854,13 +854,13 @@ export function ManualAppointmentModal({
                                 </div>
                             )}
 
-                            {/* Aluna / Mentoranda Selection (apenas em modo Aluna) */}
+                            {/* Mentoria / Mentorando(a) Selection (apenas em modo Mentoria) */}
                             {isStudent && (
                                 <div className="space-y-3 p-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/30 rounded-xl">
                                     <div className="flex items-center justify-between">
                                         <Label className="flex items-center gap-2 text-emerald-950 dark:text-emerald-200 font-semibold">
                                             <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-                                            Aluna / Mentoranda Cadastrada *
+                                            Mentorando(a) / Formando(a) Cadastrado(a) *
                                         </Label>
                                         <Button
                                             type="button"
@@ -869,7 +869,7 @@ export function ManualAppointmentModal({
                                             className="h-7 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-100/70 dark:text-emerald-300"
                                             onClick={() => setIsCreateStudentOpen(true)}
                                         >
-                                            + Nova Aluna
+                                            + Novo(a) Mentorando(a)
                                         </Button>
                                     </div>
                                     <Controller
@@ -878,18 +878,18 @@ export function ManualAppointmentModal({
                                         render={({ field }) => (
                                             <Select onValueChange={field.onChange} value={field.value || ''}>
                                                 <SelectTrigger className="w-full h-11 text-base md:h-10 md:text-sm border-emerald-300">
-                                                    <SelectValue placeholder="Selecione a aluna / mentoranda" />
+                                                    <SelectValue placeholder="Selecione o(a) mentorando(a) / formando(a)" />
                                                 </SelectTrigger>
                                                 <SelectContent position="popper" className="z-[9999]" sideOffset={4}>
                                                     {(!students || students.length === 0) ? (
                                                         <div className="p-3 text-center text-xs text-muted-foreground">
-                                                            Nenhuma aluna cadastrada. Clique em &quot;+ Nova Aluna&quot; acima.
+                                                            Nenhum(a) mentorando(a) cadastrado(a). Clique em &quot;+ Novo(a) Mentorando(a)&quot; acima.
                                                         </div>
                                                     ) : (
                                                         students.map((st: any) => (
-                                                            <SelectItem key={st.id} value={st.id}>
-                                                                {st.full_name} {st.program ? `(${st.program})` : ''}
-                                                            </SelectItem>
+                                                             <SelectItem key={st.id} value={st.id}>
+                                                                 {st.full_name} {st.program ? `(${st.program})` : ''}
+                                                             </SelectItem>
                                                         ))
                                                     )}
                                                 </SelectContent>
@@ -1170,7 +1170,7 @@ export function ManualAppointmentModal({
                                     }
                                 >
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {isStudent ? 'Confirmar Sessão com Aluna' : isSupervision ? 'Confirmar Supervisão Técnica' : 'Confirmar Agendamento'}
+                                    {isStudent ? 'Confirmar Sessão de Mentoria' : isSupervision ? 'Confirmar Supervisão Técnica' : 'Confirmar Agendamento'}
                                 </Button>
                             </div>
                         </form>
@@ -1178,16 +1178,16 @@ export function ManualAppointmentModal({
                 </DialogContent>
             </Dialog>
 
-            {/* Modal Inline: Nova Aluna */}
+            {/* Modal Inline: Novo(a) Mentorando(a) */}
             <Dialog open={isCreateStudentOpen} onOpenChange={setIsCreateStudentOpen}>
                 <DialogContent className="max-w-md z-[10000]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base">
                             <BookOpen className="h-4 w-4 text-emerald-700" />
-                            Cadastrar Nova Aluna / Mentoranda
+                            Cadastrar Novo(a) Mentorando(a) / Formando(a)
                         </DialogTitle>
                         <DialogDescription className="text-xs">
-                            Cadastre a aluna para agendamento de mentoria ou estágio. Registro próprio e isolado de pacientes.
+                            Cadastre o(a) participante para agendamento de mentoria ou formação. Registro próprio e isolado de pacientes.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -1195,7 +1195,7 @@ export function ManualAppointmentModal({
                         <div className="space-y-1">
                             <Label className="text-xs">Nome Completo *</Label>
                             <Input
-                                placeholder="Nome da aluna"
+                                placeholder="Nome do(a) mentorando(a)"
                                 value={newStudentName}
                                 onChange={(e) => setNewStudentName(e.target.value)}
                                 autoFocus
@@ -1215,7 +1215,7 @@ export function ManualAppointmentModal({
                                 <Label className="text-xs">E-mail</Label>
                                 <Input
                                     type="email"
-                                    placeholder="aluna@email.com"
+                                    placeholder="mentorando@email.com"
                                     value={newStudentEmail}
                                     onChange={(e) => setNewStudentEmail(e.target.value)}
                                 />
@@ -1223,9 +1223,9 @@ export function ManualAppointmentModal({
                         </div>
 
                         <div className="space-y-1">
-                            <Label className="text-xs">Programa / Curso / Estágio (opcional)</Label>
+                            <Label className="text-xs">Programa / Curso / Especialização (opcional)</Label>
                             <Input
-                                placeholder="Ex: Pós-graduação em Neuropsicologia, Estágio 2026..."
+                                placeholder="Ex: Pós-graduação em Neuropsicologia, Formação Clínica 2026..."
                                 value={newStudentProgram}
                                 onChange={(e) => setNewStudentProgram(e.target.value)}
                             />
@@ -1250,7 +1250,7 @@ export function ManualAppointmentModal({
                             disabled={isSavingStudent}
                         >
                             {isSavingStudent && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                            Salvar Aluna
+                            Salvar Mentorando(a)
                         </Button>
                     </div>
                 </DialogContent>

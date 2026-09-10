@@ -489,13 +489,13 @@ export function AppointmentDetailsDrawer({
 
                 {!loading && appointment && (
                     <div className="space-y-6 py-4">
-                        {/* Informações do Evento: Aluna vs Supervisão Técnica vs Consulta de Paciente */}
+                        {/* Informações do Evento: Mentoria vs Supervisão Técnica vs Consulta de Paciente */}
                         {appointment.appointment_type === 'STUDENT' ? (
                             <div className="space-y-4">
                                 <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-1">
                                     <div className="flex items-center gap-2 text-xs font-semibold text-emerald-950 dark:text-emerald-200">
                                         <BookOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-                                        <span>Sessão com Aluna / Mentoria Técnica</span>
+                                        <span>Sessão de Mentoria / Formação Técnica</span>
                                     </div>
                                     <p className="text-xs text-emerald-800/80 dark:text-emerald-300">
                                         Sessão formativa ou mentoria clínica/estágio (sem vínculo com paciente nem prontuário clínico).
@@ -508,9 +508,9 @@ export function AppointmentDetailsDrawer({
                                 </div>
 
                                 <div>
-                                    <Label>Aluna / Mentoranda</Label>
+                                    <Label>Mentorando(a) / Formando(a)</Label>
                                     <p className="font-semibold text-foreground">
-                                        {appointment.student?.full_name || 'Aluna Cadastrada'}
+                                        {appointment.student?.full_name || 'Mentorando(a) Cadastrado(a)'}
                                         {appointment.student?.program ? ` (${appointment.student.program})` : ''}
                                     </p>
                                     {(appointment.student?.contact_phone || appointment.student?.contact_email) && (

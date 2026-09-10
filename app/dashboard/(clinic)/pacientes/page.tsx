@@ -864,7 +864,7 @@ export default function PacientesPage() {
                                                             className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
                                                         >
                                                             <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
-                                                            Converter em Aluna
+                                                            Converter em Mentoria
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
                                                         <DropdownMenuItem
@@ -1067,7 +1067,7 @@ export default function PacientesPage() {
                                                                     className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
                                                                 >
                                                                     <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                    Converter em Aluna
+                                                                    Converter em Mentoria
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-lg py-1.5">
                                                                     <History className="w-4 h-4 mr-2 text-slate-450" />
@@ -1750,16 +1750,16 @@ export default function PacientesPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog de Promoção de Paciente para Aluna / Mentoria */}
+            {/* Dialog de Promoção de Paciente para Mentoria / Formação */}
             <Dialog open={showPromoteModal} onOpenChange={setShowPromoteModal}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <BookOpen className="h-5 w-5 text-emerald-700" />
-                            Converter Paciente em Aluna / Mentoria
+                            Converter Paciente em Mentoria / Formação
                         </DialogTitle>
                         <DialogDescription className="text-xs">
-                            Promove o cadastro para a tabela própria de alunas e desvincula de prontuários clínicos de pacientes.
+                            Promove o cadastro para a base de mentoria/formação clínica, desvinculando de prontuários clínicos de pacientes.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -1773,9 +1773,9 @@ export default function PacientesPage() {
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold">Curso / Programa / Estágio (Opcional)</Label>
+                                <Label className="text-xs font-semibold">Curso / Programa / Formação (Opcional)</Label>
                                 <Input
-                                    placeholder="Ex: Pós em Neuropsicologia, Mentoria 2026..."
+                                    placeholder="Ex: Pós em Neuropsicologia, Mentoria Clínica 2026..."
                                     value={promoteProgram}
                                     onChange={(e) => setPromoteProgram(e.target.value)}
                                 />
@@ -1787,7 +1787,7 @@ export default function PacientesPage() {
                                     Preservação de Dados e Auditoria
                                 </div>
                                 <ul className="text-[11px] text-amber-800 dark:text-amber-300 space-y-1 list-disc list-inside">
-                                    <li>Os agendamentos futuros deste cadastro serão convertidos para sessão com Aluna.</li>
+                                    <li>Os agendamentos futuros deste cadastro serão convertidos para sessão de Mentoria.</li>
                                     <li>O cadastro original de paciente será arquivado para preservar o histórico.</li>
                                     <li>Prontuários clínicos e evoluções passadas nunca são apagados — permanecem guardados para fins de auditoria médica e LGPD.</li>
                                 </ul>
@@ -1809,7 +1809,7 @@ export default function PacientesPage() {
                             disabled={isPromoting}
                         >
                             {isPromoting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirmar Conversão em Aluna
+                            Confirmar Conversão em Mentoria
                         </Button>
                     </DialogFooter>
                 </DialogContent>

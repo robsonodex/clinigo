@@ -1476,3 +1476,6 @@
     - O endpoint `app/api/reception/queue/route.ts` exclui ativamente o tipo `STUDENT`, impedindo que mentorandas constem como pacientes aguardando chamada médica.
   - **3. Promoção Segura de Cadastros Antigos**:
     - Criada a funcionalidade para converter alunas cadastradas anteriormente como pacientes: move agendamentos a partir da data atual para o tipo `STUDENT` e preserva integralmente prontuários clínicos pré-existentes sem nenhuma exclusão de dados (garantia LGPD).
+  - **4. Padronização de Nomenclatura SaaS Corporativo Internacional**:
+    - Aprovado o refinamento terminológico para padrão corporativo internacional: a nomenclatura de interface foi atualizada de "Aluna" para "Mentoria Clínica / Formação Técnica" e "Mentorando(a) / Formando(a)".
+    - O botão de ação rápida no modal foi padronizado como "Agendar Mentoria", a tag na agenda como "Mentoria", o bloco do agendamento como "MENTORIA: [NOME]" e o menu de conversão em Pacientes como "Converter em Mentoria".

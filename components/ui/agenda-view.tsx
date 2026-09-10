@@ -1469,7 +1469,7 @@ export default function AgendaPage() {
                                                                             {/* Patient Name / Block Title / Supervision / Student */}
                                                                             <div className={cn("font-bold truncate text-sm leading-tight", isCancelled && "line-through opacity-70")}>
                                                                                 {(appointment as any).appointment_type === 'STUDENT'
-                                                                                    ? `Aluna: ${(appointment as any).student?.full_name || (appointment as any).mentoring_notes || 'Aluna / Mentoria'}`
+                                                                                    ? `Mentoria: ${(appointment as any).student?.full_name || (appointment as any).mentoring_notes || 'Mentoria / Formação'}`
                                                                                     : (appointment as any).appointment_type === 'SUPERVISION'
                                                                                         ? `Supervisão: ${(appointment as any).professional_supervised?.user?.full_name || (appointment as any).supervision_notes || 'Supervisão Técnica'}`
                                                                                         : (appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso')}
@@ -1502,7 +1502,7 @@ export default function AgendaPage() {
                                                                                 {(appointment as any).appointment_type === 'STUDENT' && (
                                                                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded">
                                                                                         <BookOpen className="w-2.5 h-2.5" />
-                                                                                        Aluna
+                                                                                        Mentoria
                                                                                     </span>
                                                                                 )}
                                                                                 {(appointment as any).appointment_type === 'SUPERVISION' && (
@@ -1826,7 +1826,7 @@ export default function AgendaPage() {
                                                                                         {(appointment as any).appointment_type === 'STUDENT' && <BookOpen className="w-3 h-3 shrink-0" />}
                                                                                         {(appointment as any).appointment_type === 'SUPERVISION' && <GraduationCap className="w-3 h-3 shrink-0" />}
                                                                                         {(appointment as any).appointment_type === 'STUDENT'
-                                                                                            ? `ALUNA: ${((appointment as any).student?.full_name || (appointment as any).mentoring_notes || 'ALUNA').toUpperCase()} (${doctorName.toUpperCase()})`
+                                                                                            ? `MENTORIA: ${((appointment as any).student?.full_name || (appointment as any).mentoring_notes || 'MENTORIA').toUpperCase()} (${doctorName.toUpperCase()})`
                                                                                             : (appointment as any).appointment_type === 'SUPERVISION'
                                                                                                 ? `SUPERVISÃO: ${((appointment as any).professional_supervised?.user?.full_name || (appointment as any).supervision_notes || 'TÉCNICA').toUpperCase()} (${doctorName.toUpperCase()})`
                                                                                                 : `${(appointment.patient?.full_name || (appointment as any).notes || '[BLOQUEIO]').toUpperCase()} (${doctorName.toUpperCase()}${coDoctorName ? ` + ${coDoctorName.toUpperCase()}` : ''}${specShort ? `-${specShort}` : ''})`}
