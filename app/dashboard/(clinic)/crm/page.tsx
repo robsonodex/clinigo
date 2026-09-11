@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import {
     Zap, Send, StickyNote, Users, Plus, Loader2,
     Calendar, CheckCircle, Clock, Play, Pause, Mail,
-    MessageSquare, Smartphone, Bell
+    MessageSquare, Smartphone, Bell, Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -95,8 +95,10 @@ export default function CRMPage() {
         type: 'WHATSAPP',
         content: '',
         subject: '',
+        sector: 'financeiro',
         target_all_patients: true
     })
+    const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -170,9 +172,9 @@ export default function CRMPage() {
         }
     }
 
-    const handleCreateCampaign = async () => {
+    const handleCreateCampaign = async (andSend: boolean = false) => {
         if (!campaignForm.name || !campaignForm.content) {
-            toast.error('Preencha nome e conteúdo')
+            toast.error('Preencha nome e conteúdo da mensagem')
             return
         }
 
@@ -184,19 +186,73 @@ export default function CRMPage() {
                 body: JSON.stringify(campaignForm)
             })
 
+            const data = await res.json()
             if (!res.ok) {
-                toast.error('Erro ao criar campanha')
+                toast.error(data.error || 'Erro ao criar campanha')
                 return
             }
 
-            toast.success('Campanha criada!')
+            toast.success('Campanha criada com sucesso!')
             setShowNewCampaign(false)
-            setCampaignForm({ name: '', type: 'WHATSAPP', content: '', subject: '', target_all_patients: true })
+            setCampaignForm({ name: '', type: 'WHATSAPP', content: '', subject: '', sector: 'financeiro', target_all_patients: true })
             fetchData()
+
+            if (andSend && data.campaign) {
+                setTimeout(() => {
+                    handleSendCampaign(data.campaign)
+                }, 300)
+            }
         } catch (error) {
-            toast.error('Erro ao salvar')
+            toast.error('Erro ao salvar campanha')
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleSendCampaign = async (camp: Campaign) => {
+        if (!confirm(`Deseja disparar a campanha "${camp.name}" para os ${camp.total_recipients} destinatários cadastrados via WhatsApp?\n\nO envio será realizado de forma segura e cadenciada para proteção do seu número.`)) {
+            return
+        }
+
+        setSendingCampaignId(camp.id)
+        try {
+            const res = await fetch(`/api/crm/campaigns/${camp.id}/send`, {
+                method: 'POST'
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Erro ao disparar campanha')
+                return
+            }
+
+            toast.success(`Disparo concluído com sucesso! ${data.sent_count} mensagem(ns) enviada(s).`)
+            fetchData()
+        } catch (error) {
+            toast.error('Erro ao conectar ao servidor para disparo')
+        } finally {
+            setSendingCampaignId(null)
+        }
+    }
+
+    const handleDeleteCampaign = async (campaignId: string, campaignName: string) => {
+        if (!confirm(`Tem certeza que deseja excluir a campanha "${campaignName}"? Esta ação não pode ser desfeita.`)) {
+            return
+        }
+
+        try {
+            const res = await fetch(`/api/crm/campaigns/${campaignId}`, {
+                method: 'DELETE'
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                toast.error(data.error || 'Erro ao excluir campanha')
+                return
+            }
+
+            toast.success('Campanha excluída com sucesso')
+            fetchData()
+        } catch (error) {
+            toast.error('Erro ao excluir campanha')
         }
     }
 
@@ -443,10 +499,33 @@ export default function CRMPage() {
                                                 onCheckedChange={(v) => setCampaignForm(f => ({ ...f, target_all_patients: v }))}
                                             />
                                         </div>
-                                        <Button onClick={handleCreateCampaign} disabled={saving} className="w-full">
-                                            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                            Criar Campanha
-                                        </Button>
+                                        {campaignForm.type === 'WHATSAPP' && (
+                                            <div className="space-y-2">
+                                                <Label>WhatsApp de Envio (Setor)</Label>
+                                                <Select
+                                                    value={campaignForm.sector}
+                                                    onValueChange={(v) => setCampaignForm(f => ({ ...f, sector: v }))}
+                                                >
+                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="financeiro">Financeiro (Conectado)</SelectItem>
+                                                        <SelectItem value="default">Principal</SelectItem>
+                                                        <SelectItem value="recepcao">Recepção</SelectItem>
+                                                        <SelectItem value="comercial">Comercial</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                                            <Button variant="outline" onClick={() => handleCreateCampaign(false)} disabled={saving} className="w-full min-h-[44px]">
+                                                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                                                Salvar Rascunho
+                                            </Button>
+                                            <Button onClick={() => handleCreateCampaign(true)} disabled={saving} className="w-full bg-green-600 hover:bg-green-700 min-h-[44px]">
+                                                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                                                Salvar e Disparar
+                                            </Button>
+                                        </div>
                                     </div>
                                 </DialogContent>
                             </Dialog>
@@ -464,9 +543,9 @@ export default function CRMPage() {
                             <div className="grid gap-4">
                                 {campaigns.map((camp) => (
                                     <Card key={camp.id}>
-                                        <CardContent className="flex items-center justify-between py-4">
+                                        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                                                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
                                                     {getCampaignTypeIcon(camp.type)}
                                                 </div>
                                                 <div>
@@ -476,12 +555,36 @@ export default function CRMPage() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
                                                 <div className="text-right text-sm">
                                                     <p>{camp.sent_count} enviados</p>
                                                     <p className="text-muted-foreground">{camp.opened_count} abertos</p>
                                                 </div>
                                                 {getStatusBadge(camp.status)}
+                                                {camp.type === 'WHATSAPP' && camp.status !== 'COMPLETED' && (
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-green-600 hover:bg-green-700 min-h-[44px] gap-1.5"
+                                                        onClick={() => handleSendCampaign(camp)}
+                                                        disabled={sendingCampaignId === camp.id || camp.status === 'RUNNING'}
+                                                    >
+                                                        {sendingCampaignId === camp.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Send className="h-4 w-4" />
+                                                        )}
+                                                        {sendingCampaignId === camp.id ? 'Disparando...' : 'Disparar WhatsApp'}
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] min-w-[44px]"
+                                                    onClick={() => handleDeleteCampaign(camp.id, camp.name)}
+                                                    title="Excluir campanha"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </CardContent>
                                     </Card>

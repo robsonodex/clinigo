@@ -2,6 +2,27 @@
 
 ## Módulos
 
+### Implementação da Tabela de Campanhas, Disparo de WhatsApp em Lote e Gestão no CRM (Espaço Incluir e Global)
+- **Módulos**:
+  - CRM / Campanhas → Banco de Dados / Migrations → `supabase/migrations/20260911_create_campaigns_table.sql`
+  - CRM / Campanhas → API de Campanhas → `app/api/crm/campaigns/route.ts` → `POST` / `GET`
+  - CRM / Campanhas → API de Disparo → `app/api/crm/campaigns/[id]/send/route.ts` → `POST`
+  - CRM / Campanhas → API de Gestão → `app/api/crm/campaigns/[id]/route.ts` → `GET` / `DELETE`
+  - CRM / Campanhas → Interface CRM → `app/dashboard/(clinic)/crm/page.tsx` → `handleCreateCampaign` / `handleSendCampaign` / `handleDeleteCampaign`
+- **Descrição**:
+  - **Demanda Operacional da Clínica Espaço Incluir (Jefferson Bochetti)**:
+    - Após conectar o WhatsApp do Financeiro, o usuário relatou que o sistema não permitia enviar mensagem pelo recurso "Nova Campanha" para os pacientes cadastrados sobre o contrato de prestação de serviços.
+  - **Causa-Raiz 1 (Ausência da Tabela campaigns no Banco de Dados)**:
+    - A interface do CRM tentava consultar e inserir na tabela `campaigns`, mas a tabela física não existia no schema do Supabase Postgres, resultando em erro HTTP 500 (`relation "campaigns" does not exist`) ao tentar criar qualquer campanha.
+  - **Causa-Raiz 2 (Ausência de Motor de Disparo)**:
+    - O sistema não possuía rota de execução para disparo das mensagens cadastradas em campanhas nem botões de ação para iniciar o envio na listagem.
+  - **Solução Cirúrgica e Blindagem Anti-Spam (Meta / WhatsApp)**:
+    - Criada a migration versionada `supabase/migrations/20260911_create_campaigns_table.sql` com índices e política de RLS multi-tenant (`clinic_id`), aplicada diretamente no Supabase.
+    - Criado o endpoint de execução `POST /api/crm/campaigns/[id]/send` com limite `maxDuration = 300` para execução de lote, resolução de destinatários com telefone válido, validação da sessão de WhatsApp conectada (priorizando o setor `financeiro` selecionado) e substituição dinâmica de variáveis como `{{patient_name}}` e `{{clinic_name}}`.
+    - Implementado intervalo de segurança anti-banimento (2 segundos de respiro entre cada mensagem) para evitar bloqueio da linha no Meta/WhatsApp.
+    - Criado o endpoint de gerenciamento `DELETE /api/crm/campaigns/[id]` para permitir exclusão segura de campanhas.
+    - Atualizada a interface `app/dashboard/(clinic)/crm/page.tsx` com seletor de setor do WhatsApp, botões "Salvar Rascunho" e "Salvar e Disparar Agora", além de botões "Disparar WhatsApp" e "Excluir" diretamente nos cards com confirmação formal.
+
 ### Correção da Conexão WhatsApp Multi-Sessão e Eliminação de Falso Positivo (Espaço Incluir e Global)
 - **Módulos**:
   - Integrações / WhatsApp → Serviço Central Baileys → `lib/whatsapp/service.ts` → `startBaileysSession` / `createInstanceAndGetQR` / `checkInstanceStatus`
