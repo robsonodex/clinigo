@@ -2,6 +2,29 @@
 
 ## Módulos
 
+### Correção de Configuração de Horários/Carga Horária para Recepção (Espaço Incluir) e Resiliência de API
+- **Módulos**:
+  - Equipe / Agendamento → Horários → `app/api/doctors/detail/route.ts` → `POST` / `handlePostSchedules`
+  - Equipe / Agendamento → Horários Dinâmicos → `app/api/doctors/[...slug]/route.ts` → `POST` / `handlePostSchedules`
+  - Cliente de Dados / API Client → Conexão Frontend → `lib/api-client.ts` → `request()`
+  - Testes Automatizados → `scripts/test-schedule-isolation.ts`
+- **Descrição**:
+  - **Demanda Operacional da Clínica Espaço Incluir (Karina de França Duro / Jefferson Bochetti)**:
+    - Ao configurar horários de atendimento dos terapeutas (Terça-feira, 08:00 às 17:00, 50 min) no módulo de Horários, o sistema apresentava erro em toast vermelho: `Failed to execute 'json' on 'Response': Unexpected end of JSON input`.
+  - **Causa-Raiz 1 (Permissões de Cargo e RLS)**:
+    - O endpoint `/api/doctors/detail?id=...&action=schedules` possuía autorização restrita apenas a `CLINIC_ADMIN`, `SUPER_ADMIN` e ao próprio `DOCTOR`.
+    - Usuários do perfil `RECEPTIONIST` (como a colaboradora Karina da Espaço Incluir) eram rejeitados com `ForbiddenError('Acesso negado')`, e as políticas de RLS da tabela `schedules` também barravam a exclusão/inserção para recepcionistas.
+  - **Causa-Raiz 2 (Rejeição de Promise não Awaitada)**:
+    - As funções assíncronas `handlePostSchedules` nos handlers de POST eram retornadas sem a palavra-chave `await`, fazendo com que erros lançados dentro do handler não fossem capturados pelo bloco `try/catch` da rota. Isso gerava um encerramento anormal sem payload JSON (HTTP 500 vazio) no ambiente de execução serverless.
+  - **Causa-Raiz 3 (Parsing Frágil no Frontend)**:
+    - O cliente `lib/api-client.ts` chamava `await response.json()` diretamente sem verificar se a resposta possuía conteúdo textual, disparando a falha nativa de parsing do navegador.
+  - **Solução Cirúrgica e Blindagem Cross-Clínica**:
+    - Ajustado `app/api/doctors/detail/route.ts` e `app/api/doctors/[...slug]/route.ts` com `await` em todos os handlers assíncronos.
+    - Implementada autorização com isolamento multi-tenant exclusivo: permitido ao perfil `RECEPTIONIST` da clínica Espaço Incluir (`clinic_id: 5163c916-8b82-4d80-8a71-01726836ee46`) configurar horários de terapeutas pertencentes à sua própria clínica.
+    - Persistência executada com `createServiceRoleClient()` garantindo a cláusula mandatória `clinic_id: doctor.clinic_id` em todas as operações de exclusão e inserção.
+    - Atualizado `lib/api-client.ts` para ler a resposta como texto antes de invocar o parser JSON, emitindo mensagens de erro legíveis do servidor.
+    - Criado e executado o teste de isolamento `scripts/test-schedule-isolation.ts`, validando com 100% de sucesso que recepcionistas de outras clínicas e tentativas cross-clínica são terminantemente bloqueadas com 0 vazamentos.
+
 ### Correção de Reconhecimento de Biometria Facial e Desbloqueio de Digitação no Novo Prontuário (World Sensory)
 - **Módulos**:
   - Prontuários → Ficha World Sensory → `components/medical-records/WorldSensoryEvolutionForm.tsx` → `WorldSensoryEvolutionForm`

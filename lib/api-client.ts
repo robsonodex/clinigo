@@ -48,10 +48,17 @@ class ApiClient {
             return { success: true } as ApiResponse<T>
         }
 
-        const data = await response.json()
+        const rawText = await response.text()
+        let data: any
+        try {
+            data = rawText ? JSON.parse(rawText) : {}
+        } catch {
+            throw new Error(response.statusText || 'Resposta inválida do servidor')
+        }
 
-        if (!response.ok || !data.success) {
-            throw new Error(data.error?.message || 'Ocorreu um erro inesperado')
+        if (!response.ok || (data && data.success === false)) {
+            const errMsg = data?.error?.message || (typeof data?.error === 'string' ? data.error : null) || response.statusText || 'Ocorreu um erro inesperado'
+            throw new Error(errMsg)
         }
 
         return data

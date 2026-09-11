@@ -35,9 +35,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         // Handle different actions
         if (action === 'schedules') {
-            return handleGetSchedules(doctorId)
+            return await handleGetSchedules(doctorId)
         } else if (action === 'health-insurances') {
-            return handleGetHealthInsurances(request, doctorId)
+            return await handleGetHealthInsurances(request, doctorId)
         } else if (action === 'probe') {
             return successResponse({
                 status: 'ok',
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             })
         } else if (!slugParts[1]) {
             // GET /api/doctors/[doctorId] - get doctor profile
-            return handleGetDoctor(request, doctorId)
+            return await handleGetDoctor(request, doctorId)
         }
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const action = slugParts[1]
 
         if (action === 'schedules') {
-            return handlePostSchedules(request, doctorId)
+            return await handlePostSchedules(request, doctorId)
         }
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         if (!action) {
             // PATCH /api/doctors/[doctorId] - update doctor profile
-            return handlePatchDoctor(request, doctorId)
+            return await handlePatchDoctor(request, doctorId)
         }
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
@@ -164,24 +164,43 @@ async function handlePostSchedules(request: NextRequest, doctorId: string) {
         throw new NotFoundError('Médico')
     }
 
-    // Check authorization
-    if (userRole === 'DOCTOR') {
-        if (doctor.user_id !== userId) {
+    const ESCOLAR_OU_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+    const isEspacoIncluir = (userProfile.clinic_id === ESCOLAR_OU_INCLUIR_CLINIC_ID || doctor.clinic_id === ESCOLAR_OU_INCLUIR_CLINIC_ID) && userProfile.clinic_id === doctor.clinic_id
+
+    let isAuthorized = false
+
+    if (userRole === 'SUPER_ADMIN') {
+        isAuthorized = true
+    } else if (userRole === 'DOCTOR') {
+        if (doctor.user_id === userId) {
+            isAuthorized = true
+        } else {
             throw new ForbiddenError('Você só pode editar sua própria agenda')
         }
     } else if (userRole === 'CLINIC_ADMIN') {
-        if (userProfile.clinic_id !== doctor.clinic_id) {
+        if (userProfile.clinic_id === doctor.clinic_id) {
+            isAuthorized = true
+        } else {
             throw new ForbiddenError('Acesso negado')
         }
-    } else if (userRole !== 'SUPER_ADMIN') {
+    } else if (userRole === 'RECEPTIONIST' && isEspacoIncluir) {
+        // Escopo isolado especificamente para a clínica Espaço Incluir (ex: Karina / Recepção)
+        isAuthorized = true
+    }
+
+    if (!isAuthorized) {
         throw new ForbiddenError('Acesso negado')
     }
 
+    // Persistência com adminClient garantindo isolamento estrito de clinic_id
+    const adminClient = createServiceRoleClient()
+
     // Delete existing schedules (replace strategy)
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await (adminClient as any)
         .from('schedules')
         .delete()
         .eq('doctor_id', doctorId)
+        .eq('clinic_id', doctor.clinic_id)
 
     if (deleteError) throw deleteError
 
@@ -197,7 +216,7 @@ async function handlePostSchedules(request: NextRequest, doctorId: string) {
             is_active: true,
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await (adminClient as any)
             .from('schedules')
             .insert(schedulesToInsert as any)
 
@@ -205,18 +224,20 @@ async function handlePostSchedules(request: NextRequest, doctorId: string) {
 
         const primaryDuration = validatedData.schedules[0]?.slot_duration_minutes
         if (primaryDuration && primaryDuration > 0) {
-            await supabase
+            await (adminClient as any)
                 .from('doctors')
                 .update({ consultation_duration: primaryDuration })
                 .eq('id', doctorId)
+                .eq('clinic_id', doctor.clinic_id)
         }
     }
 
     // Return updated schedules
-    const { data: schedules } = await supabase
+    const { data: schedules } = await (adminClient as any)
         .from('schedules')
         .select('*')
         .eq('doctor_id', doctorId)
+        .eq('clinic_id', doctor.clinic_id)
         .eq('is_active', true)
         .order('day_of_week')
         .order('start_time')
