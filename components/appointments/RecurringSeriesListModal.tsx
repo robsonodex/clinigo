@@ -48,6 +48,7 @@ import {
     Phone,
     ArrowUpRight,
     Users,
+    BookOpen,
 } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
@@ -65,7 +66,9 @@ const DAYS_NAMES: Record<number, { full: string; short: string }> = {
 interface RecurringSeries {
     id: string
     clinic_id: string
-    patient_id: string
+    patient_id?: string | null
+    student_id?: string | null
+    mentoring_notes?: string | null
     doctor_id: string
     days_of_week: number[]
     appointment_time: string
@@ -83,6 +86,12 @@ interface RecurringSeries {
         id: string
         full_name: string
         phone?: string | null
+    }
+    student?: {
+        id: string
+        full_name: string
+        contact_phone?: string | null
+        program?: string | null
     }
     doctor?: {
         id: string
@@ -222,8 +231,11 @@ export function RecurringSeriesListModal({
             const matchesSearch =
                 !search ||
                 item.patient?.full_name?.toLowerCase().includes(search) ||
+                item.student?.full_name?.toLowerCase().includes(search) ||
+                item.student?.program?.toLowerCase().includes(search) ||
                 item.doctor?.user?.full_name?.toLowerCase().includes(search) ||
-                item.therapy_type?.toLowerCase().includes(search)
+                item.therapy_type?.toLowerCase().includes(search) ||
+                item.mentoring_notes?.toLowerCase().includes(search)
 
             const matchesDoctor =
                 selectedDoctorFilter === 'ALL' || item.doctor_id === selectedDoctorFilter
@@ -374,7 +386,10 @@ export function RecurringSeriesListModal({
                         ) : (
                             filteredSeries.map((item) => {
                                 const doctorName = item.doctor?.user?.full_name || 'Profissional'
+                                const isMentoring = item.appointment_type === 'STUDENT' || Boolean(item.student_id)
                                 const patientName = item.patient?.full_name || 'Paciente'
+                                const studentName = item.student?.full_name || 'Mentorando / Aluno'
+                                const contactPhone = isMentoring ? (item.student?.contact_phone || item.student?.phone) : item.patient?.phone
                                 const timeStr = item.appointment_time?.substring(0, 5) || 'Horário'
                                 const isBiweekly = item.recurrence_interval === 2 || item.frequency === 'biweekly'
                                 const isMonthly = item.recurrence_interval === 4 || item.frequency === 'monthly'
@@ -392,14 +407,23 @@ export function RecurringSeriesListModal({
                                             <div className="space-y-1.5 flex-1">
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="font-bold text-base text-foreground flex items-center gap-1.5">
-                                                        <User className="h-4 w-4 text-emerald-600 shrink-0" />
-                                                        {patientName}
+                                                        {isMentoring ? (
+                                                            <BookOpen className="h-4 w-4 text-emerald-600 shrink-0" />
+                                                        ) : (
+                                                            <User className="h-4 w-4 text-emerald-600 shrink-0" />
+                                                        )}
+                                                        {isMentoring ? studentName : patientName}
                                                     </span>
-                                                    {item.patient?.phone && (
+                                                    {contactPhone && (
                                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Phone className="h-3 w-3" />
-                                                            {item.patient.phone}
+                                                            {contactPhone}
                                                         </span>
+                                                    )}
+                                                    {isMentoring && (
+                                                        <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                                                            Mentoria / Formação
+                                                        </Badge>
                                                     )}
                                                     <Badge
                                                         variant={item.is_active ? 'default' : 'secondary'}
@@ -445,6 +469,11 @@ export function RecurringSeriesListModal({
                                                             {item.therapy_type}
                                                         </span>
                                                     )}
+                                                    {isMentoring && item.student?.program && (
+                                                        <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                                                            Programa: {item.student.program}
+                                                        </span>
+                                                    )}
                                                     {item.co_doctor && (
                                                         <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px] font-medium flex items-center gap-1">
                                                             <Users className="h-3 w-3 text-emerald-600" />
@@ -452,6 +481,12 @@ export function RecurringSeriesListModal({
                                                         </span>
                                                     )}
                                                 </div>
+
+                                                {isMentoring && item.mentoring_notes && (
+                                                    <p className="text-[11px] text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-200/60 dark:border-slate-800 mt-1">
+                                                        Observação de mentoria: {item.mentoring_notes}
+                                                    </p>
+                                                )}
                                             </div>
 
                                             {/* Detalhes de Agenda (Dia, Hora, Período) */}

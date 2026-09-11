@@ -166,6 +166,20 @@ export const helpItems: HelpItem[] = [
         aliases: ['agendamentos-recorrentes', 'series-recorrentes']
     },
     {
+        id: 'mentoria-recorrente',
+        title: 'Mentoria Clínica e Formação Técnica Recorrente',
+        category: 'Agendamento',
+        icon: BookOpen,
+        href: '/dashboard/agenda',
+        whatIsIt: 'Funcionalidade dedicada para agendamentos periódicos de supervisão técnica, mentoria individual ou reuniões de formação continuada com mentorandos/alunos. Opera de forma isolada, sem gerar prontuário clínico nem cobrança de paciente.',
+        whenToUse: 'Quando a gestão ou terapeutas sêniores conduzem mentorias periódicas (semanais, quinzenais ou mensais) para acompanhamento de casos e capacitação profissional.',
+        howToUse: 'No botão "Novo" da Agenda, clique em "Agendar Mentoria" (ou selecione "Mentoria Recorrente"), ative a chave de recorrência, escolha a frequência (Semanal, Quinzenal ou Mensal), os dias da semana desejados e a quantidade de sessões projetadas.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'DOCTOR'],
+        tags: ['mentoria', 'formação técnica', 'supervisão recorrente', 'mentorando', 'estágio', 'agenda'],
+        aliases: ['mentoria-recorrente', 'agendar-mentoria', 'formacao-recorrente']
+    },
+    {
         id: 'consultas',
         title: 'Consultas',
         category: 'Agendamento',

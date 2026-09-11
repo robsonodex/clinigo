@@ -8,7 +8,11 @@ import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 import { v4 as uuidv4 } from 'uuid'
 
 interface RecurringSeriesRequest {
-    patient_id: string
+    patient_id?: string
+    student_id?: string
+    is_student?: boolean
+    mentoring_notes?: string
+    specialty?: string
     doctor_id: string
     co_doctor_id?: string | null
     days_of_week: number[]       // [1, 3] = Monday + Wednesday
@@ -111,10 +115,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        const isStudent = !!(body.is_student || body.student_id)
+
         // Validate required fields
-        if (!body.patient_id || !body.doctor_id || !body.days_of_week?.length || !body.appointment_time || !body.start_date || !body.end_date) {
+        if ((!isStudent && !body.patient_id) || (isStudent && !body.student_id) || !body.doctor_id || !body.days_of_week?.length || !body.appointment_time || !body.start_date || !body.end_date) {
             return NextResponse.json(
-                { error: 'Paciente, médico, dias da semana, horário, data início e data fim são obrigatórios' },
+                { error: isStudent ? 'Mentorando(a), profissional, dias da semana, horário, data início e data fim são obrigatórios' : 'Paciente, médico, dias da semana, horário, data início e data fim são obrigatórios' },
                 { status: 400 }
             )
         }
@@ -151,19 +157,41 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Validate patient belongs to clinic
-        const { data: patient } = await supabase
-            .from('patients')
-            .select('id, full_name')
-            .eq('id', body.patient_id)
-            .eq('clinic_id', clinicId)
-            .single()
+        let patient: any = null
+        let studentRecord: any = null
 
-        if (!patient) {
-            return NextResponse.json(
-                { error: 'Paciente não encontrado nesta clínica' },
-                { status: 404 }
-            )
+        if (isStudent) {
+            // Validate student belongs to clinic
+            const { data: st } = await supabase
+                .from('students')
+                .select('id, full_name, contact_phone, program')
+                .eq('id', body.student_id)
+                .eq('clinic_id', clinicId)
+                .single()
+
+            if (!st) {
+                return NextResponse.json(
+                    { error: 'Mentorando(a) / Formando(a) não encontrado(a) nesta clínica' },
+                    { status: 404 }
+                )
+            }
+            studentRecord = st
+        } else {
+            // Validate patient belongs to clinic
+            const { data: pt } = await supabase
+                .from('patients')
+                .select('id, full_name')
+                .eq('id', body.patient_id)
+                .eq('clinic_id', clinicId)
+                .single()
+
+            if (!pt) {
+                return NextResponse.json(
+                    { error: 'Paciente não encontrado nesta clínica' },
+                    { status: 404 }
+                )
+            }
+            patient = pt
         }
 
         // Validate co_doctor if provided
@@ -250,18 +278,20 @@ export async function POST(request: NextRequest) {
             .insert({
                 id: seriesId,
                 clinic_id: clinicId,
-                patient_id: body.patient_id,
+                patient_id: isStudent ? null : body.patient_id,
+                student_id: isStudent ? body.student_id : null,
+                mentoring_notes: isStudent ? (body.mentoring_notes || null) : null,
                 doctor_id: body.doctor_id,
                 co_doctor_id: body.co_doctor_id || null,
                 days_of_week: body.days_of_week,
                 appointment_time: body.appointment_time,
-                therapy_type: body.therapy_type || null,
+                therapy_type: isStudent ? (body.therapy_type || 'Mentoria Clínica') : (body.therapy_type || null),
                 start_date: body.start_date,
                 end_date: body.end_date,
-                payment_type: body.payment_type || 'PARTICULAR',
-                appointment_type: body.appointment_type || 'presencial',
-                health_insurance_plan_id: body.health_insurance_plan_id || null,
-                notes: body.notes || null,
+                payment_type: isStudent ? 'PARTICULAR' : (body.payment_type || 'PARTICULAR'),
+                appointment_type: isStudent ? 'STUDENT' : (body.appointment_type || 'presencial'),
+                health_insurance_plan_id: isStudent ? null : (body.health_insurance_plan_id || null),
+                notes: isStudent ? (body.mentoring_notes || null) : (body.notes || null),
                 recurrence_interval: recurrenceInterval,
                 frequency: frequency,
                 is_active: true,
@@ -292,19 +322,27 @@ export async function POST(request: NextRequest) {
             // Non-blocking: proceed anyway, individual inserts may still succeed
         }
 
+        const mentoringTag = body.mentoring_notes 
+            ? `[Aluna / Mentoria] ${body.mentoring_notes}` 
+            : `[Aluna / Mentoria] ${studentRecord?.full_name || ''}`.trim()
+
         // Generate all appointments in batch
         const appointmentRecords = allDates.map(date => ({
             id: uuidv4(),
             clinic_id: clinicId,
             doctor_id: body.doctor_id,
             co_doctor_id: body.co_doctor_id || null,
-            patient_id: body.patient_id,
+            patient_id: isStudent ? null : body.patient_id,
+            student_id: isStudent ? body.student_id : null,
             appointment_date: date,
             appointment_time: body.appointment_time,
             status: 'CONFIRMED' as const,
-            payment_type: body.payment_type === 'CONVENIO' ? 'CONVENIO' : 'PARTICULAR',
-            appointment_type: body.appointment_type || 'presencial',
-            health_insurance_plan_id: body.health_insurance_plan_id || null,
+            payment_type: isStudent ? 'PARTICULAR' : (body.payment_type === 'CONVENIO' ? 'CONVENIO' : 'PARTICULAR'),
+            appointment_type: isStudent ? 'STUDENT' : (body.appointment_type || 'presencial'),
+            health_insurance_plan_id: isStudent ? null : (body.health_insurance_plan_id || null),
+            mentoring_notes: isStudent ? (body.mentoring_notes || null) : null,
+            waiting_room_notes: isStudent ? mentoringTag : (body.notes || null),
+            reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
             series_id: seriesId,
         }))
 
@@ -345,9 +383,10 @@ export async function POST(request: NextRequest) {
             series_id: seriesId,
             total_created: totalCreated,
             total_planned: allDates.length,
-            patient_name: patient.full_name,
+            patient_name: isStudent ? null : patient?.full_name,
+            student_name: isStudent ? studentRecord?.full_name : null,
             doctor_name: (doctor as any).user?.full_name || 'Terapeuta',
-            therapy_type: body.therapy_type,
+            therapy_type: isStudent ? 'Mentoria Clínica' : body.therapy_type,
             errors: errors.length > 0 ? errors : undefined,
             message: `${totalCreated} agendamentos criados com sucesso para a série recorrente`,
         })
@@ -394,6 +433,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url)
         const activeOnly = searchParams.get('active') !== 'false'
         const patientId = searchParams.get('patient_id')
+        const studentId = searchParams.get('student_id')
         const doctorId = searchParams.get('doctor_id')
 
         let query = supabase
@@ -401,6 +441,7 @@ export async function GET(request: NextRequest) {
             .select(`
                 *,
                 patient:patients(id, full_name, phone),
+                student:students!recurring_appointment_series_student_id_fkey(id, full_name, contact_phone, program),
                 doctor:doctors!recurring_appointment_series_doctor_id_fkey(id, user:users(full_name), specialty),
                 co_doctor:doctors!recurring_appointment_series_co_doctor_id_fkey(id, user:users(full_name), specialty),
                 created_by_user:users!recurring_appointment_series_created_by_fkey(full_name)
@@ -413,6 +454,9 @@ export async function GET(request: NextRequest) {
         }
         if (patientId) {
             query = query.eq('patient_id', patientId)
+        }
+        if (studentId) {
+            query = query.eq('student_id', studentId)
         }
         if (doctorId) {
             query = query.or(`doctor_id.eq.${doctorId},co_doctor_id.eq.${doctorId}`)

@@ -87,6 +87,7 @@ export async function GET(
             .select(`
                 *,
                 patient:patients(id, full_name, phone),
+                student:students!recurring_appointment_series_student_id_fkey(id, full_name, contact_phone, program),
                 doctor:doctors!recurring_appointment_series_doctor_id_fkey(id, user:users(full_name), specialty),
                 co_doctor:doctors!recurring_appointment_series_co_doctor_id_fkey(id, user:users(full_name), specialty)
             `)

@@ -2,6 +2,40 @@
 
 ## Módulos
 
+### Agendamento Recorrente de Mentorias Clínicas e Formação Técnica (World Sensory e Global)
+- **Módulos**:
+  - Recepção / Agenda → Modal de Agendamento Manual → `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal` / `calculateMentoringSeriesDates()` / `saveAppointment()`
+  - Recepção / Agenda → Modal de Gerenciamento de Séries Recorrentes → `components/appointments/RecurringSeriesListModal.tsx` → `RecurringSeriesListModal` / `filteredSeries` / renderização de cards
+  - Agendamentos API → Séries Recorrentes → `app/api/appointments/recurring/route.ts` → `POST` / `GET`
+  - Agendamentos API → Detalhe da Série Recorrente → `app/api/appointments/recurring/[id]/route.ts` → `GET`
+  - Banco de Dados / Migrations → `supabase/migrations/20260910_add_student_to_recurring_series.sql` e `supabase/migrations/20260910_allow_student_in_recurring_appointment_type.sql`
+- **Descrição**:
+  - **Demanda da Clínica World Sensory (Patrícia Mendes Leonel)**:
+    - Atendida a solicitação da gestão da World Sensory para permitir agendamentos recorrentes (semanais, quinzenais ou mensais) para sessões formativas e mentorias clínicas sem paciente (`is_student = true`).
+  - **Modelagem Relacional e Integridade de Banco de Dados**:
+    - Criada e aplicada migration versionada tornando `patient_id` opcional (`DROP NOT NULL`) e adicionando as colunas `student_id` (com chave estrangeira para `students.id`) e `mentoring_notes` (texto) na tabela `recurring_appointment_series`.
+    - Criado índice relacional `idx_recurring_appointment_series_student_id` para otimização de consultas.
+    - Atualizada a constraint de validação `valid_appointment_type` para aceitar formalmente o valor `'STUDENT'` além de `'presencial'` e `'online'`.
+  - **Lógica de Backend e Geração de Agendamentos**:
+    - Atualizado o endpoint `POST /api/appointments/recurring` para validar e aceitar parâmetros de mentorando (`student_id`, `mentoring_notes`, `is_student`).
+    - Validação de isolamento multi-tenant garantindo que o mentorando e os terapeutas pertençam à mesma clínica autenticada.
+    - Geração em lote dos agendamentos em `appointments` com `appointment_type = 'STUDENT'`, notas de sala de espera identificadas (`[Aluna / Mentoria]`), marcação de especialidade e vínculo de rastreabilidade com `series_id`.
+    - Endpoints de consulta `GET /api/appointments/recurring` e `GET /api/appointments/recurring/[id]` atualizados com join relacional `student:students!recurring_appointment_series_student_id_fkey` para carregar nome, contato e programa formativo.
+  - **Interface de Usuário (Padrão SaaS Médico Corporativo e PWA/Mobile)**:
+    - No modal "Novo Agendamento Manual", adicionado atalho direto "Agendar Recorrente" com ícone vetorial neutro `Repeat` no banner inicial de mentoria.
+    - Seletor de recorrência corporativo elegante integrado ao fluxo de mentoria, com alternância rápida (Switch), seleção de periodicidade (Semanal, Quinzenal ou Mensal), seletor de dias da semana em touch targets acessíveis (min 44x44px), definição de duração por total de sessões ou data limite e cartão informativo com a contagem projetada de datas.
+    - Sincronização automática do dia da semana a partir da data de início selecionada.
+    - Validação antecipada e exibição corporativa de possíveis conflitos de horário com outros agendamentos do terapeuta.
+    - Atualizado o modal de listagem de séries recorrentes (`RecurringSeriesListModal.tsx`) com suporte completo para mentorias: filtro de busca por nome do aluno/mentorando e programa, visualização com ícone `BookOpen`, selo "Mentoria / Formação", contato e notas clínicas.
+  - **Segurança e LGPD v5.2**:
+    - Zero dados pessoais (PII) hardcoded em condicionais de código.
+    - Consultas protegidas por RLS e filtro obrigatório por `clinic_id`.
+    - Testes automatizados executados via script com 100% de sucesso e isolamento multi-tenant validado.
+  - **Auditoria de Botões e Mobile PWA**:
+    - Touch targets mínimos de 44x44px em todos os botões e chips de dias.
+    - Inputs com tamanho mínimo de 16px para evitar auto-zoom em navegadores móveis/iOS.
+    - Zero emojis em conformidade com as diretrizes internacionais da plataforma.
+
 ### Correção de Assinatura Digital e Blindagem de Autorização Home Care (World Sensory e Global)
 - **Módulos**:
   - Prontuários → Página de Prontuário → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → `ProntuarioPage` / `handleSaveDigitalSignature()` / `handleToggleManualUnlock()`

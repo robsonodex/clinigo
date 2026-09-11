@@ -43,7 +43,10 @@ import {
     Building2,
     GraduationCap,
     BookOpen,
+    Repeat,
+    CheckCircle2,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearchCombobox'
 import { QuickPatientForm } from './QuickPatientForm'
 import { PaymentMethodSelector, type ManualPaymentType } from './PaymentMethodSelector'
@@ -52,6 +55,96 @@ import { NoShowPatientBadge } from '@/components/patients/NoShowPatientBadge'
 import { formatCurrency, cn } from '@/lib/utils'
 import { api } from '@/lib/api-client'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
+
+const MENTORING_DAYS_OF_WEEK = [
+    { value: 1, label: 'Segunda-feira', short: 'Seg' },
+    { value: 2, label: 'Terça-feira', short: 'Ter' },
+    { value: 3, label: 'Quarta-feira', short: 'Qua' },
+    { value: 4, label: 'Quinta-feira', short: 'Qui' },
+    { value: 5, label: 'Sexta-feira', short: 'Sex' },
+    { value: 6, label: 'Sábado', short: 'Sáb' },
+    { value: 0, label: 'Domingo', short: 'Dom' },
+]
+
+function calculateMentoringSeriesDates({
+    startDate,
+    daysOfWeek,
+    frequency,
+    endMode,
+    sessionsCount,
+    endDate,
+}: {
+    startDate: string
+    daysOfWeek: number[]
+    frequency: 'weekly' | 'biweekly' | 'monthly'
+    endMode: 'sessions' | 'date'
+    sessionsCount: number
+    endDate?: string
+}) {
+    if (!startDate || !daysOfWeek || daysOfWeek.length === 0) {
+        return { dates: [], finalEndDate: startDate }
+    }
+
+    const interval = frequency === 'biweekly' ? 2 : frequency === 'monthly' ? 4 : 1
+    const start = new Date(startDate + 'T00:00:00')
+    const baseWeekStart = new Date(start)
+    baseWeekStart.setDate(start.getDate() - start.getDay())
+    baseWeekStart.setHours(0, 0, 0, 0)
+
+    const dates: string[] = []
+    const current = new Date(start)
+
+    if (endMode === 'sessions') {
+        const target = Math.max(1, sessionsCount || 4)
+        let loops = 0
+        while (dates.length < target && loops < 730) {
+            const dayOfWeek = current.getDay()
+            if (daysOfWeek.includes(dayOfWeek)) {
+                const currentWeekStart = new Date(current)
+                currentWeekStart.setDate(current.getDate() - current.getDay())
+                currentWeekStart.setHours(0, 0, 0, 0)
+
+                const diffDays = Math.round((currentWeekStart.getTime() - baseWeekStart.getTime()) / (1000 * 60 * 60 * 24))
+                const diffWeeks = Math.floor(diffDays / 7)
+
+                if (diffWeeks % interval === 0) {
+                    const yyyy = current.getFullYear()
+                    const mm = String(current.getMonth() + 1).padStart(2, '0')
+                    const dd = String(current.getDate()).padStart(2, '0')
+                    dates.push(`${yyyy}-${mm}-${dd}`)
+                }
+            }
+            current.setDate(current.getDate() + 1)
+            loops++
+        }
+    } else {
+        const end = endDate ? new Date(endDate + 'T00:00:00') : new Date(start)
+        let loops = 0
+        while (current <= end && loops < 730) {
+            const dayOfWeek = current.getDay()
+            if (daysOfWeek.includes(dayOfWeek)) {
+                const currentWeekStart = new Date(current)
+                currentWeekStart.setDate(current.getDate() - current.getDay())
+                currentWeekStart.setHours(0, 0, 0, 0)
+
+                const diffDays = Math.round((currentWeekStart.getTime() - baseWeekStart.getTime()) / (1000 * 60 * 60 * 24))
+                const diffWeeks = Math.floor(diffDays / 7)
+
+                if (diffWeeks % interval === 0) {
+                    const yyyy = current.getFullYear()
+                    const mm = String(current.getMonth() + 1).padStart(2, '0')
+                    const dd = String(current.getDate()).padStart(2, '0')
+                    dates.push(`${yyyy}-${mm}-${dd}`)
+                }
+            }
+            current.setDate(current.getDate() + 1)
+            loops++
+        }
+    }
+
+    const finalEndDate = dates.length > 0 ? dates[dates.length - 1] : startDate
+    return { dates, finalEndDate }
+}
 
 // Types
 interface Doctor {
@@ -94,6 +187,12 @@ const manualAppointmentSchema = z.object({
     override_reason: z.string().optional(),
     specialty: z.string().optional(),
     co_doctor_id: z.string().optional(),
+    is_recurring: z.boolean().default(false),
+    recurrence_frequency: z.enum(['weekly', 'biweekly', 'monthly']).default('weekly'),
+    recurrence_days: z.array(z.number()).default([]),
+    recurrence_end_mode: z.enum(['sessions', 'date']).default('sessions'),
+    recurrence_sessions_count: z.number().default(4),
+    recurrence_end_date: z.string().optional(),
 })
 
 type ManualAppointmentFormData = z.infer<typeof manualAppointmentSchema>
@@ -153,6 +252,12 @@ export function ManualAppointmentModal({
             specialty: '',
             notes: '',
             co_doctor_id: '',
+            is_recurring: false,
+            recurrence_frequency: 'weekly',
+            recurrence_days: [],
+            recurrence_end_mode: 'sessions',
+            recurrence_sessions_count: 4,
+            recurrence_end_date: '',
         },
     })
 
@@ -163,6 +268,58 @@ export function ManualAppointmentModal({
     const isStudent = eventCategory === 'student'
     const isNonPatient = isSupervision || isStudent
     const paymentType = watch('payment_type') as ManualPaymentType
+    const [recurringConflicts, setRecurringConflicts] = useState<string[]>([])
+
+    const isRecurring = watch('is_recurring')
+    const recurrenceFrequency = watch('recurrence_frequency')
+    const recurrenceDays = watch('recurrence_days') || []
+    const recurrenceEndMode = watch('recurrence_end_mode')
+    const recurrenceSessionsCount = watch('recurrence_sessions_count')
+    const recurrenceEndDate = watch('recurrence_end_date')
+    const appointmentDate = watch('appointment_date')
+    const appointmentTime = watch('appointment_time')
+
+    // Sincronizar dia da semana inicial se nenhum tiver sido marcado
+    useEffect(() => {
+        if (appointmentDate) {
+            try {
+                const dateObj = new Date(appointmentDate + 'T00:00:00')
+                if (!isNaN(dateObj.getTime())) {
+                    const day = dateObj.getDay()
+                    const current = form.getValues('recurrence_days') || []
+                    if (current.length === 0) {
+                        setValue('recurrence_days', [day])
+                    }
+                }
+            } catch {}
+        }
+    }, [appointmentDate, setValue, form])
+
+    // Toggle de dia da semana na mentoria recorrente
+    const toggleMentoringDay = (day: number) => {
+        const current = form.getValues('recurrence_days') || []
+        if (current.includes(day)) {
+            if (current.length > 1) {
+                setValue('recurrence_days', current.filter((d: number) => d !== day))
+            } else {
+                toast.error('Selecione pelo menos um dia da semana para a mentoria')
+            }
+        } else {
+            setValue('recurrence_days', [...current, day].sort((a, b) => a - b))
+        }
+    }
+
+    // Projeção calculada para mentoria recorrente
+    const mentoringProjection = isStudent && isRecurring
+        ? calculateMentoringSeriesDates({
+            startDate: appointmentDate || format(new Date(), 'yyyy-MM-dd'),
+            daysOfWeek: recurrenceDays.length > 0 ? recurrenceDays : [new Date((appointmentDate || format(new Date(), 'yyyy-MM-dd')) + 'T00:00:00').getDay()],
+            frequency: recurrenceFrequency,
+            endMode: recurrenceEndMode,
+            sessionsCount: recurrenceSessionsCount,
+            endDate: recurrenceEndDate,
+        })
+        : { dates: [], finalEndDate: '' }
 
     // Student quick creation state
     const [isCreateStudentOpen, setIsCreateStudentOpen] = useState(false)
@@ -336,9 +493,64 @@ export function ManualAppointmentModal({
     // Create/Update appointment mutation
     const { mutate: saveAppointment, isPending } = useMutation({
         mutationFn: async (data: ManualAppointmentFormData) => {
+            setRecurringConflicts([])
             const cleanCoDoctorId = data.co_doctor_id && data.co_doctor_id !== 'none' && data.co_doctor_id !== data.doctor_id
                 ? data.co_doctor_id
                 : null
+
+            // FLUXO ESPECIAL: Mentoria Recorrente
+            if (data.event_category === 'student' && data.is_recurring) {
+                const recurrenceInterval = data.recurrence_frequency === 'biweekly' ? 2 : data.recurrence_frequency === 'monthly' ? 4 : 1
+                const activeDays = data.recurrence_days && data.recurrence_days.length > 0
+                    ? data.recurrence_days
+                    : [new Date(data.appointment_date + 'T00:00:00').getDay()]
+
+                const { dates, finalEndDate } = calculateMentoringSeriesDates({
+                    startDate: data.appointment_date,
+                    daysOfWeek: activeDays,
+                    frequency: data.recurrence_frequency,
+                    endMode: data.recurrence_end_mode,
+                    sessionsCount: data.recurrence_sessions_count,
+                    endDate: data.recurrence_end_date,
+                })
+
+                if (dates.length === 0) {
+                    throw new Error('Nenhuma data válida encontrada para os dias e período da mentoria selecionados.')
+                }
+
+                const payload = {
+                    is_student: true,
+                    student_id: data.student_id,
+                    doctor_id: data.doctor_id,
+                    days_of_week: activeDays,
+                    appointment_time: data.appointment_time,
+                    therapy_type: 'Mentoria Clínica',
+                    start_date: data.appointment_date,
+                    end_date: finalEndDate,
+                    recurrence_interval: recurrenceInterval,
+                    frequency: data.recurrence_frequency,
+                    mentoring_notes: data.mentoring_notes || undefined,
+                    specialty: data.specialty || undefined,
+                    appointment_type: data.type === 'telemedicina' ? 'online' : 'presencial',
+                }
+
+                const response = await fetch('/api/appointments/recurring', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+
+                const resJson = await response.json()
+                if (!response.ok) {
+                    if (response.status === 409 && resJson.conflicting_dates) {
+                        setRecurringConflicts(resJson.conflicting_dates)
+                        throw new Error(`${resJson.total_conflicts} conflito(s) de horário encontrado(s). Ajuste o horário para prosseguir.`)
+                    }
+                    throw new Error(resJson.error || 'Erro ao criar série recorrente de mentoria')
+                }
+
+                return { ...resJson, isRecurringMentoring: true, appointmentDate: data.appointment_date }
+            }
 
             let payload: any = {}
             if (data.event_category === 'student') {
@@ -442,6 +654,15 @@ export function ManualAppointmentModal({
             return response.json()
         },
         onSuccess: (data) => {
+            if (data?.isRecurringMentoring) {
+                toast.success(data.message || `${data.total_created} sessões de mentoria criadas com sucesso!`)
+                queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+                queryClient.invalidateQueries({ queryKey: ['recurring-series-list'], exact: false })
+                onSuccess?.(data.appointmentDate)
+                handleClose()
+                return
+            }
+
             if (isEditing) {
                 toast.success('Agendamento atualizado!')
             } else {
@@ -503,6 +724,7 @@ export function ManualAppointmentModal({
         setQuickRegistration(null)
         setShowSuccessModal(false)
         setCreatedAppointment(null)
+        setRecurringConflicts([])
         form.reset()
         onOpenChange(false)
     }
@@ -518,7 +740,7 @@ export function ManualAppointmentModal({
             return
         }
         if (data.event_category === 'student' && !data.student_id) {
-            toast.error('Selecione ou cadastre a aluna')
+            toast.error('Selecione ou cadastre o(a) mentorando(a)')
             return
         }
         saveAppointment(data)
@@ -532,14 +754,18 @@ export function ManualAppointmentModal({
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             {isStudent ? (
-                                <BookOpen className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+                                isRecurring ? (
+                                    <Repeat className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+                                ) : (
+                                    <BookOpen className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+                                )
                             ) : isSupervision ? (
                                 <GraduationCap className="h-5 w-5 text-indigo-600" />
                             ) : (
                                 <Calendar className="h-5 w-5" />
                             )}
                             {isStudent 
-                                ? 'Sessão com Aluna / Mentoria' 
+                                ? (isRecurring ? 'Mentoria Clínica Recorrente / Formação' : 'Mentoria Clínica / Formação Técnica') 
                                 : isSupervision 
                                     ? 'Nova Supervisão Técnica / Clínica' 
                                     : isEditing 
@@ -550,7 +776,9 @@ export function ManualAppointmentModal({
                         </DialogTitle>
                         <DialogDescription>
                             {isStudent
-                                ? 'Agende uma sessão formativa, mentoria técnica ou de estágio com aluna (sem prontuário de paciente).'
+                                ? (isRecurring 
+                                    ? 'Configure uma série periódica de mentoria clínica com aluna/formando(a) sem prontuário de paciente.' 
+                                    : 'Agende uma sessão formativa, mentoria técnica ou de estágio com aluna (sem prontuário de paciente).')
                                 : isSupervision
                                     ? 'Agende uma sessão interna de mentoria ou supervisão técnica entre profissionais da clínica.'
                                     : isEncaixe 
@@ -563,7 +791,7 @@ export function ManualAppointmentModal({
                     {step === 'search' && (
                         <div className="space-y-4">
                             {/* Banner de Mentoria / Formacao */}
-                            <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl flex items-center justify-between gap-3">
+                            <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div className="flex items-center gap-2.5">
                                     <BookOpen className="h-5 w-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                     <div>
@@ -575,23 +803,44 @@ export function ManualAppointmentModal({
                                         </p>
                                     </div>
                                 </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 dark:text-emerald-300 shrink-0"
-                                    onClick={() => {
-                                        if (selectedDoctorId) {
-                                            setValue('doctor_id', selectedDoctorId)
-                                        } else if (doctors && doctors.length > 0) {
-                                            setValue('doctor_id', doctors[0].id)
-                                        }
-                                        setValue('event_category', 'student')
-                                        setStep('form')
-                                    }}
-                                >
-                                    Agendar Mentoria
-                                </Button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 min-h-[44px] sm:min-h-[36px] text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 dark:text-emerald-300"
+                                        onClick={() => {
+                                            if (selectedDoctorId) {
+                                                setValue('doctor_id', selectedDoctorId)
+                                            } else if (doctors && doctors.length > 0) {
+                                                setValue('doctor_id', doctors[0].id)
+                                            }
+                                            setValue('event_category', 'student')
+                                            setValue('is_recurring', false)
+                                            setStep('form')
+                                        }}
+                                    >
+                                        Agendar Mentoria
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        className="h-9 min-h-[44px] sm:min-h-[36px] text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5"
+                                        onClick={() => {
+                                            if (selectedDoctorId) {
+                                                setValue('doctor_id', selectedDoctorId)
+                                            } else if (doctors && doctors.length > 0) {
+                                                setValue('doctor_id', doctors[0].id)
+                                            }
+                                            setValue('event_category', 'student')
+                                            setValue('is_recurring', true)
+                                            setStep('form')
+                                        }}
+                                    >
+                                        <Repeat className="h-3.5 w-3.5" />
+                                        Agendar Recorrente
+                                    </Button>
+                                </div>
                             </div>
 
                             {doctors?.some(d => d.allows_supervision) && (
@@ -659,6 +908,26 @@ export function ManualAppointmentModal({
                     {/* Step: Appointment Form */}
                     {step === 'form' && (
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            {/* Alerta de Conflitos em Série Recorrente */}
+                            {recurringConflicts.length > 0 && (
+                                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl space-y-2">
+                                    <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-semibold text-xs">
+                                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                                        Conflitos de Horário Identificados na Agenda ({recurringConflicts.length})
+                                    </div>
+                                    <p className="text-xs text-amber-800/90 dark:text-amber-300/90">
+                                        O profissional já possui agendamentos nestas datas no horário selecionado. Ajuste o horário ou a data de início para prosseguir:
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {recurringConflicts.map((d) => (
+                                            <Badge key={d} variant="outline" className="bg-white dark:bg-slate-900 text-amber-800 border-amber-300 text-[10px]">
+                                                {format(new Date(d + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Modalidade / Categoria do Evento */}
                             <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
                                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
@@ -1026,6 +1295,227 @@ export function ManualAppointmentModal({
                                 </div>
                             </div>
 
+                            {/* Seção de Recorrência (Exclusiva para Mentoria Clínica) */}
+                            {isStudent && (
+                                <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 p-4 space-y-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 shrink-0">
+                                                <Repeat className="h-4 w-4" />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="mentoring-recurring-toggle" className="text-sm font-semibold text-emerald-950 dark:text-emerald-200 cursor-pointer">
+                                                    Mentoria Recorrente
+                                                </Label>
+                                                <p className="text-xs text-emerald-700/90 dark:text-emerald-400/90">
+                                                    Agendar encontros periódicos fixos na agenda do profissional.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Switch
+                                            id="mentoring-recurring-toggle"
+                                            checked={isRecurring}
+                                            onCheckedChange={(checked) => {
+                                                setValue('is_recurring', checked)
+                                                if (checked && recurrenceDays.length === 0 && appointmentDate) {
+                                                    try {
+                                                        const d = new Date(appointmentDate + 'T00:00:00').getDay()
+                                                        setValue('recurrence_days', [d])
+                                                    } catch {}
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
+                                    {isRecurring && (
+                                        <div className="space-y-4 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/40 animate-in fade-in duration-200">
+                                            {/* Periodicidade */}
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                                    Frequência dos Encontros
+                                                </Label>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={cn(
+                                                            "h-10 min-h-[44px] text-xs font-medium transition-all",
+                                                            recurrenceFrequency === 'weekly'
+                                                                ? "bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 hover:text-white"
+                                                                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                                                        )}
+                                                        onClick={() => setValue('recurrence_frequency', 'weekly')}
+                                                    >
+                                                        Semanal
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={cn(
+                                                            "h-10 min-h-[44px] text-xs font-medium transition-all",
+                                                            recurrenceFrequency === 'biweekly'
+                                                                ? "bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 hover:text-white"
+                                                                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                                                        )}
+                                                        onClick={() => setValue('recurrence_frequency', 'biweekly')}
+                                                    >
+                                                        Quinzenal
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={cn(
+                                                            "h-10 min-h-[44px] text-xs font-medium transition-all",
+                                                            recurrenceFrequency === 'monthly'
+                                                                ? "bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 hover:text-white"
+                                                                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                                                        )}
+                                                        onClick={() => setValue('recurrence_frequency', 'monthly')}
+                                                    >
+                                                        Mensal
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Dias da semana */}
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                                    Dia(s) da Semana
+                                                </Label>
+                                                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                                                    {MENTORING_DAYS_OF_WEEK.map((d) => {
+                                                        const isSelected = recurrenceDays.includes(d.value)
+                                                        return (
+                                                            <Button
+                                                                key={d.value}
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className={cn(
+                                                                    "h-11 min-h-[44px] px-1 text-xs font-semibold transition-all",
+                                                                    isSelected
+                                                                        ? "bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 hover:text-white shadow-xs"
+                                                                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                                                                )}
+                                                                onClick={() => toggleMentoringDay(d.value)}
+                                                            >
+                                                                {d.short}
+                                                            </Button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Término da série: Por Sessões ou Por Data */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs font-semibold text-emerald-950 dark:text-emerald-200">
+                                                        Duração da Série
+                                                    </Label>
+                                                    <div className="flex items-center gap-3 text-xs">
+                                                        <button
+                                                            type="button"
+                                                            className={cn(
+                                                                "pb-0.5 border-b-2 font-medium transition-colors cursor-pointer",
+                                                                recurrenceEndMode === 'sessions'
+                                                                    ? "border-emerald-700 text-emerald-900 dark:text-emerald-200 font-semibold"
+                                                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                                                            )}
+                                                            onClick={() => setValue('recurrence_end_mode', 'sessions')}
+                                                        >
+                                                            Por Encontros
+                                                        </button>
+                                                        <span className="text-muted-foreground">•</span>
+                                                        <button
+                                                            type="button"
+                                                            className={cn(
+                                                                "pb-0.5 border-b-2 font-medium transition-colors cursor-pointer",
+                                                                recurrenceEndMode === 'date'
+                                                                    ? "border-emerald-700 text-emerald-900 dark:text-emerald-200 font-semibold"
+                                                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                                                            )}
+                                                            onClick={() => setValue('recurrence_end_mode', 'date')}
+                                                        >
+                                                            Até Data Limite
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {recurrenceEndMode === 'sessions' ? (
+                                                    <div className="space-y-2">
+                                                        <div className="grid grid-cols-4 gap-2">
+                                                            {[4, 8, 12, 24].map((count) => (
+                                                                <Button
+                                                                    key={count}
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className={cn(
+                                                                        "h-10 min-h-[44px] text-xs font-medium transition-all",
+                                                                        recurrenceSessionsCount === count
+                                                                            ? "bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 hover:text-white"
+                                                                            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                                                                    )}
+                                                                    onClick={() => setValue('recurrence_sessions_count', count)}
+                                                                >
+                                                                    {count} encontros
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 pt-1">
+                                                            <span className="text-xs text-muted-foreground">Ou quantidade exata:</span>
+                                                            <Input
+                                                                type="number"
+                                                                min={2}
+                                                                max={52}
+                                                                value={recurrenceSessionsCount || ''}
+                                                                onChange={(e) => {
+                                                                    const v = parseInt(e.target.value, 10)
+                                                                    setValue('recurrence_sessions_count', isNaN(v) ? 4 : v)
+                                                                }}
+                                                                className="w-24 h-9 text-xs bg-white dark:bg-slate-900 border-slate-200"
+                                                            />
+                                                            <span className="text-xs text-muted-foreground">sessões</span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-1">
+                                                        <Input
+                                                            type="date"
+                                                            min={appointmentDate || undefined}
+                                                            value={recurrenceEndDate || ''}
+                                                            onChange={(e) => setValue('recurrence_end_date', e.target.value)}
+                                                            className="h-10 min-h-[44px] text-xs bg-white dark:bg-slate-900 border-slate-200"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Card de Projeção em Tempo Real */}
+                                            {mentoringProjection.dates.length > 0 && (
+                                                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs space-y-1.5">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-semibold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                                                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                                            Projeção da Série de Mentoria
+                                                        </span>
+                                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 text-[11px] font-semibold">
+                                                            {mentoringProjection.dates.length} sessões programadas
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {recurrenceFrequency === 'weekly' ? 'Toda semana' : recurrenceFrequency === 'biweekly' ? 'A cada 15 dias' : 'A cada 4 semanas'} às {appointmentTime || '00:00'} • De {appointmentDate ? format(new Date(appointmentDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : '--/--'} até {mentoringProjection.finalEndDate ? format(new Date(mentoringProjection.finalEndDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : '--/--'}.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Schedule Override Warning */}
                             {showScheduleWarning && (
                                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1154,23 +1644,35 @@ export function ManualAppointmentModal({
                             <Separator />
 
                             {/* Actions */}
-                            <div className="flex justify-end gap-3">
-                                <Button type="button" variant="outline" onClick={handleClose}>
+                            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={handleClose}
+                                    className="h-11 sm:h-10 min-h-[44px] text-xs sm:text-sm"
+                                >
                                     Cancelar
                                 </Button>
                                 <Button 
                                     type="submit" 
                                     disabled={isPending} 
-                                    className={
+                                    className={cn(
+                                        "h-11 sm:h-10 min-h-[44px] text-xs sm:text-sm font-semibold",
                                         isStudent 
-                                            ? "bg-emerald-700 hover:bg-emerald-800 text-white" 
+                                            ? "bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs" 
                                             : isSupervision 
-                                                ? "bg-indigo-700 hover:bg-indigo-800 text-white" 
+                                                ? "bg-indigo-700 hover:bg-indigo-800 text-white shadow-xs" 
                                                 : ""
-                                    }
+                                    )}
                                 >
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {isStudent ? 'Confirmar Sessão de Mentoria' : isSupervision ? 'Confirmar Supervisão Técnica' : 'Confirmar Agendamento'}
+                                    {isStudent 
+                                        ? (isRecurring 
+                                            ? `Confirmar Mentoria Recorrente (${mentoringProjection.dates.length} sessões)` 
+                                            : 'Confirmar Sessão de Mentoria') 
+                                        : isSupervision 
+                                            ? 'Confirmar Supervisão Técnica' 
+                                            : 'Confirmar Agendamento'}
                                 </Button>
                             </div>
                         </form>
