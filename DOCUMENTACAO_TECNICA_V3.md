@@ -1753,3 +1753,24 @@
   - **2. Causa Raiz Recepção**: Uma unificação anterior havia introduzido globalmente o botão de TV "Chamar" e o status "Em Atendimento", além de contornar a abertura do modal de motivo de cancelamento com a flag `!chamadaPainelTvHabilitada`.
   - **3. Resolução Cirúrgica**: Rota central de download seguro com redirecionamento para Presigned URL; autorização e RLS atualizados para recepcionistas; limpeza do registro órfão específico do Arthur Luiz que gerava erro; isolamento da clínica Espaço Incluir (`5163c916-8b82-4d80-8a71-01726836ee46`) para operar estritamente em 2 etapas operacionais (Check-in e Concluir); e restauração do modal de justificativa de cancelamento na Recepção.
 
+### Item 60: Conexão WhatsApp Multi-Sessão por Setores e Eliminação de Falso Positivo (Espaço Incluir)
+- **Data**: 11/09/2026
+- **Módulos**: WhatsApp Multi-Sessão, Integrações, Configurações
+- **Caminho Completo**:
+  - Backend → WhatsApp Status API → `app/api/whatsapp/status/route.ts` → `GET` (Verificação estrita de credenciais registradas no Storage antes de declarar status como connected; eliminação de falso positivo onde o registro no banco constava como conectado mesmo com sessão inativa)
+  - Backend → WhatsApp Connect API → `app/api/whatsapp/connect/route.ts` → `POST` (Suporte explícito ao parâmetro `sector` no handshake e emissão de QR Code dedicado por setor: financeiro, recepcao, comercial, default)
+  - Backend → Baileys Service → `lib/whatsapp/service.ts` (Sessões isoladas por par `[clinicId, sector]`, garantia de persistência das credenciais no Supabase Storage)
+  - Banco de Dados → Supabase → Tabela `whatsapp_sessions` (Ajuste de restrição única e índice para `(clinic_id, sector)`, permitindo múltiplos números de WhatsApp por clínica)
+- **Descrição Técnica**:
+  - O WhatsApp do setor Financeiro da clínica Espaço Incluir apresentava inconsistência onde a interface exibia pop-up de sucesso na conexão, mas a sessão não transmitia mensagens. A validação das credenciais foi corrigida para cruzar o estado de autenticação real (`creds.registered`) com o banco de dados. A conexão do número (11) 97080-7530 foi validada e consolidada com status `connected`.
+
+### Item 61: Módulo CRM de Campanhas com Disparo Cadenciado via WhatsApp e Gestão de Lotes
+- **Data**: 11/09/2026
+- **Módulos**: CRM → Campanhas, Disparo em Lote WhatsApp, Automação
+- **Caminho Completo**:
+  - Banco de Dados → Supabase Migration → `supabase/migrations/20260911_create_campaigns_table.sql` (Criação da tabela `campaigns`, índices de busca, colunas de rastreio de entrega `sent_count`, `error_count` e política RLS multi-tenant vinculada ao `clinic_id`)
+  - Backend → CRM Campanhas API → `app/api/crm/campaigns/route.ts` → `GET`, `POST`, `DELETE` (Consolidação em rota única de alta performance: listagem de campanhas por clínica; criação com suporte a variáveis dinâmicas `{{patient_name}}` e `{{clinic_name}}`; sub-ação `action: 'send'` executada de forma assíncrona e não bloqueante com `after()` do Next.js 16 para envio seguro e cadenciado via Baileys com tempo limite de 60s; exclusão de campanhas por ID via query param)
+  - Frontend → CRM Dashboard → `app/dashboard/(clinic)/crm/page.tsx` (Formulário modal "Nova Campanha" com seletor de setor do WhatsApp [Financeiro, Recepção, Comercial, Principal]; botões "Salvar Rascunho", "Salvar e Disparar" e "Disparar WhatsApp"; atualização automática a cada 3s durante o processamento em segundo plano; botão de exclusão com diálogo de confirmação formal; áreas de toque e responsividade compatíveis com padrão PWA Mobile)
+- **Descrição Técnica**:
+  - Implementado motor de envio em lote seguro para proteger os números de WhatsApp contra banimento pela Meta. O envio opera em pares com intervalo de segurança nativo do Baileys e atualização contínua do progresso no banco de dados. A consolidação em rota única evitou o limite de 12 Serverless Functions do plano Hobby da Vercel.
+

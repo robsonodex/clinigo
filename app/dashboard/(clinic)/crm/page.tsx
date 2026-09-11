@@ -134,6 +134,17 @@ export default function CRMPage() {
         fetchData()
     }, [fetchData])
 
+    useEffect(() => {
+        const hasRunning = campaigns.some(c => c.status === 'RUNNING')
+        if (!hasRunning) return
+
+        const interval = setInterval(() => {
+            fetchData()
+        }, 3000)
+
+        return () => clearInterval(interval)
+    }, [campaigns, fetchData])
+
     const handleCreateAutomation = async () => {
         if (!automationForm.name || !automationForm.trigger) {
             toast.error('Preencha nome e gatilho')
@@ -216,8 +227,13 @@ export default function CRMPage() {
 
         setSendingCampaignId(camp.id)
         try {
-            const res = await fetch(`/api/crm/campaigns/${camp.id}/send`, {
-                method: 'POST'
+            const res = await fetch('/api/crm/campaigns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send',
+                    campaign_id: camp.id
+                })
             })
             const data = await res.json()
             if (!res.ok) {
@@ -225,7 +241,7 @@ export default function CRMPage() {
                 return
             }
 
-            toast.success(`Disparo concluído com sucesso! ${data.sent_count} mensagem(ns) enviada(s).`)
+            toast.success(data.message || `Disparo iniciado com sucesso! (${camp.total_recipients} destinatários)`)
             fetchData()
         } catch (error) {
             toast.error('Erro ao conectar ao servidor para disparo')
@@ -240,7 +256,7 @@ export default function CRMPage() {
         }
 
         try {
-            const res = await fetch(`/api/crm/campaigns/${campaignId}`, {
+            const res = await fetch(`/api/crm/campaigns?id=${campaignId}`, {
                 method: 'DELETE'
             })
             if (!res.ok) {
@@ -573,7 +589,7 @@ export default function CRMPage() {
                                                         ) : (
                                                             <Send className="h-4 w-4" />
                                                         )}
-                                                        {sendingCampaignId === camp.id ? 'Disparando...' : 'Disparar WhatsApp'}
+                                                        {camp.status === 'RUNNING' ? 'Enviando...' : (sendingCampaignId === camp.id ? 'Iniciando...' : 'Disparar WhatsApp')}
                                                     </Button>
                                                 )}
                                                 <Button
