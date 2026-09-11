@@ -2,6 +2,27 @@
 
 ## Módulos
 
+### Correção de Reconhecimento de Biometria Facial e Desbloqueio de Digitação no Novo Prontuário (World Sensory)
+- **Módulos**:
+  - Prontuários → Ficha World Sensory → `components/medical-records/WorldSensoryEvolutionForm.tsx` → `WorldSensoryEvolutionForm`
+  - Prontuários → Página de Prontuário → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx` → `ProntuarioPage` / `loadInitialData()` / `handleSave()`
+  - Banco de Dados / Saneamento → `scripts/saneamento/2026-09-11_sincronizar_biometria_wordsensory.mjs`
+- **Descrição**:
+  - **Demanda de Urgência da Clínica World Sensory (Terapeuta Lara Maria / Patrícia Mendes)**:
+    - Profissional relatou que pacientes atendidos na terça-feira (08/09/2026) que realizaram o cadastro biométrico facial continuavam aparecendo como bloqueados por falta de biometria facial.
+    - Além disso, a terapeuta não conseguia digitar nos campos de evolução no celular (o teclado virtual mobile não aparecia ao clicar nos campos).
+  - **Causa-Raiz 1 (Biometria Facial)**:
+    - Os pacientes possuíam cadastros biométricos faciais válidos gravados na tabela `patient_face_biometrics` no próprio dia 08/09/2026. Porém, o formulário de evolução avaliava apenas flags da tabela `appointments` (`doctor_checkin_method === 'FACIAL_DOCTOR'`, `checked_in_at`), não consultando se o paciente já possuía biometria facial ativa na clínica.
+    - Implementada consulta relacional em `patient_face_biometrics` no carregamento da ficha (`page.tsx`) e repassada a prop `hasFaceBiometrics` para `WorldSensoryEvolutionForm.tsx`, validando a presença biométrica imediatamente e removendo o falso alerta de bloqueio.
+  - **Causa-Raiz 2 (Travamento de Digitação e Teclado Mobile no iOS/PWA)**:
+    - Existia uma trava temporal que calculava a diferença de horas entre o agendamento e o momento do acesso (`hoursDiff > 48`), marcando `isLocked = true`.
+    - Ao receber `isLocked = true`, os campos `<Textarea>` recebiam a propriedade `disabled`, o que no iOS Safari / PWA bloqueia qualquer foco e impede a abertura do teclado virtual nativo.
+    - Como a World Sensory está em implantação do novo prontuário e migrando registros do Anclinic, o prazo de 48h foi flexibilizado exclusivamente para o escopo da World Sensory (`isWorldSensory`), mantendo fichas pendentes desbloqueadas para digitação e evolução até o momento em que forem formalmente assinadas pelo profissional.
+  - **Saneamento e Sincronização em Produção (LGPD v5.2)**:
+    - Executado dry-run prévio e script seguro em `scripts/saneamento/2026-09-11_sincronizar_biometria_wordsensory.mjs`, sincronizando os 7 atendimentos de 08/09/2026 com `checked_in_at`, `checkin_method = 'facial'`, `verification_level = 'FACIAL_DOCTOR'` e `session_status = 'Presente'`.
+  - **Testes e Isolamento Multi-Tenant**:
+    - Testes automatizados executados (`test_wordsensory_evolution_fix.ts` e `test_isolation_wordsensory.ts`) comprovando 100% de conformidade, com validação de que outras clínicas mantêm intactas as regras de 48h.
+
 ### Agendamento Recorrente de Mentorias Clínicas e Formação Técnica (World Sensory e Global)
 - **Módulos**:
   - Recepção / Agenda → Modal de Agendamento Manual → `components/appointments/ManualAppointmentModal.tsx` → `ManualAppointmentModal` / `calculateMentoringSeriesDates()` / `saveAppointment()`

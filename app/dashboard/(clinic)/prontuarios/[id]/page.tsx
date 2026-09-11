@@ -152,6 +152,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
     })
 
     const [escalaDor, setEscalaDor] = useState<number[]>([0])
+    const [hasFaceBiometrics, setHasFaceBiometrics] = useState<boolean>(false)
 
     useEffect(() => {
         if (appointmentId) {
@@ -189,28 +190,20 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 })
             }
 
-            // Verifica bloqueio de 24h
-            let referenceTime = new Date().getTime()
-            if (appt.checked_in_at) {
-                referenceTime = new Date(appt.checked_in_at).getTime()
-            } else if (appt.appointment_date) {
-                referenceTime = new Date(`${appt.appointment_date}T${appt.appointment_time || '00:00:00'}`).getTime()
-            }
-            const hoursDiff = (new Date().getTime() - referenceTime) / (1000 * 60 * 60)
-            if (hoursDiff > 48) {
-                setIsLocked(true)
-            }
-
-            // 2. Fetch Patient, Clinic, Doctor
-            const [patientRes, clinicRes, doctorRes] = await Promise.all([
+            // 2. Fetch Patient, Clinic, Doctor e Biometria Facial Cadastrada
+            const [patientRes, clinicRes, doctorRes, faceBioRes] = await Promise.all([
                 supabase.from('patients').select('*').eq('id', appt.patient_id).maybeSingle(),
                 supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).maybeSingle(),
-                supabase.from('doctors').select('id, user:users(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).maybeSingle()
+                supabase.from('doctors').select('id, user:users(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).maybeSingle(),
+                supabase.from('patient_face_biometrics').select('id').eq('patient_id', appt.patient_id).eq('clinic_id', appt.clinic_id).limit(1).maybeSingle()
             ])
 
             if (patientRes.data) setPatient(patientRes.data)
             if (clinicRes.data) setClinic(clinicRes.data)
             if (doctorRes.data) setDoctor(doctorRes.data)
+
+            const patientHasFaceBio = Boolean(faceBioRes?.data)
+            setHasFaceBiometrics(patientHasFaceBio)
 
             // Verifica se módulo Psicomotricidade está ativo na clínica
             try {
@@ -253,6 +246,21 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             if (wsActive) {
                 setHasWorldSensoryEvolution(true)
                 setProfessionType('TERAPEUTA')
+            }
+
+            // Verifica bloqueio de 48h
+            // Para a WorldSensory (wsActive / isWorldSensory): fichas pendentes não são travadas por 48h antes de assinadas, permitindo a evolução de sessões recentes
+            if (!wsActive && !isWorldSensory) {
+                let referenceTime = new Date().getTime()
+                if (appt.checked_in_at) {
+                    referenceTime = new Date(appt.checked_in_at).getTime()
+                } else if (appt.appointment_date) {
+                    referenceTime = new Date(`${appt.appointment_date}T${appt.appointment_time || '00:00:00'}`).getTime()
+                }
+                const hoursDiff = (new Date().getTime() - referenceTime) / (1000 * 60 * 60)
+                if (hoursDiff > 48) {
+                    setIsLocked(true)
+                }
             }
 
             // Detecta se perfil ou clínica é de Terapia
@@ -455,7 +463,8 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             appointment?.doctor_checkin_method === 'FACIAL_DOCTOR' ||
             appointment?.checkin_confirmed_at ||
             appointment?.checked_in_at ||
-            appointment?.manual_checkin_unlocked_at
+            appointment?.manual_checkin_unlocked_at ||
+            hasFaceBiometrics
         )
         const isPresenceSession = sessionStatus === 'Presente' || sessionStatus === 'Reposição'
         if (isPresenceSession && !isBiometricsValidated) {
@@ -774,7 +783,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     data={worldSensoryData}
                     onChange={(field, value) => {
                         if (isLocked) {
-                            toast({ title: 'Bloqueado', description: 'O prazo de 48h para evolução expirou.', variant: 'destructive' })
+                            toast({ title: 'Bloqueado', description: 'O prontuário assinado não pode ser alterado.', variant: 'destructive' })
                             return
                         }
                         setWorldSensoryData(prev => ({ ...prev, [field]: value }))
@@ -815,6 +824,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     patient={patient}
                     appointment={appointment}
                     clinicName={clinic?.name || 'World Sensory'}
+                    hasFaceBiometrics={hasFaceBiometrics}
                     canUnlockManual={isAdminOrCoordinator}
                     onToggleManualUnlock={handleToggleManualUnlock}
                     isUnlockingManual={isUnlockingManual}

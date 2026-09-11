@@ -110,6 +110,7 @@ interface WorldSensoryEvolutionFormProps {
         manual_checkin_unlocked_at?: string | null
     } | null
     clinicName?: string
+    hasFaceBiometrics?: boolean
     canUnlockManual?: boolean
     onToggleManualUnlock?: () => Promise<void> | void
     isUnlockingManual?: boolean
@@ -134,6 +135,7 @@ export function WorldSensoryEvolutionForm({
     patient,
     appointment,
     clinicName = 'World Sensory',
+    hasFaceBiometrics = false,
     canUnlockManual = false,
     onToggleManualUnlock,
     isUnlockingManual = false
@@ -172,6 +174,7 @@ export function WorldSensoryEvolutionForm({
         appointment?.checkin_method === 'facial' ||
         appointment?.checkin_confirmed_at ||
         appointment?.checked_in_at ||
+        hasFaceBiometrics ||
         isManualUnlocked
     )
     const isPresenceSession = sessionStatus === 'Presente' || sessionStatus === 'Reposição'
@@ -316,7 +319,7 @@ export function WorldSensoryEvolutionForm({
                             size="sm"
                             onClick={() => {
                                 if (isEvolutionBlockedByBiometrics) {
-                                    alert('A evolução está bloqueada: é obrigatório realizar a biometria facial do paciente para atendimentos presenciais.')
+                                    toast.error('A evolução está bloqueada: é obrigatório realizar a biometria facial do paciente para atendimentos presenciais.')
                                     return
                                 }
                                 onSign()
@@ -333,7 +336,7 @@ export function WorldSensoryEvolutionForm({
                         type="button"
                         onClick={() => {
                             if (isEvolutionBlockedByBiometrics) {
-                                alert('A evolução está bloqueada: é obrigatório realizar a biometria facial do paciente para atendimentos presenciais.')
+                                toast.error('A evolução está bloqueada: é obrigatório realizar a biometria facial do paciente para atendimentos presenciais.')
                                 return
                             }
                             onSave()
