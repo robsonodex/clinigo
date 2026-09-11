@@ -63,11 +63,14 @@ export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocum
         if (!confirm('Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita.')) return
         try {
             const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' })
-            if (!res.ok) throw new Error('Erro ao excluir')
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || 'Erro ao excluir')
+            }
             toast.success('Documento excluído')
             loadDocuments()
-        } catch (error) {
-            toast.error('Erro ao excluir documento')
+        } catch (error: any) {
+            toast.error(error?.message || 'Erro ao excluir documento')
         }
     }
 
@@ -155,8 +158,8 @@ export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocum
                             <Button variant="ghost" size="sm" className="h-9 w-9 min-w-[44px] min-h-[44px]" onClick={() => handleEditClick(doc)}>
                                 <Edit2 className="w-4 h-4 text-blue-500" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-9 w-9 min-w-[44px] min-h-[44px]" asChild>
-                                <a href={doc.storage_path || doc.file_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="sm" className="h-9 w-9 min-w-[44px] min-h-[44px]" asChild title="Baixar / Abrir arquivo">
+                                <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
                                     <Download className="w-4 h-4" />
                                 </a>
                             </Button>

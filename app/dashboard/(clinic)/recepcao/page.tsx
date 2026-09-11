@@ -119,6 +119,9 @@ export default function RecepcaoPage() {
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
 
+    // Detecção da clínica Espaço Incluir para fluxo isolado de 2 etapas
+    const isEspacoIncluir = currentUser?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+
     // Configuração do Painel de TV (default true para todas as clínicas; exceções configuradas no banco)
     const [chamadaPainelTvHabilitada, setChamadaPainelTvHabilitada] = useState(true)
     const [tvRecallMinutes, setTvRecallMinutes] = useState<number>(5)
@@ -807,20 +810,20 @@ export default function RecepcaoPage() {
             <Dialog open={noShowModal.open} onOpenChange={(open) => setNoShowModal({ ...noShowModal, open })}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Marcar como Não Compareceu</DialogTitle>
+                        <DialogTitle>Cancelar Atendimento / Ausência</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <p className="text-sm text-muted-foreground">Paciente: <span className="font-medium text-foreground">{noShowModal.patientName}</span></p>
                         <div className="space-y-2">
-                            <Label>Observação (Falta justificada, cobrada, motivo, etc.)</Label>
+                            <Label>Motivo do cancelamento / Observação</Label>
                             <Input
-                                placeholder="Adicione uma observação (opcional)..."
+                                placeholder="Informe o motivo do cancelamento ou falta..."
                                 value={noShowModal.notes}
                                 onChange={(e) => setNoShowModal({ ...noShowModal, notes: e.target.value })}
                             />
                         </div>
                         <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => noShowModal.appointmentId && handleNoShow(noShowModal.appointmentId, noShowModal.patientName, noShowModal.notes)}>
-                            Confirmar Não Comparecimento
+                            Confirmar Cancelamento
                         </Button>
                     </div>
                 </DialogContent>
@@ -940,7 +943,14 @@ export default function RecepcaoPage() {
                                                 </Button>
                                             )}
 
-                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-xs" onClick={() => !chamadaPainelTvHabilitada ? setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' }) : handleNoShow(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Não Compareceu">
+                                            <Button 
+                                                size="sm" 
+                                                variant="ghost" 
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-xs" 
+                                                onClick={() => setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' })} 
+                                                disabled={actionId === item.id} 
+                                                title="Cancelar Atendimento / Não Compareceu"
+                                            >
                                                 <UserX className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
@@ -1016,8 +1026,8 @@ export default function RecepcaoPage() {
 
                                                 {/* Action Footbar: Botões amplos e sem quebra de texto */}
                                                 <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
-                                                    {/* Chamar / Re-chamar Paciente no Painel de TV */}
-                                                    {chamadaPainelTvHabilitada && (
+                                                    {/* Chamar / Re-chamar Paciente no Painel de TV (apenas para clínicas com fluxo de chamada e fora do Espaço Incluir) */}
+                                                    {!isEspacoIncluir && chamadaPainelTvHabilitada && (
                                                         <Button 
                                                             size="sm" 
                                                             variant="outline" 
@@ -1041,26 +1051,53 @@ export default function RecepcaoPage() {
                                                         </Button>
                                                     )}
 
-                                        {/* Iniciar Atendimento / Check-in */}
-                                        {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                            <button 
-                                                className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
-                                                onClick={() => !chamadaPainelTvHabilitada ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
-                                                disabled={actionId === item.id}
-                                            >
-                                                {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>{!chamadaPainelTvHabilitada ? 'Em Atendimento' : 'Check-in'}</span></>}
-                                            </button>
-                                        )}
-                                        {item.status === 'WAITING' && (
-                                            <button 
-                                                className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
-                                                onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
-                                                disabled={actionId === item.id}
-                                            >
-                                                {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>Em Atendimento</span></>}
-                                            </button>
-                                        )}
-                                    </div>
+                                                    {/* FLUXO EXCLUSIVO ESPAÇO INCLUIR (2 ETAPAS: Check-in -> Concluído) */}
+                                                    {isEspacoIncluir ? (
+                                                        <>
+                                                            {!item.checkedInAt && item.status !== 'WAITING' ? (
+                                                                <button 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    onClick={() => handleCheckIn(item.id)} 
+                                                                    disabled={actionId === item.id}
+                                                                    title="Realizar Check-in do paciente"
+                                                                >
+                                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>Check-in</span></>}
+                                                                </button>
+                                                            ) : (
+                                                                <button 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
+                                                                    disabled={actionId === item.id}
+                                                                    title="Concluir Atendimento"
+                                                                >
+                                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-100" /><span>Concluir</span></>}
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        /* FLUXO COMPLETO PADRÃO PARA DEMAIS CLÍNICAS (4 ETAPAS) */
+                                                        <>
+                                                            {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
+                                                                <button 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    onClick={() => !chamadaPainelTvHabilitada ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
+                                                                    disabled={actionId === item.id}
+                                                                >
+                                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>{!chamadaPainelTvHabilitada ? 'Em Atendimento' : 'Check-in'}</span></>}
+                                                                </button>
+                                                            )}
+                                                            {item.status === 'WAITING' && (
+                                                                <button 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
+                                                                    disabled={actionId === item.id}
+                                                                >
+                                                                    {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>Em Atendimento</span></>}
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
                                             </>
                                         )
                                     })()}

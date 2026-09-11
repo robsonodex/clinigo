@@ -9,9 +9,10 @@ interface RouteParams {
 }
 
 /**
- * GET /api/documents/[id]/signed-url
- * Gera uma URL assinada temporaria (10 min) para acesso seguro a documentos de pacientes.
- * O documento NUNCA mais e servido via URL publica estatica.
+ * GET /api/documents/[id]/download
+ * Rota segura para visualização/download de documentos de pacientes.
+ * Suporta Cloudflare R2 e Supabase Storage, redirecionando o navegador
+ * para uma URL assinada (presigned URL) válida e temporária.
  */
 export async function GET(
     request: NextRequest,
@@ -24,7 +25,7 @@ export async function GET(
         // 1. Validar autenticacao
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
-            return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
         // 2. Obter perfil e clinica do usuario
@@ -35,7 +36,7 @@ export async function GET(
             .single()
 
         if (!currentUser) {
-            return NextResponse.json({ error: 'Usuario nao encontrado' }, { status: 401 })
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 })
         }
 
         // 3. Buscar documento e clinica do paciente
@@ -56,7 +57,7 @@ export async function GET(
             .single()
 
         if (docError || !document) {
-            return NextResponse.json({ error: 'Documento nao encontrado' }, { status: 404 })
+            return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 })
         }
 
         const patientClinicId = (document.patient as any)?.clinic_id
@@ -68,7 +69,7 @@ export async function GET(
 
             if (patientClinicId && patientClinicId !== effectiveClinicId && patientClinicId !== currentUser.clinic_id) {
                 return NextResponse.json(
-                    { error: 'Acesso negado: documento pertence a outra clinica' },
+                    { error: 'Acesso negado: documento pertence a outra clínica' },
                     { status: 403 }
                 )
             }
@@ -86,29 +87,25 @@ export async function GET(
                 const allowed = await isDoctorAllowedForDocument(supabase, currentUser.id, document.patient_id)
                 if (!allowed) {
                     return NextResponse.json(
-                        { error: 'Acesso negado: paciente nao vinculado aos seus atendimentos' },
+                        { error: 'Acesso negado: paciente não vinculado aos seus atendimentos' },
                         { status: 403 }
                     )
                 }
             }
         }
 
-        // 5. Detectar provedor de armazenamento e gerar URL assinada
+        // 5. Resolver caminho e obter Signed URL
         let storageFilePath = document.file_url || ''
         const expiresInSeconds = 600
         let signedUrl = ''
 
-        // Se for URL direta do Supabase
+        // Normalizar caso venha como URL estática http do Supabase
         if (storageFilePath.startsWith('http://') || storageFilePath.startsWith('https://')) {
-            return NextResponse.json({
-                success: true,
-                signedUrl: storageFilePath,
-                expiresIn: expiresInSeconds,
-                fileName: document.file_name,
-                fileType: document.file_type
-            })
+            // Se for URL pública antiga do Supabase, pode redirecionar diretamente
+            return NextResponse.redirect(storageFilePath, { status: 302 })
         }
 
+        // Detectar se está no padrão R2 ou prefixado com r2://
         const isR2Key = storageFilePath.startsWith('r2://') || 
             (storageFilePath.includes('/patient-documents/') && !storageFilePath.startsWith('http'))
 
@@ -118,11 +115,12 @@ export async function GET(
                 const r2Adapter = new R2StorageAdapter()
                 signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
             } catch (r2Err: any) {
-                console.error('[R2_SIGNED_URL_ERROR]', r2Err)
+                console.error('[R2_DOWNLOAD_ERROR]', r2Err)
+                // Fallback para Supabase se falhar no R2
             }
         }
 
-        // Fallback para Supabase Storage se não obteve signedUrl
+        // Se ainda não gerou signedUrl, tenta no Supabase Storage
         if (!signedUrl) {
             let cleanPath = storageFilePath.replace(/^r2:\/\//, '').replace(/^supabase:\/\//, '')
             if (cleanPath.includes('patient-documents/')) {
@@ -134,25 +132,24 @@ export async function GET(
                 .from('patient-documents')
                 .createSignedUrl(cleanPath, expiresInSeconds)
 
-            if (signError || !signedData?.signedUrl) {
-                console.error('[SIGNED_URL_ERROR]', signError)
-                return NextResponse.json({ error: 'Falha ao gerar link seguro para o documento' }, { status: 404 })
+            if (!signError && signedData?.signedUrl) {
+                signedUrl = signedData.signedUrl
             }
-            signedUrl = signedData.signedUrl
         }
 
-        return NextResponse.json({
-            success: true,
-            signedUrl,
-            expiresIn: expiresInSeconds,
-            fileName: document.file_name,
-            fileType: document.file_type
-        })
+        if (!signedUrl) {
+            return NextResponse.json(
+                { error: 'Arquivo do documento não encontrado no armazenamento seguro.' },
+                { status: 404 }
+            )
+        }
+
+        return NextResponse.redirect(signedUrl, { status: 302 })
 
     } catch (error: any) {
-        console.error('[GET_SIGNED_URL]', error)
+        console.error('[GET_DOWNLOAD_DOCUMENT]', error)
         return NextResponse.json(
-            { error: error?.message || 'Erro interno ao gerar link do documento' },
+            { error: error?.message || 'Erro interno ao acessar arquivo do documento' },
             { status: 500 }
         )
     }

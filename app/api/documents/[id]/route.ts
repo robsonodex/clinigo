@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/middlewares/auth'
 
@@ -59,18 +59,33 @@ export async function DELETE(
         const user = authResult.user!
         const role = user.role
         const supabase = await createClient()
+        const adminDb = createServiceRoleClient() as any
 
         const { id: documentId } = await props.params
 
         // Get document info first (include patient_id for security check)
-        const { data: document } = await supabase
+        const { data: document } = await adminDb
             .from('patient_documents')
-            .select('file_url, uploaded_by, patient_id, category')
+            .select(`
+                id,
+                file_url,
+                uploaded_by,
+                patient_id,
+                category,
+                patient:patients!patient_documents_patient_id_fkey(id, clinic_id)
+            `)
             .eq('id', documentId)
-            .single() as { data: { file_url: string; uploaded_by: string; patient_id: string; category: string } | null }
+            .single()
 
         if (!document) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+        }
+
+        const patientClinicId = (document.patient as any)?.clinic_id
+
+        // SECURITY: Isolamento multi-tenant estrito
+        if (role !== 'SUPER_ADMIN' && patientClinicId && patientClinicId !== user.clinic_id) {
+            return NextResponse.json({ error: 'Acesso negado: documento pertence a outra clínica' }, { status: 403 })
         }
 
         // SECURITY: Se o documento for do tipo 'personal', apenas administradores podem ter acesso (deletar)
@@ -78,16 +93,16 @@ export async function DELETE(
             return NextResponse.json({ error: 'Acesso negado - apenas administradores podem gerenciar documentos pessoais' }, { status: 403 })
         }
 
-        // Check permission (Admins can delete anything, others only their own)
-        if (role !== 'CLINIC_ADMIN' && role !== 'SUPER_ADMIN' && document.uploaded_by !== user.id) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        }
-
-        // SECURITY: DOCTOR não-coordenador só pode deletar documentos dos seus pacientes
+        // Permissões:
+        // - CLINIC_ADMIN e SUPER_ADMIN podem excluir qualquer documento da clínica.
+        // - RECEPTIONIST pode excluir documentos de prontuário dos pacientes da sua clínica (para fins operacionais).
+        // - DOCTOR pode excluir se for o autor do upload ou se for coordenador/médico vinculado ao paciente.
         if (role === 'DOCTOR') {
-            const allowed = await isDoctorAllowedForDocument(supabase, user.id, document.patient_id)
-            if (!allowed) {
-                return NextResponse.json({ error: 'Acesso negado - documento não pertence aos seus pacientes' }, { status: 403 })
+            if (document.uploaded_by !== user.id) {
+                const allowed = await isDoctorAllowedForDocument(supabase, user.id, document.patient_id)
+                if (!allowed) {
+                    return NextResponse.json({ error: 'Acesso negado - documento não pertence aos seus pacientes' }, { status: 403 })
+                }
             }
         }
 
@@ -99,19 +114,19 @@ export async function DELETE(
                     const r2Adapter = new R2StorageAdapter()
                     await r2Adapter.delete({ key: document.file_url })
                 } else {
-                    let cleanPath = document.file_url.replace(/^supabase:\/\//, '')
+                    let cleanPath = document.file_url.replace(/^supabase:\/\//, '').replace(/^r2:\/\//, '')
                     if (cleanPath.includes('patient-documents/')) {
                         cleanPath = cleanPath.split('patient-documents/')[1].split('?')[0]
                     }
-                    await supabase.storage.from('patient-documents').remove([cleanPath])
+                    await adminDb.storage.from('patient-documents').remove([cleanPath])
                 }
             } catch (storageDelErr) {
-                console.error('[STORAGE_DELETE_ERROR] Falha ao remover arquivo fisico do storage:', storageDelErr)
+                console.warn('[STORAGE_DELETE_WARN] Falha ao remover arquivo fisico do storage (ou já inexistente):', storageDelErr)
             }
         }
 
-        // Delete from database
-        const { error } = await supabase
+        // Delete from database via adminDb para garantir exclusão definitiva após todas as checagens
+        const { error } = await adminDb
             .from('patient_documents')
             .delete()
             .eq('id', documentId)
