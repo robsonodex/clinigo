@@ -101,13 +101,13 @@ export default function WhatsAppPage() {
     return sector
   }, [doctors])
 
-  const handleConnect = async (sector: string) => {
+  const handleConnect = async (sector: string, force: boolean = false) => {
     setConnectingSector(sector)
     try {
       const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sector }),
+        body: JSON.stringify({ sector, force }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Erro'); setConnectingSector(null); return }
@@ -137,6 +137,9 @@ export default function WhatsAppPage() {
             }
           }
         }, 3000)
+      } else {
+        toast.error('Não foi possível gerar o QR Code no momento. Tente novamente.')
+        setConnectingSector(null)
       }
     } catch { toast.error('Erro ao conectar'); setConnectingSector(null) }
   }
@@ -276,7 +279,7 @@ export default function WhatsAppPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">Desconectado</p>
                   </div>
                   <Button className="gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]"
-                    onClick={() => handleConnect(s.sector)}
+                    onClick={() => handleConnect(s.sector, true)}
                     disabled={connectingSector === s.sector}>
                     {connectingSector === s.sector ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
                     Conectar
@@ -302,7 +305,7 @@ export default function WhatsAppPage() {
               </p>
             </div>
             <Button size="lg" className="gap-3 bg-green-600 hover:bg-green-700 text-lg px-8 py-6 min-h-[44px]"
-              onClick={() => handleConnect('default')} disabled={!!connectingSector}>
+              onClick={() => handleConnect('default', true)} disabled={!!connectingSector}>
               {connectingSector ? <><Loader2 className="h-5 w-5 animate-spin" />Gerando QR...</> : <><MessageSquare className="h-5 w-5" />Conectar WhatsApp</>}
             </Button>
           </CardContent>
@@ -362,7 +365,7 @@ export default function WhatsAppPage() {
               <Loader2 className="h-4 w-4 animate-spin" /> Aguardando escaneamento...
             </div>
             <Button variant="ghost" size="sm" className="w-full gap-1.5 min-h-[44px]"
-              onClick={() => qrData && handleConnect(qrData.sector)}>
+              onClick={() => qrData && handleConnect(qrData.sector, true)}>
               <RefreshCw className="h-3.5 w-3.5" /> Gerar novo QR Code
             </Button>
           </div>

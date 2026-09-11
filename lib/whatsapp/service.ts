@@ -248,7 +248,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
             qr_code: qrDataUri,
             qr_code_expires_at: new Date(Date.now() + 45 * 1000).toISOString(),
             updated_at: new Date().toISOString(),
-          } as any, { onConflict: 'clinic_id' })
+          } as any, { onConflict: 'clinic_id,sector' })
         } catch (err) {
           console.error('[WhatsApp] Erro ao gerar QR:', err)
         }
@@ -281,7 +281,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
           error_message: null,
           last_health_check: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as any, { onConflict: 'clinic_id' })
+        } as any, { onConflict: 'clinic_id,sector' })
 
         console.log(`[WhatsApp] ✅ Clínica ${clinicId} conectada (${phoneNumber})`)
 
@@ -423,7 +423,17 @@ export async function createInstanceAndGetQR(clinicId: string, sector: string = 
   const instanceName = `baileys_${clinicId.substring(0, 16)}_${sector}`
   const session = getSession(clinicId, sector)
 
-  if (force) {
+  // Consultar estado da sessão no banco de dados
+  const supabase = getSupabaseAdmin()
+  const { data: dbSession } = await supabase
+    .from('whatsapp_sessions')
+    .select('status')
+    .eq('clinic_id', clinicId)
+    .eq('sector', sector)
+    .maybeSingle()
+
+  // Se force=true ou se o status no banco for disconnected, desconecta e limpa storage para garantir QR novo
+  if (force || !dbSession || dbSession.status === 'disconnected') {
     await disconnectInstance(clinicId, sector)
   } else if (session.status === 'open' && session.socket) {
     return { qr_code: null, status: 'connected', instance_name: instanceName }
@@ -460,53 +470,58 @@ export async function checkInstanceStatus(clinicId: string, sector: string = 'de
 }> {
   let session = getSession(clinicId, sector)
 
-  // Se a sessão está fechada na memória (ex: Next.js dev server restartou)
-  // vamos checar se existe um auth_info no storage para reconectar silenciosamente
-  if (session.status === 'close' || !session.socket) {
-    const authState = await loadAuthStateFromStorage(clinicId, sector)
-    if (authState) {
-      console.log(`[WhatsApp] Lazy checking status for ${clinicId}/${sector}. Data found in storage.`)
-      // Disparamos o startBaileysSession em background
-      startBaileysSession(clinicId, sector).catch(console.error)
-      
-      // Capturar número de telefone salvo no authState para exibição
-      let phoneNumber = null
-      if (authState.creds && authState.creds.me && authState.creds.me.id) {
-        phoneNumber = authState.creds.me.id.split(':')[0].split('@')[0]
-      }
-
-      // 🚀 Correção de Falso Positivo: Como estamos na Vercel (Serverless), a memória RAM reseta constantemente.
-      // Se existe AuthState persistido no banco, significa que o usuário não se desconectou e a sessão é válida.
-      return {
-        connected: true,
-        phone_number: phoneNumber,
-        status: 'connected',
-      }
+  if (session.status === 'open' && session.socket) {
+    return {
+      connected: true,
+      phone_number: session.phoneNumber,
+      status: 'connected',
     }
   }
 
-  // Mapear status interno para a interface esperada
-  switch (session.status) {
-    case 'open':
-      return {
-        connected: true,
-        phone_number: session.phoneNumber,
-        status: 'connected',
-      }
-    case 'qr':
-    case 'connecting':
+  // Consultar status real persistido no banco de dados
+  const supabase = getSupabaseAdmin()
+  const { data: dbSession } = await supabase
+    .from('whatsapp_sessions')
+    .select('status, phone_number')
+    .eq('clinic_id', clinicId)
+    .eq('sector', sector)
+    .maybeSingle()
+
+  // Se no banco de dados não existir ou estiver disconnected/connecting, respeitar rigorosamente o banco
+  if (!dbSession || dbSession.status !== 'connected') {
+    if (session.status === 'qr' || session.status === 'connecting') {
       return {
         connected: false,
         phone_number: null,
         status: 'connecting',
       }
-    case 'close':
-    default:
-      return {
-        connected: false,
-        phone_number: null,
-        status: 'disconnected',
-      }
+    }
+    return {
+      connected: false,
+      phone_number: null,
+      status: 'disconnected',
+    }
+  }
+
+  // Se no banco consta como connected, verificar se existe AuthState válido e registrado no Storage (Serverless restart)
+  const authState = await loadAuthStateFromStorage(clinicId, sector)
+  if (authState && authState.creds?.registered && authState.creds?.me?.id) {
+    if (session.status !== 'connecting' && session.status !== 'open') {
+      startBaileysSession(clinicId, sector).catch(console.error)
+    }
+
+    const phoneNumber = authState.creds.me.id.split(':')[0].split('@')[0]
+    return {
+      connected: true,
+      phone_number: phoneNumber || dbSession.phone_number,
+      status: 'connected',
+    }
+  }
+
+  return {
+    connected: false,
+    phone_number: null,
+    status: 'disconnected',
   }
 }
 

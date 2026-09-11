@@ -2,6 +2,29 @@
 
 ## Módulos
 
+### Correção da Conexão WhatsApp Multi-Sessão e Eliminação de Falso Positivo (Espaço Incluir e Global)
+- **Módulos**:
+  - Integrações / WhatsApp → Serviço Central Baileys → `lib/whatsapp/service.ts` → `startBaileysSession` / `createInstanceAndGetQR` / `checkInstanceStatus`
+  - Integrações / WhatsApp → API de Conexão → `app/api/whatsapp/connect/route.ts` → `POST`
+  - Integrações / WhatsApp → Página de Gerenciamento → `app/dashboard/(clinic)/whatsapp/page.tsx` → `handleConnect` / `WhatsAppPage`
+  - Storage / Supabase → Bucket `whatsapp-sessions`
+- **Descrição**:
+  - **Demanda Operacional da Clínica Espaço Incluir (Jefferson Bochetti)**:
+    - Ao tentar conectar o WhatsApp do setor Financeiro da clínica Espaço Incluir, a interface exibia notificação verde de sucesso informando que a instância havia sido conectada, porém a sessão permanecia com status desconectado na listagem.
+  - **Causa-Raiz 1 (Sessão Órfã no Storage e Falso Positivo em checkInstanceStatus)**:
+    - Havia um arquivo residual `5163c916-8b82-4d80-8a71-01726836ee46/financeiro_auth_info.json` gravado no Supabase Storage de uma conexão desconectada anteriormente.
+    - Na função `checkInstanceStatus` de `lib/whatsapp/service.ts`, havia uma condicional para contornar a volatilidade de memória da Vercel que assumia que a presença de qualquer arquivo de autenticação no Storage significava que a sessão estava conectada (`connected: true`), mesmo que o status persistido no banco de dados (`whatsapp_sessions`) fosse explicitamente `disconnected`.
+    - Ao tentar conectar, o polling da interface consultava a rota de status que retornava falsamente `connected: true`, disparando a notificação verde de sucesso e fechando o modal do QR Code. Imediatamente a seguir, a listagem geral consultava a tabela do banco de dados e revertia a exibição para desconectado.
+  - **Causa-Raiz 2 (Incompatibilidade de Constraint no Upsert do Postgres)**:
+    - No `startBaileysSession`, os comandos de upsert da tabela `whatsapp_sessions` utilizavam `{ onConflict: 'clinic_id' }`. Porém, a constraint única da tabela foi migrada para chave composta `(clinic_id, sector)`. Isso gerava falha de execução interna silenciosa no Postgres ao tentar atualizar o status para `connected` no evento de abertura da sessão.
+  - **Solução Cirúrgica e Blindagem Multi-Sessão**:
+    - Ajustado o upsert em `lib/whatsapp/service.ts` para respeitar a constraint composta `{ onConflict: 'clinic_id,sector' }`.
+    - Modificada a função `checkInstanceStatus` para validar prioritariamente o registro na tabela `whatsapp_sessions`: se o banco registrar status desconectado, o serviço jamais reporta `connected: true`.
+    - Validação estrita de `authState.creds.registered` e `authState.creds.me.id` antes de considerar qualquer credencial do Storage como válida para reconexão silenciosa.
+    - Atualizada a função `createInstanceAndGetQR` para realizar limpeza prévia (`disconnectInstance`) caso a sessão esteja desconectada no banco ou seja solicitada reconexão forçada (`force: true`), assegurando que Baileys gere imediatamente um QR Code novo e limpo.
+    - Habilitado o repasse do parâmetro `force` em `app/api/whatsapp/connect/route.ts` e ajustado o frontend `app/dashboard/(clinic)/whatsapp/page.tsx` para passar `force: true` nas ações de reconectar e gerar novo QR Code.
+    - Removido com sucesso o arquivo órfão `financeiro_auth_info.json` do bucket `whatsapp-sessions` da clínica Espaço Incluir, restabelecendo o fluxo normal de escaneamento.
+
 ### Correção de Configuração de Horários/Carga Horária para Recepção (Espaço Incluir) e Resiliência de API
 - **Módulos**:
   - Equipe / Agendamento → Horários → `app/api/doctors/detail/route.ts` → `POST` / `handlePostSchedules`

@@ -34,18 +34,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    // Ler sector do body (se for admin) ou forçar user.id se for DOCTOR
+    // Ler sector e force do body (se for admin) ou forçar user.id se for DOCTOR
     let sector = 'default'
+    let force = false
     if (profile.role === 'DOCTOR') {
       sector = user.id
     } else {
       try {
         const body = await req.json()
         if (body?.sector) sector = body.sector
+        if (body?.force !== undefined) force = Boolean(body.force)
       } catch { /* body vazio = default */ }
     }
 
-    const result = await createInstanceAndGetQR(profile.clinic_id, sector)
+    const result = await createInstanceAndGetQR(profile.clinic_id, sector, force)
 
     return NextResponse.json({
       qr_code: result.qr_code,
