@@ -1005,6 +1005,20 @@ export const helpItems: HelpItem[] = [
         aliases: ['fluxomed', 'automacoes']
     },
     {
+        id: 'campanhas-crm',
+        title: 'Campanhas em Lote (CRM WhatsApp)',
+        category: 'Comunicação',
+        icon: Send,
+        href: '/dashboard/crm',
+        whatIsIt: 'Disparo de comunicações e comunicados em lote para pacientes cadastrados via WhatsApp, com envio cadenciado anti-bloqueio, variáveis dinâmicas de personalização ({{patient_name}}, {{clinic_name}}) e seleção de setor remetente.',
+        whenToUse: 'Para enviar comunicados contratuais, avisos institucionais de recesso ou feriados, comunicados de renovação e informativos gerais em massa sem necessidade de envio individual.',
+        howToUse: 'Acesse o menu CRM > aba Campanhas > clique em "Nova Campanha". Preencha o nome, selecione o canal WhatsApp e o setor remetente (ex: Financeiro), insira a mensagem e clique em "Salvar e Disparar" ou "Salvar Rascunho". O sistema gerencia o envio cadenciado em segundo plano com atualização em tempo real.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['campanhas', 'disparo em massa', 'whatsapp em lote', 'crm', 'comunicados', 'contratos'],
+        aliases: ['campanhas', 'disparos', 'mala direta']
+    },
+    {
         id: 'pipeline',
         title: 'Pipeline (Kanban de Oportunidades)',
         category: 'Comunicação',
