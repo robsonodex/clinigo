@@ -111,7 +111,14 @@ export default function ContratosPage() {
             }
             if (!res.ok) throw new Error('Falha ao buscar contratos')
             const json = await res.json()
-            setDocuments(json.documents || [])
+            const list = Array.isArray(json)
+                ? json
+                : Array.isArray(json?.documents)
+                    ? json.documents
+                    : Array.isArray(json?.data)
+                        ? json.data
+                        : []
+            setDocuments(list)
         } catch (err: any) {
             console.error(err)
             toast.error('Não foi possível carregar os contratos.')
@@ -399,7 +406,7 @@ export default function ContratosPage() {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {documents.map((doc) => {
+                            {(documents || []).map((doc) => {
                                 const signers = doc.contract_signers || []
                                 const totalSigners = signers.length
                                 const signedCount = signers.filter(s => s.status === 'SIGNED').length

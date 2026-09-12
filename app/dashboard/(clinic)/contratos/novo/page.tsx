@@ -119,20 +119,41 @@ export default function NovoContratoPage() {
 
                 if (tplRes.ok) {
                     const tplJson = await tplRes.json()
-                    setTemplates(tplJson.templates || [])
-                    if (tplJson.templates?.length > 0) {
-                        setSelectedTemplateId(tplJson.templates[0].id)
+                    const list = Array.isArray(tplJson)
+                        ? tplJson
+                        : Array.isArray(tplJson?.templates)
+                            ? tplJson.templates
+                            : Array.isArray(tplJson?.data)
+                                ? tplJson.data
+                                : []
+                    setTemplates(list)
+                    if (list.length > 0) {
+                        setSelectedTemplateId(list[0].id)
                     }
                 }
 
                 if (docsRes.ok) {
                     const docsJson = await docsRes.json()
-                    setProfessionals(docsJson.doctors || docsJson || [])
+                    const list = Array.isArray(docsJson)
+                        ? docsJson
+                        : Array.isArray(docsJson?.data)
+                            ? docsJson.data
+                            : Array.isArray(docsJson?.doctors)
+                                ? docsJson.doctors
+                                : []
+                    setProfessionals(list)
                 }
 
                 if (patRes.ok) {
                     const patJson = await patRes.json()
-                    setPatients(patJson.patients || patJson || [])
+                    const list = Array.isArray(patJson)
+                        ? patJson
+                        : Array.isArray(patJson?.data)
+                            ? patJson.data
+                            : Array.isArray(patJson?.patients)
+                                ? patJson.patients
+                                : []
+                    setPatients(list)
                 }
             } catch (err) {
                 console.error(err)
@@ -395,7 +416,7 @@ export default function NovoContratoPage() {
                                 <p className="text-sm text-slate-500">Carregando biblioteca...</p>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {templates.map(tpl => (
+                                    {(templates || []).map(tpl => (
                                         <div
                                             key={tpl.id}
                                             onClick={() => setSelectedTemplateId(tpl.id)}
@@ -491,7 +512,7 @@ export default function NovoContratoPage() {
                                             <SelectValue placeholder="Selecione um profissional da equipe..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {professionals.map(doc => (
+                                            {(professionals || []).map(doc => (
                                                 <SelectItem key={doc.id} value={doc.id} className="text-xs">
                                                     {doc.full_name} {doc.specialty ? `— ${doc.specialty}` : ''} {doc.cpf ? `(CPF: ${doc.cpf})` : ''}
                                                 </SelectItem>
@@ -515,7 +536,7 @@ export default function NovoContratoPage() {
                                             <SelectValue placeholder="Selecione um paciente cadastrado..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {patients.map(p => (
+                                            {(patients || []).map(p => (
                                                 <SelectItem key={p.id} value={p.id} className="text-xs">
                                                     {p.full_name} {p.guardian_name ? `— Resp: ${p.guardian_name}` : ''}
                                                 </SelectItem>

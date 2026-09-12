@@ -1893,5 +1893,33 @@
 - **Descrição Técnica**:
   - Permite aos gestores master redefinir imediatamente a senha de acesso de qualquer super administrador cadastrado de forma direta e segura pelo painel, sem necessidade de links de redefinição por e-mail ou senhas antigas.
 
-
-
+### Item 64: Módulo de Contratos e Assinatura Eletrônica (Exclusivo World Sensory) e Resolução do Erro "E.map is not a function"
+- **Data**: 12/09/2026
+- **Módulos**: Prontuário → Contratos & Assinaturas, Emissão de Contratos, Biblioteca de Modelos Jurídicos, Assinatura Eletrônica Pública, Multi-tenancy e Isolamento RLS
+- **Caminho Completo**:
+  - Sidebar do Sistema → `components/layout/sidebar.tsx` → Inclusão dos itens "Contratos & Assinaturas", "Emitir Novo Contrato" e "Modelos de Contratos" sob a seção PRONTUÁRIO, com restrição estrita via `clinica_modulos` (`contratos_assinatura`) e fallback para a clínica World Sensory (`4c13e586-5390-4393-a180-2c9dd7ed81c7`).
+  - Painel de Gestão de Contratos → `app/dashboard/(clinic)/contratos/page.tsx` → `ContratosPage` (Listagem, filtros por status/categoria, busca em tempo real, visualização de signatários, reenvio de link e cancelamento).
+  - Emissão de Novo Contrato → `app/dashboard/(clinic)/contratos/novo/page.tsx` → `NovoContratoPage` (Assistente em 3 etapas com seleção de modelo, autopreenchimento de dados de profissionais/pacientes/clínica, configuração de variáveis e signatários).
+  - Biblioteca de Modelos → `app/dashboard/(clinic)/contratos/modelos/page.tsx` → `ModelosContratosPage` (Gestão, visualização de cláusulas e cópia de variáveis disponíveis).
+  - Tela Pública de Assinatura → `app/assinar/[token]/page.tsx` → `PublicContractSigningPage` (Página pública responsiva com leitura do documento, conferência de dados, assinatura manuscrita em tela touch canvas, rubrica, aceite LGPD e registro de auditoria).
+  - Backend APIs → `app/api/contracts/...` (Rotas REST para listagem, emissão, modelos, cancelamento, autopreenchimento, link público e download em PDF).
+  - Banco de Dados → Supabase Migrations → `supabase/migrations/20260912160000_restrict_contracts_to_world_sensory.sql` (Criação de `contract_templates`, `contract_documents`, `contract_signers`, `contract_audit_log`, seeding dos 6 modelos contratuais da World Sensory e restrição RLS).
+- **Descrição Técnica**:
+  - **1. Causa Raiz do Erro "E.map is not a function"**:
+    - Ao carregar a página `/dashboard/contratos/novo`, a requisição para `/api/doctors?limit=200` retornava o formato paginado `{ success: true, data: [...], pagination: { ... } }`.
+    - O frontend tentava ler `docsJson.doctors || docsJson || []`. Como `docsJson.doctors` era `undefined` e `docsJson` era um objeto (e não um array), o estado `professionals` recebia o objeto completo da resposta.
+    - Na renderização do Step 1 (seletor de profissionais), o React executava `professionals.map(...)` sobre o objeto, disparando `TypeError: E.map is not a function` na tela minificada de produção.
+  - **2. Resolução Cirúrgica e Blindagem**:
+    - No arquivo `app/dashboard/(clinic)/contratos/novo/page.tsx`, foi implementada extração defensiva estrita para `templates`, `professionals` e `patients`, garantindo que arrays aninhados em `data`, `doctors`, `patients` ou na raiz sejam resolvidos e que qualquer resposta não-array resulte em `[]`.
+    - No JSX, todas as chamadas de iteração foram blindadas com `(templates || []).map`, `(professionals || []).map` e `(patients || []).map`.
+    - Idêntica blindagem defensiva foi estendida preventivamente às páginas `contratos/page.tsx` e `contratos/modelos/page.tsx`.
+  - **3. Confirmação dos Modelos da World Sensory (PDF / DOC.docx)**:
+    - Todos os 6 contratos enviados no arquivo oficial da clínica foram integrados, formatados com suas cláusulas completas e variáveis dinâmicas no banco de dados e estão 100% disponíveis para emissão e visualização:
+      1. *Contrato de Prestação de Serviços (PJ)* (com todas as 18 cláusulas, Anexo I de Proposta Comercial/Técnica, Payjota e faixas de remuneração por sessão geral, Unimed e clientes especiais).
+      2. *Termo Aditivo Contratual de Prestação de Serviços*.
+      3. *Distrato de Contrato de Prestação de Serviços*.
+      4. *Acordo de Confidencialidade e Sigilo (NDA)*.
+      5. *Termo de Autorização de Uso de Imagem e Voz — Profissional*.
+      6. *Termo de Autorização de Uso de Imagem e Voz — Paciente Menor*.
+  - **4. Isolamento Multi-tenant Estrito**:
+    - O módulo está restrito via `clinica_modulos` e verificação no backend exclusivamente para a clínica World Sensory (`4c13e586-5390-4393-a180-2c9dd7ed81c7`). Nenhuma outra clínica tem acesso ao menu, modelos ou documentos.

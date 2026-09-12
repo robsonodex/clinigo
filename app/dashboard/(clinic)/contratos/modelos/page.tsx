@@ -121,7 +121,14 @@ export default function ModelosContratosPage() {
             }
             if (!res.ok) throw new Error('Falha ao carregar modelos')
             const json = await res.json()
-            setTemplates(json.templates || [])
+            const list = Array.isArray(json)
+                ? json
+                : Array.isArray(json?.templates)
+                    ? json.templates
+                    : Array.isArray(json?.data)
+                        ? json.data
+                        : []
+            setTemplates(list)
         } catch (err: any) {
             toast.error('Erro ao carregar modelos de contratos.')
         } finally {
@@ -216,7 +223,7 @@ export default function ModelosContratosPage() {
         }
     }
 
-    const filteredTemplates = templates.filter(t =>
+    const filteredTemplates = (templates || []).filter(t =>
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.category.toLowerCase().includes(searchQuery.toLowerCase())
     )
