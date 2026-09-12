@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### Agendamento em Lote Multi-Horário e Multi-Contato no Clin WhatsApp (Master Hub)
+- **Módulos**:
+  - Master Hub → Clin WhatsApp → API de Lote → `app/api/clin-whatsapp/schedule-batch/route.ts` (`POST` com autenticação Super Admin, validação atômica de payload, sanitização/normalização de telefones para padrão internacional DDI 55 + DDD, cálculo cartesiano de destinatários por horário e inserção em lote na fila `scheduled_whatsapp_messages`)
+  - Master Hub → Clin WhatsApp → Interface do Usuário → `app/system-master-hub/clin-whatsapp/page.tsx` (card "Programar Novo Envio em Lote", gerenciamento dinâmico de múltiplos blocos de horários e múltiplos contatos por bloco com Nome + Telefone, atalho para copiar dados de administradores cadastrados, botões de exclusão individual com confirmação, botão Limpar restaurando estado padrão, contagem dinâmica de disparos e saneamento total de emojis para Lucide Icons neutros e sóbrios)
+  - Fila / Cron Job → Mensagens Programadas → `app/api/cron/send-scheduled-whatsapp/route.ts` (fila existente mantida 100% íntegra e funcional, consumindo mensagens `pending` a cada 10 minutos ou via disparo imediato da fila vencida)
+- **Descrição**:
+  - **Demanda Operacional (Agendamento em Lote / Clin WhatsApp)**:
+    - O fluxo anterior obrigava o operador a submeter o formulário repetidas vezes (um número e um horário por vez), tornando o agendamento de campanhas para múltiplos contatos e horários excessivamente lento.
+  - **Solução Implementada**:
+    - **Multi-Horários e Multi-Contatos**: Interface com blocos independentes para cada horário e lista dinâmica de contatos (Nome + Telefone) por horário.
+    - **Endpoint Dedicado em Lote (`/api/clin-whatsapp/schedule-batch`)**: Realiza inserção atômica em lote na tabela `scheduled_whatsapp_messages`, eliminando chamadas repetitivas e garantindo integridade transacional.
+    - **Compatibilidade Plena com Cron Job**: Registros são gerados individualmente por combinação (Contato × Horário), permitindo que o cron job existente processe normalmente a cada 10 minutos.
+    - **Padrão Visual SaaS Premium & PWA Mobile**: Remoção absoluta de emojis em toda a aba de mensagens programadas e cabeçalho, substituição por ícones vetoriais Lucide (`Bot`, `CalendarClock`, `UserPlus`, `Trash2`, `Zap`, `Inbox`, `AlertTriangle`, `CheckCircle2`), áreas de toque confortáveis (mínimo 44x44px) e inputs otimizados para mobile.
+
+
 ### Módulo Corporativo de Contratos e Assinatura Eletrônica com Validade Jurídica (Exclusivo World Sensory)
 - **Módulos**:
   - Contratos / Allowlist & Escopo → `lib/constants/contracts-allowlist.ts` (`WORLD_SENSORY_CLINIC_ID = '4c13e586-5390-4393-a180-2c9dd7ed81c7'`, verificação estrita de autorização)

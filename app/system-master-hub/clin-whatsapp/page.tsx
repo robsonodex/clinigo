@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash, Pencil, Upload, Image as ImageIcon, X, FileText, Users } from 'lucide-react'
+import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash, Pencil, Upload, Image as ImageIcon, X, FileText, Users, Bot, AlertTriangle, Phone, CheckCircle2, Save, Zap, Inbox, UserPlus, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -28,6 +28,18 @@ interface ScheduledMessage {
   status: 'pending' | 'sent' | 'failed'
   error_message: string | null
   sent_at: string | null
+}
+
+interface ScheduleContact {
+  id: string
+  name: string
+  phone: string
+}
+
+interface ScheduleGroup {
+  id: string
+  scheduledFor: string
+  contacts: ScheduleContact[]
 }
 
 export default function ClinWhatsAppPage() {
@@ -77,6 +89,21 @@ export default function ClinWhatsAppPage() {
   const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+
+  // Estados de Agendamento em Lote (Multi-Horário e Multi-Contato)
+  const [scheduleGroups, setScheduleGroups] = useState<ScheduleGroup[]>([
+    {
+      id: 'group-1',
+      scheduledFor: '',
+      contacts: [
+        {
+          id: 'contact-1-1',
+          name: '',
+          phone: ''
+        }
+      ]
+    }
+  ])
 
   const checkStatus = useCallback(async () => {
     try {
@@ -418,40 +445,103 @@ export default function ClinWhatsAppPage() {
     if (schedImageInputRef.current) schedImageInputRef.current.value = ''
   }
 
+  // === HANDLERS DE GERENCIAMENTO DE LOTES (MULTI-HORÁRIO & MULTI-CONTATO) ===
+  const createNewId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+    return Math.random().toString(36).substring(2, 9) + Date.now().toString(36)
+  }
+
+  const handleAddGroup = () => {
+    setScheduleGroups(prev => [
+      ...prev,
+      {
+        id: createNewId(),
+        scheduledFor: '',
+        contacts: [
+          {
+            id: createNewId(),
+            name: '',
+            phone: ''
+          }
+        ]
+      }
+    ])
+  }
+
+  const handleRemoveGroup = (groupId: string) => {
+    if (scheduleGroups.length <= 1) {
+      setScheduleGroups([
+        {
+          id: createNewId(),
+          scheduledFor: '',
+          contacts: [{ id: createNewId(), name: '', phone: '' }]
+        }
+      ])
+      return
+    }
+    setScheduleGroups(prev => prev.filter(g => g.id !== groupId))
+  }
+
+  const handleGroupDateChange = (groupId: string, val: string) => {
+    setScheduleGroups(prev => prev.map(g => g.id === groupId ? { ...g, scheduledFor: val } : g))
+  }
+
+  const handleAddContact = (groupId: string) => {
+    setScheduleGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g
+      return {
+        ...g,
+        contacts: [...g.contacts, { id: createNewId(), name: '', phone: '' }]
+      }
+    }))
+  }
+
+  const handleRemoveContact = (groupId: string, contactId: string) => {
+    setScheduleGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g
+      if (g.contacts.length <= 1) {
+        return {
+          ...g,
+          contacts: [{ id: createNewId(), name: '', phone: '' }]
+        }
+      }
+      return {
+        ...g,
+        contacts: g.contacts.filter(c => c.id !== contactId)
+      }
+    }))
+  }
+
+  const handleContactChange = (groupId: string, contactId: string, field: 'name' | 'phone', val: string) => {
+    setScheduleGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g
+      return {
+        ...g,
+        contacts: g.contacts.map(c => c.id === contactId ? { ...c, [field]: val } : c)
+      }
+    }))
+  }
+
+  const handleSelectAdminForContact = (groupId: string, contactId: string, adminId: string) => {
+    const admin = admins.find(a => a.id === adminId)
+    if (!admin) return
+    setScheduleGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g
+      return {
+        ...g,
+        contacts: g.contacts.map(c => c.id === contactId ? {
+          ...c,
+          name: admin.name,
+          phone: admin.phone
+        } : c)
+      }
+    }))
+  }
+
   const handleScheduleMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    let targetPhone = ''
-    let destinationName = ''
-
-    if (sendMethod === 'registered') {
-      if (!selectedAdminId) {
-        setScheduleError('Selecione um administrador para agendar a mensagem.')
-        return
-      }
-      const admin = admins.find(a => a.id === selectedAdminId)
-      if (!admin || !admin.phone) {
-        setScheduleError('Administrador selecionado não possui número de telefone cadastrado.')
-        return
-      }
-      targetPhone = admin.phone
-      destinationName = admin.name
-    } else {
-      if (!customPhone.trim()) {
-        setScheduleError('Digite o número de telefone do destinatário.')
-        return
-      }
-      let sanitized = customPhone.replace(/\D/g, '')
-      if (sanitized.length < 10) {
-        setScheduleError('Por favor, insira um número válido com DDD (mínimo 10 dígitos).')
-        return
-      }
-      if (!sanitized.startsWith('55') && (sanitized.length === 10 || sanitized.length === 11)) {
-        sanitized = '55' + sanitized
-      }
-      targetPhone = sanitized
-      destinationName = customPhone.trim()
-    }
 
     if (!subject.trim()) {
       setScheduleError('O campo Assunto é obrigatório.')
@@ -461,33 +551,64 @@ export default function ClinWhatsAppPage() {
       setScheduleError('O campo Mensagem é obrigatório.')
       return
     }
-    if (!scheduledFor) {
-      setScheduleError('Selecione a data e hora do agendamento.')
-      return
-    }
 
-    const scheduledDate = new Date(scheduledFor)
-    if (scheduledDate <= new Date()) {
-      setScheduleError('A data e hora do agendamento devem ser no futuro.')
-      return
-    }
+    // 1. MODO EDIÇÃO INDIVIDUAL (agendamento existente da lista)
+    if (editingMessageId) {
+      let targetPhone = ''
+      let destinationName = ''
 
-    setSchedulingMsg(true)
-    setScheduleError(null)
-    setScheduleSuccess(null)
+      if (sendMethod === 'registered') {
+        if (!selectedAdminId) {
+          setScheduleError('Selecione um administrador para agendar a mensagem.')
+          return
+        }
+        const admin = admins.find(a => a.id === selectedAdminId)
+        if (!admin || !admin.phone) {
+          setScheduleError('Administrador selecionado não possui número de telefone cadastrado.')
+          return
+        }
+        targetPhone = admin.phone
+        destinationName = admin.name
+      } else {
+        if (!customPhone.trim()) {
+          setScheduleError('Digite o número de telefone do destinatário.')
+          return
+        }
+        let sanitized = customPhone.replace(/\D/g, '')
+        if (sanitized.length < 10) {
+          setScheduleError('Por favor, insira um número válido com DDD (mínimo 10 dígitos).')
+          return
+        }
+        if (!sanitized.startsWith('55') && (sanitized.length === 10 || sanitized.length === 11)) {
+          sanitized = '55' + sanitized
+        }
+        targetPhone = sanitized
+        destinationName = customPhone.trim()
+      }
 
-    // Converter imagem para base64 se presente
-    let imageBase64: string | null = null
-    if (schedImageFile) {
-      const arrayBuffer = await schedImageFile.arrayBuffer()
-      imageBase64 = Buffer.from(arrayBuffer).toString('base64')
-    }
+      if (!scheduledFor) {
+        setScheduleError('Selecione a data e hora do agendamento.')
+        return
+      }
 
-    try {
-      const supabase = createClient()
-      
-      if (editingMessageId) {
-        // Modo Edição
+      const scheduledDate = new Date(scheduledFor)
+      if (scheduledDate <= new Date()) {
+        setScheduleError('A data e hora do agendamento devem ser no futuro.')
+        return
+      }
+
+      setSchedulingMsg(true)
+      setScheduleError(null)
+      setScheduleSuccess(null)
+
+      let imageBase64: string | null = null
+      if (schedImageFile) {
+        const arrayBuffer = await schedImageFile.arrayBuffer()
+        imageBase64 = Buffer.from(arrayBuffer).toString('base64')
+      }
+
+      try {
+        const supabase = createClient()
         const { error } = await supabase
           .from('scheduled_whatsapp_messages')
           .update({
@@ -506,29 +627,117 @@ export default function ClinWhatsAppPage() {
         if (error) throw error
         setScheduleSuccess(`Agendamento para ${destinationName} atualizado com sucesso!`)
         handleCancelEdit()
-      } else {
-        // Modo Criação
-        const { error } = await supabase
-          .from('scheduled_whatsapp_messages')
-          .insert({
-            scheduled_for: scheduledDate.toISOString(),
-            recipient_phone: targetPhone,
-            recipient_name: destinationName,
-            subject: subject.trim(),
-            message: message.trim(),
-            image_base64: imageBase64,
-            status: 'pending'
-          })
-
-        if (error) throw error
-        setScheduleSuccess(`Mensagem agendada com sucesso para ${destinationName}!`)
-        setSubject('')
-        setMessage('')
-        setCustomPhone('')
-        setSelectedAdminId('')
-        setScheduledFor('')
+        loadScheduledMessages()
+      } catch (err: any) {
+        setScheduleError(err.message || 'Erro ao processar agendamento.')
+      } finally {
+        setSchedulingMsg(false)
       }
-      
+      return
+    }
+
+    // 2. MODO CRIAÇÃO EM LOTE (NOVO ENVIO COM MÚLTIPLOS HORÁRIOS E CONTATOS)
+    if (!scheduleGroups || scheduleGroups.length === 0) {
+      setScheduleError('Adicione pelo menos um bloco de horário com contatos.')
+      return
+    }
+
+    const now = new Date()
+    for (let i = 0; i < scheduleGroups.length; i++) {
+      const grp = scheduleGroups[i]
+      const grpNum = i + 1
+
+      if (!grp.scheduledFor) {
+        setScheduleError(`Selecione a data e hora para o Bloco de Horário ${grpNum}.`)
+        return
+      }
+
+      const scheduledDate = new Date(grp.scheduledFor)
+      if (isNaN(scheduledDate.getTime())) {
+        setScheduleError(`Data e hora inválidas no Bloco de Horário ${grpNum}.`)
+        return
+      }
+
+      if (scheduledDate <= now) {
+        setScheduleError(`A data e hora do Bloco ${grpNum} deve ser no futuro.`)
+        return
+      }
+
+      if (!grp.contacts || grp.contacts.length === 0) {
+        setScheduleError(`Adicione pelo menos um contato no Bloco ${grpNum}.`)
+        return
+      }
+
+      for (let j = 0; j < grp.contacts.length; j++) {
+        const ctc = grp.contacts[j]
+        const ctcNum = j + 1
+
+        if (!ctc.name.trim()) {
+          setScheduleError(`Preencha o nome do contato ${ctcNum} no Bloco ${grpNum}.`)
+          return
+        }
+
+        if (!ctc.phone.trim()) {
+          setScheduleError(`Preencha o telefone do contato '${ctc.name.trim()}' (Bloco ${grpNum}).`)
+          return
+        }
+
+        const digits = ctc.phone.replace(/\D/g, '')
+        if (digits.length < 10) {
+          setScheduleError(`Telefone de '${ctc.name.trim()}' é inválido. Mínimo de 10 dígitos com DDD.`)
+          return
+        }
+      }
+    }
+
+    setSchedulingMsg(true)
+    setScheduleError(null)
+    setScheduleSuccess(null)
+
+    // Converter imagem para base64 se presente
+    let imageBase64: string | null = null
+    if (schedImageFile) {
+      const arrayBuffer = await schedImageFile.arrayBuffer()
+      imageBase64 = Buffer.from(arrayBuffer).toString('base64')
+    }
+
+    try {
+      const res = await fetch('/api/clin-whatsapp/schedule-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: subject.trim(),
+          message: message.trim(),
+          imageBase64: imageBase64,
+          scheduleGroups: scheduleGroups.map(g => ({
+            scheduledFor: g.scheduledFor,
+            contacts: g.contacts.map(c => ({
+              name: c.name.trim(),
+              phone: c.phone.trim()
+            }))
+          }))
+        })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao processar agendamento em lote.')
+      }
+
+      setScheduleSuccess(data.message || `${data.count || 0} agendamento(s) programado(s) com sucesso na fila!`)
+      setSubject('')
+      setMessage('')
+      setSchedImageFile(null)
+      setSchedImagePreview(null)
+      if (schedImageInputRef.current) schedImageInputRef.current.value = ''
+      setScheduleGroups([
+        {
+          id: createNewId(),
+          scheduledFor: '',
+          contacts: [{ id: createNewId(), name: '', phone: '' }]
+        }
+      ])
       loadScheduledMessages()
     } catch (err: any) {
       setScheduleError(err.message || 'Erro ao processar agendamento.')
@@ -709,12 +918,19 @@ export default function ClinWhatsAppPage() {
   }
 
   const handleClearForm = () => {
-    if (confirm('Deseja limpar todos os campos?')) {
+    if (confirm('Deseja limpar todos os campos e blocos de agendamento?')) {
       setSubject('')
       setMessage('')
       setSelectedAdminId('')
       setCustomPhone('')
       setScheduledFor('')
+      setScheduleGroups([
+        {
+          id: createNewId(),
+          scheduledFor: '',
+          contacts: [{ id: createNewId(), name: '', phone: '' }]
+        }
+      ])
       setSendSuccess(null)
       setSendError(null)
       setScheduleSuccess(null)
@@ -723,6 +939,7 @@ export default function ClinWhatsAppPage() {
       setImagePreview(null)
       setSchedImageFile(null)
       setSchedImagePreview(null)
+      if (schedImageInputRef.current) schedImageInputRef.current.value = ''
       setBulkFile(null)
       setBulkNumbers([])
       setBulkInvalidCount(0)
@@ -948,7 +1165,7 @@ export default function ClinWhatsAppPage() {
             <span className="text-sm font-medium">Voltar para o Master Hub</span>
           </Link>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <span className="text-3xl">🤖</span>
+            <Bot className="w-8 h-8 text-emerald-400" />
             Clin — WhatsApp
           </h1>
           <p className="text-gray-400 mt-2">
@@ -1444,149 +1661,62 @@ export default function ClinWhatsAppPage() {
               id="agendamento-form"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8"
+              className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6 sm:p-8"
             >
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-emerald-400" />
-                    {editingMessageId ? '📝 Editar Mensagem Programada' : 'Programar Novo Envio'}
+                    {editingMessageId ? 'Editar Mensagem Programada' : 'Programar Novo Envio em Lote'}
                   </h2>
                   <p className="text-gray-400 text-sm mt-1">
                     {editingMessageId 
                       ? 'Modifique os dados abaixo para atualizar o agendamento na fila.' 
-                      : 'Crie e salve uma mensagem para ser enviada automaticamente em uma data futura.'}
+                      : 'Configure múltiplos horários e associe vários contatos para disparo automático na fila.'}
                   </p>
                 </div>
               </div>
 
               {status !== 'connected' ? (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center flex items-center justify-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
                   <p className="text-yellow-400 text-sm">
-                    ⚠️ Conecte o WhatsApp no painel acima para habilitar o agendamento de mensagens.
+                    Conecte o WhatsApp no painel superior para habilitar o agendamento de mensagens.
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleScheduleMessage} className="space-y-5">
-                  {/* Alternar Método de Envio */}
-                  <div>
-                    <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
-                      Método de Destino
-                    </label>
-                    <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSendMethod('registered')
-                          setScheduleError(null)
-                        }}
-                        className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                          sendMethod === 'registered'
-                            ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
-                        }`}
-                      >
-                        <span>👥</span> Administrador Cadastrado
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSendMethod('manual')
-                          setScheduleError(null)
-                        }}
-                        className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                          sendMethod === 'manual'
-                            ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
-                        }`}
-                      >
-                        <span>📱</span> Digitar Número Manual
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Renderização Condicional do Campo de Destino */}
-                  {sendMethod === 'registered' ? (
-                    <div>
-                      <label className="text-gray-300 font-medium text-sm mb-2 block">
-                        Administrador & Clínica Destinatária
-                      </label>
-                      <select
-                        value={selectedAdminId}
-                        onChange={(e) => setSelectedAdminId(e.target.value)}
-                        className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full animate-none"
-                        required
-                      >
-                        <option value="">Selecione o administrador...</option>
-                        {admins.map((admin) => (
-                          <option key={admin.id} value={admin.id}>
-                            {admin.clinicName} — {admin.name} ({admin.phone})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-gray-300 font-medium text-sm mb-2 block">
-                        Número de WhatsApp Destinatário
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: 88 98807-3740"
-                        value={customPhone}
-                        onChange={(e) => setCustomPhone(e.target.value)}
-                        className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                        required
-                      />
-                    </div>
-                  )}
-
-                  {/* Data e Hora de Envio */}
-                  <div>
-                    <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-emerald-400" />
-                      Data e Hora Programada para o Envio
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={scheduledFor}
-                      onChange={(e) => setScheduledFor(e.target.value)}
-                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full color-scheme-dark"
-                      required
-                    />
-                  </div>
-
-                  {/* Assunto */}
+                <form onSubmit={handleScheduleMessage} className="space-y-6">
+                  {/* Assunto (Único para todo o lote) */}
                   <div>
                     <label className="text-gray-300 font-medium text-sm mb-2 block">
-                      Assunto
+                      Assunto da Mensagem
                     </label>
                     <input
                       type="text"
                       placeholder="Ex: Alerta de Renovação de Plano..."
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full min-h-[48px]"
                       required
                     />
                   </div>
 
-                  {/* Mensagem */}
+                  {/* Mensagem (Única para todo o lote) */}
                   <div>
                     <label className="text-gray-300 font-medium text-sm mb-2 block">
                       Mensagem
                     </label>
                     <textarea
-                      placeholder="Escreva a mensagem programada..."
+                      placeholder="Escreva a mensagem que será enviada para todos os destinatários do lote..."
                       rows={4}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none"
+                      className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full resize-none text-sm"
                       required
                     />
                   </div>
 
-                  {/* Upload de Imagem (opcional) para Mensagem Programada */}
+                  {/* Upload de Imagem (opcional, único para todo o lote) */}
                   <div>
                     <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
                       <ImageIcon className="w-4 h-4 text-emerald-400" />
@@ -1633,21 +1763,260 @@ export default function ClinWhatsAppPage() {
                     )}
                   </div>
 
+                  {/* SE FOR MODO EDIÇÃO INDIVIDUAL: RENDERIZA DESTINATÁRIO E DATA ÚNICOS */}
+                  {editingMessageId ? (
+                    <div className="bg-gray-900/60 border border-gray-700/60 rounded-xl p-5 space-y-4">
+                      <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold pb-2 border-b border-gray-800">
+                        <Pencil className="w-4 h-4" />
+                        <span>Editando agendamento individual</span>
+                      </div>
+
+                      {/* Método de Destino */}
+                      <div>
+                        <label className="text-gray-300 font-semibold text-xs uppercase tracking-wider mb-2 block">
+                          Método de Destino
+                        </label>
+                        <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/40">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSendMethod('registered')
+                              setScheduleError(null)
+                            }}
+                            className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] ${
+                              sendMethod === 'registered'
+                                ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
+                                : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                            }`}
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            Administrador Cadastrado
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSendMethod('manual')
+                              setScheduleError(null)
+                            }}
+                            className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] ${
+                              sendMethod === 'manual'
+                                ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
+                                : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
+                            }`}
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            Digitar Número Manual
+                          </button>
+                        </div>
+                      </div>
+
+                      {sendMethod === 'registered' ? (
+                        <div>
+                          <label className="text-gray-300 font-medium text-sm mb-2 block">
+                            Administrador & Clínica Destinatária
+                          </label>
+                          <select
+                            value={selectedAdminId}
+                            onChange={(e) => setSelectedAdminId(e.target.value)}
+                            className="bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full min-h-[48px]"
+                            required
+                          >
+                            <option value="">Selecione o administrador...</option>
+                            {admins.map((admin) => (
+                              <option key={admin.id} value={admin.id}>
+                                {admin.clinicName} — {admin.name} ({admin.phone})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-gray-300 font-medium text-sm mb-2 block">
+                            Número de WhatsApp Destinatário
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: 88 98807-3740"
+                            value={customPhone}
+                            onChange={(e) => setCustomPhone(e.target.value)}
+                            className="bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full min-h-[48px]"
+                            required
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="text-gray-300 font-medium text-sm mb-2 block flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-emerald-400" />
+                          Data e Hora Programada
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={scheduledFor}
+                          onChange={(e) => setScheduledFor(e.target.value)}
+                          className="bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full color-scheme-dark min-h-[48px]"
+                          required
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    /* MODO LOTE: BLOCOS DE HORÁRIOS E CONTATOS */
+                    <div className="space-y-5 pt-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-700/60">
+                        <div>
+                          <label className="text-gray-200 font-semibold text-base flex items-center gap-2">
+                            <CalendarClock className="w-5 h-5 text-emerald-400" />
+                            Horários e Destinatários do Lote
+                          </label>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Monte múltiplos horários de disparo e adicione os contatos de cada um.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddGroup}
+                          className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Adicionar Novo Horário
+                        </button>
+                      </div>
+
+                      {scheduleGroups.map((group, gIdx) => (
+                        <div
+                          key={group.id}
+                          className="bg-gray-900/80 border border-gray-700/70 rounded-2xl p-5 space-y-4 shadow-sm"
+                        >
+                          {/* Cabeçalho do Bloco de Horário */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800">
+                            <div className="flex-1 max-w-sm">
+                              <label className="text-emerald-300 font-semibold text-xs uppercase tracking-wider mb-1.5 flex items-center gap-2">
+                                <Clock className="w-3.5 h-3.5" />
+                                Horário {gIdx + 1} — Data e Hora de Envio
+                              </label>
+                              <input
+                                type="datetime-local"
+                                value={group.scheduledFor}
+                                onChange={(e) => handleGroupDateChange(group.id, e.target.value)}
+                                className="bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full color-scheme-dark min-h-[44px]"
+                                required
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 self-start sm:self-end">
+                              <button
+                                type="button"
+                                onClick={() => handleAddContact(group.id)}
+                                className="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-gray-700 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 min-h-[44px]"
+                                title="Adicionar novo contato a este horário"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                                <span>Adicionar Contato</span>
+                              </button>
+                              {scheduleGroups.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveGroup(group.id)}
+                                  className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-gray-700/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                  title={`Remover Horário ${gIdx + 1}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Lista de Contatos */}
+                          <div className="space-y-3">
+                            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
+                              Contatos programados para este horário ({group.contacts.length})
+                            </span>
+
+                            {group.contacts.map((contact, cIdx) => (
+                              <div
+                                key={contact.id}
+                                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 bg-gray-950/60 p-3 rounded-xl border border-gray-800/80"
+                              >
+                                <div className="flex-1">
+                                  <input
+                                    type="text"
+                                    placeholder="Nome do contato (ex: João)"
+                                    value={contact.name}
+                                    onChange={(e) => handleContactChange(group.id, contact.id, 'name', e.target.value)}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[44px]"
+                                    required
+                                  />
+                                </div>
+
+                                <div className="flex-1">
+                                  <input
+                                    type="text"
+                                    placeholder="Telefone (ex: 11 99999-0001)"
+                                    value={contact.phone}
+                                    onChange={(e) => handleContactChange(group.id, contact.id, 'phone', e.target.value)}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[44px]"
+                                    required
+                                  />
+                                </div>
+
+                                {admins.length > 0 && (
+                                  <div className="sm:w-44">
+                                    <select
+                                      defaultValue=""
+                                      onChange={(e) => {
+                                        if (e.target.value) {
+                                          handleSelectAdminForContact(group.id, contact.id, e.target.value)
+                                          e.target.value = ''
+                                        }
+                                      }}
+                                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-2 text-xs text-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[44px]"
+                                      title="Preencher com os dados de um Administrador cadastrado"
+                                    >
+                                      <option value="">Puxar Admin...</option>
+                                      {admins.map((adm) => (
+                                        <option key={adm.id} value={adm.id}>
+                                          {adm.name} ({adm.clinicName})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+
+                                {group.contacts.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveContact(group.id, contact.id)}
+                                    className="self-end sm:self-center p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                    title="Remover este contato"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Mensagens de feedback */}
                   {scheduleError && (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
                       <p className="text-red-400 text-sm">{scheduleError}</p>
                     </div>
                   )}
 
                   {scheduleSuccess && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                      <p className="text-emerald-400 text-sm">✅ {scheduleSuccess}</p>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <p className="text-emerald-400 text-sm">{scheduleSuccess}</p>
                     </div>
                   )}
 
                   {/* Ações */}
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     {editingMessageId ? (
                       <>
                         <button
@@ -1664,7 +2033,7 @@ export default function ClinWhatsAppPage() {
                         >
                           {schedulingMsg ? 'Salvando...' : (
                             <>
-                              <span>💾</span>
+                              <Save className="w-4 h-4" />
                               Salvar Alterações
                             </>
                           )}
@@ -1688,7 +2057,7 @@ export default function ClinWhatsAppPage() {
                           {schedulingMsg ? 'Agendando...' : (
                             <>
                               <Plus className="w-4 h-4" />
-                              Agendar Envio
+                              Agendar Envio ({scheduleGroups.reduce((acc, g) => acc + g.contacts.length, 0)} {scheduleGroups.reduce((acc, g) => acc + g.contacts.length, 0) === 1 ? 'destinatário' : 'destinatários'} em {scheduleGroups.length} {scheduleGroups.length === 1 ? 'horário' : 'horários'})
                             </>
                           )}
                         </button>
@@ -1703,9 +2072,9 @@ export default function ClinWhatsAppPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8"
+              className="bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6 sm:p-8"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-3">
                     <Clock className="w-5 h-5 text-emerald-400" />
@@ -1722,7 +2091,8 @@ export default function ClinWhatsAppPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 min-h-[40px]"
                     title="Forçar envio de todas as mensagens vencidas da fila"
                   >
-                    <span>⚡</span> Disparar Fila Vencida
+                    <Zap className="w-3.5 h-3.5" />
+                    Disparar Fila Vencida
                   </button>
                   <button
                     onClick={loadScheduledMessages}
@@ -1738,8 +2108,9 @@ export default function ClinWhatsAppPage() {
               {loadingScheduled ? (
                 <div className="py-8 text-center text-gray-500 text-sm">Carregando agendamentos...</div>
               ) : scheduledMessages.length === 0 ? (
-                <div className="py-12 border border-dashed border-gray-700/50 rounded-xl text-center text-gray-500 text-sm">
-                  📭 Nenhuma mensagem programada no momento.
+                <div className="py-12 border border-dashed border-gray-700/50 rounded-xl text-center text-gray-500 text-sm flex flex-col items-center justify-center gap-2">
+                  <Inbox className="w-8 h-8 text-gray-600" />
+                  <span>Nenhuma mensagem programada no momento.</span>
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-gray-700/40">
