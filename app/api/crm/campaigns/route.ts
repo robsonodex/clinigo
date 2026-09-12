@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 
-export const maxDuration = 300
+export const maxDuration = 60
 
 // GET: List campaigns
 export async function GET(request: NextRequest) {
@@ -283,9 +283,9 @@ export async function POST(request: NextRequest) {
                             continue
                         }
 
-                        // Proteção contra timeout de Serverless (buffer seguro antes do limite de 300s da Vercel)
-                        if (Date.now() - startTime > 260000) {
-                            console.warn(`[Campaign ${campaignId}] Limite de tempo da função se aproximando. Pausando fila com progresso salvo.`)
+                        // Proteção contra timeout de Serverless (buffer seguro antes do limite de 60s da Vercel)
+                        if (Date.now() - startTime > 50000) {
+                            console.warn(`[Campaign ${campaignId}] Limite de tempo da função se aproximando (50s). Pausando fila com progresso salvo.`)
                             break
                         }
 
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
                                 .replace(/\{\{clinic_name\}\}/gi, clinicName)
                                 .replace(/\{\{nome_clinica\}\}/gi, clinicName)
 
-                            // Timeout individual de 15 segundos para garantir que o socket Baileys nunca trave a execução
+                            // Timeout individual de 10 segundos para garantir que o socket Baileys nunca trave a execução
                             await Promise.race([
                                 sendWhatsAppMessage(
                                     clinicId,
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
                                     sectorToSend
                                 ),
                                 new Promise((_, reject) =>
-                                    setTimeout(() => reject(new Error('Tempo limite de envio excedido (15s)')), 15000)
+                                    setTimeout(() => reject(new Error('Tempo limite de envio excedido (10s)')), 10000)
                                 )
                             ])
 
@@ -341,8 +341,8 @@ export async function POST(request: NextRequest) {
                             })
                             .eq('id', campaignId)
 
-                        // Cadência suave de 1.8s entre mensagens para proteger o socket e evitar bloqueio pelo WhatsApp
-                        await new Promise(resolve => setTimeout(resolve, 1800))
+                        // Cadência suave de 800ms entre mensagens para proteger o socket e manter performance
+                        await new Promise(resolve => setTimeout(resolve, 800))
                     }
                 } catch (loopErr) {
                     console.error(`[Campaign ${campaignId}] Erro inesperado no loop de disparo:`, loopErr)
