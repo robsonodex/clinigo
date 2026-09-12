@@ -2,6 +2,26 @@
 
 ## Módulos
 
+### Validação Prévia de WhatsApp, Status Dinâmico de Setores e Gestão Resiliente de Campanhas CRM (Espaço Incluir e Global)
+- **Módulos**:
+  - CRM Médico → Campanhas → `app/api/crm/campaigns/route.ts` → `POST` (validação com `checkInstanceStatus` e reset limpo), `PATCH` (edição de setor/conteúdo)
+  - CRM Médico → Interface → `app/dashboard/(clinic)/crm/page.tsx` → `fetchData` (`/api/whatsapp/status?sector=all`), select dinâmico de setores, badge de conexão WhatsApp, botão Redefinir para Rascunho, modal Editar Campanha
+  - Banco de Dados / Campanhas → Tabela `campaigns` → Reset da campanha `2d59c09b-c7c6-4b0a-991e-61c0f0c64a3c` para `DRAFT` com `error_count: 0` e `sent_count: 0`
+- **Descrição**:
+  - **Demanda Operacional da Clínica Espaço Incluir (Jeferson Bochetti)**:
+    - O usuário enviou print mostrando a campanha "Contrato de Prestação de Serviços Terapeuticos" com status "Com falha", "0 enviados de 48" e "4 falha(s)".
+  - **Causa-Raiz 1 (WhatsApp Desconectado e Circuit Breaker Fail-Fast)**:
+    - A campanha foi configurada com o setor WhatsApp `financeiro`. No Supabase e Storage, a sessão `financeiro` da Clínica Espaço Incluir estava desconectada e sem credenciais de autenticação Baileys.
+    - Ao tentar enviar para os 4 primeiros pacientes, o Baileys gerou erro de conexão consecutiva, acionando o circuit breaker da API que abortou a fila e marcou a campanha como `FAILED`.
+  - **Causa-Raiz 2 (Ausência de Validação em Tempo Real e Indicador Falso no Form)**:
+    - O seletor de setor no modal de campanha possuía o texto estático `"Financeiro (Conectado)"`, gerando falsa percepção de conexão ativa para o usuário.
+    - A rota `POST` iniciava o disparo sem executar `checkInstanceStatus`, permitindo que a campanha entrasse em `RUNNING` antes de falhar por falta de socket.
+  - **Solução Implementada**:
+    - **Validação Prévia com Baileys (`checkInstanceStatus`)**: A API valida ativamente se a sessão e credenciais do setor estão operacionais antes de qualquer envio. Se desconectado e sem setor alternativo, rejeita com HTTP 400 amigável sem alterar o status da campanha para `RUNNING` nem registrar falsas falhas.
+    - **Status Dinâmico de Setores WhatsApp**: O formulário busca o status de todos os setores em tempo real via `/api/whatsapp/status?sector=all`, exibindo indicadores claros de `Conectado` ou `Desconectado`, com link direto para reconexão.
+    - **Gestão de Campanhas**: Adicionados botões "Redefinir" (que zera erros e retorna a rascunho) e "Editar" (que permite alterar nome, mensagem e setor através do novo endpoint `PATCH`).
+    - **Recuperação da Campanha do Cliente**: A campanha da Clínica Espaço Incluir foi redefinida no banco de dados para `DRAFT` com contadores zerados, permitindo que Jeferson conecte o WhatsApp e realize o disparo sem falhas.
+
 ### Correção de Polling Silencioso, Resiliência de Disparo e Gestão de Campanhas CRM (Espaço Incluir e Global)
 - **Módulos**:
   - CRM / Campanhas → Interface CRM → `app/dashboard/(clinic)/crm/page.tsx` → `fetchData` / `handleResetCampaign` / `getStatusBadge`

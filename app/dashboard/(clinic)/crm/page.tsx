@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +15,8 @@ import { Switch } from '@/components/ui/switch'
 import {
     Zap, Send, StickyNote, Users, Plus, Loader2,
     Calendar, CheckCircle, Clock, Play, Pause, Mail,
-    MessageSquare, Smartphone, Bell, Trash2
+    MessageSquare, Smartphone, Bell, Trash2,
+    RotateCcw, Edit3, Wifi, WifiOff, ExternalLink, AlertTriangle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -35,7 +37,11 @@ interface Campaign {
     id: string
     name: string
     type: string
+    sector?: string
+    content?: string
+    subject?: string
     status: string
+    target_all_patients?: boolean
     total_recipients: number
     sent_count: number
     opened_count: number
@@ -43,6 +49,21 @@ interface Campaign {
     scheduled_at: string | null
     created_at: string
 }
+
+interface WhatsAppSessionItem {
+    sector: string
+    status: string
+    phone_number: string | null
+    connected: boolean
+}
+
+const SECTOR_OPTIONS = [
+    { value: 'financeiro', label: 'Financeiro' },
+    { value: 'default', label: 'Principal' },
+    { value: 'comercial', label: 'Comercial' },
+    { value: 'recepcao', label: 'Recepção' },
+    { value: 'clinico', label: 'Clínico' }
+]
 
 interface Note {
     id: string
@@ -77,8 +98,11 @@ export default function CRMPage() {
     const [automations, setAutomations] = useState<Automation[]>([])
     const [campaigns, setCampaigns] = useState<Campaign[]>([])
     const [notes, setNotes] = useState<Note[]>([])
+    const [whatsappSessions, setWhatsappSessions] = useState<WhatsAppSessionItem[]>([])
     const [showNewAutomation, setShowNewAutomation] = useState(false)
     const [showNewCampaign, setShowNewCampaign] = useState(false)
+    const [showEditCampaign, setShowEditCampaign] = useState(false)
+    const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
     const [saving, setSaving] = useState(false)
 
     // Automation form
@@ -101,15 +125,25 @@ export default function CRMPage() {
     })
     const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null)
 
+    const getSectorStatus = (sectorName: string = 'financeiro') => {
+        const s = whatsappSessions.find(item => item.sector === sectorName)
+        return {
+            connected: s?.connected || false,
+            status: s?.status || 'disconnected',
+            phone: s?.phone_number || null
+        }
+    }
+
     const fetchData = useCallback(async (silent = false) => {
         if (!silent) {
             setLoading(true)
         }
         try {
-            const [autoRes, campRes, notesRes] = await Promise.all([
+            const [autoRes, campRes, notesRes, waRes] = await Promise.all([
                 fetch('/api/crm/automations'),
                 fetch('/api/crm/campaigns'),
-                fetch('/api/crm/notes?tasks_only=true&pending_only=true')
+                fetch('/api/crm/notes?tasks_only=true&pending_only=true'),
+                fetch('/api/whatsapp/status?sector=all').catch(() => null)
             ])
 
             if (autoRes.ok) {
@@ -125,6 +159,18 @@ export default function CRMPage() {
             if (notesRes.ok) {
                 const data = await notesRes.json()
                 setNotes(data.notes || [])
+            }
+
+            if (waRes && waRes.ok) {
+                const waData = await waRes.json()
+                if (Array.isArray(waData.sessions)) {
+                    setWhatsappSessions(waData.sessions.map((s: any) => ({
+                        sector: s.sector || 'default',
+                        status: s.status || 'disconnected',
+                        phone_number: s.phone_number || null,
+                        connected: s.status === 'connected'
+                    })))
+                }
             }
         } catch (error) {
             console.error('Error fetching CRM data:', error)
@@ -226,6 +272,23 @@ export default function CRMPage() {
     }
 
     const handleSendCampaign = async (camp: Campaign) => {
+        if (camp.type === 'WHATSAPP') {
+            const sectorName = camp.sector || 'financeiro'
+            const secStatus = getSectorStatus(sectorName)
+
+            if (!secStatus.connected) {
+                const secLabel = SECTOR_OPTIONS.find(o => o.value === sectorName)?.label || sectorName
+                toast.error(`O WhatsApp do setor "${secLabel}" está desconectado. Conecte o WhatsApp em Menu > WhatsApp antes de disparar.`, {
+                    action: {
+                        label: 'Conectar WhatsApp',
+                        onClick: () => { window.location.href = '/dashboard/whatsapp' }
+                    },
+                    duration: 8000
+                })
+                return
+            }
+        }
+
         if (!confirm(`Deseja disparar a campanha "${camp.name}" para os ${camp.total_recipients} destinatários cadastrados via WhatsApp?\n\nO envio será realizado de forma segura e cadenciada para proteção do seu número.`)) {
             return
         }
@@ -252,6 +315,48 @@ export default function CRMPage() {
             toast.error('Erro ao conectar ao servidor para disparo')
         } finally {
             setSendingCampaignId(null)
+        }
+    }
+
+    const handleOpenEditCampaign = (camp: Campaign) => {
+        setEditingCampaign({ ...camp })
+        setShowEditCampaign(true)
+    }
+
+    const handleSaveEditCampaign = async () => {
+        if (!editingCampaign) return
+        if (!editingCampaign.name || !editingCampaign.content) {
+            toast.error('Preencha nome e conteúdo da mensagem')
+            return
+        }
+
+        setSaving(true)
+        try {
+            const res = await fetch('/api/crm/campaigns', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingCampaign.id,
+                    name: editingCampaign.name,
+                    content: editingCampaign.content,
+                    subject: editingCampaign.subject,
+                    sector: editingCampaign.sector,
+                    target_all_patients: editingCampaign.target_all_patients
+                })
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Erro ao atualizar campanha')
+                return
+            }
+            toast.success('Campanha atualizada com sucesso!')
+            setShowEditCampaign(false)
+            setEditingCampaign(null)
+            fetchData()
+        } catch {
+            toast.error('Erro ao conectar ao servidor para atualizar campanha')
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -557,12 +662,24 @@ export default function CRMPage() {
                                                 >
                                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="financeiro">Financeiro (Conectado)</SelectItem>
-                                                        <SelectItem value="default">Principal</SelectItem>
-                                                        <SelectItem value="recepcao">Recepção</SelectItem>
-                                                        <SelectItem value="comercial">Comercial</SelectItem>
+                                                        {SECTOR_OPTIONS.map(opt => {
+                                                            const status = getSectorStatus(opt.value)
+                                                            return (
+                                                                <SelectItem key={opt.value} value={opt.value}>
+                                                                    {opt.label} ({status.connected ? 'Conectado' : 'Desconectado'})
+                                                                </SelectItem>
+                                                            )
+                                                        })}
                                                     </SelectContent>
                                                 </Select>
+                                                {!getSectorStatus(campaignForm.sector).connected && (
+                                                    <div className="flex items-center justify-between p-2.5 rounded-md border border-amber-200 bg-amber-50 text-amber-900 text-xs">
+                                                        <span>O setor selecionado está desconectado. Conecte antes de disparar.</span>
+                                                        <Link href="/dashboard/whatsapp" className="text-blue-700 underline font-medium hover:text-blue-900 ml-2 shrink-0">
+                                                            Conectar WhatsApp
+                                                        </Link>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
@@ -576,6 +693,94 @@ export default function CRMPage() {
                                             </Button>
                                         </div>
                                     </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Edit Campaign Dialog */}
+                            <Dialog open={showEditCampaign} onOpenChange={setShowEditCampaign}>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Editar Campanha</DialogTitle>
+                                        <DialogDescription>Altere as configurações, setor de envio ou mensagem da campanha</DialogDescription>
+                                    </DialogHeader>
+                                    {editingCampaign && (
+                                        <div className="space-y-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label>Nome</Label>
+                                                <Input
+                                                    value={editingCampaign.name}
+                                                    onChange={(e) => setEditingCampaign(c => c ? { ...c, name: e.target.value } : null)}
+                                                    placeholder="Nome da campanha"
+                                                />
+                                            </div>
+                                            {editingCampaign.type === 'EMAIL' && (
+                                                <div className="space-y-2">
+                                                    <Label>Assunto</Label>
+                                                    <Input
+                                                        value={editingCampaign.subject || ''}
+                                                        onChange={(e) => setEditingCampaign(c => c ? { ...c, subject: e.target.value } : null)}
+                                                        placeholder="Assunto do email"
+                                                    />
+                                                </div>
+                                            )}
+                                            <div className="space-y-2">
+                                                <Label>Mensagem</Label>
+                                                <Textarea
+                                                    value={editingCampaign.content || ''}
+                                                    onChange={(e) => setEditingCampaign(c => c ? { ...c, content: e.target.value } : null)}
+                                                    rows={4}
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Use: {'{{patient_name}}'}, {'{{clinic_name}}'}, {'{{doctor_name}}'}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <Label>Enviar para todos os pacientes</Label>
+                                                <Switch
+                                                    checked={editingCampaign.target_all_patients ?? true}
+                                                    onCheckedChange={(v) => setEditingCampaign(c => c ? { ...c, target_all_patients: v } : null)}
+                                                />
+                                            </div>
+                                            {editingCampaign.type === 'WHATSAPP' && (
+                                                <div className="space-y-2">
+                                                    <Label>WhatsApp de Envio (Setor)</Label>
+                                                    <Select
+                                                        value={editingCampaign.sector || 'financeiro'}
+                                                        onValueChange={(v) => setEditingCampaign(c => c ? { ...c, sector: v } : null)}
+                                                    >
+                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {SECTOR_OPTIONS.map(opt => {
+                                                                const status = getSectorStatus(opt.value)
+                                                                return (
+                                                                    <SelectItem key={opt.value} value={opt.value}>
+                                                                        {opt.label} ({status.connected ? 'Conectado' : 'Desconectado'})
+                                                                    </SelectItem>
+                                                                )
+                                                            })}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {!getSectorStatus(editingCampaign.sector || 'financeiro').connected && (
+                                                        <div className="flex items-center justify-between p-2.5 rounded-md border border-amber-200 bg-amber-50 text-amber-900 text-xs">
+                                                            <span>O setor selecionado está desconectado. Conecte antes de disparar.</span>
+                                                            <Link href="/dashboard/whatsapp" className="text-blue-700 underline font-medium hover:text-blue-900 ml-2 shrink-0">
+                                                                Conectar WhatsApp
+                                                            </Link>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                            <div className="flex justify-end gap-2 pt-2">
+                                                <Button variant="outline" onClick={() => setShowEditCampaign(false)} disabled={saving} className="min-h-[44px]">
+                                                    Cancelar
+                                                </Button>
+                                                <Button onClick={handleSaveEditCampaign} disabled={saving} className="bg-primary hover:bg-primary/90 min-h-[44px]">
+                                                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                                    Salvar Alterações
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </DialogContent>
                             </Dialog>
                         </div>
@@ -598,13 +803,28 @@ export default function CRMPage() {
                                                     {getCampaignTypeIcon(camp.type)}
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-medium">{camp.name}</h3>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {camp.total_recipients} destinatários
-                                                    </p>
+                                                    <h3 className="font-medium text-base">{camp.name}</h3>
+                                                    <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground mt-0.5">
+                                                        <span>{camp.total_recipients} destinatários</span>
+                                                        {camp.type === 'WHATSAPP' && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span>Setor: {SECTOR_OPTIONS.find(o => o.value === (camp.sector || 'financeiro'))?.label || camp.sector || 'Financeiro'}</span>
+                                                                {getSectorStatus(camp.sector || 'financeiro').connected ? (
+                                                                    <Badge variant="outline" className="text-emerald-700 border-emerald-200 bg-emerald-50 text-[11px] gap-1 py-0 px-1.5 h-5">
+                                                                        <Wifi className="h-2.5 w-2.5" /> WhatsApp Online
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[11px] gap-1 py-0 px-1.5 h-5">
+                                                                        <WifiOff className="h-2.5 w-2.5" /> WhatsApp Desconectado
+                                                                    </Badge>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+                                            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
                                                 <div className="text-right text-sm">
                                                     <p className="font-medium">{camp.sent_count} enviados de {camp.total_recipients}</p>
                                                     {camp.type === 'EMAIL' ? (
@@ -619,7 +839,7 @@ export default function CRMPage() {
                                                 {camp.type === 'WHATSAPP' && camp.status !== 'COMPLETED' && (
                                                     <Button
                                                         size="sm"
-                                                        className="bg-green-600 hover:bg-green-700 min-h-[44px] gap-1.5"
+                                                        className="bg-green-600 hover:bg-green-700 min-h-[44px] gap-1.5 text-white"
                                                         onClick={() => handleSendCampaign(camp)}
                                                         disabled={sendingCampaignId === camp.id || camp.status === 'RUNNING'}
                                                     >
@@ -631,16 +851,53 @@ export default function CRMPage() {
                                                         {camp.status === 'RUNNING' ? 'Enviando...' : (sendingCampaignId === camp.id ? 'Iniciando...' : (camp.status === 'FAILED' ? 'Tentar novamente' : 'Disparar WhatsApp'))}
                                                     </Button>
                                                 )}
+                                                {camp.status === 'FAILED' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-emerald-700 border-emerald-200 hover:bg-emerald-50 min-h-[44px] gap-1.5"
+                                                        onClick={() => handleResetCampaign(camp)}
+                                                        title="Redefinir para rascunho e zerar falhas"
+                                                    >
+                                                        <RotateCcw className="h-4 w-4" />
+                                                        Redefinir
+                                                    </Button>
+                                                )}
+                                                {(camp.status === 'DRAFT' || camp.status === 'FAILED') && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-slate-700 border-slate-200 hover:bg-slate-50 min-h-[44px] gap-1.5"
+                                                        onClick={() => handleOpenEditCampaign(camp)}
+                                                        title="Editar campanha"
+                                                    >
+                                                        <Edit3 className="h-4 w-4" />
+                                                        Editar
+                                                    </Button>
+                                                )}
                                                 {camp.status === 'RUNNING' && (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
                                                         className="text-amber-600 border-amber-200 hover:bg-amber-50 min-h-[44px] gap-1.5"
                                                         onClick={() => handleResetCampaign(camp)}
-                                                        title="Redefinir para rascunho"
+                                                        title="Interromper envio"
                                                     >
                                                         <Pause className="h-4 w-4" />
                                                         Interromper
+                                                    </Button>
+                                                )}
+                                                {camp.type === 'WHATSAPP' && !getSectorStatus(camp.sector || 'financeiro').connected && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        asChild
+                                                        className="text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] gap-1.5"
+                                                    >
+                                                        <Link href="/dashboard/whatsapp">
+                                                            <ExternalLink className="h-4 w-4" />
+                                                            Conectar
+                                                        </Link>
                                                     </Button>
                                                 )}
                                                 <Button

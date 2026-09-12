@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
-        // 🔥 FEATURE GATE: CRM is PRO+ exclusive
+        // FEATURE GATE: CRM is PRO+ exclusive
         const { data: clinic } = await supabase
             .from('clinics')
             .select('plan_type')
             .eq('id', clinicId)
             .single()
 
-        if (clinic?.plan_type === 'BASIC') {
+        if (clinic && (clinic as any).plan_type === 'BASIC') {
             return NextResponse.json({
                 error: 'CRM disponível apenas nos planos Profissional e Enterprise',
                 current_plan: 'BASIC',
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         const searchParams = request.nextUrl.searchParams
         const status = searchParams.get('status')
 
-        let query = supabase
+        let query = (supabase as any)
             .from('campaigns')
             .select('*')
             .eq('clinic_id', clinicId)
@@ -97,10 +97,12 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
             }
 
-            const { error: resetErr } = await supabase
+            const { error: resetErr } = await (supabase as any)
                 .from('campaigns')
                 .update({
                     status: 'DRAFT',
+                    sent_count: 0,
+                    error_count: 0,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', campaignId)
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Erro ao resetar campanha' }, { status: 500 })
             }
 
-            return NextResponse.json({ success: true, message: 'Campanha redefinida para rascunho' })
+            return NextResponse.json({ success: true, message: 'Campanha redefinida para rascunho com sucesso' })
         }
 
         // SUB-AÇÃO: DISPARAR CAMPANHA VIA WHATSAPP
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
             }
 
-            const { data: campaign, error: campErr } = await supabase
+            const { data: campaign, error: campErr } = await (supabase as any)
                 .from('campaigns')
                 .select('*')
                 .eq('id', campaignId)
@@ -131,30 +133,32 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Campanha não encontrada' }, { status: 404 })
             }
 
-            let sectorToSend = campaign.sector || 'financeiro'
+            let sectorToSend = (campaign as any)?.sector || 'financeiro'
 
-            // Verificar se o setor está conectado
-            const { data: waSession } = await supabase
-                .from('whatsapp_sessions')
-                .select('sector, status, phone_number')
-                .eq('clinic_id', clinicId)
-                .eq('sector', sectorToSend)
-                .maybeSingle()
+            // Verificar em tempo real se o setor está conectado no Baileys/Storage
+            const { checkInstanceStatus, getAllClinicSessions } = await import('@/lib/whatsapp/service')
+            const statusTarget = await checkInstanceStatus(clinicId, sectorToSend)
 
-            if (!waSession || waSession.status !== 'connected') {
-                const { data: anyConnected } = await supabase
-                    .from('whatsapp_sessions')
-                    .select('sector, status, phone_number')
-                    .eq('clinic_id', clinicId)
-                    .eq('status', 'connected')
-                    .limit(1)
-                    .maybeSingle()
+            if (!statusTarget.connected) {
+                // Verificar se existe algum outro setor ativo e conectado para fallback
+                const allSessions = await getAllClinicSessions(clinicId)
+                let fallbackSector: string | null = null
 
-                if (anyConnected) {
-                    sectorToSend = anyConnected.sector
+                for (const s of allSessions) {
+                    if (s.sector !== sectorToSend) {
+                        const check = await checkInstanceStatus(clinicId, s.sector)
+                        if (check.connected) {
+                            fallbackSector = s.sector
+                            break
+                        }
+                    }
+                }
+
+                if (fallbackSector) {
+                    sectorToSend = fallbackSector
                 } else {
                     return NextResponse.json({
-                        error: `WhatsApp do setor "${sectorToSend}" não está conectado. Acesse o menu WhatsApp para conectar antes de disparar.`
+                        error: `O WhatsApp do setor "${sectorToSend}" não está conectado. Acesse Menu > WhatsApp para conectar antes de disparar.`
                     }, { status: 400 })
                 }
             }
@@ -170,7 +174,7 @@ export async function POST(request: NextRequest) {
             // Destinatários
             let targetPatients: { id: string; full_name: string; phone: string | null }[] = []
 
-            if (campaign.target_all_patients) {
+            if ((campaign as any).target_all_patients) {
                 const { data: patients } = await supabase
                     .from('patients')
                     .select('id, full_name, phone')
@@ -178,11 +182,11 @@ export async function POST(request: NextRequest) {
                     .is('deleted_at', null)
 
                 targetPatients = patients || []
-            } else if (Array.isArray(campaign.target_tags) && campaign.target_tags.length > 0) {
+            } else if (Array.isArray((campaign as any).target_tags) && (campaign as any).target_tags.length > 0) {
                 const { data: tagged } = await supabase
                     .from('patient_tag_assignments')
                     .select('patient:patients(id, full_name, phone)')
-                    .in('tag_id', campaign.target_tags)
+                    .in('tag_id', (campaign as any).target_tags)
 
                 targetPatients = (tagged || []).map((t: any) => t.patient).filter(Boolean)
             }
@@ -199,7 +203,7 @@ export async function POST(request: NextRequest) {
                 }, { status: 400 })
             }
 
-            await supabase
+            await (supabase as any)
                 .from('campaigns')
                 .update({
                     status: 'RUNNING',
@@ -226,7 +230,7 @@ export async function POST(request: NextRequest) {
                         const chunk = validRecipients.slice(i, i + 2)
                         await Promise.all(chunk.map(async (patient) => {
                             try {
-                                const personalizedMessage = campaign.content
+                                const personalizedMessage = ((campaign as any).content || '')
                                     .replace(/\{\{patient_name\}\}/gi, patient.full_name || 'Cliente')
                                     .replace(/\{\{nome_paciente\}\}/gi, patient.full_name || 'Cliente')
                                     .replace(/\{\{clinic_name\}\}/gi, clinicName)
@@ -252,7 +256,7 @@ export async function POST(request: NextRequest) {
                             }
                         }))
 
-                        await adminDb
+                        await (adminDb as any)
                             .from('campaigns')
                             .update({
                                 sent_count: successCount,
@@ -275,7 +279,7 @@ export async function POST(request: NextRequest) {
                         ? 'COMPLETED' 
                         : (failureCount > 0 || aborted ? 'FAILED' : 'COMPLETED')
 
-                    await adminDb
+                    await (adminDb as any)
                         .from('campaigns')
                         .update({
                             status: finalStatus,
@@ -332,7 +336,7 @@ export async function POST(request: NextRequest) {
             totalRecipients = count || 0
         }
 
-        const { data: campaign, error } = await supabase
+        const { data: campaign, error } = await (supabase as any)
             .from('campaigns')
             .insert({
                 clinic_id: clinicId,
@@ -362,6 +366,80 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Campaigns error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    }
+}
+
+// PATCH: Update campaign
+export async function PATCH(request: NextRequest) {
+    try {
+        const supabase = await createClient()
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+        }
+
+        const { data: userData } = await supabase
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single()
+
+        const clinicId = (userData as any)?.clinic_id
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+        }
+
+        const body = await request.json()
+        const campaignId = body.id || body.campaign_id
+        if (!campaignId) {
+            return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
+        }
+
+        const { data: existing } = await (supabase as any)
+            .from('campaigns')
+            .select('status')
+            .eq('id', campaignId)
+            .eq('clinic_id', clinicId)
+            .single()
+
+        if (!existing) {
+            return NextResponse.json({ error: 'Campanha não encontrada' }, { status: 404 })
+        }
+
+        if ((existing as any)?.status === 'RUNNING') {
+            return NextResponse.json({ error: 'Não é possível alterar uma campanha em andamento' }, { status: 400 })
+        }
+
+        const updates: any = { updated_at: new Date().toISOString() }
+        if (body.name !== undefined) updates.name = body.name
+        if (body.content !== undefined) updates.content = body.content
+        if (body.sector !== undefined) updates.sector = body.sector
+        if (body.type !== undefined) updates.type = body.type
+        if (body.subject !== undefined) updates.subject = body.subject
+        if (body.target_all_patients !== undefined) updates.target_all_patients = body.target_all_patients
+
+        if ((existing as any)?.status === 'FAILED') {
+            updates.status = 'DRAFT'
+            updates.error_count = 0
+            updates.sent_count = 0
+        }
+
+        const { data: updated, error } = await (supabase as any)
+            .from('campaigns')
+            .update(updates)
+            .eq('id', campaignId)
+            .eq('clinic_id', clinicId)
+            .select()
+            .single()
+
+        if (error) {
+            return NextResponse.json({ error: 'Erro ao atualizar campanha' }, { status: 500 })
+        }
+
+        return NextResponse.json({ success: true, campaign: updated })
+    } catch (error: any) {
+        return NextResponse.json({ error: error?.message || 'Erro interno' }, { status: 500 })
     }
 }
 
@@ -400,7 +478,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
         }
 
-        const { error } = await supabase
+        const { error } = await (supabase as any)
             .from('campaigns')
             .delete()
             .eq('id', campaignId)
