@@ -2,6 +2,24 @@
 
 ## Módulos
 
+### Disparo Sequencial com Deduplicação, Timeout Individual e Persistência em Tempo Real no CRM (Espaço Incluir e Global)
+- **Módulos**:
+  - CRM Médico → Campanhas API → `app/api/crm/campaigns/route.ts` → `POST` (envio sequencial unitário, deduplicação via `whatsapp_logs`, timeout de 15s por socket Baileys, persistência de progresso a cada destinatário e guarda de tempo de execução Vercel)
+  - Banco de Dados / Campanhas → Tabela `campaigns` → Atualização do status da campanha `2d59c09b-c7c6-4b0a-991e-61c0f0c64a3c` para `DRAFT` com `sent_count: 1` e `error_count: 0`
+- **Descrição**:
+  - **Demanda Operacional da Clínica Espaço Incluir (Jeferson Bochetti)**:
+    - O usuário enviou print mostrando a campanha "Contrato de Prestação de Serviços Terapeuticos" com status "Em andamento", "0 enviados de 48" congelado por vários minutos.
+  - **Causa-Raiz (Concorrência em Socket Baileys e Bloqueio de Promise)**:
+    - O loop anterior utilizava blocos paralelos com `Promise.all(chunk.map(...))` disparando duas mensagens no mesmo milissegundo pelo mesmo WebSocket do Baileys.
+    - O primeiro destinatário (Eduarda Cespedes) foi entregue e gravado no `whatsapp_logs`. O segundo pacote concorrente gerou colisão no socket, travando a Promise sem estourar exceção imediata.
+    - Sem timeout individual por mensagem e sem atualização incremental do banco a cada envio, a execução do background task ficou represada, e o banco nunca recebeu o incremento de `sent_count`, mantendo a tela do usuário em "0 enviados de 48".
+  - **Solução Implementada**:
+    - **Envio Sequencial Unitário**: O envio agora itera estritamente 1 a 1 (`for...of`), eliminando qualquer concorrência e instabilidade no socket Baileys.
+    - **Deduplicação Inteligente com `whatsapp_logs`**: Antes e durante o envio, a API consulta os logs de envio com sucesso da campanha e ignora automaticamente qualquer paciente que já recebeu a mensagem, prevenindo mensagens duplicadas ao retomar disparos.
+    - **Timeout Individual de 15 Segundos**: Cada disparo é encapsulado em `Promise.race`, garantindo que eventuais números inválidos ou congelamento de rede sejam interrompidos e contabilizados como falha sem travar os próximos destinatários da fila.
+    - **Persistência Incremental em Tempo Real**: O banco de dados (`campaigns.sent_count`) é atualizado imediatamente após cada paciente, alimentando o polling da tela a cada 3 segundos e refletindo o avanço ao vivo (1/48, 2/48...).
+    - **Proteção de Timeout Serverless**: Limite de tempo de segurança (260s) configurado antes dos 300s da Vercel, salvando o progresso para permitir que o usuário retome a fila sem perdas.
+
 ### Validação Prévia de WhatsApp, Status Dinâmico de Setores e Gestão Resiliente de Campanhas CRM (Espaço Incluir e Global)
 - **Módulos**:
   - CRM Médico → Campanhas → `app/api/crm/campaigns/route.ts` → `POST` (validação com `checkInstanceStatus` e reset limpo), `PATCH` (edição de setor/conteúdo)

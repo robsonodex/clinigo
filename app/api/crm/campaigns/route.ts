@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // GET: List campaigns
 export async function GET(request: NextRequest) {
@@ -97,11 +97,19 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
             }
 
+            // Consultar quantas mensagens já foram enviadas com sucesso no whatsapp_logs para preservar o contador real
+            const { count: sentLogsCount } = await (supabase as any)
+                .from('whatsapp_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId)
+                .eq('trigger_source', `campaign_${campaignId}`)
+                .eq('status', 'sent')
+
             const { error: resetErr } = await (supabase as any)
                 .from('campaigns')
                 .update({
                     status: 'DRAFT',
-                    sent_count: 0,
+                    sent_count: sentLogsCount || 0,
                     error_count: 0,
                     updated_at: new Date().toISOString()
                 })
@@ -203,59 +211,127 @@ export async function POST(request: NextRequest) {
                 }, { status: 400 })
             }
 
+            // Consultar mensagens que já foram enviadas com sucesso para esta campanha (deduplicação)
+            const { data: sentLogs } = await (supabase as any)
+                .from('whatsapp_logs')
+                .select('recipient_phone')
+                .eq('clinic_id', clinicId)
+                .eq('trigger_source', `campaign_${campaignId}`)
+                .eq('status', 'sent')
+
+            const sentPhoneSet = new Set<string>()
+            for (const log of sentLogs || []) {
+                if (log.recipient_phone) {
+                    const clean = log.recipient_phone.replace(/\D/g, '')
+                    sentPhoneSet.add(clean)
+                    if (clean.startsWith('55')) {
+                        sentPhoneSet.add(clean.substring(2))
+                    } else {
+                        sentPhoneSet.add(`55${clean}`)
+                    }
+                }
+            }
+
+            const isAlreadySent = (rawPhone: string | null | undefined): boolean => {
+                if (!rawPhone) return false
+                const clean = rawPhone.replace(/\D/g, '')
+                if (sentPhoneSet.has(clean)) return true
+                if (clean.startsWith('55') && sentPhoneSet.has(clean.substring(2))) return true
+                if (!clean.startsWith('55') && sentPhoneSet.has(`55${clean}`)) return true
+
+                const ddd = clean.startsWith('55') ? clean.substring(2, 4) : clean.substring(0, 2)
+                const num = clean.startsWith('55') ? clean.substring(4) : clean.substring(2)
+                if (num.length === 9 && num.startsWith('9')) {
+                    const without9 = clean.startsWith('55') ? `55${ddd}${num.substring(1)}` : `${ddd}${num.substring(1)}`
+                    if (sentPhoneSet.has(without9)) return true
+                } else if (num.length === 8) {
+                    const with9 = clean.startsWith('55') ? `55${ddd}9${num}` : `${ddd}9${num}`
+                    if (sentPhoneSet.has(with9)) return true
+                }
+                return false
+            }
+
+            const initialSentCount = validRecipients.filter(p => isAlreadySent(p.phone)).length
+
             await (supabase as any)
                 .from('campaigns')
                 .update({
                     status: 'RUNNING',
                     total_recipients: validRecipients.length,
-                    sent_count: 0,
+                    sent_count: initialSentCount,
                     error_count: 0,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', campaignId)
 
-            // Executar envio cadenciado em segundo plano com Next.js after()
+            // Executar envio sequencial em segundo plano com Next.js after()
             after(async () => {
                 const { createServiceRoleClient } = await import('@/lib/supabase/server')
                 const adminDb = createServiceRoleClient()
-                let successCount = 0
+                let successCount = initialSentCount
                 let failureCount = 0
                 let consecutiveConnectionErrors = 0
                 let aborted = false
+                const startTime = Date.now()
 
                 try {
-                    for (let i = 0; i < validRecipients.length; i += 2) {
+                    for (const patient of validRecipients) {
                         if (aborted) break
 
-                        const chunk = validRecipients.slice(i, i + 2)
-                        await Promise.all(chunk.map(async (patient) => {
-                            try {
-                                const personalizedMessage = ((campaign as any).content || '')
-                                    .replace(/\{\{patient_name\}\}/gi, patient.full_name || 'Cliente')
-                                    .replace(/\{\{nome_paciente\}\}/gi, patient.full_name || 'Cliente')
-                                    .replace(/\{\{clinic_name\}\}/gi, clinicName)
-                                    .replace(/\{\{nome_clinica\}\}/gi, clinicName)
+                        // Pular destinatário se já foi enviado com sucesso
+                        if (isAlreadySent(patient.phone)) {
+                            continue
+                        }
 
-                                await sendWhatsAppMessage(
+                        // Proteção contra timeout de Serverless (buffer seguro antes do limite de 300s da Vercel)
+                        if (Date.now() - startTime > 260000) {
+                            console.warn(`[Campaign ${campaignId}] Limite de tempo da função se aproximando. Pausando fila com progresso salvo.`)
+                            break
+                        }
+
+                        if (consecutiveConnectionErrors >= 4) {
+                            console.error(`[Campaign ${campaignId}] WhatsApp desconectado em múltiplos envios seguidos. Interrompendo fila.`)
+                            aborted = true
+                            break
+                        }
+
+                        try {
+                            const personalizedMessage = ((campaign as any).content || '')
+                                .replace(/\{\{patient_name\}\}/gi, patient.full_name || 'Cliente')
+                                .replace(/\{\{nome_paciente\}\}/gi, patient.full_name || 'Cliente')
+                                .replace(/\{\{clinic_name\}\}/gi, clinicName)
+                                .replace(/\{\{nome_clinica\}\}/gi, clinicName)
+
+                            // Timeout individual de 15 segundos para garantir que o socket Baileys nunca trave a execução
+                            await Promise.race([
+                                sendWhatsAppMessage(
                                     clinicId,
                                     patient.phone!,
                                     personalizedMessage,
                                     `campaign_${campaignId}`,
                                     sectorToSend
+                                ),
+                                new Promise((_, reject) =>
+                                    setTimeout(() => reject(new Error('Tempo limite de envio excedido (15s)')), 15000)
                                 )
+                            ])
 
-                                successCount++
-                                consecutiveConnectionErrors = 0
-                            } catch (sendErr: any) {
-                                console.error(`[Campaign ${campaignId}] Falha ao enviar para ${patient.id}:`, sendErr?.message || sendErr)
-                                failureCount++
-                                const errMsg = (sendErr?.message || '').toLowerCase()
-                                if (errMsg.includes('não conectado') || errMsg.includes('desconectado') || errMsg.includes('socket')) {
-                                    consecutiveConnectionErrors++
-                                }
+                            successCount++
+                            consecutiveConnectionErrors = 0
+                            if (patient.phone) {
+                                const clean = patient.phone.replace(/\D/g, '')
+                                sentPhoneSet.add(clean)
                             }
-                        }))
+                        } catch (sendErr: any) {
+                            console.error(`[Campaign ${campaignId}] Falha ao enviar para ${patient.id} (${patient.phone}):`, sendErr?.message || sendErr)
+                            failureCount++
+                            const errMsg = (sendErr?.message || '').toLowerCase()
+                            if (errMsg.includes('não conectado') || errMsg.includes('desconectado') || errMsg.includes('socket')) {
+                                consecutiveConnectionErrors++
+                            }
+                        }
 
+                        // Persistência incremental imediata para atualizar o polling da tela em tempo real a cada 3s
                         await (adminDb as any)
                             .from('campaigns')
                             .update({
@@ -265,19 +341,25 @@ export async function POST(request: NextRequest) {
                             })
                             .eq('id', campaignId)
 
-                        // Fail-fast se o WhatsApp cair durante o envio para nao estourar o tempo da Vercel
-                        if (consecutiveConnectionErrors >= 4) {
-                            console.error(`[Campaign ${campaignId}] WhatsApp desconectado em múltiplos envios seguidos. Abortando fila.`)
-                            aborted = true
-                            break
-                        }
+                        // Cadência suave de 1.8s entre mensagens para proteger o socket e evitar bloqueio pelo WhatsApp
+                        await new Promise(resolve => setTimeout(resolve, 1800))
                     }
                 } catch (loopErr) {
                     console.error(`[Campaign ${campaignId}] Erro inesperado no loop de disparo:`, loopErr)
                 } finally {
-                    const finalStatus = successCount > 0 
-                        ? 'COMPLETED' 
-                        : (failureCount > 0 || aborted ? 'FAILED' : 'COMPLETED')
+                    const isFullyFinished = (successCount + failureCount) >= validRecipients.length
+                    let finalStatus = 'COMPLETED'
+
+                    if (!isFullyFinished) {
+                        if (aborted || consecutiveConnectionErrors >= 4) {
+                            finalStatus = 'FAILED'
+                        } else {
+                            // Interrupção por tempo da função: volta para DRAFT preservando sent_count para permitir continuar
+                            finalStatus = 'DRAFT'
+                        }
+                    } else if (failureCount > 0 && successCount === 0) {
+                        finalStatus = 'FAILED'
+                    }
 
                     await (adminDb as any)
                         .from('campaigns')
