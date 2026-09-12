@@ -26,9 +26,11 @@ export interface SessionRegistration {
     sessionId: string
 }
 
-// Usuários com autorização explícita para múltiplas sessões simultâneas (suporte técnico / auditoria)
+// Usuários com autorização explícita para múltiplas sessões simultâneas (suporte técnico / auditoria / Super Admin)
 const CONCURRENT_SESSION_ALLOWED_EMAILS = new Set([
-    'clinicaworldsensory@gmail.com'
+    'clinicaworldsensory@gmail.com',
+    'contato@clinigo.app',
+    'robsonfenriz@gmail.com'
 ])
 
 const CONCURRENT_SESSION_ALLOWED_USER_IDS = new Set([

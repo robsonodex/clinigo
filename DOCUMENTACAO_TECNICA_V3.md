@@ -1797,3 +1797,16 @@
 - **Descrição Técnica**:
   - Implementado motor de envio em lote seguro para proteger os números de WhatsApp contra banimento pela Meta. O envio opera em pares com intervalo de segurança nativo do Baileys e atualização contínua do progresso no banco de dados. A consolidação em rota única evitou o limite de 12 Serverless Functions do plano Hobby da Vercel.
 
+### Item 62: Correção de Crash em Super Administradores e Autorização de Sessões Concorrentes para Super Admins
+- **Data**: 12/09/2026
+- **Módulos**: Super Admin → Administradores da Plataforma, Autenticação e Segurança de Sessão (Single Session Manager)
+- **Caminho Completo**:
+  - Backend → Super Admin Admins API → `app/api/super-admin/admins/route.ts` → `GET`, `POST`, `DELETE` (Restauração do contrato unificado fornecendo tanto `admins` para o painel de Super Admins quanto `data` para a ferramenta de broadcast WhatsApp; implementação de `POST` com validação Zod e criação no Supabase Auth via Service Role; implementação de `DELETE` com trava contra auto-exclusão)
+  - Frontend → Super Admin Admins Page → `app/dashboard/super/admins/page.tsx` (Blindagem defensiva contra dados nulos ou indefinidos eliminando o erro fatal `Cannot read properties of undefined (reading 'length')`; inclusão de barra de busca em tempo real por nome/e-mail; inclusão de botão Atualizar com feedback visual; inclusão de botão Voltar ao Painel Master; conformidade estrita de toque PWA >= 44px e zero emojis)
+  - Backend → Single Session Manager → `lib/services/single-session.ts` (Inclusão de `contato@clinigo.app` e `robsonfenriz@gmail.com` na lista `CONCURRENT_SESSION_ALLOWED_EMAILS`, impedindo que o polling do `useSessionGuard` derrube involuntariamente a sessão do administrador ao operar em múltiplas abas, navegadores ou dispositivos)
+- **Descrição Técnica**:
+  - **1. Causa Raiz do Crash**: O endpoint `/api/super-admin/admins` havia sido reescrito para alimentar um dropdown do disparador de WhatsApp em `clin-whatsapp`, retornando exclusivamente a propriedade `data` e removendo os métodos `POST` e `DELETE`. Na tela `/dashboard/super/admins`, a chamada `setAdmins(data.admins)` recebia `undefined`, fazendo com que a renderização de `admins.length` quebrasse com erro 500 client-side.
+  - **2. Causa Raiz do Logout**: O mecanismo de sessão única mantinha apenas `clinicaworldsensory@gmail.com` na whitelist de sessões simultâneas. O usuário master `contato@clinigo.app`, ao abrir novas abas ou alternar entre dispositivos, acionava a revogação de `active_sessions.is_active = false`, resultando em deslogamento forçado pelo polling do `useSessionGuard`.
+  - **3. Resolução**: Endpoint e interface 100% blindados, tolerantes a falhas e compatíveis com todas as telas dependentes, com liberação de concorrência ativa para os e-mails administrativos master.
+
+
