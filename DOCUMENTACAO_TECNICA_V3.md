@@ -2,7 +2,44 @@
 
 ## Módulos
 
-### Disparo Sequencial com Deduplicação, Timeout Individual e Persistência em Tempo Real no CRM (Espaço Incluir e Global)
+### Módulo Corporativo de Contratos e Assinatura Eletrônica com Validade Jurídica (Exclusivo World Sensory)
+- **Módulos**:
+  - Contratos / Allowlist & Escopo → `lib/constants/contracts-allowlist.ts` (`WORLD_SENSORY_CLINIC_ID = '4c13e586-5390-4393-a180-2c9dd7ed81c7'`, verificação estrita de autorização)
+  - Contratos / Banco de Dados → `supabase/migrations/20260912160000_restrict_contracts_to_world_sensory.sql` (ativação na `clinica_modulos`, purga de dados e templates de outras clínicas, reforço de RLS em `contract_templates`, `contract_documents`, `contract_signers` e `contract_audit_events` amarrados à World Sensory)
+  - Contratos / Biblioteca → Banco de Dados / Migrations → `supabase/migrations/20260912150000_create_contracts_and_signatures_module.sql` (tabelas `contract_templates`, `contract_documents`, `contract_signers`, `contract_audit_events` e os 6 modelos oficiais do `DOC.docx`)
+  - Contratos / API → Templates → `app/api/contracts/templates/route.ts` (`GET`, `POST`) e `app/api/contracts/templates/[id]/route.ts` (`GET`, `PUT`, `DELETE` com bloqueio 403 para clínicas não autorizadas)
+  - Contratos / API → Emissão e Gestão → `app/api/contracts/route.ts` (`GET`, `POST` com bloqueio 403, resolução de merge-fields e número sequencial CTR-AAAA/NNN), `app/api/contracts/[id]/route.ts` (`GET`, `DELETE` com log de auditoria e bloqueio 403)
+  - Contratos / API → Autofill Cadastral → `app/api/contracts/autofill/route.ts` (preenchimento assistido com dados cadastrais e bloqueio 403 para outras clínicas)
+  - Contratos / API → Reenvio de Notificação → `app/api/contracts/[id]/resend/route.ts` (`POST` com bloqueio 403 para reenvio e auditoria por E-mail/WhatsApp)
+  - Contratos / API → Folha Probatória / PDF → `app/api/contracts/[id]/pdf/route.ts` (layout para impressão com texto integral, assinaturas e termo de auditoria com bloqueio 403)
+  - Assinatura Pública PWA → Rota /assinar/[token] → `app/api/public/signature/[token]/route.ts` (`GET` e `POST` com validação de escopo institucional da World Sensory, rejeição 403 para links de outras instituições, captura de IP, User-Agent, UTC e Hash SHA-256 probatório nos termos da MP 2.200-2/2001 e Lei 14.063/2020)
+  - Interface / Dashboard → Painel de Contratos → `app/dashboard/(clinic)/contratos/page.tsx` (métricas, abas de status, filtros, cópia de links de signatários, cancelamento e tela de acesso restrito institucional)
+  - Interface / Dashboard → Emissão Assistida → `app/dashboard/(clinic)/contratos/novo/page.tsx` (fluxo em 3 etapas com seleção de modelo, preenchimento inteligente, pré-visualização em tempo real e bloqueio para clínicas não autorizadas)
+  - Interface / Dashboard → Biblioteca de Modelos → `app/dashboard/(clinic)/contratos/modelos/page.tsx` (CRUD de templates com catálogo de tags variáveis copiáveis e bloqueio para clínicas não autorizadas)
+  - Interface / Dashboard → Detalhes & Trilha → `app/dashboard/(clinic)/contratos/[id]/page.tsx` (status por signatário, linha do tempo de eventos de auditoria, cancelamento e bloqueio para clínicas não autorizadas)
+  - Interface / Mobile PWA → Tela de Assinatura → `app/assinar/[token]/page.tsx` (experiência mobile-first sem login, canvas de rubrica vetorial, zero emojis, toque mínimo 44x44px e emissão de comprovante com hash SHA-256)
+  - Layout / Menu Lateral → `components/layout/sidebar.tsx` (exibição condicional de "Contratos & Assinaturas" estritamente restrita à clínica World Sensory; oculto para todas as demais)
+  - Testes / Segurança → `tests/contract-tenant-isolation.ts` (14 testes automatizados comprovando isolamento em duas camadas, exclusividade da World Sensory e 0 resultados fora do escopo)
+- **Descrição**:
+  - **Demanda Corporativa da Clínica (Patrícia Mendes / Gestão da World Sensory)**:
+    - Módulo sob medida para a clínica World Sensory Terapias Multidisciplinares, abrangendo biblioteca de modelos de contratos e termos legais (`DOC.docx`), autofill cadastral de terapeutas, pacientes e responsáveis, emissão assistida, assinatura pública mobile-first sem login e painel de acompanhamento com trilha de integridade criptográfica SHA-256.
+  - **Biblioteca de Modelos Jurídicos Cadastrada (Exclusiva World Sensory)**:
+    1. Contrato de Prestação de Serviços (PJ) (com Anexo I Proposta Comercial/Técnica integrada)
+    2. Termo Aditivo Contratual de Prestação de Serviços
+    3. Distrato de Contrato de Prestação de Serviços
+    4. Acordo de Confidencialidade e Sigilo (NDA)
+    5. Termo de Autorização de Uso de Imagem e Voz — Profissional
+    6. Termo de Autorização de Uso de Imagem e Voz — Paciente Menor (assinado pelo responsável)
+  - **Segurança de Dados, LGPD v5.2 e Isolamento Estrito de Escopo**:
+    - **Escopo Exclusivo**: Restrito integralmente à clínica World Sensory (`4c13e586-5390-4393-a180-2c9dd7ed81c7`).
+    - Nenhuma outra clínica tem acesso ao menu lateral, páginas do dashboard, rotas de API nem aos modelos no banco de dados.
+    - Rota pública `/api/public/signature/[token]` valida institucionalmente a clínica dona do documento e bloqueia com 403 qualquer contrato fora da World Sensory.
+    - Teste de isolamento automatizado executado com 100% de aprovação (14/14 testes aprovados).
+  - **Padrão Visual Premium e PWA/Mobile**:
+    - Zero emojis em todas as interfaces, mensagens de sistema e botões.
+    - Ícones estritamente vetoriais e neutros (Lucide Icons).
+    - Design mobile-first touch-friendly (área de toque >= 44x44px, inputs 16px).
+
 - **Módulos**:
   - CRM Médico → Campanhas API → `app/api/crm/campaigns/route.ts` → `POST` (envio sequencial unitário, deduplicação via `whatsapp_logs`, timeout de 15s por socket Baileys, persistência de progresso a cada destinatário e guarda de tempo de execução Vercel)
   - Banco de Dados / Campanhas → Tabela `campaigns` → Atualização do status da campanha `2d59c09b-c7c6-4b0a-991e-61c0f0c64a3c` para `DRAFT` com `sent_count: 1` e `error_count: 0`

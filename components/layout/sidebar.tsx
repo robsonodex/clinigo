@@ -58,11 +58,13 @@ import {
     ShieldCheck,
     Plus,
     Tablet,
+    FileSignature,
 } from 'lucide-react'
 import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
 import { type FeatureKey, FEATURE_KEYS } from '@/lib/constants/features'
+import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowlist'
 import {
     Dialog,
     DialogContent,
@@ -198,11 +200,16 @@ const navigationSections: NavSection[] = [
                 // Apenas ADM e Recepção podem acessar documentos (solicitação Jeferson - Espaço Incluir)
             },
             {
-                title: 'Modelos de Termos & Contratos',
-                href: '/dashboard/configuracoes/modelos-documentos',
+                title: 'Contratos & Assinaturas',
+                href: '/dashboard/contratos',
+                icon: FileSignature,
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+            },
+            {
+                title: 'Modelos de Contratos',
+                href: '/dashboard/contratos/modelos',
                 icon: ShieldCheck,
                 roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
-                featureKey: FEATURE_KEYS.MODELOS_DOCUMENTOS,
             },
             {
                 title: 'Templates Prontuário',
@@ -1060,10 +1067,12 @@ function NavItemComponent({
 
 export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
-    const { role, isCoordinator } = useRole()
+    const { role, isCoordinator, clinicId, isSuperAdmin } = useRole()
     const { planType, isLoading, permissions } = usePlan()
     const profLabel = useProfessionalLabel()
     const { clinic } = useClinic()
+
+    const effectiveClinicId = clinicId || clinic?.id
 
     // Tema dinâmico da Sidebar com persistência
     const [sidebarTheme, setSidebarTheme] = useState<'dark-green' | 'light-classic'>('dark-green')
@@ -1099,6 +1108,13 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
             ...section,
             items: section.items
                 .filter((item) => {
+                    // Módulo de Contratos e Assinaturas: Restrição estrita para World Sensory
+                    if (item.href.startsWith('/dashboard/contratos')) {
+                        if (!isClinicAuthorizedForContracts(effectiveClinicId)) {
+                            return false
+                        }
+                    }
+
                     if (!item.roles) return true
                     if (role && item.roles.includes(role)) {
                         // Remove 'Planos', 'Grupos' e 'Cobrança' para SUPER_ADMIN — não pertinentes ao contexto operacional
