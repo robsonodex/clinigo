@@ -39,6 +39,7 @@ interface Campaign {
     total_recipients: number
     sent_count: number
     opened_count: number
+    error_count?: number
     scheduled_at: string | null
     created_at: string
 }
@@ -100,8 +101,10 @@ export default function CRMPage() {
     })
     const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null)
 
-    const fetchData = useCallback(async () => {
-        setLoading(true)
+    const fetchData = useCallback(async (silent = false) => {
+        if (!silent) {
+            setLoading(true)
+        }
         try {
             const [autoRes, campRes, notesRes] = await Promise.all([
                 fetch('/api/crm/automations'),
@@ -126,7 +129,9 @@ export default function CRMPage() {
         } catch (error) {
             console.error('Error fetching CRM data:', error)
         } finally {
-            setLoading(false)
+            if (!silent) {
+                setLoading(false)
+            }
         }
     }, [])
 
@@ -139,7 +144,7 @@ export default function CRMPage() {
         if (!hasRunning) return
 
         const interval = setInterval(() => {
-            fetchData()
+            fetchData(true)
         }, 3000)
 
         return () => clearInterval(interval)
@@ -281,12 +286,40 @@ export default function CRMPage() {
         }
     }
 
+    const handleResetCampaign = async (camp: Campaign) => {
+        if (!confirm(`Deseja interromper ou redefinir a campanha "${camp.name}" para rascunho? Você poderá dispará-la novamente depois.`)) {
+            return
+        }
+
+        try {
+            const res = await fetch('/api/crm/campaigns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'reset',
+                    campaign_id: camp.id
+                })
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Erro ao redefinir campanha')
+                return
+            }
+
+            toast.success('Campanha redefinida para rascunho com sucesso!')
+            fetchData()
+        } catch (error) {
+            toast.error('Erro ao conectar ao servidor para redefinir campanha')
+        }
+    }
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'DRAFT': return <Badge variant="outline">Rascunho</Badge>
             case 'SCHEDULED': return <Badge className="bg-blue-500">Agendada</Badge>
             case 'RUNNING': return <Badge className="bg-yellow-500">Em andamento</Badge>
             case 'COMPLETED': return <Badge className="bg-green-500">Concluída</Badge>
+            case 'FAILED': return <Badge variant="destructive">Com falha</Badge>
             case 'CANCELLED': return <Badge variant="destructive">Cancelada</Badge>
             default: return <Badge variant="outline">{status}</Badge>
         }
@@ -573,8 +606,14 @@ export default function CRMPage() {
                                             </div>
                                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
                                                 <div className="text-right text-sm">
-                                                    <p>{camp.sent_count} enviados</p>
-                                                    <p className="text-muted-foreground">{camp.opened_count} abertos</p>
+                                                    <p className="font-medium">{camp.sent_count} enviados de {camp.total_recipients}</p>
+                                                    {camp.type === 'EMAIL' ? (
+                                                        <p className="text-muted-foreground">{camp.opened_count} abertos</p>
+                                                    ) : (
+                                                        (camp.error_count ?? 0) > 0 ? (
+                                                            <p className="text-red-500 font-medium">{camp.error_count} falha(s)</p>
+                                                        ) : null
+                                                    )}
                                                 </div>
                                                 {getStatusBadge(camp.status)}
                                                 {camp.type === 'WHATSAPP' && camp.status !== 'COMPLETED' && (
@@ -589,7 +628,19 @@ export default function CRMPage() {
                                                         ) : (
                                                             <Send className="h-4 w-4" />
                                                         )}
-                                                        {camp.status === 'RUNNING' ? 'Enviando...' : (sendingCampaignId === camp.id ? 'Iniciando...' : 'Disparar WhatsApp')}
+                                                        {camp.status === 'RUNNING' ? 'Enviando...' : (sendingCampaignId === camp.id ? 'Iniciando...' : (camp.status === 'FAILED' ? 'Tentar novamente' : 'Disparar WhatsApp'))}
+                                                    </Button>
+                                                )}
+                                                {camp.status === 'RUNNING' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-amber-600 border-amber-200 hover:bg-amber-50 min-h-[44px] gap-1.5"
+                                                        onClick={() => handleResetCampaign(camp)}
+                                                        title="Redefinir para rascunho"
+                                                    >
+                                                        <Pause className="h-4 w-4" />
+                                                        Interromper
                                                     </Button>
                                                 )}
                                                 <Button

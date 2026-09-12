@@ -90,6 +90,29 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json()
 
+        // SUB-AÇÃO: CANCELAR / RESETAR CAMPANHA TRAVADA
+        if (body.action === 'reset' || body.action === 'cancel') {
+            const campaignId = body.campaign_id || body.id
+            if (!campaignId) {
+                return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
+            }
+
+            const { error: resetErr } = await supabase
+                .from('campaigns')
+                .update({
+                    status: 'DRAFT',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', campaignId)
+                .eq('clinic_id', clinicId)
+
+            if (resetErr) {
+                return NextResponse.json({ error: 'Erro ao resetar campanha' }, { status: 500 })
+            }
+
+            return NextResponse.json({ success: true, message: 'Campanha redefinida para rascunho' })
+        }
+
         // SUB-AÇÃO: DISPARAR CAMPANHA VIA WHATSAPP
         if (body.action === 'send') {
             const campaignId = body.campaign_id || body.id
@@ -181,60 +204,88 @@ export async function POST(request: NextRequest) {
                 .update({
                     status: 'RUNNING',
                     total_recipients: validRecipients.length,
+                    sent_count: 0,
+                    error_count: 0,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', campaignId)
 
             // Executar envio cadenciado em segundo plano com Next.js after()
             after(async () => {
+                const { createServiceRoleClient } = await import('@/lib/supabase/server')
+                const adminDb = createServiceRoleClient()
                 let successCount = 0
                 let failureCount = 0
+                let consecutiveConnectionErrors = 0
+                let aborted = false
 
-                for (let i = 0; i < validRecipients.length; i += 2) {
-                    const chunk = validRecipients.slice(i, i + 2)
-                    await Promise.all(chunk.map(async (patient) => {
-                        try {
-                            const personalizedMessage = campaign.content
-                                .replace(/\{\{patient_name\}\}/gi, patient.full_name || 'Cliente')
-                                .replace(/\{\{nome_paciente\}\}/gi, patient.full_name || 'Cliente')
-                                .replace(/\{\{clinic_name\}\}/gi, clinicName)
-                                .replace(/\{\{nome_clinica\}\}/gi, clinicName)
+                try {
+                    for (let i = 0; i < validRecipients.length; i += 2) {
+                        if (aborted) break
 
-                            await sendWhatsAppMessage(
-                                clinicId,
-                                patient.phone!,
-                                personalizedMessage,
-                                `campaign_${campaignId}`,
-                                sectorToSend
-                            )
+                        const chunk = validRecipients.slice(i, i + 2)
+                        await Promise.all(chunk.map(async (patient) => {
+                            try {
+                                const personalizedMessage = campaign.content
+                                    .replace(/\{\{patient_name\}\}/gi, patient.full_name || 'Cliente')
+                                    .replace(/\{\{nome_paciente\}\}/gi, patient.full_name || 'Cliente')
+                                    .replace(/\{\{clinic_name\}\}/gi, clinicName)
+                                    .replace(/\{\{nome_clinica\}\}/gi, clinicName)
 
-                            successCount++
-                        } catch (sendErr: any) {
-                            console.error(`[Campaign ${campaignId}] Falha ao enviar para ${patient.id}:`, sendErr?.message || sendErr)
-                            failureCount++
+                                await sendWhatsAppMessage(
+                                    clinicId,
+                                    patient.phone!,
+                                    personalizedMessage,
+                                    `campaign_${campaignId}`,
+                                    sectorToSend
+                                )
+
+                                successCount++
+                                consecutiveConnectionErrors = 0
+                            } catch (sendErr: any) {
+                                console.error(`[Campaign ${campaignId}] Falha ao enviar para ${patient.id}:`, sendErr?.message || sendErr)
+                                failureCount++
+                                const errMsg = (sendErr?.message || '').toLowerCase()
+                                if (errMsg.includes('não conectado') || errMsg.includes('desconectado') || errMsg.includes('socket')) {
+                                    consecutiveConnectionErrors++
+                                }
+                            }
+                        }))
+
+                        await adminDb
+                            .from('campaigns')
+                            .update({
+                                sent_count: successCount,
+                                error_count: failureCount,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', campaignId)
+
+                        // Fail-fast se o WhatsApp cair durante o envio para nao estourar o tempo da Vercel
+                        if (consecutiveConnectionErrors >= 4) {
+                            console.error(`[Campaign ${campaignId}] WhatsApp desconectado em múltiplos envios seguidos. Abortando fila.`)
+                            aborted = true
+                            break
                         }
-                    }))
+                    }
+                } catch (loopErr) {
+                    console.error(`[Campaign ${campaignId}] Erro inesperado no loop de disparo:`, loopErr)
+                } finally {
+                    const finalStatus = successCount > 0 
+                        ? 'COMPLETED' 
+                        : (failureCount > 0 || aborted ? 'FAILED' : 'COMPLETED')
 
-                    await supabase
+                    await adminDb
                         .from('campaigns')
                         .update({
+                            status: finalStatus,
                             sent_count: successCount,
                             error_count: failureCount,
+                            last_sent_at: successCount > 0 ? new Date().toISOString() : null,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', campaignId)
                 }
-
-                await supabase
-                    .from('campaigns')
-                    .update({
-                        status: 'COMPLETED',
-                        sent_count: successCount,
-                        error_count: failureCount,
-                        last_sent_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', campaignId)
             })
 
             return NextResponse.json({

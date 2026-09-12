@@ -2,6 +2,29 @@
 
 ## Módulos
 
+### Correção de Polling Silencioso, Resiliência de Disparo e Gestão de Campanhas CRM (Espaço Incluir e Global)
+- **Módulos**:
+  - CRM / Campanhas → Interface CRM → `app/dashboard/(clinic)/crm/page.tsx` → `fetchData` / `handleResetCampaign` / `getStatusBadge`
+  - CRM / Campanhas → API de Disparo e Gestão → `app/api/crm/campaigns/route.ts` → `POST`
+  - Banco de Dados / Campanhas → Tabela `campaigns`
+- **Descrição**:
+  - **Demanda Operacional da Clínica Espaço Incluir (Jefferson Bochetti)**:
+    - O usuário relatou que, após criar e disparar a campanha "Contrato de Prestação de Serviços Terapeuticos", a tela do CRM ficou piscando continuamente como se estivesse atualizando a cada segundo, enquanto os contadores permaneciam em 0 envios e 0 abertos.
+  - **Causa-Raiz 1 (Tela Piscando por Estado de Carregamento Global no Polling)**:
+    - Na página `app/dashboard/(clinic)/crm/page.tsx`, quando uma campanha possui status `RUNNING`, um `useEffect` executa `fetchData()` a cada 3 segundos.
+    - O método `fetchData` acionava incondicionalmente `setLoading(true)`, o que desmontava a interface inteira das abas e exibia o componente `<Loader2 className="animate-spin" />` em tela cheia por 200 a 400ms, remontando a interface logo em seguida a cada ciclo. Esse comportamento causava o efeito visual de tela piscando sem parar.
+  - **Causa-Raiz 2 (Campanha Travada em RUNNING e Falha de Disparo)**:
+    - O WhatsApp do setor `financeiro` da clínica não estava conectado no momento exato do disparo (estava desconectado e só foi autenticado minutos depois).
+    - O processo em segundo plano executado via Next.js `after()` tentava enviar em blocos de mensagens e aguardava até 10 segundos por tentativa na reconexão do socket do Baileys.
+    - Após 12 tentativas com erro, o tempo limite de execução serverless da Vercel (`maxDuration = 60s`) foi atingido e encerrou o processo antes que o bloco `update` de conclusão pudesse ser executado, deixando a campanha congelada em status `RUNNING` com `sent_count: 0` e `error_count: 12`.
+    - No frontend, o botão de disparo ficava desabilitado em campanhas `RUNNING`, impedindo o usuário de reiniciar ou disparar novamente.
+  - **Solução Cirúrgica e Resiliência**:
+    - **Polling Silencioso**: `fetchData(silent = true)` atualiza os dados em segundo plano sem disparar o spinner nem desmontar a UI, eliminando 100% das oscilações de tela.
+    - **Contador e Indicador de Falhas**: A listagem agora exibe explicitamente `X falha(s)` em vermelho caso mensagens falhem, e suprime o texto de "0 abertos" para WhatsApp (que se aplica exclusivamente a e-mails).
+    - **Ação de Interromper / Resetar**: Criada a ação de reset para rascunho (`handleResetCampaign` / `action: 'reset'`) com botão "Interromper" disponível diretamente no card para campanhas em execução ou travadas.
+    - **Fail-Fast no Background Worker**: Adicionado detector de falhas consecutivas de conexão (se 4 tentativas falharem por WhatsApp desconectado, o disparo é interrompido imediatamente para não estourar o limite de tempo da Vercel) e garantida a finalização de status para `FAILED` ou `COMPLETED` através de `finally` com `createServiceRoleClient`.
+    - **Correção da Campanha da Espaço Incluir**: A campanha `2d59c09b-c7c6-4b0a-991e-61c0f0c64a3c` teve seu status redefinido para `DRAFT`, cessando imediatamente o loop no navegador do cliente e liberando o botão "Disparar WhatsApp".
+
 ### Implementação da Tabela de Campanhas, Disparo de WhatsApp em Lote e Gestão no CRM (Espaço Incluir e Global)
 - **Módulos**:
   - CRM / Campanhas → Banco de Dados / Migrations → `supabase/migrations/20260911_create_campaigns_table.sql`
