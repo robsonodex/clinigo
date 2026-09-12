@@ -243,3 +243,58 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno ao remover administrador' }, { status: 500 })
     }
 }
+
+const updatePasswordSchema = z.object({
+    adminId: z.string().uuid('ID inválido'),
+    password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+})
+
+export async function PATCH(request: NextRequest) {
+    try {
+        const body = await request.json()
+        const { adminId, password } = updatePasswordSchema.parse(body)
+
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+        }
+
+        const supabaseAdmin = createServiceRoleClient() as any
+
+        // Verificar se usuário atual é super admin
+        const { data: currentUser } = await supabaseAdmin
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (currentUser?.role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+        }
+
+        // Atualizar senha no Supabase Auth via admin API
+        const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            adminId,
+            { password }
+        )
+
+        if (updateError) {
+            console.error('[SUPER_ADMIN admins] Erro ao alterar senha:', updateError)
+            return NextResponse.json({ error: 'Erro ao alterar senha: ' + updateError.message }, { status: 400 })
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Senha alterada com sucesso'
+        })
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return NextResponse.json({ error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 })
+        }
+        console.error('[SUPER_ADMIN admins] Patch error:', error)
+        return NextResponse.json({ error: 'Erro interno ao alterar senha' }, { status: 500 })
+    }
+}
+

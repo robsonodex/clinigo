@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Trash2, Shield, Loader2, UserPlus, RefreshCw, ArrowLeft, Search } from 'lucide-react'
+import { Trash2, Shield, Loader2, UserPlus, RefreshCw, ArrowLeft, Search, KeyRound, Eye, EyeOff } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -52,11 +52,20 @@ export default function AdminsPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Estados para formulário de cadastro de novo admin
     const [formData, setFormData] = useState({
         email: '',
         full_name: '',
         password: '',
     })
+
+    // Estados para modal de alteração de senha
+    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+    const [selectedAdminForPassword, setSelectedAdminForPassword] = useState<Admin | null>(null)
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
 
     const fetchAdmins = async () => {
         try {
@@ -132,6 +141,59 @@ export default function AdminsPage() {
 
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Erro ao remover administrador')
+        }
+    }
+
+    const handleOpenPasswordDialog = (admin: Admin) => {
+        setSelectedAdminForPassword(admin)
+        setNewPassword('')
+        setConfirmPassword('')
+        setShowPassword(false)
+        setIsPasswordDialogOpen(true)
+    }
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        if (!selectedAdminForPassword) return
+
+        if (newPassword.length < 6) {
+            toast.error('A senha deve ter no mínimo 6 caracteres')
+            return
+        }
+
+        if (newPassword !== confirmPassword) {
+            toast.error('As senhas digitadas não coincidem')
+            return
+        }
+
+        setIsUpdatingPassword(true)
+
+        try {
+            const res = await fetch('/api/super-admin/admins', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    adminId: selectedAdminForPassword.id,
+                    password: newPassword,
+                }),
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao alterar senha')
+            }
+
+            toast.success(`Senha de ${selectedAdminForPassword.email} alterada com sucesso`)
+            setIsPasswordDialogOpen(false)
+            setNewPassword('')
+            setConfirmPassword('')
+            setSelectedAdminForPassword(null)
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Erro ao alterar senha')
+        } finally {
+            setIsUpdatingPassword(false)
         }
     }
 
@@ -304,7 +366,7 @@ export default function AdminsPage() {
                                         <TableHead className="font-semibold text-slate-700">E-mail</TableHead>
                                         <TableHead className="font-semibold text-slate-700">Cadastrado em</TableHead>
                                         <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                                        <TableHead className="w-[100px] text-right font-semibold text-slate-700">Ações</TableHead>
+                                        <TableHead className="w-[120px] text-right font-semibold text-slate-700">Ações</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -328,35 +390,49 @@ export default function AdminsPage() {
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="min-h-[44px] min-w-[44px] text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                                            aria-label="Remover administrador"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Remover Administrador?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Esta ação é irreversível. O usuário <strong>{admin.email}</strong> terá seu acesso totalmente revogado da plataforma.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel className="min-h-[44px]">Cancelar</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleDelete(admin.id)}
-                                                                className="min-h-[44px] bg-rose-600 hover:bg-rose-700 text-white"
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleOpenPasswordDialog(admin)}
+                                                        className="min-h-[44px] min-w-[44px] text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                                                        title="Alterar Senha"
+                                                        aria-label="Alterar senha do administrador"
+                                                    >
+                                                        <KeyRound className="h-4 w-4" />
+                                                    </Button>
+
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="min-h-[44px] min-w-[44px] text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                                                title="Remover Administrador"
+                                                                aria-label="Remover administrador"
                                                             >
-                                                                Confirmar Remoção
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Remover Administrador?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Esta ação é irreversível. O usuário <strong>{admin.email}</strong> terá seu acesso totalmente revogado da plataforma.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel className="min-h-[44px]">Cancelar</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={() => handleDelete(admin.id)}
+                                                                    className="min-h-[44px] bg-rose-600 hover:bg-rose-700 text-white"
+                                                                >
+                                                                    Confirmar Remoção
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -374,6 +450,87 @@ export default function AdminsPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Modal de Alteração de Senha */}
+            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <KeyRound className="h-5 w-5 text-slate-700" />
+                            Alterar Senha do Administrador
+                        </DialogTitle>
+                        <DialogDescription>
+                            Defina uma nova credencial de acesso para <strong>{selectedAdminForPassword?.email}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleUpdatePassword} className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="new_password">Nova Senha</Label>
+                            <div className="relative">
+                                <Input
+                                    id="new_password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Mínimo 6 caracteres"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                    minLength={6}
+                                    className="min-h-[44px] pr-10 text-base sm:text-sm"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                                    tabIndex={-1}
+                                    aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="confirm_password">Confirmar Nova Senha</Label>
+                            <Input
+                                id="confirm_password"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Repita a nova senha"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                                minLength={6}
+                                className="min-h-[44px] text-base sm:text-sm"
+                            />
+                        </div>
+
+                        <div className="flex gap-2.5 pt-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsPasswordDialogOpen(false)}
+                                className="flex-1 min-h-[44px]"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isUpdatingPassword}
+                                className="flex-1 min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white"
+                            >
+                                {isUpdatingPassword ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Salvando...
+                                    </>
+                                ) : (
+                                    'Salvar Senha'
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

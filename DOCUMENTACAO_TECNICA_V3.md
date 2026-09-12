@@ -1809,4 +1809,14 @@
   - **2. Causa Raiz do Logout**: O mecanismo de sessão única mantinha apenas `clinicaworldsensory@gmail.com` na whitelist de sessões simultâneas. O usuário master `contato@clinigo.app`, ao abrir novas abas ou alternar entre dispositivos, acionava a revogação de `active_sessions.is_active = false`, resultando em deslogamento forçado pelo polling do `useSessionGuard`.
   - **3. Resolução**: Endpoint e interface 100% blindados, tolerantes a falhas e compatíveis com todas as telas dependentes, com liberação de concorrência ativa para os e-mails administrativos master.
 
+### Item 63: Funcionalidade de Alteração de Senha de Super Administradores
+- **Data**: 12/09/2026
+- **Módulos**: Super Admin → Administradores da Plataforma, Autenticação Administrativa Supabase
+- **Caminho Completo**:
+  - Backend → Super Admin Admins API → `app/api/super-admin/admins/route.ts` → `PATCH` (Implementação de método PATCH para redefinição direta de senha de administradores via Supabase Auth Admin Service Role `auth.admin.updateUserById`, com validação estrita Zod de UUID e comprimento mínimo de 6 caracteres)
+  - Frontend → Super Admin Admins Page → `app/dashboard/super/admins/page.tsx` (Inclusão de botão de ação com ícone KeyRound na tabela de administradores; modal institucional Dialog de redefinição com inputs de nova senha e confirmação, toggle de visualização com Eye/EyeOff, validação de correspondência e área de toque PWA >= 44px)
+- **Descrição Técnica**:
+  - Permite aos gestores master redefinir imediatamente a senha de acesso de qualquer super administrador cadastrado de forma direta e segura pelo painel, sem necessidade de links de redefinição por e-mail ou senhas antigas.
+
+
 
