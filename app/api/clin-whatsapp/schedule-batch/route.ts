@@ -44,6 +44,22 @@ function normalizePhone(rawPhone: string): { valid: boolean; formatted: string; 
   return { valid: true, formatted: target }
 }
 
+/**
+ * Interpreta com precisão a data/hora agendada, respeitando o Horário Oficial de Brasília (-03:00)
+ * caso a string recebida não contenha offset explícito de fuso horário.
+ */
+function parseScheduledDate(rawDate: string): Date {
+  const str = String(rawDate).trim()
+  if (str.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(str)) {
+    return new Date(str)
+  }
+  if (str.includes('T')) {
+    const formatted = str.length === 16 ? `${str}:00-03:00` : `${str}-03:00`
+    return new Date(formatted)
+  }
+  return new Date(str)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -103,7 +119,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const scheduledDate = new Date(group.scheduledFor)
+      const scheduledDate = parseScheduledDate(group.scheduledFor)
       if (isNaN(scheduledDate.getTime())) {
         return NextResponse.json(
           { error: `Data/hora inválida no Bloco de Horário ${groupNum}.` },
@@ -113,7 +129,7 @@ export async function POST(request: NextRequest) {
 
       if (scheduledDate <= now) {
         return NextResponse.json(
-          { error: `A data e hora do Bloco ${groupNum} (${scheduledDate.toLocaleString('pt-BR')}) deve ser no futuro.` },
+          { error: `A data e hora do Bloco ${groupNum} (${scheduledDate.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}) deve ser no futuro.` },
           { status: 400 }
         )
       }

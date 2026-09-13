@@ -14,7 +14,11 @@
     - **Multi-Horários e Multi-Contatos**: Interface com blocos independentes para cada horário e lista dinâmica de contatos (Nome + Telefone) por horário.
     - **Endpoint Dedicado em Lote (`/api/clin-whatsapp/schedule-batch`)**: Realiza inserção atômica em lote na tabela `scheduled_whatsapp_messages`, eliminando chamadas repetitivas e garantindo integridade transacional.
     - **Compatibilidade Plena com Cron Job**: Registros são gerados individualmente por combinação (Contato × Horário), permitindo que o cron job existente processe normalmente a cada 10 minutos.
-    - **Padrão Visual SaaS Premium & PWA Mobile**: Remoção absoluta de emojis em toda a aba de mensagens programadas e cabeçalho, substituição por ícones vetoriais Lucide (`Bot`, `CalendarClock`, `UserPlus`, `Trash2`, `Zap`, `Inbox`, `AlertTriangle`, `CheckCircle2`), áreas de toque confortáveis (mínimo 44x44px) e inputs otimizados para mobile.
+    - **Blindagem de Timezone (Horário Oficial de Brasília UTC-3)**:
+      - Correção da dessincronização entre `<input type="datetime-local">` (string pura YYYY-MM-DDTHH:mm sem timezone) e o runtime Node.js da Vercel (operando nativamente em UTC).
+      - Frontend (`app/system-master-hub/clin-whatsapp/page.tsx`): Conversão prévia do horário local selecionado pelo usuário para string ISO completa em UTC (`new Date(scheduledFor).toISOString()`).
+      - Backend (`app/api/clin-whatsapp/schedule-batch/route.ts`): Implementação da função `parseScheduledDate()` com tratamento defensivo que infere e anexa o offset `-03:00` (Horário de Brasília) caso receba string datetime pura sem offset explícito, evitando que o servidor Vercel interprete como UTC e gere antecipação indevida de 3 horas no disparo.
+      - Base de Dados Supabase (`scheduled_whatsapp_messages`): Reajuste pontual dos registros pendentes que haviam sido gravados com desvio de 3 horas, restaurando a conformidade dos disparos reais para as 09:00 e 12:00 programadas.
 
 
 ### Módulo Corporativo de Contratos e Assinatura Eletrônica com Validade Jurídica (Exclusivo World Sensory)

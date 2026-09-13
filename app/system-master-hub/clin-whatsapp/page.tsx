@@ -709,13 +709,17 @@ export default function ClinWhatsAppPage() {
           subject: subject.trim(),
           message: message.trim(),
           imageBase64: imageBase64,
-          scheduleGroups: scheduleGroups.map(g => ({
-            scheduledFor: g.scheduledFor,
-            contacts: g.contacts.map(c => ({
-              name: c.name.trim(),
-              phone: c.phone.trim()
-            }))
-          }))
+          scheduleGroups: scheduleGroups.map(g => {
+            const dateObj = new Date(g.scheduledFor)
+            const scheduledForIso = !isNaN(dateObj.getTime()) ? dateObj.toISOString() : g.scheduledFor
+            return {
+              scheduledFor: scheduledForIso,
+              contacts: g.contacts.map(c => ({
+                name: c.name.trim(),
+                phone: c.phone.trim()
+              }))
+            }
+          })
         })
       })
 
