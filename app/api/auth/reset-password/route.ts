@@ -77,11 +77,11 @@ export async function POST(request: NextRequest) {
 
             await sendMail({
                 to: tokenData.users.email,
-                subject: '✅ Senha Alterada com Sucesso - CliniGo',
+                subject: 'Senha Alterada com Sucesso - CliniGo',
                 html: `
                     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc;">
-                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 28px;">✅ Senha Alterada</h1>
+                        <div style="background: #047857; padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px;">Senha Alterada</h1>
                         </div>
                         <div style="background: white; padding: 40px 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                             <p style="font-size: 18px; color: #1f2937; margin-bottom: 10px;">Olá, <strong>${tokenData.users.full_name}</strong>!</p>

@@ -1942,3 +1942,22 @@
       6. *Termo de Autorização de Uso de Imagem e Voz — Paciente Menor*.
   - **4. Isolamento Multi-tenant Estrito**:
     - O módulo está restrito via `clinica_modulos` e verificação no backend exclusivamente para a clínica World Sensory (`4c13e586-5390-4393-a180-2c9dd7ed81c7`). Nenhuma outra clínica tem acesso ao menu, modelos ou documentos.
+
+### Item 65: Resolução do Erro "Link is not defined" na Tela de Redefinição de Senha e Adequação PWA/Mobile
+- **Data**: 14/09/2026
+- **Módulos**: Autenticação → Recuperação & Redefinição de Senha
+- **Caminho Completo**:
+  - Frontend → Autenticação → Redefinir Senha → `app/(auth)/redefinir-senha/[token]/page.tsx`
+  - Backend → Autenticação → Reset Password API → `app/api/auth/reset-password/route.ts`
+- **Descrição Técnica**:
+  - **1. Causa Raiz do Erro "Link is not defined"**:
+    - O componente `RedefinirSenhaContent` em `app/(auth)/redefinir-senha/[token]/page.tsx` utilizava o componente `<Link>` do Next.js nos estados de token inválido, formulário de redefinição e tela de sucesso.
+    - O arquivo não possuía a declaração de importação `import Link from 'next/link'`.
+    - Ao concluir a validação do token (seja com sucesso ou expiração), a renderização do React tentava acessar a variável global `Link`, disparando a exceção `ReferenceError: Link is not defined` capturada pela tela global de erro `app/error.tsx`.
+  - **2. Resolução Cirúrgica**:
+    - Adicionado `import Link from 'next/link'` no cabeçalho de `app/(auth)/redefinir-senha/[token]/page.tsx`.
+  - **3. Adequação PWA/Mobile e Padrão Visual Premium**:
+    - Ajustado o tamanho da fonte dos campos de senha para `text-base` (16px), prevenindo comportamento indesejado de auto-zoom no Safari iOS.
+    - Redimensionados os botões de alternância de visibilidade de senha (`Eye`/`EyeOff`) com área mínima de toque de 44×44px (`min-w-[44px] min-h-[44px]`) e rótulos de acessibilidade `aria-label`.
+    - Padronização do botão de envio com estilo institucional verde esmeralda (`bg-emerald-700 hover:bg-emerald-800`), sem gradientes espalhafatosos e com altura mínima de 48px.
+    - No e-mail transacional disparado por `app/api/auth/reset-password/route.ts`, foram removidos emojis do assunto e cabeçalho para alinhamento com a diretriz de SaaS corporativo de alto padrão.
