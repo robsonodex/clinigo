@@ -60,9 +60,22 @@ interface ClinicSession {
   connectedAt: string | null
   authState: AuthenticationState | null
   reconnectAttempts: number
+  receivedPendingNotifications: boolean
 }
 
 const sessions = new Map<string, ClinicSession>()
+
+/** Cache em memória de mensagens enviadas para atender retries do Baileys e evitar "Aguardando mensagem" */
+const sentMessagesCache = new Map<string, proto.IMessage>()
+const MAX_CACHED_MESSAGES = 1000
+
+function cacheSentMessage(id: string, message: proto.IMessage) {
+  if (sentMessagesCache.size >= MAX_CACHED_MESSAGES) {
+    const firstKey = sentMessagesCache.keys().next().value
+    if (firstKey) sentMessagesCache.delete(firstKey)
+  }
+  sentMessagesCache.set(id, message)
+}
 
 /** Gera chave composta: clinicId__sector */
 function sessionKey(clinicId: string, sector: string = 'default'): string {
@@ -80,6 +93,7 @@ function getSession(clinicId: string, sector: string = 'default'): ClinicSession
       connectedAt: null,
       authState: null,
       reconnectAttempts: 0,
+      receivedPendingNotifications: false,
     })
   }
   return sessions.get(key)!
@@ -152,13 +166,32 @@ async function removeAuthStateFromStorage(clinicId: string, sector: string = 'de
  * Cria um auth state que vive 100% em memória.
  * Compatível com a interface que Baileys espera.
  */
-function createInMemoryAuthState(existingState?: any): {
+function createInMemoryAuthState(
+  clinicId: string,
+  sector: string = 'default',
+  existingState?: any
+): {
   state: AuthenticationState
   saveCreds: () => Promise<any>
 } {
   // Se não há creds existentes, gerar credenciais iniciais com chaves criptográficas
   const creds = existingState?.creds || initAuthCreds()
   const keys: Record<string, Record<string, any>> = existingState?.keys || {}
+
+  // Timer para debounce de persistência de chaves de criptografia Signal
+  let saveKeysTimer: NodeJS.Timeout | null = null
+
+  const scheduleSaveKeys = () => {
+    if (saveKeysTimer) clearTimeout(saveKeysTimer)
+    saveKeysTimer = setTimeout(async () => {
+      try {
+        const authData = { creds: state.creds, keys }
+        await saveAuthStateToStorage(clinicId, authData, sector)
+      } catch (err) {
+        console.error(`[WhatsApp] Erro ao sincronizar chaves no Storage (${clinicId}/${sector}):`, err)
+      }
+    }, 2000)
+  }
 
   const state: AuthenticationState = {
     creds: creds as any,
@@ -179,11 +212,17 @@ function createInMemoryAuthState(existingState?: any): {
             keys[category][id] = data[category][id]
           }
         }
+        // Quando Baileys rotaciona ou adiciona chaves criptográficas, persistir no Storage
+        scheduleSaveKeys()
       },
     },
   }
 
   const saveCreds = async () => {
+    if (saveKeysTimer) {
+      clearTimeout(saveKeysTimer)
+      saveKeysTimer = null
+    }
     return { creds: state.creds, keys }
   }
 
@@ -203,7 +242,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
 
   // Tentar carregar auth state existente do Storage
   const existingAuth = await loadAuthStateFromStorage(clinicId, sector)
-  const { state, saveCreds } = createInMemoryAuthState(existingAuth || undefined)
+  const { state, saveCreds } = createInMemoryAuthState(clinicId, sector, existingAuth || undefined)
 
   session.authState = state
 
@@ -221,6 +260,13 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
       browser: ['CliniGo', 'Chrome', '120.0.0'],
       generateHighQualityLinkPreview: false,
       syncFullHistory: false,
+      getMessage: async (key: proto.IMessageKey) => {
+        if (key.id) {
+          const cached = sentMessagesCache.get(key.id)
+          if (cached) return cached
+        }
+        return undefined
+      },
     })
 
     session.socket = socket
@@ -229,7 +275,12 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
 
     // QR Code gerado
     socket.ev.on('connection.update', async (update: Partial<ConnectionState>) => {
-      const { connection, lastDisconnect, qr } = update
+      const { connection, lastDisconnect, qr, receivedPendingNotifications } = update
+
+      if (receivedPendingNotifications) {
+        session.receivedPendingNotifications = true
+        console.log(`[WhatsApp] Notificações pendentes recebidas para ${clinicId}/${sector}`)
+      }
 
       if (qr) {
         // Gerar QR como data URI base64
@@ -258,6 +309,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
         session.status = 'open'
         session.qrCode = null
         session.reconnectAttempts = 0
+        session.receivedPendingNotifications = false
 
         // Extrair número do telefone
         const me = socket.user
@@ -323,6 +375,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
 
         session.socket = null
         session.qrCode = null
+        session.receivedPendingNotifications = false
 
         if (shouldReconnect) {
           // Para o Clin bot: reconexão INFINITA (sessão eterna)
@@ -656,7 +709,7 @@ export async function sendWhatsAppMessage(
     // Check if we have auth state
     const authState = await loadAuthStateFromStorage(clinicId, sector)
     if (authState) {
-      // Start session and wait for it to be open (up to 5 seconds)
+      // Start session and wait for it to be open (up to 10 seconds)
       startBaileysSession(clinicId, sector).catch(console.error)
       
       let attempts = 0
@@ -665,6 +718,22 @@ export async function sendWhatsAppMessage(
         session = getSession(clinicId, sector)
         attempts++
       }
+
+      // Aguardar handshake criptográfico Signal estabilizar (até 3s adicionais ou receivedPendingNotifications)
+      if (session.status === 'open' && !session.receivedPendingNotifications) {
+        let settleAttempts = 0
+        while (!session.receivedPendingNotifications && settleAttempts < 6) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          session = getSession(clinicId, sector)
+          settleAttempts++
+        }
+      }
+    }
+  } else if (session.connectedAt) {
+    // Se a sessão acabou de conectar há menos de 2 segundos, aguardar brevemente para troca de chaves Signal
+    const msSinceConnect = Date.now() - new Date(session.connectedAt).getTime()
+    if (msSinceConnect < 2000) {
+      await new Promise(resolve => setTimeout(resolve, 2000 - msSinceConnect))
     }
   }
 
@@ -704,7 +773,10 @@ export async function sendWhatsAppMessage(
       }
     }
 
-    await session.socket.sendMessage(jid, { text: message })
+    const sentMsg = await session.socket.sendMessage(jid, { text: message })
+    if (sentMsg?.key?.id) {
+      cacheSentMessage(sentMsg.key.id, sentMsg.message || { conversation: message })
+    }
     
     // Delay de 1.5s para garantir que a Vercel/Node Event Loop não mate a Serverless function antes do pacote TCP ser despachado pro Meta
     await new Promise(resolve => setTimeout(resolve, 1500))
@@ -978,7 +1050,7 @@ async function handleClinWhatsAppMessage(
     }
 
     if (messages.length === 0) {
-      messages.push('Desculpe, estou com dificuldade técnica. Tente novamente em instantes! 😊')
+      messages.push('Desculpe, estou com dificuldade técnica. Tente novamente em instantes.')
     }
 
     // Adicionar respostas ao histórico
@@ -1025,7 +1097,7 @@ async function handleClinWhatsAppMessage(
 
     // Resposta de fallback imediata enviando o menu principal
     await socket.sendMessage(senderJid, {
-      text: 'Olá! 😊 Como posso te ajudar hoje?\n\n1 — O que é o CliniGo\n2 — Planos e preços\n3 — Demonstração gratuita\n4 — Funcionalidades\n5 — Falar com especialista'
+      text: 'Olá. Como posso ajudar hoje?\n\n1 — O que é o CliniGo\n2 — Planos e preços\n3 — Demonstração gratuita\n4 — Funcionalidades\n5 — Falar com especialista'
     })
   } finally {
     try { await socket.sendPresenceUpdate('paused', senderJid) } catch { /* best effort */ }
