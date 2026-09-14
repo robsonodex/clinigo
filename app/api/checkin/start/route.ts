@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             .select(`
                 id, clinic_id, patient_id, doctor_id,
                 doctor:doctors!appointments_doctor_id_fkey(id, user_id),
-                patient:patients(id, full_name, phone, mobile)
+                patient:patients(id, full_name, phone)
             `)
             .eq('id', appointment_id)
             .eq('clinic_id', currentUser.clinic_id)
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
                 }, { status: 403 })
             }
 
-            const targetPhone = (phone_override || appointment.patient?.mobile || appointment.patient?.phone || '').replace(/\D/g, '')
+            const targetPhone = (phone_override || appointment.patient?.phone || '').replace(/\D/g, '')
             if (!targetPhone || targetPhone.length < 10) {
                 return NextResponse.json({
                     success: false,
