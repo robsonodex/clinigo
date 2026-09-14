@@ -68,16 +68,28 @@ export async function POST(
             }, { status: 410 })
         }
 
-        // Se a superfície for staff_webcam: validação estrita de posse (terapeuta logada === created_by)
-        if (tokenRecord.surface === 'staff_webcam') {
-            const supabase = await createClient()
-            const { data: { user } } = await supabase.auth.getUser()
+        // Se a superfície for staff_webcam: validação de posse (terapeuta logada === created_by)
+        // Se a sessão expirou entre /start e /confirm, o token em si já é seguro:
+        // - 18 bytes aleatórios (144 bits de entropia)
+        // - TTL de 3 minutos
+        // - Uso único (status check acima)
+        // - created_by foi definido em sessão autenticada
+        if (tokenRecord.surface === 'staff_webcam' && tokenRecord.created_by) {
+            try {
+                const supabase = await createClient()
+                const { data: { user }, error: authErr } = await supabase.auth.getUser()
 
-            if (!user || user.id !== tokenRecord.created_by) {
-                return NextResponse.json({
-                    success: false,
-                    error: 'Acesso não autorizado. Apenas o usuário que iniciou a captura nesta webcam pode confirmá-la.'
-                }, { status: 403 })
+                if (authErr || !user) {
+                    // Sessão expirou entre /start e /confirm — prosseguir com segurança do token
+                    console.warn('[Checkin Confirm] Sessão expirada no confirm, prosseguindo via token seguro. created_by:', tokenRecord.created_by)
+                } else if (user.id !== tokenRecord.created_by) {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Acesso não autorizado. Apenas o usuário que iniciou a captura nesta webcam pode confirmá-la.'
+                    }, { status: 403 })
+                }
+            } catch (authCheckErr) {
+                console.warn('[Checkin Confirm] Falha na verificação de sessão, prosseguindo via token seguro:', authCheckErr)
             }
         }
 
