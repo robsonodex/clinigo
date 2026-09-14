@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Save, CreditCard, Building, ShieldCheck, Zap, Mail, Building2, Users } from 'lucide-react'
+import { Save, CreditCard, Building, ShieldCheck, Zap, Mail, Building2, Users, ShieldAlert, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -21,7 +22,7 @@ import { ConsultingRoomsSettings } from './components/ConsultingRoomsSettings'
 import { createClient } from '@/lib/supabase/client'
 import { PROFESSIONAL_LABEL_OPTIONS } from '@/lib/hooks/use-professional-label'
 import { COUNCIL_LABEL_OPTIONS } from '@/lib/hooks/use-council-label'
-import { useRole } from '@/lib/hooks/use-auth'
+import { useAuth, useRole } from '@/lib/hooks/use-auth'
 
 const clinicSettingsSchema = z.object({
     name: z.string().min(3, 'Nome muito curto'),
@@ -54,7 +55,9 @@ export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState('general')
     const [uploadingLogo, setUploadingLogo] = useState(false)
     const [previewLogo, setPreviewLogo] = useState<string | null>(null)
-    const { clinicId: roleClinicId } = useRole()
+    const { isLoading: authLoading } = useAuth()
+    const { clinicId: roleClinicId, isClinicAdmin, isSuperAdmin } = useRole()
+    const isAuthorized = isClinicAdmin || isSuperAdmin
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [professionalLabel, setProfessionalLabel] = useState('Médico(a)')
@@ -198,6 +201,11 @@ export default function SettingsPage() {
         const file = e.target.files?.[0]
         if (!file) return
 
+        if (!isAuthorized) {
+            toast.error('Apenas administradores podem alterar o logo da clínica.')
+            return
+        }
+
         if (!clinicId) {
             toast.error('ID da clínica não encontrado')
             return
@@ -229,6 +237,11 @@ export default function SettingsPage() {
     }
 
     const onSubmit = async (data: ClinicSettingsData) => {
+        if (!isAuthorized) {
+            toast.error('Apenas administradores podem alterar as configurações da clínica.')
+            return
+        }
+
         if (!clinicId) {
             toast.error('ID da clínica não encontrado')
             return
@@ -275,13 +288,41 @@ export default function SettingsPage() {
         }
     }
 
-    if (loading) {
+    if (loading || authLoading) {
         return (
             <div className="space-y-6 max-w-4xl">
                 <div>
                     <h1 className="text-2xl font-bold">Configurações da Clínica</h1>
                     <p className="text-muted-foreground">Carregando...</p>
                 </div>
+            </div>
+        )
+    }
+
+    if (!isAuthorized) {
+        return (
+            <div className="space-y-6 max-w-2xl py-8">
+                <Card className="border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10">
+                    <CardHeader className="text-center pb-2">
+                        <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-3">
+                            <ShieldAlert className="w-6 h-6" />
+                        </div>
+                        <CardTitle className="text-xl text-red-950 dark:text-red-100">
+                            Acesso Restrito ao Administrador
+                        </CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                            Esta área é de acesso exclusivo para administradores da clínica. Alterações cadastrais, identidade visual e nomenclatura institucional só podem ser realizadas por perfis administrativos.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex justify-center pt-4">
+                        <Button asChild variant="outline" className="gap-2">
+                            <Link href="/dashboard">
+                                <ArrowLeft className="w-4 h-4" />
+                                Voltar ao Painel
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         )
     }

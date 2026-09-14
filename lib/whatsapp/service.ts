@@ -257,6 +257,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
       if (connection === 'open') {
         session.status = 'open'
         session.qrCode = null
+        session.reconnectAttempts = 0
 
         // Extrair número do telefone
         const me = socket.user
@@ -283,10 +284,10 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
           updated_at: new Date().toISOString(),
         } as any, { onConflict: 'clinic_id,sector' })
 
-        console.log(`[WhatsApp] ✅ Clínica ${clinicId} conectada (${phoneNumber})`)
+        console.log(`[WhatsApp] Clínica ${clinicId} conectada (${phoneNumber})`)
 
         if (clinicId === CLIN_SESSION_ID) {
-          console.log(`[WhatsApp] ✅ Clin Sales Bot conectado (${phoneNumber}). Handoff de sessão para o Railway em 3s...`)
+          console.log(`[WhatsApp] Clin Sales Bot conectado (${phoneNumber}). Handoff de sessão para o Railway em 3s...`)
           setTimeout(() => {
             try { socket.end(undefined) } catch {}
           }, 3000)
@@ -294,17 +295,38 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
       }
 
       if (connection === 'close') {
-        const statusCode = (lastDisconnect?.error as any)?.output?.statusCode
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut
+        const errorObj = lastDisconnect?.error as any
+        const statusCode = errorObj?.output?.statusCode
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut
+        const shouldReconnect = !isLoggedOut
 
-        console.log(`[WhatsApp] Conexão fechada (${clinicId}), code=${statusCode}, reconnect=${shouldReconnect}`)
+        // Descrição detalhada do motivo para observabilidade e logs
+        let errorDesc = 'Desconexão de rede transitória'
+        if (isLoggedOut) {
+          errorDesc = 'Desconectado pelo celular (Logout explícito - 401)'
+        } else if (statusCode === DisconnectReason.connectionReplaced) {
+          errorDesc = 'Sessão substituída em outro dispositivo (440)'
+        } else if (statusCode === DisconnectReason.timedOut) {
+          errorDesc = 'Tempo limite de conexão esgotado (408)'
+        } else if (statusCode === DisconnectReason.restartRequired) {
+          errorDesc = 'Reinício de conexão solicitado pelo WhatsApp (515)'
+        } else if (statusCode === DisconnectReason.badSession) {
+          errorDesc = 'Sessão corrompida (500)'
+        } else if (statusCode) {
+          errorDesc = `Desconexão com código ${statusCode}`
+        }
+        if (errorObj?.message) {
+          errorDesc += ` (${errorObj.message})`
+        }
+
+        console.log(`[WhatsApp] Conexão fechada (${clinicId}/${sector}), code=${statusCode}, reconnect=${shouldReconnect}, motivo=${errorDesc}`)
 
         session.socket = null
         session.qrCode = null
 
         if (shouldReconnect) {
           // Para o Clin bot: reconexão INFINITA (sessão eterna)
-          // Para clínicas normais: limite de 3 tentativas
+          // Para clínicas normais: limite de 3 tentativas em memória por ciclo
           const isClinBot = clinicId === CLIN_SESSION_ID
           const maxAttempts = isClinBot ? Infinity : MAX_RECONNECT_ATTEMPTS
 
@@ -312,32 +334,31 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
             session.reconnectAttempts++
             session.status = 'connecting'
 
-            // Backoff exponencial: 3s, 6s, 12s, 24s, 30s (max)
+            // Backoff exponencial: 3s, 6s, 12s, 15s (max)
             const delay = isClinBot
               ? Math.min(3000 * Math.pow(2, session.reconnectAttempts - 1), 30000)
-              : 3000
+              : Math.min(3000 * Math.pow(2, session.reconnectAttempts - 1), 15000)
 
-            console.log(`[WhatsApp] 🔄 Reconexão ${session.reconnectAttempts}${isClinBot ? '/∞' : `/${MAX_RECONNECT_ATTEMPTS}`} em ${delay/1000}s (${clinicId}/${sector})`)
+            console.log(`[WhatsApp] Reconexão ${session.reconnectAttempts}${isClinBot ? '/inf' : `/${MAX_RECONNECT_ATTEMPTS}`} em ${delay/1000}s (${clinicId}/${sector})`)
             setTimeout(() => startBaileysSession(clinicId, sector), delay)
           } else {
-            console.log(`[WhatsApp] Máximo de reconexões atingido (${clinicId})`)
+            console.log(`[WhatsApp] Limite de tentativas imediatas em memória atingido (${clinicId}/${sector}). Credenciais mantidas no Storage para auto-restauração.`)
             session.status = 'close'
-            session.phoneNumber = null
-            session.connectedAt = null
             session.reconnectAttempts = 0
-            await removeAuthStateFromStorage(clinicId, sector)
 
+            // NUNCA deletar credenciais do Storage em oscilação de rede!
+            // Atualizar status no banco registrando o motivo sem quebrar emparelhamento
             const supabase = getSupabaseAdmin()
             await supabase.from('whatsapp_sessions').update({
-              status: 'disconnected',
-              disconnected_at: new Date().toISOString(),
-              qr_code: null,
-              phone_number: null,
+              status: 'connecting',
+              error_message: `Pausa de reconexão: ${errorDesc}. Credenciais preservadas para auto-restauração.`,
+              last_health_check: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }).eq('clinic_id', clinicId).eq('sector', sector)
           }
         } else {
-          // Logout explícito (desconectou do celular) — limpar tudo
+          // Logout explícito no celular (Desconectou dispositivo via WhatsApp Web) — limpar credenciais
+          console.log(`[WhatsApp] Logout definitivo pelo aparelho móvel (${clinicId}/${sector})`)
           session.status = 'close'
           session.phoneNumber = null
           session.connectedAt = null
@@ -350,6 +371,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
             disconnected_at: new Date().toISOString(),
             qr_code: null,
             phone_number: null,
+            error_message: errorDesc,
             updated_at: new Date().toISOString(),
           }).eq('clinic_id', clinicId).eq('sector', sector)
         }
@@ -413,7 +435,7 @@ async function startBaileysSession(clinicId: string, sector: string = 'default')
 
 /**
  * Inicia sessão Baileys e retorna QR Code.
- * Se já estiver conectado, retorna status connected.
+ * Se já estiver conectado ou houver credenciais salvas válidas, restaura e retorna status connected.
  */
 export async function createInstanceAndGetQR(clinicId: string, sector: string = 'default', force: boolean = false): Promise<{
   qr_code: string | null
@@ -423,20 +445,20 @@ export async function createInstanceAndGetQR(clinicId: string, sector: string = 
   const instanceName = `baileys_${clinicId.substring(0, 16)}_${sector}`
   const session = getSession(clinicId, sector)
 
-  // Consultar estado da sessão no banco de dados
-  const supabase = getSupabaseAdmin()
-  const { data: dbSession } = await supabase
-    .from('whatsapp_sessions')
-    .select('status')
-    .eq('clinic_id', clinicId)
-    .eq('sector', sector)
-    .maybeSingle()
-
-  // Se force=true ou se o status no banco for disconnected, desconecta e limpa storage para garantir QR novo
-  if (force || !dbSession || dbSession.status === 'disconnected') {
+  // Se force=true, o usuário solicitou expressamente reset/geração de novo QR
+  if (force) {
     await disconnectInstance(clinicId, sector)
   } else if (session.status === 'open' && session.socket) {
     return { qr_code: null, status: 'connected', instance_name: instanceName }
+  } else {
+    // Se force=false, verificar se já temos credenciais válidas no Storage para auto-restaurar
+    try {
+      const authState = await loadAuthStateFromStorage(clinicId, sector)
+      if (authState && authState.creds?.registered && authState.creds?.me?.id) {
+        startBaileysSession(clinicId, sector).catch(console.error)
+        return { qr_code: null, status: 'connected', instance_name: instanceName }
+      }
+    } catch { /* segue para gerar QR */ }
   }
 
   // Iniciar sessão (não bloqueia — QR chega via evento)
@@ -462,6 +484,7 @@ export async function createInstanceAndGetQR(clinicId: string, sector: string = 
 
 /**
  * Verifica status da conexão WhatsApp da clínica.
+ * Prioriza credenciais ativas no Storage para resiliência a Serverless restarts.
  */
 export async function checkInstanceStatus(clinicId: string, sector: string = 'default'): Promise<{
   connected: boolean
@@ -478,7 +501,26 @@ export async function checkInstanceStatus(clinicId: string, sector: string = 'de
     }
   }
 
-  // Consultar status real persistido no banco de dados
+  // 1. Verificar se existe AuthState válido e registrado no Storage (Serverless restart ou socket reciclado)
+  try {
+    const authState = await loadAuthStateFromStorage(clinicId, sector)
+    if (authState && authState.creds?.registered && authState.creds?.me?.id) {
+      if (session.status !== 'connecting' && session.status !== 'open') {
+        startBaileysSession(clinicId, sector).catch(console.error)
+      }
+
+      const phoneNumber = authState.creds.me.id.split(':')[0].split('@')[0]
+      return {
+        connected: true,
+        phone_number: phoneNumber || session.phoneNumber || null,
+        status: 'connected',
+      }
+    }
+  } catch (storageErr) {
+    console.warn(`[WhatsApp] Falha ao verificar Storage (${clinicId}/${sector}):`, storageErr)
+  }
+
+  // 2. Consultar status persistido no banco de dados
   const supabase = getSupabaseAdmin()
   const { data: dbSession } = await supabase
     .from('whatsapp_sessions')
@@ -487,34 +529,11 @@ export async function checkInstanceStatus(clinicId: string, sector: string = 'de
     .eq('sector', sector)
     .maybeSingle()
 
-  // Se no banco de dados não existir ou estiver disconnected/connecting, respeitar rigorosamente o banco
-  if (!dbSession || dbSession.status !== 'connected') {
-    if (session.status === 'qr' || session.status === 'connecting') {
-      return {
-        connected: false,
-        phone_number: null,
-        status: 'connecting',
-      }
-    }
+  if (dbSession?.status === 'connecting' || session.status === 'qr' || session.status === 'connecting') {
     return {
       connected: false,
       phone_number: null,
-      status: 'disconnected',
-    }
-  }
-
-  // Se no banco consta como connected, verificar se existe AuthState válido e registrado no Storage (Serverless restart)
-  const authState = await loadAuthStateFromStorage(clinicId, sector)
-  if (authState && authState.creds?.registered && authState.creds?.me?.id) {
-    if (session.status !== 'connecting' && session.status !== 'open') {
-      startBaileysSession(clinicId, sector).catch(console.error)
-    }
-
-    const phoneNumber = authState.creds.me.id.split(':')[0].split('@')[0]
-    return {
-      connected: true,
-      phone_number: phoneNumber || dbSession.phone_number,
-      status: 'connected',
+      status: 'connecting',
     }
   }
 
@@ -526,7 +545,8 @@ export async function checkInstanceStatus(clinicId: string, sector: string = 'de
 }
 
 /**
- * Retorna todas as sessões WhatsApp de uma clínica (todos os setores).
+ * Retorna todas as sessões WhatsApp de uma clínica (todos os setores),
+ * validando contra o Storage para evitar falsos "desconectado" após reciclagem de função.
  */
 export async function getAllClinicSessions(clinicId: string): Promise<any[]> {
   const supabase = getSupabaseAdmin()
@@ -535,7 +555,28 @@ export async function getAllClinicSessions(clinicId: string): Promise<any[]> {
     .select('*')
     .eq('clinic_id', clinicId)
     .order('sector')
-  return data || []
+
+  if (!data || data.length === 0) return []
+
+  const validatedSessions = await Promise.all(
+    data.map(async (s) => {
+      if (s.status === 'connected') return s
+      try {
+        const authState = await loadAuthStateFromStorage(clinicId, s.sector || 'default')
+        if (authState && authState.creds?.registered && authState.creds?.me?.id) {
+          const phoneNumber = authState.creds.me.id.split(':')[0].split('@')[0]
+          return {
+            ...s,
+            status: 'connected',
+            phone_number: phoneNumber || s.phone_number,
+          }
+        }
+      } catch { /* ignora erro de storage */ }
+      return s
+    })
+  )
+
+  return validatedSessions
 }
 
 // ========== EXPORTED: NOTIFICAÇÃO DE LEAD PARA O ADMIN ==========

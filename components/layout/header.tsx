@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/lib/hooks/use-auth'
+import { useAuth, useRole } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -21,6 +21,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
     const { profile, signOut } = useAuth()
+    const { isClinicAdmin, isSuperAdmin } = useRole()
 
     return (
         <header className="sticky top-0 z-40 bg-white border-b h-16 flex items-center justify-between px-4 lg:px-6">
@@ -71,12 +72,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                                 Meu Perfil
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href="/dashboard/configuracoes" className="w-full flex items-center cursor-pointer">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Configurações
-                            </Link>
-                        </DropdownMenuItem>
+                        {(isClinicAdmin || isSuperAdmin) && (
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/configuracoes" className="w-full flex items-center cursor-pointer">
+                                    <Settings className="w-4 h-4 mr-2" />
+                                    Configurações
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
                             <LogOut className="w-4 h-4 mr-2" />
