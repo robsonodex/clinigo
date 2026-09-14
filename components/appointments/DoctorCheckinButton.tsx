@@ -47,6 +47,8 @@ export interface DoctorCheckinButtonProps {
   status?: string;
   hasReceptionCheckin?: boolean;
   doctorCheckedInAt?: string | null;
+  checkinConfirmedAt?: string | null;
+  checkinMethod?: string | null;
   verificationLevel?: 'UNVERIFIED' | 'FACIAL_ONLY' | 'DOCTOR_ONLY' | 'DOUBLE_VERIFIED' | string;
   repasseAmount?: number;
   isManualUnlocked?: boolean;
@@ -72,6 +74,8 @@ export function DoctorCheckinButton({
   status,
   hasReceptionCheckin = false,
   doctorCheckedInAt,
+  checkinConfirmedAt,
+  checkinMethod,
   verificationLevel = 'UNVERIFIED',
   repasseAmount,
   isManualUnlocked = false,
@@ -86,8 +90,19 @@ export function DoctorCheckinButton({
   const [loading, setLoading] = useState(false);
   const [resolvedPatientId, setResolvedPatientId] = useState<string | undefined>(patientId);
   const [resolvedClinicId, setResolvedClinicId] = useState<string | undefined>(clinicId);
-  const [localCheckedIn, setLocalCheckedIn] = useState(Boolean(doctorCheckedInAt || status === 'IN_PROGRESS' || status === 'COMPLETED'));
-  const [checkinMethodTag, setCheckinMethodTag] = useState<string | null>(null);
+  const hasConfirmedCheckin = Boolean(
+    doctorCheckedInAt || 
+    checkinConfirmedAt || 
+    status === 'IN_PROGRESS' || 
+    status === 'COMPLETED' || 
+    (status === 'WAITING' && checkinConfirmedAt)
+  );
+  const [localCheckedIn, setLocalCheckedIn] = useState(hasConfirmedCheckin);
+  const [checkinMethodTag, setCheckinMethodTag] = useState<string | null>(
+    checkinMethod === 'facial' || verificationLevel === 'FACIAL_DOCTOR' || verificationLevel === 'FACIAL_ONLY'
+      ? 'Biometria Facial'
+      : null
+  );
 
   // Tablets disponíveis
   const [devices, setDevices] = useState<ClinicDeviceItem[]>([]);
@@ -134,10 +149,13 @@ export function DoctorCheckinButton({
   useEffect(() => {
     if (patientId) setResolvedPatientId(patientId);
     if (clinicId) setResolvedClinicId(clinicId);
-    if (doctorCheckedInAt || status === 'IN_PROGRESS' || status === 'COMPLETED') {
+    if (doctorCheckedInAt || checkinConfirmedAt || status === 'IN_PROGRESS' || status === 'COMPLETED' || (status === 'WAITING' && checkinConfirmedAt)) {
       setLocalCheckedIn(true);
     }
-  }, [patientId, clinicId, doctorCheckedInAt, status]);
+    if (checkinMethod === 'facial' || verificationLevel === 'FACIAL_DOCTOR' || verificationLevel === 'FACIAL_ONLY') {
+      setCheckinMethodTag('Biometria Facial');
+    }
+  }, [patientId, clinicId, doctorCheckedInAt, checkinConfirmedAt, status, checkinMethod, verificationLevel]);
 
   // Carregar dados auxiliares se ausentes
   const ensurePatientAndClinicLoaded = useCallback(async () => {

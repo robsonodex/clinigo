@@ -60,7 +60,7 @@ export default function AgendaPage() {
 
   const stats = {
     total: appointments.length,
-    confirmed: appointments.filter(a => a.status === 'CONFIRMED').length,
+    confirmed: appointments.filter(a => ['CONFIRMED', 'WAITING'].includes(a.status) || Boolean((a as any).checkin_confirmed_at)).length,
     pending: appointments.filter(a => ['PENDING', 'PENDING_PAYMENT'].includes(a.status)).length,
     completed: appointments.filter(a => a.status === 'COMPLETED').length,
   }

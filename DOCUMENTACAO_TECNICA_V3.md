@@ -1961,3 +1961,21 @@
     - Redimensionados os botões de alternância de visibilidade de senha (`Eye`/`EyeOff`) com área mínima de toque de 44×44px (`min-w-[44px] min-h-[44px]`) e rótulos de acessibilidade `aria-label`.
     - Padronização do botão de envio com estilo institucional verde esmeralda (`bg-emerald-700 hover:bg-emerald-800`), sem gradientes espalhafatosos e com altura mínima de 48px.
     - No e-mail transacional disparado por `app/api/auth/reset-password/route.ts`, foram removidos emojis do assunto e cabeçalho para alinhamento com a diretriz de SaaS corporativo de alto padrão.
+
+### Item 66: Atualização dos Filtros e Badges da Agenda para Status WAITING e Reconhecimento Imediato de Biometria Facial
+- **Data**: 14/09/2026
+- **Módulos**: Recepção → Agenda (Desktop & PWA Mobile), Check-in Biométrico e Atendimento Clínico
+- **Caminho Completo**:
+  - Frontend → Agenda Desktop → `components/ui/agenda-view.tsx` → `getAppointmentsForSlot()` e `getAppointmentsForDay()`: Inclusão de `a.status === 'WAITING'` e `checkin_confirmed_at` no filtro de confirmados (`confirmationFilter === 'CONFIRMED'`), adição da badge visual "Presente (Biometria)" na grade e atualização dos menus de ação para "Ver Atendimento / Prontuário".
+  - Frontend → Drawer de Detalhes → `components/dashboard/AppointmentDetailsDrawer.tsx` → Passagem explícita de `checkinConfirmedAt` e `checkinMethod` para o `DoctorCheckinButton`.
+  - Frontend → Botão de Check-in Clínico → `components/appointments/DoctorCheckinButton.tsx` → Reconhecimento imediato de agendamento com biometria confirmada ou status `WAITING`, exibindo a tag de presença e botão direto para o prontuário.
+  - Frontend → PWA Mobile Agenda → `app/m/agenda/page.tsx` → Inclusão de agendamentos com biometria e status `WAITING` no contador de confirmados.
+  - Backend → Check-in Confirm API → `app/api/checkin/[token]/confirm/route.ts` → Preenchimento automático de `checked_in_at` simultaneamente a `checkin_confirmed_at`.
+- **Descrição Técnica**:
+  - **1. Causa Raiz da Dúvida da Equipe**:
+    - Ao concluir o check-in por biometria facial, a API atualiza o agendamento de `CONFIRMED` para `WAITING` (sala de espera) com `session_status = 'Presente'`.
+    - No frontend da agenda desktop, o filtro de "Confirmados" só aceitava `CONFIRMED`, `CHECKED_IN` e `COMPLETED`. Quando filtrado por confirmados, o agendamento sumia da grade.
+    - Além disso, o card da agenda não possuía uma badge visual para `WAITING`, fazendo a tag "Confirmado" sumir sem dar feedback visual do check-in biométrico realizado.
+  - **2. Resolução**:
+    - Integrado o status `WAITING` e agendamentos com `checkin_confirmed_at` aos filtros de confirmados e exibida a badge destacada em verde-azulado "Presente (Biometria)".
+    - O drawer e o botão clínico agora mostram a presença biométrica validada e atalho direto para o prontuário.

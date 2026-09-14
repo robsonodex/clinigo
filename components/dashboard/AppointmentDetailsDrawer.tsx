@@ -766,6 +766,8 @@ export function AppointmentDetailsDrawer({
                                             status={appointment.status}
                                             hasReceptionCheckin={Boolean(appointment.checked_in || appointment.checked_in_at)}
                                             doctorCheckedInAt={appointment.doctor_checked_in_at}
+                                            checkinConfirmedAt={appointment.checkin_confirmed_at}
+                                            checkinMethod={appointment.checkin_method}
                                             verificationLevel={appointment.verification_level}
                                             repasseAmount={appointment.repasse_amount}
                                             isManualUnlocked={Boolean(appointment.manual_checkin_unlocked_at)}

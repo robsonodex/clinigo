@@ -215,6 +215,7 @@ export async function POST(
         await (adminDb as any)
             .from('appointments')
             .update({
+                checked_in_at: confirmedAt,
                 checkin_confirmed_at: confirmedAt,
                 checkin_method: 'facial',
                 status: 'WAITING',

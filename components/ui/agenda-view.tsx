@@ -616,7 +616,7 @@ export default function AgendaPage() {
                 if (apptHour !== slotHour) return false
                 if (selectedDoctorIds.length > 0 && !selectedDoctorIds.includes(a.doctor?.id) && !selectedDoctorIds.includes((a as any).co_doctor?.id)) return false
                 if (searchLower && !a.patient?.full_name?.toLowerCase().includes(searchLower)) return false
-                if (confirmationFilter === 'CONFIRMED' && !(a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) return false
+                if (confirmationFilter === 'CONFIRMED' && !(a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED' || a.status === 'WAITING' || (a as any).checkin_confirmed_at)) return false
                 if (confirmationFilter === 'PENDING' && !(a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING')) return false
                 // Se ocultar cancelados estiver ativo, não exibe agendamentos cancelados na grade
                 if (hideCancelled && a.status === 'CANCELLED') return false
@@ -637,7 +637,7 @@ export default function AgendaPage() {
                 (selectedDoctorIds.length === 0 || selectedDoctorIds.includes(a.doctor?.id) || selectedDoctorIds.includes((a as any).co_doctor?.id)) &&
                 (!searchLower || a.patient?.full_name?.toLowerCase().includes(searchLower)) &&
                 (confirmationFilter === 'ALL' ||
-                    (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED')) ||
+                    (confirmationFilter === 'CONFIRMED' && (a.status === 'CONFIRMED' || a.status === 'CHECKED_IN' || a.status === 'COMPLETED' || a.status === 'WAITING' || (a as any).checkin_confirmed_at)) ||
                     (confirmationFilter === 'PENDING' && (a.status === 'SCHEDULED' || a.status === 'PENDING_PAYMENT' || a.status === 'PENDING'))) &&
                 (!hideCancelled || a.status !== 'CANCELLED') &&
                 // Oculta cancelamentos que foram decorrentes da exclusão de uma série recorrente
@@ -1518,7 +1518,13 @@ export default function AgendaPage() {
                                                                                         Co-atendimento
                                                                                     </span>
                                                                                 )}
-                                                                                {appointment.status === 'CONFIRMED' && (
+                                                                                {(appointment.status === 'WAITING' || (appointment as any).checkin_confirmed_at) && (
+                                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-teal-800 dark:text-teal-300 bg-teal-100/90 dark:bg-teal-950/70 px-1.5 py-0.5 rounded">
+                                                                                        <UserCheck className="w-2.5 h-2.5" />
+                                                                                        Presente (Biometria)
+                                                                                    </span>
+                                                                                )}
+                                                                                {appointment.status === 'CONFIRMED' && !(appointment as any).checkin_confirmed_at && (
                                                                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded">
                                                                                         <CheckCircle2 className="w-2.5 h-2.5" />
                                                                                         Confirmado
@@ -1530,7 +1536,7 @@ export default function AgendaPage() {
                                                                                         A Confirmar
                                                                                     </span>
                                                                                 )}
-                                                                                {appointment.status === 'CHECKED_IN' && (
+                                                                                {appointment.status === 'CHECKED_IN' && !(appointment as any).checkin_confirmed_at && (
                                                                                     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-800 dark:text-blue-300 bg-blue-100/90 dark:bg-blue-950/70 px-1.5 py-0.5 rounded">
                                                                                         <UserCheck className="w-2.5 h-2.5" />
                                                                                         Na Recepção
@@ -1591,7 +1597,7 @@ export default function AgendaPage() {
                                                                                                 className="text-emerald-700 dark:text-emerald-400 font-semibold"
                                                                                             >
                                                                                                 <UserCheck className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                                                {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
+                                                                                                {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at || (appointment as any).checkin_confirmed_at || appointment.status === 'WAITING' ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
                                                                                             </DropdownMenuItem>
                                                                                         )}
                                                                                         {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
@@ -1883,7 +1889,7 @@ export default function AgendaPage() {
                                                                                                         className="text-emerald-700 dark:text-emerald-400 font-semibold"
                                                                                                     >
                                                                                                         <UserCheck className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                                                        {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
+                                                                                                        {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at || (appointment as any).checkin_confirmed_at || appointment.status === 'WAITING' ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
                                                                                                     </DropdownMenuItem>
                                                                                                 )}
                                                                                                 {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
