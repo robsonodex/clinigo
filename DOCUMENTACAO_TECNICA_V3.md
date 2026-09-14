@@ -2,6 +2,24 @@
 
 ## Módulos
 
+### Central de Acesso Unificada e Saneamento de Credenciais em Texto Puro no Cliente (Etapa 1)
+- **Módulos**:
+  - Autenticação → Central de Acesso → `app/(auth)/login/page.tsx` (eliminação da trava restritiva de `SUPER_ADMIN` no fluxo principal, conversão da rota `/login` em Central de Acesso com 3 cards dedicados para Portal da Clínica, Portal do Médico e Portal do Paciente, redirecionamento automático inteligente para usuários já autenticados e modal técnico discreto de Super Admin com tecla Escape e clique fora)
+  - Autenticação / Segurança do Cliente → Portal do Médico → `app/medico/page.tsx` (remoção definitiva da gravação e leitura de senha em texto plano no `localStorage`, persistindo estritamente o identificador CRM)
+  - Autenticação / Segurança do Cliente → Portal da Clínica → `app/clinica/page.tsx` (remoção definitiva da gravação e leitura de senha em texto plano no `localStorage`, persistindo estritamente o identificador Email)
+  - Autenticação / Segurança do Cliente → Portal do Paciente → `app/paciente/page.tsx` (remoção definitiva da gravação e leitura de senha em texto plano no `localStorage`, persistindo estritamente o identificador CPF)
+  - Testes Automatizados → `scripts/test_login_central.ts` (suite de 8 testes automatizados validando a integridade das rotas, cards, travas e ausência de senhas no client-side)
+- **Descrição**:
+  - **Demanda Operacional (Bug de Login em /login e Vulnerabilidade de Credenciais)**:
+    - A rota `/login` possuía uma trava de verificação de role que forçava logout e impedia o login de qualquer usuário que não fosse `SUPER_ADMIN`.
+    - Ao mesmo tempo, os 3 portais (`/medico`, `/clinica`, `/paciente`) gravavam a senha do usuário em texto puro no `localStorage` ao marcar "lembrar de mim".
+  - **Solução Implementada (Etapa 1)**:
+    - **Saneamento de Segurança**: Todas as funções de "lembrar de mim" foram corrigidas cirurgicamente para reter apenas os identificadores institucionais (Email, CRM e CPF), sem jamais armazenar senhas no navegador.
+    - **Central de Acesso Premium**: `/login` reformulado como hub de seleção elegante, sério e corporativo com 3 cards de portais (`/clinica`, `/medico`, `/paciente`), zero emojis, ícones vetoriais Lucide, 100% responsivo mobile/tablet/desktop e área de toque mínima de 44x44px.
+    - **Acesso Técnico Super Admin**: Modal discreto protegido no rodapé, fechável via Escape, clique no backdrop ou botão X, validando a credencial via Supabase Auth e liberando acesso ao `/dashboard`.
+    - **Redirecionamento Automático**: Acesso direto a `/login` por usuários já autenticados redireciona instantaneamente para seus respectivos destinos (`/dashboard` para corpo clínico/gestão ou `/paciente/meu-painel` para pacientes).
+
+
 ### Agendamento em Lote Multi-Horário e Multi-Contato no Clin WhatsApp (Master Hub)
 - **Módulos**:
   - Master Hub → Clin WhatsApp → API de Lote → `app/api/clin-whatsapp/schedule-batch/route.ts` (`POST` com autenticação Super Admin, validação atômica de payload, sanitização/normalização de telefones para padrão internacional DDI 55 + DDD, cálculo cartesiano de destinatários por horário e inserção em lote na fila `scheduled_whatsapp_messages`)
@@ -1979,3 +1997,20 @@
   - **2. Resolução**:
     - Integrado o status `WAITING` e agendamentos com `checkin_confirmed_at` aos filtros de confirmados e exibida a badge destacada em verde-azulado "Presente (Biometria)".
     - O drawer e o botão clínico agora mostram a presença biométrica validada e atalho direto para o prontuário.
+
+### Item 67: Blindagem de Segurança RLS e Restrição Exclusiva das Configurações da Clínica para Administradores
+- **Data**: 14/09/2026
+- **Módulos**: Segurança & Governança → Configurações da Clínica, Permissões de Acesso e Supabase RLS
+- **Caminho Completo**:
+  - Banco de Dados → Supabase RLS → `supabase/migrations/20260914160000_restrict_clinics_update_to_admins.sql`: Remoção da política permissiva `Users can update their clinic` e criação de política RLS estrita `clinic_admin_update_own_clinic` exigindo `role IN ('CLINIC_ADMIN', 'SUPER_ADMIN')`.
+  - Frontend → Menu do Usuário → `components/layout/header.tsx` → `Header`: Ocultação do link "Configurações" no dropdown para usuários sem perfil administrativo (`isClinicAdmin || isSuperAdmin`).
+  - Frontend → Configurações da Clínica → `app/dashboard/(clinic)/configuracoes/page.tsx` → `SettingsPage`: Implementação de guarda de autorização via `useRole()`, bloqueio de upload de logo, bloqueio de submissão do formulário e exibição de card "Acesso Restrito ao Administrador" para não-administradores.
+  - Banco de Dados → Restauração de Dados → Tabela `clinics`: Restauração da nomenclatura da clínica WorldSensory para `professional_label = 'Terapeuta'` e `council_label = 'CREFITO'`.
+- **Descrição Técnica**:
+  - **1. Causa Raiz da Vulnerabilidade**:
+    - A tabela `clinics` continha uma política RLS legada (`Users can update their clinic`) que permitia a qualquer usuário autenticado vinculado à clínica executar operações de `UPDATE` diretamente via cliente/PostgREST sem checagem de role.
+    - Na interface, a tela `/dashboard/configuracoes` e o menu do cabeçalho não restringiam a rota por perfil, permitindo que profissionais acessassem a página e alterassem parâmetros globais da instituição.
+  - **2. Resolução Cirúrgica**:
+    - **Banco de Dados (RLS)**: Revogadas as políticas permissivas na tabela `clinics`. Criada política unificada exigindo que `auth.uid()` pertença a um usuário com `role IN ('CLINIC_ADMIN', 'SUPER_ADMIN')`.
+    - **Interface**: A tela de configurações agora valida o papel do usuário. Se não for administrador, renderiza estado de acesso negado sem carregar ou permitir submissão de formulário. O cabeçalho oculta o atalho para não-administradores.
+    - **Restauração**: A nomenclatura da WorldSensory foi revertida com sucesso para 'Terapeuta'.

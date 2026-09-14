@@ -22,11 +22,11 @@ export default function MedicoLoginPage() {
             const saved = localStorage.getItem('clinigo_remember_medico')
             if (saved) {
                 const parsed = JSON.parse(saved)
-                setFormData({
+                setFormData(prev => ({
+                    ...prev,
                     crm: parsed.crm || '',
-                    password: parsed.password || '',
                     rememberMe: true
-                })
+                }))
             }
         } catch (e) {
             console.error('Failed to load remembered credentials', e)
@@ -65,8 +65,7 @@ export default function MedicoLoginPage() {
 
             if (formData.rememberMe) {
                 localStorage.setItem('clinigo_remember_medico', JSON.stringify({
-                    crm: formData.crm,
-                    password: formData.password
+                    crm: formData.crm
                 }))
             } else {
                 localStorage.removeItem('clinigo_remember_medico')

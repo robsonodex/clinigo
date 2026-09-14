@@ -121,6 +121,19 @@ export const helpItems: HelpItem[] = [
         tags: ['onboarding', 'passo a passo', 'primeiros passos', 'configuração inicial'],
         aliases: ['checklist-inicial', 'onboarding']
     },
+    {
+        id: 'central-de-acesso',
+        title: 'Central de Acesso e Portais de Login',
+        category: 'Principal',
+        icon: Key,
+        href: '/login',
+        whatIsIt: 'Página centralizada de autenticação que direciona cada usuário para o seu ambiente específico: Portal da Clínica (/clinica) para gestão e recepção, Portal do Médico (/medico) para o corpo clínico e terapeutas, e Portal do Paciente (/paciente) para agendamentos e histórico médico.',
+        whenToUse: 'Sempre que novos usuários precisarem acessar o sistema ou quando houver dúvida sobre qual link compartilhar com secretárias, médicos ou pacientes.',
+        howToUse: 'Acesse /login na barra de navegação e selecione o cartão correspondente ao seu perfil. Usuários que já estiverem logados serão automaticamente direcionados para o seu respectivo painel.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
+        tags: ['login', 'acesso', 'portais', 'entrar', 'médico', 'clínica', 'paciente']
+    },
 
     // ==========================================
     // 2. AGENDAMENTO
@@ -1145,6 +1158,19 @@ export const helpItems: HelpItem[] = [
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
         tags: ['minha clínica', 'dados institucionais', 'cnpj', 'endereço', 'cabeçalho']
+    },
+    {
+        id: 'nomenclatura-profissional',
+        title: 'Nomenclatura Profissional e Conselho de Classe',
+        category: 'Configurações',
+        icon: Users,
+        href: '/dashboard/configuracoes',
+        whatIsIt: 'Configuração dos termos oficiais adotados pela clínica para designar seus especialistas (ex: Terapeuta, Médico, Psicólogo, Fisioterapeuta) e respectivos conselhos de classe (CRM, CRP, CREFITO).',
+        whenToUse: 'Ao definir ou padronizar os termos exibidos em botões, agendas, cabeçalhos, evoluções e documentos em toda a plataforma.',
+        howToUse: 'Acesse Configurações → Informações Gerais → Nomenclatura Profissional, selecione o termo padrão ou cadastre um personalizado e salve. Recurso restrito exclusivamente a administradores.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN'],
+        tags: ['nomenclatura', 'terapeuta', 'médico', 'psicólogo', 'conselho', 'crp', 'crefito', 'crm']
     },
     {
         id: 'logo-clinica-co-branding',

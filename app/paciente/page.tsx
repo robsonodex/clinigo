@@ -22,11 +22,11 @@ export default function PacienteLoginPage() {
             const saved = localStorage.getItem('clinigo_remember_paciente')
             if (saved) {
                 const parsed = JSON.parse(saved)
-                setFormData({
+                setFormData(prev => ({
+                    ...prev,
                     cpf: parsed.cpf || '',
-                    password: parsed.password || '',
                     rememberMe: true
-                })
+                }))
             }
         } catch (e) {
             console.error('Failed to load remembered credentials', e)
@@ -79,8 +79,7 @@ export default function PacienteLoginPage() {
 
             if (formData.rememberMe) {
                 localStorage.setItem('clinigo_remember_paciente', JSON.stringify({
-                    cpf: formData.cpf,
-                    password: formData.password
+                    cpf: formData.cpf
                 }))
             } else {
                 localStorage.removeItem('clinigo_remember_paciente')
