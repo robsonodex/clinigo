@@ -2014,3 +2014,43 @@
     - **Banco de Dados (RLS)**: Revogadas as políticas permissivas na tabela `clinics`. Criada política unificada exigindo que `auth.uid()` pertença a um usuário com `role IN ('CLINIC_ADMIN', 'SUPER_ADMIN')`.
     - **Interface**: A tela de configurações agora valida o papel do usuário. Se não for administrador, renderiza estado de acesso negado sem carregar ou permitir submissão de formulário. O cabeçalho oculta o atalho para não-administradores.
     - **Restauração**: A nomenclatura da WorldSensory foi revertida com sucesso para 'Terapeuta'.
+
+### Item 68: Inativação de Pacientes para Pausa de Comunicações/Campanhas WhatsApp e Conformidade LGPD
+- **Data**: 14/09/2026
+- **Módulos**: Pacientes, Recepção, CRM de Campanhas WhatsApp, Conformidade LGPD
+- **Caminho Completo**:
+  - Banco de Dados → Supabase Migration → `supabase/migrations/20260914200000_ensure_patient_is_active_column.sql`: Garantia idempotente das colunas `is_active` (BOOLEAN DEFAULT TRUE), `deleted_at` (TIMESTAMPTZ) e `is_anonymized` (BOOLEAN DEFAULT FALSE) com índices otimizados.
+  - Backend → Pacientes API → `app/api/patients/route.ts` → `GET`: Suporte ao parâmetro `?include_inactive=true` para alternância de visualização na listagem.
+  - Backend → Paciente Individual API → `app/api/patients/[id]/route.ts` → `GET`: Ajuste na consulta para permitir que administradores e recepcionistas visualizem e reativem prontuários pausados.
+  - Backend → CRM Campanhas API → `app/api/crm/campaigns/route.ts` → `POST`: Inclusão obrigatória de `.eq('is_active', true)` tanto na contagem de destinatários quanto no loop de despacho do WhatsApp, impedindo o disparo de mensagens para pacientes pausados ou em reavaliação.
+  - Frontend → Ficha do Paciente → `app/dashboard/(clinic)/pacientes/[id]/page.tsx`: Inclusão de botão "Inativar Paciente" / "Reativar Paciente" no cabeçalho, com diálogo de confirmação formal, badge visual "Inativo" e atualização de estado em tempo real.
+  - Frontend → Listagem de Pacientes → `app/dashboard/(clinic)/pacientes/page.tsx`: Inclusão de filtro toggle "Exibir inativos", badge "Inativo" nas visualizações em grade e tabela, e área de toque PWA mobile >= 44px.
+- **Descrição Técnica**:
+  - **1. Demanda e Contexto (Espaço Incluir & Geral)**:
+    - Pacientes que pausam terapias para novas avaliações ou aguardam retorno não devem receber mensagens de campanhas promocionais ou avisos rotineiros.
+    - Diferenciação clara entre pausa de comunicações (inativação via `is_active = false`, preservando histórico clínico e prontuários) e exclusão/anonimização definitiva por direito do titular (LGPD via `deleted_at` e anonimização de PII).
+  - **2. Resolução Cirúrgica**:
+    - Campanhas do CRM e notificações rotineiras filtram estritamente pacientes com `is_active = true`.
+    - Pacientes inativos permanecem acessíveis aos terapeutas e recepcionistas mediante filtro ou busca direta, podendo ser reativados com um clique.
+
+### Item 69: Resolução da Mensagem WhatsApp "Aguardando Mensagem" via getMessage, Sincronização Contínua de Chaves Signal e Estabilização Pós-Conexão
+- **Data**: 14/09/2026
+- **Módulos**: Integrações → WhatsApp (Baileys), CRM de Campanhas, Notificações e Agendamentos
+- **Caminho Completo**:
+  - Backend → Serviço Baileys WhatsApp → `lib/whatsapp/service.ts`:
+    - Interface `ClinicSession` e gerenciamento de estado: Adicionado controle do evento `receivedPendingNotifications` e estado de inicialização.
+    - Armazenamento de Mensagens para Retries: Implementado `sentMessagesCache` (LRU em memória de 1.000 mensagens) e configurado o callback `getMessage` em `makeWASocket` para responder às requisições de reenvio de envelopes criptografados (`retry receipt`) do WhatsApp.
+    - Persistência Contínua de Chaves Criptográficas Signal: No método `state.keys.set(...)` de `createInMemoryAuthState`, implementado debounce de 2 segundos para sincronização automática de chaves pré-computadas (`pre-keys`) e sessões rotacionadas no Supabase Storage (`whatsapp-sessions/{clinicId}/{sector}_auth_info.json`), eliminando descompasso de chaves após reinício de Serverless ou novas instâncias.
+    - Estabilização da Conexão Pós-Abertura: Em `sendWhatsAppMessage`, adicionada espera de estabilização do handshake criptográfico (até 3 segundos ou disparo de `receivedPendingNotifications`) antes de despachar a primeira mensagem da fila.
+    - Padrão Visual Institucional: Sanitizadas mensagens de fallback do chatbot removendo emojis residuais.
+- **Descrição Técnica**:
+  - **1. Causa Raiz do "Aguardando mensagem. Essa ação pode levar alguns instantes"**:
+    - Ao disparar campanhas ou mensagens pelo Baileys em ambiente Serverless ou container que acabou de conectar, o socket atingia `connection === 'open'`, mas o canal de criptografia de ponta a ponta (Signal protocol) da Meta ainda estava em processo de troca de pré-chaves públicas e ratchets com os aparelhos dos destinatários (em especial iOS e versões multi-dispositivo).
+    - O aparelho do destinatário não conseguia descriptografar a mensagem de imediato e enviava um pacote de solicitação de reenvio (`type: retry`).
+    - Como o `makeWASocket` não possuía o handler `getMessage` implementado, o Baileys não conseguia recuperar o conteúdo da mensagem enviada para criptografá-la com o novo ratchet, deixando o destinatário indefinidamente com a tela de "Aguardando mensagem".
+    - Adicionalmente, quando o Baileys gerava novas chaves de criptografia via `state.keys.set`, elas não eram salvas no Supabase Storage. Qualquer nova conexão ou reinício de função carregava o arquivo de autenticação desatualizado, quebrando a cadeia de criptografia.
+  - **2. Resolução Cirúrgica**:
+    - O `getMessage` agora consulta o cache de mensagens enviadas e devolve a mensagem exata para reenvio instantâneo pelo Baileys.
+    - As chaves de criptografia rotacionadas são persistidas com debounce no Supabase Storage.
+    - O disparo aguarda a estabilização do handshake Signal antes de emitir a primeira mensagem.
+
