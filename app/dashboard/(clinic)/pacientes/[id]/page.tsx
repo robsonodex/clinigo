@@ -16,6 +16,8 @@ import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDro
 import {
     ArrowLeft,
     User,
+    UserX,
+    UserCheck,
     Phone,
     Mail,
     Calendar,
@@ -67,6 +69,7 @@ interface Patient {
     birth_date?: string;
     address?: string;
     created_at: string;
+    is_active?: boolean;
     billing_type?: 'particular' | 'convenio' | 'ambos';
     health_insurance_id?: string;
     insurance_card_number?: string;
@@ -162,6 +165,7 @@ export default function PatientDetailsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [hasPsicomotricidade, setHasPsicomotricidade] = useState(false);
     const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [isTogglingActive, setIsTogglingActive] = useState(false);
 
     const copyToClipboard = (text: string, fieldId: string) => {
         if (!text) return;
@@ -659,6 +663,40 @@ export default function PatientDetailsPage() {
         toast.success('Biometria cadastrada com sucesso!');
     };
 
+    const handleToggleActive = async () => {
+        if (!patient) return;
+        const currentActive = (patient as any).is_active !== false;
+        const action = currentActive ? 'inativar' : 'reativar';
+        const confirmMsg = currentActive
+            ? `Tem certeza que deseja inativar ${patient.full_name}? O paciente deixara de receber mensagens de campanhas e nao aparecera na lista principal.`
+            : `Deseja reativar ${patient.full_name}? O paciente voltara a aparecer na lista principal e podera receber mensagens.`;
+        if (!confirm(confirmMsg)) return;
+
+        setIsTogglingActive(true);
+        try {
+            const res = await fetch(`/api/patients/${patientId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !currentActive }),
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || `Erro ao ${action} paciente`);
+            }
+            const updated = await res.json();
+            setPatient(updated);
+            toast.success(
+                currentActive
+                    ? 'Paciente inativado com sucesso. Nao recebera mais mensagens de campanha.'
+                    : 'Paciente reativado com sucesso.'
+            );
+        } catch (err: any) {
+            toast.error(err.message || `Erro ao ${action} paciente`);
+        } finally {
+            setIsTogglingActive(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -707,16 +745,22 @@ export default function PatientDetailsPage() {
                                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                                     {typeof patient.full_name === 'object' ? '-' : (patient.full_name || 'Paciente')}
                                 </h1>
+                                {(patient as any).is_active === false && (
+                                    <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60 font-medium text-xs">
+                                        <UserX className="w-3.5 h-3.5 mr-1" />
+                                        Inativo
+                                    </Badge>
+                                )}
                                 {patient.billing_type === 'convenio' ? (
                                     <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60 font-medium text-xs">
                                         <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
-                                        Convênio: {patient.health_insurances?.name || 'Convênio'}
+                                        Convenio: {patient.health_insurances?.name || 'Convenio'}
                                         {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
                                     </Badge>
                                 ) : patient.billing_type === 'ambos' ? (
                                     <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/80 dark:border-sky-800/60 font-medium text-xs">
                                         <Sparkles className="w-3.5 h-3.5 mr-1 text-sky-600 dark:text-sky-400" />
-                                        Particular & {patient.health_insurances?.name || 'Convênio'}
+                                        Particular & {patient.health_insurances?.name || 'Convenio'}
                                         {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
                                     </Badge>
                                 ) : (
@@ -763,6 +807,26 @@ export default function PatientDetailsPage() {
                     >
                         <Edit2 className="w-4 h-4 text-slate-500" />
                         <span>Editar</span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={handleToggleActive}
+                        disabled={isTogglingActive}
+                        className={cn(
+                            "min-h-[44px] px-3.5 font-medium text-sm gap-2 border transition-all",
+                            (patient as any).is_active === false
+                                ? 'border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                                : 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                        )}
+                    >
+                        {isTogglingActive ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (patient as any).is_active === false ? (
+                            <UserCheck className="w-4 h-4" />
+                        ) : (
+                            <UserX className="w-4 h-4" />
+                        )}
+                        <span>{(patient as any).is_active === false ? 'Reativar' : 'Inativar'}</span>
                     </Button>
                 </div>
             </div>

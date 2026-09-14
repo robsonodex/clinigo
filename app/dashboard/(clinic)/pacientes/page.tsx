@@ -67,6 +67,7 @@ import {
     X,
     Filter,
     ExternalLink,
+    UserX,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -115,6 +116,7 @@ interface Patient {
     date_of_birth?: string
     gender?: string
     created_at: string
+    is_active?: boolean
     billing_type?: 'particular' | 'convenio' | 'ambos'
     health_insurance_id?: string
     insurance_card_number?: string
@@ -153,6 +155,7 @@ export default function PacientesPage() {
     const [showPromoteModal, setShowPromoteModal] = useState(false)
     const [promoteProgram, setPromoteProgram] = useState('')
     const [isPromoting, setIsPromoting] = useState(false)
+    const [showInactive, setShowInactive] = useState(false)
 
     const handlePromotePatientToStudent = async () => {
         if (!patientToPromote) return
@@ -269,9 +272,14 @@ export default function PacientesPage() {
 
     // Fetch patients from real API (limit 1000 to retrieve full patient roster)
     const { data: patients, isLoading } = useQuery<Patient[]>({
-        queryKey: ['patients', search],
+        queryKey: ['patients', search, showInactive],
         queryFn: async () => {
-            const response = await fetch(`/api/patients?search=${encodeURIComponent(search)}&limit=1000`)
+            const params = new URLSearchParams({
+                search,
+                limit: '1000',
+            })
+            if (showInactive) params.set('include_inactive', 'true')
+            const response = await fetch(`/api/patients?${params.toString()}`)
             if (!response.ok) {
                 if (response.status === 404) return []
                 throw new Error('Failed to fetch patients')
@@ -646,6 +654,21 @@ export default function PacientesPage() {
                         Ambos
                     </button>
                 </div>
+
+                {/* Toggle para incluir pacientes inativos */}
+                <button
+                    type="button"
+                    onClick={() => setShowInactive(!showInactive)}
+                    className={cn(
+                        "px-3 py-1.5 text-xs font-semibold rounded-xl transition-all min-h-[36px] flex items-center gap-1.5 border shrink-0",
+                        showInactive
+                            ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                            : "bg-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-amber-300"
+                    )}
+                >
+                    <UserX className="w-3.5 h-3.5" />
+                    {showInactive ? 'Inativos visíveis' : 'Mostrar inativos'}
+                </button>
             </div>
 
             {/* Diretório Alfabético A-Z Inteligente */}
@@ -833,6 +856,12 @@ export default function PacientesPage() {
                                                                     <Cake className="w-2.5 h-2.5" />
                                                                 </span>
                                                             )}
+                                                            {patient.is_active === false && (
+                                                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 px-1.5 py-0.2 rounded">
+                                                                    <UserX className="w-2.5 h-2.5" />
+                                                                    Inativo
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1011,6 +1040,12 @@ export default function PacientesPage() {
                                                                     ) : (
                                                                         <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/50 px-1.5 py-0.5 rounded-md">
                                                                             Particular
+                                                                        </span>
+                                                                    )}
+                                                                    {patient.is_active === false && (
+                                                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 px-1.5 py-0.5 rounded-md">
+                                                                            <UserX className="w-3 h-3" />
+                                                                            Inativo
                                                                         </span>
                                                                     )}
                                                                 </div>

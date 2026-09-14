@@ -66,8 +66,14 @@ export async function GET(request: Request) {
             query = query.eq('clinic_id', userData.clinic_id)
         }
 
-        // Não listar pacientes excluídos (soft-deleted) ou inativos
-        query = query.is('deleted_at', null).neq('is_active', false)
+        // Não listar pacientes excluídos (soft-deleted)
+        query = query.is('deleted_at', null)
+
+        // Por padrao, oculta pacientes inativos. Permite listar com ?include_inactive=true
+        const includeInactive = searchParams.get('include_inactive') === 'true'
+        if (!includeInactive) {
+            query = query.neq('is_active', false)
+        }
 
         // DOCTOR não-coordenador: filtrar apenas pacientes com agendamentos do doctor
         if (userData.role === 'DOCTOR') {

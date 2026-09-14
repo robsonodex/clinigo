@@ -26,7 +26,6 @@ export async function GET(
                 )
             `)
             .eq('id', id)
-            .eq('is_active', true)
             .single()
 
         if (error || !patient) {

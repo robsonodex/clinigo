@@ -187,6 +187,7 @@ export async function POST(request: NextRequest) {
                     .from('patients')
                     .select('id, full_name, phone')
                     .eq('clinic_id', clinicId)
+                    .eq('is_active', true)
                     .is('deleted_at', null)
 
                 targetPatients = patients || []
@@ -408,6 +409,7 @@ export async function POST(request: NextRequest) {
                 .from('patients')
                 .select('id', { count: 'exact', head: true })
                 .eq('clinic_id', clinicId)
+                .eq('is_active', true)
                 .is('deleted_at', null)
             totalRecipients = count || 0
         } else if (target_tags.length > 0) {
