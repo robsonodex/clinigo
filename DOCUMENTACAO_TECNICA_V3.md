@@ -2054,3 +2054,52 @@
     - As chaves de criptografia rotacionadas são persistidas com debounce no Supabase Storage.
     - O disparo aguarda a estabilização do handshake Signal antes de emitir a primeira mensagem.
 
+### Item 70: Redesenho SaaS Premium das Ocorrências Clínicas e Adequação Mobile PWA no Detalhamento do Agendamento
+- **Data**: 15/09/2026
+- **Módulos**: Recepção → Agenda (Detalhes do Agendamento), Atendimento Clínico
+- **Caminho Completo**:
+  - Recepção → Agenda → `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer` (reestruturação do card de Ocorrências Clínicas e Justificativas, responsividade mobile do `SheetContent` e refinamento de border-radius nos modais)
+- **Descrição Técnica**:
+  - **1. Causa Raiz da Desconfiguração Visual**:
+    - Os botões "Terapeuta Desmarcou", "Falta Justificada" e "Falta Não Justificada" estavam estruturados em `grid-cols-1 sm:grid-cols-3` dentro de um drawer lateral de 400-540px.
+    - Em telas desktop, o breakpoint `sm:` ativava a distribuição em 3 colunas (apenas ~140px por botão). Como os textos possuem entre 17 e 22 caracteres e os botões tinham `whitespace-nowrap`, os textos e ícones transbordavam, sobrepondo-se uns aos outros e saindo dos limites do drawer.
+    - Estética defasada com bordas pastel saturadas e ausência de hierarquia corporativa.
+  - **2. Resolução Cirúrgica Padrão SaaS Internacional**:
+    - Substituição da grade comprimida por um painel exclusivo de Exceções de Agenda (`rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 p-3`).
+    - Cada ocorrência clínica foi convertida em um card de ação com largura total (`w-full`), altura mínima de toque de 46px (conforme padrão PWA touch target >= 44px), ícone vetorial temático em badge neutro, título institucional em negrito, microcopy descritivo elegante ("Registro de cancelamento motivado pela profissional", "Ausência do paciente com justificativa ou atestado", "Não comparecimento sem aviso prévio (No-Show)") e seta de fluxo (`ChevronRight`).
+    - O `SheetContent` teve a largura ajustada para `w-full sm:max-w-[540px]`, eliminando riscos de overflow horizontal em aparelhos móveis menores que 400px.
+    - Correção de classes nos diálogos de confirmação (`rounded-xl`).
+
+### Item 71: Liberação do Botão "Excluir da Grade" para Agendamentos Confirmados e Pendentes na Agenda
+- **Data**: 15/09/2026
+- **Módulos**: Recepção → Agenda (Grid Semanal e Diário), Detalhes do Agendamento
+- **Caminho Completo**:
+  - Recepção → Agenda → `components/ui/agenda-view.tsx` → `AgendaPage` (liberação do item "Excluir da Grade" no menu de 3 pontos em visualização semanal e diária, e atualização dos textos do diálogo)
+  - Recepção → Agenda → `components/dashboard/AppointmentDetailsDrawer.tsx` → `AppointmentDetailsDrawer` (inclusão do botão destrutivo "Excluir Agendamento da Grade" nas ações do agendamento)
+- **Descrição Técnica**:
+  - **1. Causa Raiz do Bloqueio**:
+    - O botão/item de menu "Excluir da Grade" no menu de ações rápidas (3 pontos) dos cards de agendamento estava condicionado estritamente a `{isCancelled && (...)`.
+    - No drawer lateral de detalhes, o botão de exclusão só era renderizado dentro do banner de cancelamento (`appointment.status === 'CANCELLED'`).
+    - Consequentemente, para qualquer agendamento confirmado, pendente ou agendado por engano/duplicidade (como o caso reportado pela Viviane da World Sensory), o botão de exclusão simplesmente não aparecia, obrigando o usuário a cancelar primeiro ou impedindo a limpeza direta da grade.
+  - **2. Resolução Cirúrgica**:
+    - No menu de 3 pontos dos agendamentos (semana e dia), "Excluir da Grade" foi posicionado após o divisor (`DropdownMenuSeparator`), disponível para qualquer agendamento ativo.
+    - No drawer lateral, adicionado botão institucional "Excluir Agendamento da Grade" com confirmação formal.
+    - O diálogo de confirmação foi padronizado com alerta explícito e institucional de desvinculação e liberação de horário.
+
+### Item 72: Blindagem de Permissões de Exclusão de Agendamentos (Recepção e Admin Autorizados / Médicos e Psicólogos Bloqueados)
+- **Data**: 15/09/2026
+- **Módulos**: Recepção → Agenda, Atendimento Clínico, API de Agendamentos
+- **Caminho Completo**:
+  - Recepção → Agenda → `components/ui/agenda-view.tsx` → `canDeleteAppointment` (validação de `isReceptionist`, `isClinicAdmin`, `isSuperAdmin` via `useRole()` e `profile.role`)
+  - Recepção → Agenda → `components/dashboard/AppointmentDetailsDrawer.tsx` → `canDelete` (validação de `isReceptionist` e administradores, ocultação absoluta para `DOCTOR`)
+  - Backend → API → `app/api/appointments/[id]/route.ts` → `DELETE` (verificação de perfil na sessão autenticada, retornando HTTP 403 Forbidden para perfis `DOCTOR`)
+- **Descrição Técnica**:
+  - **1. Contexto e Requisitos de Segurança Médica**:
+    - Profissionais de atendimento clínico (`DOCTOR` / Psicólogos / Terapeutas) não devem possuir permissão para excluir agendamentos da grade institucional, preservando a integridade do histórico clínico e fluxo financeiro da clínica.
+    - Perfis de Recepção (`RECEPTIONIST`) e Administradores (`CLINIC_ADMIN` e `SUPER_ADMIN`), por sua vez, devem conseguir excluir agendamentos duplicados ou incorretos (ex.: perfil `atworldsensory@hotmail.com`).
+  - **2. Resolução Cirúrgica**:
+    - Ajustado o cálculo de permissões no frontend para consumir simultaneamente o hook `useRole()` e o objeto `profile` retornado por `useAuth()`.
+    - No backend (`/api/appointments/[id]`), a rota `DELETE` valida a role do usuário no banco (`users.role`); se for diferente de `SUPER_ADMIN`, `CLINIC_ADMIN` ou `RECEPTIONIST`, a requisição é abortada imediatamente com código 403.
+
+
+

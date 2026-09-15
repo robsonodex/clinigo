@@ -404,25 +404,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             throw new NotFoundError('Agendamento')
         }
 
-        // Validação de segurança e isolamento multi-tenant
+        // Validação de permissão: apenas Administração e Recepção podem excluir agendamentos da grade
+        const allowedRoles = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']
+        if (!allowedRoles.includes(currentUser.role)) {
+            throw new ForbiddenError('Acesso negado: apenas a administração e recepção possuem permissão para excluir agendamentos da grade')
+        }
+
+        // Validação de isolamento multi-tenant
         if (currentUser.role !== 'SUPER_ADMIN') {
             const headerClinicId = request.headers.get('x-clinic-id')
             const effectiveClinicId = headerClinicId || currentUser.clinic_id
 
             if (appointment.clinic_id !== effectiveClinicId && appointment.clinic_id !== currentUser.clinic_id) {
                 throw new ForbiddenError('Acesso negado: agendamento pertence a outra clínica')
-            }
-
-            if (currentUser.role === 'DOCTOR') {
-                const { data: doctor } = await adminDb
-                    .from('doctors')
-                    .select('id')
-                    .eq('user_id', currentUser.id)
-                    .single()
-
-                if (doctor?.id !== appointment.doctor_id) {
-                    throw new ForbiddenError('Acesso negado: profissional não autorizado')
-                }
             }
         }
 

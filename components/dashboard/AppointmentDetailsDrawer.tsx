@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/use-auth'
+import { useAuth, useRole } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -37,7 +37,7 @@ import { Separator } from '@/components/ui/separator'
 import { 
     Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, 
     Send, DollarSign, Trash2, AlertTriangle, Users, GraduationCap, BookOpen, 
-    SlidersHorizontal, Lock, Unlock, CalendarX, UserX, XCircle, FileText 
+    SlidersHorizontal, Lock, Unlock, CalendarX, UserX, XCircle, FileText, ChevronRight 
 } from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
@@ -53,8 +53,11 @@ export function AppointmentDetailsDrawer({
     onClose
 }: AppointmentDetailsDrawerProps) {
     const { user, profile } = useAuth()
+    const { isClinicAdmin, isReceptionist: isRoleReceptionist, isSuperAdmin } = useRole()
     const router = useRouter()
-    const isAdmin = profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN'
+    const isAdmin = Boolean(isClinicAdmin || isSuperAdmin || profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN')
+    const isReceptionist = Boolean(isRoleReceptionist || profile?.role === 'RECEPTIONIST')
+    const canDelete = isAdmin || isReceptionist
 
     const [appointment, setAppointment] = useState<any>(null)
     const [qrCode, setQrCode] = useState<any>(null)
@@ -501,7 +504,7 @@ export function AppointmentDetailsDrawer({
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+            <SheetContent className="w-full sm:max-w-[540px] overflow-y-auto">
                 <SheetHeader>
                     <SheetTitle>Detalhes do Agendamento</SheetTitle>
                     <SheetDescription>
@@ -574,17 +577,19 @@ export function AppointmentDetailsDrawer({
                                     </div>
                                 </div>
 
-                                <div className="pt-2">
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => setConfirmDeleteOpen(true)}
-                                        className="w-full gap-1.5 font-semibold"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        <span>Excluir da Grade</span>
-                                    </Button>
-                                </div>
+                                {canDelete && (
+                                    <div className="pt-2">
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setConfirmDeleteOpen(true)}
+                                            className="w-full gap-1.5 font-semibold"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span>Excluir da Grade</span>
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         ) : appointment.appointment_type === 'SUPERVISION' ? (
                             <div className="space-y-4">
@@ -638,17 +643,19 @@ export function AppointmentDetailsDrawer({
                                     </div>
                                 </div>
 
-                                <div className="pt-2">
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => setConfirmDeleteOpen(true)}
-                                        className="w-full gap-1.5 font-semibold"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        <span>Excluir da Grade</span>
-                                    </Button>
-                                </div>
+                                {canDelete && (
+                                    <div className="pt-2">
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setConfirmDeleteOpen(true)}
+                                            className="w-full gap-1.5 font-semibold"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span>Excluir da Grade</span>
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -710,15 +717,17 @@ export function AppointmentDetailsDrawer({
                                         <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
                                         <span>Informações do Cancelamento</span>
                                     </h4>
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => setConfirmDeleteOpen(true)}
-                                        className="h-8 text-xs font-semibold gap-1.5 rounded-lg px-2.5 shadow-xs"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Excluir da Grade</span>
-                                    </Button>
+                                    {canDelete && (
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setConfirmDeleteOpen(true)}
+                                            className="h-8 text-xs font-semibold gap-1.5 rounded-lg px-2.5 shadow-xs"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <span>Excluir da Grade</span>
+                                        </Button>
+                                    )}
                                 </div>
                                 <div className="space-y-1.5 text-xs">
                                     <div>
@@ -780,46 +789,85 @@ export function AppointmentDetailsDrawer({
                                     </div>
 
                                     {/* DEMAIS OPÇÕES CLÍNICAS: TERAPEUTA DESMARCOU, FALTA JUSTIFICADA, FALTA NÃO JUSTIFICADA */}
-                                    <div className="pt-1 space-y-1.5">
-                                        <span className="text-[11px] font-medium text-muted-foreground block">
-                                            Ocorrências Clínicas e Justificativas:
-                                        </span>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                            <Button
+                                    <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-3 space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                                Ocorrências Clínicas e Justificativas
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground font-medium">
+                                                Exceções de Agenda
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {/* Opção 1: Terapeuta Desmarcou */}
+                                            <button
                                                 type="button"
-                                                variant="outline"
-                                                size="sm"
                                                 onClick={() => setTherapistCancelModalOpen(true)}
                                                 disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
-                                                className="min-h-[44px] text-xs font-semibold border-amber-300 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:hover:bg-amber-950/30 dark:hover:text-amber-300 text-amber-700 dark:text-amber-400 gap-1.5 justify-center"
+                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-amber-200/80 bg-white hover:bg-amber-50/70 text-amber-900 dark:border-amber-900/50 dark:bg-slate-900 dark:hover:bg-amber-950/25 dark:text-amber-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                             >
-                                                <CalendarX className="w-3.5 h-3.5 shrink-0" />
-                                                <span>Terapeuta Desmarcou</span>
-                                            </Button>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="w-7 h-7 rounded-md bg-amber-100/80 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                                        <CalendarX className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-semibold leading-tight truncate text-amber-950 dark:text-amber-200">
+                                                            Terapeuta Desmarcou
+                                                        </p>
+                                                        <p className="text-[10px] text-amber-800/80 dark:text-amber-400/80 mt-0.5 truncate">
+                                                            Registro de cancelamento motivado pela profissional
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-amber-500/70 group-hover:text-amber-700 dark:text-amber-400/70 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                                            </button>
 
-                                            <Button
+                                            {/* Opção 2: Falta Justificada */}
+                                            <button
                                                 type="button"
-                                                variant="outline"
-                                                size="sm"
                                                 onClick={() => setJustifiedAbsenceModalOpen(true)}
                                                 disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
-                                                className="min-h-[44px] text-xs font-semibold border-blue-300 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300 text-blue-700 dark:text-blue-400 gap-1.5 justify-center"
+                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-sky-200/80 bg-white hover:bg-sky-50/70 text-sky-900 dark:border-sky-900/50 dark:bg-slate-900 dark:hover:bg-sky-950/25 dark:text-sky-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                             >
-                                                <UserX className="w-3.5 h-3.5 shrink-0" />
-                                                <span>Falta Justificada</span>
-                                            </Button>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="w-7 h-7 rounded-md bg-sky-100/80 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center shrink-0">
+                                                        <UserX className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-semibold leading-tight truncate text-sky-950 dark:text-sky-200">
+                                                            Falta Justificada
+                                                        </p>
+                                                        <p className="text-[10px] text-sky-800/80 dark:text-sky-400/80 mt-0.5 truncate">
+                                                            Ausência do paciente com justificativa ou atestado
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-sky-500/70 group-hover:text-sky-700 dark:text-sky-400/70 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                                            </button>
 
-                                            <Button
+                                            {/* Opção 3: Falta Não Justificada */}
+                                            <button
                                                 type="button"
-                                                variant="outline"
-                                                size="sm"
                                                 onClick={() => setUnjustifiedAbsenceModalOpen(true)}
                                                 disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
-                                                className="min-h-[44px] text-xs font-semibold border-rose-300 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-800 dark:hover:bg-rose-950/30 dark:hover:text-rose-300 text-rose-700 dark:text-rose-400 gap-1.5 justify-center"
+                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-rose-200/80 bg-white hover:bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-slate-900 dark:hover:bg-rose-950/25 dark:text-rose-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                             >
-                                                <XCircle className="w-3.5 h-3.5 shrink-0" />
-                                                <span>Falta Não Justificada</span>
-                                            </Button>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="w-7 h-7 rounded-md bg-rose-100/80 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                                        <XCircle className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-semibold leading-tight truncate text-rose-950 dark:text-rose-200">
+                                                            Falta Não Justificada
+                                                        </p>
+                                                        <p className="text-[10px] text-rose-800/80 dark:text-rose-400/80 mt-0.5 truncate">
+                                                            Não comparecimento sem aviso prévio (No-Show)
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-rose-500/70 group-hover:text-rose-700 dark:text-rose-400/70 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                                            </button>
                                         </div>
                                     </div>
 
@@ -944,16 +992,27 @@ export function AppointmentDetailsDrawer({
                                     </div>
                                 </div>
 
-                                <div className="pt-2">
+                                <div className="pt-2 space-y-2">
                                     <Button 
                                         variant="outline" 
-                                        className="w-full" 
+                                        className="w-full min-h-[44px]" 
                                         onClick={handleResendWhatsApp}
                                         disabled={isResending}
                                     >
                                         <Send className="h-4 w-4 mr-2" />
                                         {isResending ? 'Enviando...' : 'Reenviar WhatsApp'}
                                     </Button>
+
+                                    {canDelete && appointment.status !== 'CANCELLED' && (
+                                        <Button
+                                            variant="outline"
+                                            className="w-full min-h-[44px] text-destructive hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/60 font-semibold gap-2"
+                                            onClick={() => setConfirmDeleteOpen(true)}
+                                        >
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                            <span>Excluir Agendamento da Grade</span>
+                                        </Button>
+                                    )}
                                 </div>
                             </>
                         )}
@@ -1234,7 +1293,7 @@ export function AppointmentDetailsDrawer({
                             <Button
                                 onClick={() => handleClinicalStatusAction('THERAPIST_CANCELLED', therapistCancelReason)}
                                 disabled={processingClinicalStatus}
-                                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
                             >
                                 {processingClinicalStatus ? (
                                     <>
@@ -1282,7 +1341,7 @@ export function AppointmentDetailsDrawer({
                             <Button
                                 onClick={() => handleClinicalStatusAction('JUSTIFIED_ABSENCE', justifiedAbsenceReason)}
                                 disabled={processingClinicalStatus}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
                             >
                                 {processingClinicalStatus ? (
                                     <>
@@ -1326,7 +1385,7 @@ export function AppointmentDetailsDrawer({
                             <Button
                                 onClick={() => handleClinicalStatusAction('UNJUSTIFIED_ABSENCE')}
                                 disabled={processingClinicalStatus}
-                                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
                             >
                                 {processingClinicalStatus ? (
                                     <>

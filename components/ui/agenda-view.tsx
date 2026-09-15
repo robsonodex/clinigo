@@ -74,6 +74,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
@@ -258,8 +259,8 @@ function calcEndTime(startTime: string, durationMinutes: number = 60): string {
 export default function AgendaPage() {
     const profLabel = useProfessionalLabel()
     const router = useRouter()
-    const { isDoctor, isCoordinator } = useRole()
-    const { user } = useAuth()
+    const { isDoctor, isCoordinator, isClinicAdmin, isReceptionist, isSuperAdmin } = useRole()
+    const { user, profile } = useAuth()
     const [selectedDate, setSelectedDate] = useState(new Date())
     const [view, setView] = useState<'week' | 'day'>('week')
     const [calendarStyle, setCalendarStyle] = useState<'standard' | 'timeline'>('standard')
@@ -321,8 +322,14 @@ export default function AgendaPage() {
     const [isSubmittingBulletin, setIsSubmittingBulletin] = useState(false)
     const [unreadBulletinsCount, setUnreadBulletinsCount] = useState(0)
 
-    const isClinicAdmin = user?.role === 'CLINIC_ADMIN' || user?.role === 'SUPER_ADMIN'
-    const isReceptionist = user?.role === 'RECEPTIONIST'
+    const canDeleteAppointment = Boolean(
+        isClinicAdmin ||
+        isReceptionist ||
+        isSuperAdmin ||
+        profile?.role === 'CLINIC_ADMIN' ||
+        profile?.role === 'RECEPTIONIST' ||
+        profile?.role === 'SUPER_ADMIN'
+    )
     const canManageBulletins = isClinicAdmin || isReceptionist || isDoctor || isCoordinator || !!user
 
     // Fetch Bulletins (Mural)
@@ -1551,7 +1558,7 @@ export default function AgendaPage() {
                                                                             )}
 
                                                                             <div className="flex items-center justify-end mt-1">
-                                                                                {isCancelled && (
+                                                                                {canDeleteAppointment && isCancelled && (
                                                                                     <Button
                                                                                         variant="ghost"
                                                                                         size="icon"
@@ -1579,15 +1586,6 @@ export default function AgendaPage() {
                                                                                             <User className="w-4 h-4 mr-2" />
                                                                                             Ver Detalhes
                                                                                         </DropdownMenuItem>
-                                                                                        {isCancelled && (
-                                                                                            <DropdownMenuItem
-                                                                                                className="text-destructive focus:text-destructive font-semibold"
-                                                                                                onClick={() => setDeletingAppointmentId(appointment.id)}
-                                                                                            >
-                                                                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                                                                Excluir da Grade
-                                                                                            </DropdownMenuItem>
-                                                                                        )}
                                                                                         {appointment.status !== 'CANCELLED' && (
                                                                                             <DropdownMenuItem 
                                                                                                 onClick={() => {
@@ -1602,7 +1600,7 @@ export default function AgendaPage() {
                                                                                         )}
                                                                                         {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
                                                                                             <DropdownMenuItem
-                                                                                                className="text-destructive focus:text-destructive"
+                                                                                                className="text-amber-700 dark:text-amber-400 font-medium"
                                                                                                 onClick={() => setCancellingId(appointment.id)}
                                                                                             >
                                                                                                 <X className="w-4 h-4 mr-2" />
@@ -1618,7 +1616,7 @@ export default function AgendaPage() {
                                                                                                     Editar Série
                                                                                                 </DropdownMenuItem>
                                                                                                 <DropdownMenuItem
-                                                                                                    className="text-destructive focus:text-destructive"
+                                                                                                    className="text-amber-700 dark:text-amber-400 font-medium"
                                                                                                     onClick={() => {
                                                                                                         setCancellingSeriesId((appointment as any).series_id)
                                                                                                         setCancelSeriesStep(1)
@@ -1626,6 +1624,18 @@ export default function AgendaPage() {
                                                                                                 >
                                                                                                     <Repeat className="w-4 h-4 mr-2" />
                                                                                                     Cancelar Série
+                                                                                                </DropdownMenuItem>
+                                                                                            </>
+                                                                                        )}
+                                                                                        {canDeleteAppointment && (
+                                                                                            <>
+                                                                                                <DropdownMenuSeparator />
+                                                                                                <DropdownMenuItem
+                                                                                                    className="text-destructive focus:text-destructive font-semibold"
+                                                                                                    onClick={() => setDeletingAppointmentId(appointment.id)}
+                                                                                                >
+                                                                                                    <Trash2 className="w-4 h-4 mr-2" />
+                                                                                                    Excluir da Grade
                                                                                                 </DropdownMenuItem>
                                                                                             </>
                                                                                         )}
@@ -1843,7 +1853,7 @@ export default function AgendaPage() {
                                                                                     </div>
                                                                                     {/* Menu de ações */}
                                                                                     <div className="absolute top-0 right-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center">
-                                                                                        {isCancelled && (
+                                                                                        {canDeleteAppointment && isCancelled && (
                                                                                             <Button
                                                                                                 variant="ghost"
                                                                                                 size="icon"
@@ -1871,15 +1881,6 @@ export default function AgendaPage() {
                                                                                                     <User className="w-4 h-4 mr-2" />
                                                                                                     Ver Detalhes
                                                                                                 </DropdownMenuItem>
-                                                                                                {isCancelled && (
-                                                                                                    <DropdownMenuItem
-                                                                                                        className="text-destructive focus:text-destructive font-semibold"
-                                                                                                        onClick={() => setDeletingAppointmentId(appointment.id)}
-                                                                                                    >
-                                                                                                        <Trash2 className="w-4 h-4 mr-2" />
-                                                                                                        Excluir da Grade
-                                                                                                    </DropdownMenuItem>
-                                                                                                )}
                                                                                                 {appointment.status !== 'CANCELLED' && (
                                                                                                     <DropdownMenuItem 
                                                                                                         onClick={() => {
@@ -1894,7 +1895,7 @@ export default function AgendaPage() {
                                                                                                 )}
                                                                                                 {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
                                                                                                     <DropdownMenuItem
-                                                                                                        className="text-destructive focus:text-destructive"
+                                                                                                        className="text-amber-700 dark:text-amber-400 font-medium"
                                                                                                         onClick={() => setCancellingId(appointment.id)}
                                                                                                     >
                                                                                                         <X className="w-4 h-4 mr-2" />
@@ -1910,7 +1911,7 @@ export default function AgendaPage() {
                                                                                                             Editar Série
                                                                                                         </DropdownMenuItem>
                                                                                                         <DropdownMenuItem
-                                                                                                            className="text-destructive focus:text-destructive"
+                                                                                                            className="text-amber-700 dark:text-amber-400 font-medium"
                                                                                                             onClick={() => {
                                                                                                                 setCancellingSeriesId((appointment as any).series_id)
                                                                                                                 setCancelSeriesStep(1)
@@ -1918,6 +1919,18 @@ export default function AgendaPage() {
                                                                                                         >
                                                                                                             <Repeat className="w-4 h-4 mr-2" />
                                                                                                             Cancelar Série
+                                                                                                        </DropdownMenuItem>
+                                                                                                    </>
+                                                                                                )}
+                                                                                                {canDeleteAppointment && (
+                                                                                                    <>
+                                                                                                        <DropdownMenuSeparator />
+                                                                                                        <DropdownMenuItem
+                                                                                                            className="text-destructive focus:text-destructive font-semibold"
+                                                                                                            onClick={() => setDeletingAppointmentId(appointment.id)}
+                                                                                                        >
+                                                                                                            <Trash2 className="w-4 h-4 mr-2" />
+                                                                                                            Excluir da Grade
                                                                                                         </DropdownMenuItem>
                                                                                                     </>
                                                                                                 )}
@@ -2009,21 +2022,21 @@ export default function AgendaPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog de Exclusão Individual de Agendamento Cancelado */}
+            {/* Dialog de Exclusão Individual de Agendamento da Grade */}
             <Dialog open={!!deletingAppointmentId} onOpenChange={(open) => !open && setDeletingAppointmentId(null)}>
                 <DialogContent className="max-w-md rounded-2xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-destructive">
                             <Trash2 className="h-5 w-5" />
-                            <span>Excluir Agendamento Cancelado</span>
+                            <span>Excluir Agendamento da Grade</span>
                         </DialogTitle>
                         <DialogDescription>
-                            Tem certeza que deseja remover este agendamento cancelado da grade? Esta ação liberará permanentemente o horário na agenda.
+                            Tem certeza que deseja remover este agendamento da grade? Esta ação liberará permanentemente o horário na agenda e não pode ser desfeita.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-2">
                         <div className="bg-red-50 dark:bg-red-950/30 p-3.5 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-800 dark:text-red-300">
-                            O agendamento cancelado será apagado do sistema e o horário voltará a ficar disponível para novos atendimentos.
+                            O agendamento será apagado do sistema e o horário voltará a ficar disponível para novos atendimentos.
                         </div>
                     </div>
                     <DialogFooter className="gap-2 sm:gap-0">
