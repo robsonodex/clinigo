@@ -29,6 +29,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         const supabase = await createClient()
 
+        const ESCOLAR_OU_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+        const isEspacoIncluir = clinicId === ESCOLAR_OU_INCLUIR_CLINIC_ID
+
         // Check authorization
         if (userRole !== 'SUPER_ADMIN') {
             const { data: user } = await supabase
@@ -40,6 +43,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             if ((user as any)?.clinic_id !== clinicId) {
                 throw new ForbiddenError('Acesso negado')
             }
+
+            // Apenas CLINIC_ADMIN pode alterar em lote, exceto na Espaço Incluir onde RECEPTIONIST é autorizado
+            if (userRole === 'RECEPTIONIST' && !isEspacoIncluir) {
+                throw new ForbiddenError('Acesso negado')
+            }
         }
 
         const body = await request.json()
@@ -49,7 +57,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             throw new BadRequestError('Nenhum médico selecionado')
         }
 
-        const { error } = await (supabase
+        const dbClient = (userRole === 'RECEPTIONIST' && isEspacoIncluir)
+            ? createServiceRoleClient()
+            : supabase
+
+        const { error } = await (dbClient
             .from('doctors') as any)
             .update({ is_accepting_appointments })
             .in('id', ids)

@@ -2,6 +2,26 @@
 
 ## Módulos
 
+### Liberação Cirúrgica de Edição de Perfil de Terapeutas para Comercial e Recepção (Exclusivo Espaço Incluir)
+- **Módulos**:
+  - Layout / Menu Lateral → `components/layout/sidebar.tsx` → `Sidebar()` (liberação condicional do menu "Terapeutas" para `role === 'RECEPTIONIST'` estritamente quando `effectiveClinicId === '5163c916-8b82-4d80-8a71-01726836ee46'`; bloqueio mantido para todas as outras clínicas)
+  - Corpo Clínico / API → Detalhes & Ações → `app/api/doctors/detail/route.ts` → `handlePatchDoctor()` (autorização de escrita `PATCH` para `role === 'RECEPTIONIST'` condicionada à igualdade de `clinic_id` no tenant da Espaço Incluir, com bypass seguro de RLS via `createServiceRoleClient()` mantendo filtro estrito `.eq('id', doctorId).eq('clinic_id', doctorData.clinic_id)`)
+  - Corpo Clínico / API → ID Específico → `app/api/doctors/[uuid]/route.ts` → `PATCH` (autorização e persistência cirúrgica para `RECEPTIONIST` no tenant Espaço Incluir com contenção de `clinic_id`)
+  - Corpo Clínico / API → Catch-all → `app/api/doctors/[...slug]/route.ts` → `handlePatchDoctor()` (autorização e persistência cirúrgica para `RECEPTIONIST` no tenant Espaço Incluir com contenção de `clinic_id`)
+  - Corpo Clínico / API → Lote → `app/api/clinics/[id]/doctors/bulk/route.ts` → `PATCH` (autorização para alteração de disponibilidade em lote para `RECEPTIONIST` exclusivamente no tenant Espaço Incluir)
+  - Interface / Corpo Clínico → Perfil Detalhado → `app/dashboard/(clinic)/medicos/[id]/page.tsx` → `DoctorProfilePage()` (inclusão do botão "Editar Perfil" com acionamento do `DoctorFormDialog` no cabeçalho de ações da terapeuta)
+  - Interface / Corpo Clínico → Listagem → `app/dashboard/(clinic)/medicos/page.tsx` → `DoctorsPage()` (nome do profissional transformado em link para `/dashboard/medicos/[id]`, blindagem de botões destrutivos de exclusão para ficarem restritos exclusivamente a `CLINIC_ADMIN` e `SUPER_ADMIN`)
+  - Testes / Segurança Multi-Tenant → `scripts/test-doctor-profile-isolation.ts` (suite de 6 testes automatizados validando que Comercial e Recepção da Espaço Incluir podem editar seus terapeutas, mas são bloqueados em tentativas cross-clínica, e que recepcionistas de qualquer outra clínica permanecem 100% bloqueadas)
+- **Descrição**:
+  - **Demanda Operacional (Espaço Incluir)**:
+    - O administrador Jeferson Bochetti solicitou formalmente a liberação de acesso para que os setores Comercial e Recepção da clínica Espaço Incluir possam editar o perfil cadastral das terapeutas.
+    - Como ambas as credenciais operam no banco com o papel `role: 'RECEPTIONIST'`, o menu "Terapeutas" e as operações de escrita estavam bloqueadas pelas restrições padrão de `CLINIC_ADMIN` do CliniGo.
+  - **Solução Implementada**:
+    - **Isolamento Absoluto (Zero Vazamento Multi-Tenant)**: Todas as condições de autorização (menu lateral e endpoints de API `PATCH`) validam o UUID imutável da clínica Espaço Incluir (`5163c916-8b82-4d80-8a71-01726836ee46`). Para 100% das outras clínicas na plataforma, recepcionistas não têm acesso ao menu nem permissão de escrita.
+    - **Bypass de RLS com Contenção**: Utilização de `createServiceRoleClient()` estritamente nas requisições autorizadas da Espaço Incluir para superar o bloqueio nativo do RLS nas tabelas `doctors` e `users`, sempre ancorado às cláusulas `.eq('id', doctorId).eq('clinic_id', doctorData.clinic_id)`.
+    - **Segurança LGPD**: Nenhuma checagem nominal ou de PII em condicionais de código.
+    - **Padrão SaaS Premium e Botões**: Botões de exclusão mantidos protegidos para administradores; botão "Editar Perfil" integrado na visualização detalhada da terapeuta.
+
 ### Central de Acesso Unificada e Saneamento de Credenciais em Texto Puro no Cliente (Etapa 1)
 - **Módulos**:
   - Autenticação → Central de Acesso → `app/(auth)/login/page.tsx` (eliminação da trava restritiva de `SUPER_ADMIN` no fluxo principal, conversão da rota `/login` em Central de Acesso com 3 cards dedicados para Portal da Clínica, Portal do Médico e Portal do Paciente, redirecionamento automático inteligente para usuários já autenticados e modal técnico discreto de Super Admin com tecla Escape e clique fora)

@@ -314,21 +314,49 @@ async function handlePatchDoctor(request: NextRequest, doctorId: string) {
 
     const doctorData = doctor as any
 
-    if (userRole === 'DOCTOR') {
-        if (doctorData.user_id !== userId) {
-            throw new ForbiddenError('Você só pode editar seu próprio perfil')
-        }
-    } else if (userRole === 'CLINIC_ADMIN') {
+    const ESCOLAR_OU_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+    let userClinicId = request.headers.get('x-clinic-id')
+    if (!userClinicId && userId) {
         const { data: currentUser } = await supabase
             .from('users')
             .select('clinic_id')
             .eq('id', userId)
             .single()
+        userClinicId = (currentUser as any)?.clinic_id
+    }
 
-        if ((currentUser as any)?.clinic_id !== doctorData.clinic_id) {
+    const isEspacoIncluir = (userClinicId === ESCOLAR_OU_INCLUIR_CLINIC_ID || doctorData.clinic_id === ESCOLAR_OU_INCLUIR_CLINIC_ID) && userClinicId === doctorData.clinic_id
+
+    let isAuthorized = false
+
+    if (userRole === 'SUPER_ADMIN') {
+        isAuthorized = true
+    } else if (userRole === 'DOCTOR') {
+        if (doctorData.user_id === userId) {
+            isAuthorized = true
+        } else {
+            throw new ForbiddenError('Você só pode editar seu próprio perfil')
+        }
+    } else if (userRole === 'CLINIC_ADMIN') {
+        if (userClinicId === doctorData.clinic_id) {
+            isAuthorized = true
+        } else {
             throw new ForbiddenError('Acesso negado')
         }
+    } else if (userRole === 'RECEPTIONIST' && isEspacoIncluir) {
+        // Exclusivo Espaço Incluir: Comercial e Recepção autorizados a editar perfil de terapeutas da mesma clínica
+        isAuthorized = true
     }
+
+    if (!isAuthorized) {
+        throw new ForbiddenError('Acesso negado')
+    }
+
+    // Se for RECEPTIONIST no Espaço Incluir, usar adminClient (Service Role) com filtro rigoroso de clinic_id
+    // para contornar RLS que restringe UPDATE direto na tabela doctors/users
+    const dbClient = (userRole === 'RECEPTIONIST' && isEspacoIncluir)
+        ? createServiceRoleClient()
+        : supabase
 
     const doctorFields: Record<string, unknown> = {}
     const userFields: Record<string, unknown> = {}
@@ -352,24 +380,26 @@ async function handlePatchDoctor(request: NextRequest, doctorId: string) {
     if (body.phone !== undefined) userFields.phone = body.phone
 
     if (Object.keys(doctorFields).length > 0) {
-        const { error } = await supabase
+        const { error } = await (dbClient as any)
             .from('doctors')
             .update(doctorFields as any)
             .eq('id', doctorId)
+            .eq('clinic_id', doctorData.clinic_id)
 
         if (error) throw error
     }
 
     if (Object.keys(userFields).length > 0) {
-        const { error } = await supabase
+        const { error } = await (dbClient as any)
             .from('users')
             .update(userFields as any)
             .eq('id', doctorData.user_id)
+            .eq('clinic_id', doctorData.clinic_id)
 
         if (error) throw error
     }
 
-    const { data: updatedDoctor } = await supabase
+    const { data: updatedDoctor } = await (dbClient as any)
         .from('doctors')
         .select(`
             *,

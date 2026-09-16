@@ -1133,6 +1133,14 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         }
                         return true
                     }
+                    // Exclusivo Espaço Incluir: Comercial e Recepção autorizados a visualizar e acessar o menu Terapeutas
+                    const ESPACO_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+                    if (effectiveClinicId === ESPACO_INCLUIR_CLINIC_ID && role === 'RECEPTIONIST' && item.href === '/dashboard/medicos') {
+                        if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
+                            return false
+                        }
+                        return true
+                    }
                     return false
                 })
                 .map(item => {

@@ -92,23 +92,49 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // Check authorization
-        if (userRole === 'DOCTOR') {
-            // Doctors can only update their own profile
-            if (doctor.user_id !== userId) {
-                throw new ForbiddenError('Você só pode editar seu próprio perfil')
-            }
-        } else if (userRole === 'CLINIC_ADMIN') {
-            // Clinic admins can only update doctors in their clinic
+        const ESCOLAR_OU_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+        let userClinicId = request.headers.get('x-clinic-id')
+        if (!userClinicId && userId) {
             const { data: currentUser } = await supabase
                 .from('users')
                 .select('clinic_id')
                 .eq('id', userId)
                 .single()
+            userClinicId = (currentUser as any)?.clinic_id
+        }
 
-            if (currentUser?.clinic_id !== doctor.clinic_id) {
+        const isEspacoIncluir = (userClinicId === ESCOLAR_OU_INCLUIR_CLINIC_ID || doctor.clinic_id === ESCOLAR_OU_INCLUIR_CLINIC_ID) && userClinicId === doctor.clinic_id
+
+        let isAuthorized = false
+
+        if (userRole === 'SUPER_ADMIN') {
+            isAuthorized = true
+        } else if (userRole === 'DOCTOR') {
+            // Doctors can only update their own profile
+            if (doctor.user_id === userId) {
+                isAuthorized = true
+            } else {
+                throw new ForbiddenError('Você só pode editar seu próprio perfil')
+            }
+        } else if (userRole === 'CLINIC_ADMIN') {
+            // Clinic admins can only update doctors in their clinic
+            if (userClinicId === doctor.clinic_id) {
+                isAuthorized = true
+            } else {
                 throw new ForbiddenError('Acesso negado')
             }
+        } else if (userRole === 'RECEPTIONIST' && isEspacoIncluir) {
+            // Exclusivo Espaço Incluir: Comercial e Recepção autorizados a editar perfil de terapeutas da mesma clínica
+            isAuthorized = true
         }
+
+        if (!isAuthorized) {
+            throw new ForbiddenError('Acesso negado')
+        }
+
+        const dbClient = (userRole === 'RECEPTIONIST' && isEspacoIncluir)
+            ? createServiceRoleClient()
+            : supabase
 
         // Separate doctor fields from user fields
         const doctorFields: Record<string, unknown> = {}
@@ -127,26 +153,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         // Update doctor
         if (Object.keys(doctorFields).length > 0) {
-            const { error } = await supabase
+            const { error } = await (dbClient as any)
                 .from('doctors')
                 .update(doctorFields)
                 .eq('id', doctorId)
+                .eq('clinic_id', doctor.clinic_id)
 
             if (error) throw error
         }
 
         // Update user profile
         if (Object.keys(userFields).length > 0) {
-            const { error } = await supabase
+            const { error } = await (dbClient as any)
                 .from('users')
                 .update(userFields)
                 .eq('id', doctor.user_id)
+                .eq('clinic_id', doctor.clinic_id)
 
             if (error) throw error
         }
 
         // Fetch updated doctor
-        const { data: updatedDoctor } = await supabase
+        const { data: updatedDoctor } = await (dbClient as any)
             .from('doctors')
             .select(`
         *,

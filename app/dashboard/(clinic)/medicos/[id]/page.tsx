@@ -1,7 +1,7 @@
 'use client';
 
-import React, { use } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { use, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRole } from '@/lib/hooks/use-auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -19,7 +19,9 @@ import {
   Building,
   Loader2,
   PenTool,
+  Pencil,
 } from 'lucide-react';
+import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -37,6 +39,8 @@ export default function DoctorProfilePage({ params }: PageProps) {
   const { id: doctorId } = use(params);
   const { clinicId } = useRole();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Consulta detalhes do médico
   const {
@@ -133,6 +137,15 @@ export default function DoctorProfilePage({ params }: PageProps) {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setIsEditDialogOpen(true)}
+                  className="h-9 rounded-md px-3 text-xs font-medium gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>Editar Perfil</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   asChild
                   className="h-9 rounded-md px-3 text-xs font-medium"
                 >
@@ -223,6 +236,20 @@ export default function DoctorProfilePage({ params }: PageProps) {
           <DoctorSignaturesTab doctorId={doctorId} doctorName={doctorName} doctor={doctor} />
         </TabsContent>
       </Tabs>
+
+      {/* MODAL DE EDIÇÃO DO PERFIL */}
+      {doctor && (
+        <DoctorFormDialog
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) {
+              queryClient.invalidateQueries({ queryKey: ['doctor-detail', doctorId, clinicId] });
+            }
+          }}
+          doctorToEdit={doctor}
+        />
+      )}
     </div>
   );
 }

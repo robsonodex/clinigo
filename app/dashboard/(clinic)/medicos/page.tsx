@@ -56,7 +56,7 @@ import { formatCurrency, getInitials } from '@/lib/utils'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 export default function DoctorsPage() {
-    const { clinicId } = useRole()
+    const { clinicId, role } = useRole()
     const queryClient = useQueryClient()
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
@@ -210,20 +210,22 @@ export default function DoctorsPage() {
                                 <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
                                 Indisponibilizar
                             </Button>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                    if (confirm(`Deseja realmente remover/desativar os ${profLabel.plural.toLowerCase()} selecionados?`)) {
-                                        bulkDeleteMutation.mutate(selectedIds)
-                                    }
-                                }}
-                                disabled={bulkDeleteMutation.isPending}
-                                className="rounded-md h-8 text-xs"
-                            >
-                                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                Excluir
-                            </Button>
+                            {(role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN') && (
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (confirm(`Deseja realmente remover/desativar os ${profLabel.plural.toLowerCase()} selecionados?`)) {
+                                            bulkDeleteMutation.mutate(selectedIds)
+                                        }
+                                    }}
+                                    disabled={bulkDeleteMutation.isPending}
+                                    className="rounded-md h-8 text-xs"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                    Excluir
+                                </Button>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -345,7 +347,12 @@ export default function DoctorsPage() {
                                                         )}
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-medium text-foreground text-xs">{doctor.user?.full_name}</span>
+                                                        <Link
+                                                            href={`/dashboard/medicos/${doctor.id}`}
+                                                            className="font-medium text-foreground text-xs hover:underline hover:text-emerald-600 transition-colors"
+                                                        >
+                                                            {doctor.user?.full_name}
+                                                        </Link>
                                                         <span className="text-[11px] text-muted-foreground">
                                                             {doctor.user?.email}
                                                         </span>
@@ -439,13 +446,15 @@ export default function DoctorsPage() {
                                                                 Tornar Disponível
                                                             </DropdownMenuItem>
                                                         )}
-                                                        <DropdownMenuItem
-                                                            className="text-destructive"
-                                                            onClick={() => setDoctorToDelete(doctor)}
-                                                        >
-                                                            <Trash2 className="w-4 h-4 mr-2" />
-                                                            Excluir
-                                                        </DropdownMenuItem>
+                                                        {(role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN') && (
+                                                            <DropdownMenuItem
+                                                                className="text-destructive"
+                                                                onClick={() => setDoctorToDelete(doctor)}
+                                                            >
+                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                Excluir
+                                                            </DropdownMenuItem>
+                                                        )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
