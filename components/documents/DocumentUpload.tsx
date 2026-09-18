@@ -58,20 +58,69 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
 
         try {
             for (const file of Array.from(files)) {
-                const formData = new FormData()
-                formData.append('file', file)
-                formData.append('patient_id', patientId)
-                formData.append('document_type', documentType)
-                formData.append('notes', '')
+                // Validate file size (max 50MB)
+                if (file.size > 50 * 1024 * 1024) {
+                    toast.error(`${file.name}: Arquivo muito grande. Tamanho máximo: 50MB`)
+                    continue
+                }
 
-                const response = await fetch('/api/documents', {
+                // Step 1: Get presigned upload URL
+                const urlRes = await fetch('/api/documents/upload-url', {
                     method: 'POST',
-                    body: formData,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: patientId,
+                        file_name: file.name,
+                        file_size: file.size,
+                        file_type: file.type,
+                        document_type: documentType,
+                        notes: '',
+                    }),
                 })
 
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}))
-                    toast.error(`Erro ao fazer upload de ${file.name}: ${errData.error || 'Falha no upload'}`)
+                if (!urlRes.ok) {
+                    const errData = await urlRes.json().catch(() => ({}))
+                    toast.error(`Erro ao preparar upload de ${file.name}: ${errData.error || 'Falha'}`)
+                    continue
+                }
+
+                const urlData = await urlRes.json()
+                const { upload_url, token, storage_path, metadata } = urlData.data
+
+                // Step 2: Upload directly to Supabase Storage
+                const uploadRes = await fetch(upload_url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': file.type || 'application/octet-stream',
+                        ...(token ? { 'x-upsert': 'true' } : {}),
+                    },
+                    body: file,
+                })
+
+                if (!uploadRes.ok) {
+                    console.error('[UPLOAD_DIRECT] Storage upload failed:', uploadRes.status)
+                    toast.error(`Erro ao enviar ${file.name} para o storage`)
+                    continue
+                }
+
+                // Step 3: Register document in database
+                const registerRes = await fetch('/api/documents/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: metadata.patient_id,
+                        file_name: metadata.file_name,
+                        file_url: storage_path,
+                        file_size: metadata.file_size,
+                        file_type: metadata.file_type,
+                        category: metadata.category,
+                        description: metadata.description,
+                    }),
+                })
+
+                if (!registerRes.ok) {
+                    const errData = await registerRes.json().catch(() => ({}))
+                    toast.error(`Erro ao registrar ${file.name}: ${errData.error || 'Falha'}`)
                     continue
                 }
 
@@ -105,7 +154,7 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
-                                <SelectLabel className="text-emerald-600 font-bold text-xs">🏥 Saúde</SelectLabel>
+                                <SelectLabel className="text-emerald-600 font-bold text-xs">Saude</SelectLabel>
                                 <SelectItem value="EXAM">Exame</SelectItem>
                                 <SelectItem value="PRESCRIPTION">Receita</SelectItem>
                                 <SelectItem value="report">Laudo</SelectItem>
@@ -113,7 +162,7 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
                                 <SelectItem value="certificate">Atestado</SelectItem>
                             </SelectGroup>
                             <SelectGroup>
-                                <SelectLabel className="text-blue-600 font-bold text-xs">📋 Administrativo</SelectLabel>
+                                <SelectLabel className="text-blue-600 font-bold text-xs">Administrativo</SelectLabel>
                                 <SelectItem value="CONVENIO_CARD">Carteirinha de Convênio</SelectItem>
                                 <SelectItem value="CONSENT_TERM">Termo de Consentimento</SelectItem>
                                 <SelectItem value="OTHER">Outro</SelectItem>
@@ -152,7 +201,7 @@ export function DocumentUpload({ patientId, clinicId, onUploadComplete, userRole
 
                 <div className="text-sm text-muted-foreground">
                     <p>Formatos aceitos: PDF, imagens (JPG, PNG)</p>
-                    <p>Tamanho máximo por arquivo: 10MB</p>
+                    <p>Tamanho máximo por arquivo: 50MB</p>
                 </div>
             </CardContent>
         </Card>

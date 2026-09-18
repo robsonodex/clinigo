@@ -113,39 +113,84 @@ export default function DocumentsPage() {
             return
         }
 
+        // Validate file size on client side (max 50MB)
+        if (uploadFile.size > 50 * 1024 * 1024) {
+            toast.error('Arquivo muito grande. Tamanho máximo permitido: 50MB')
+            return
+        }
+
         setUploading(true)
         try {
-            const formData = new FormData()
-            formData.append('file', uploadFile)
-            formData.append('patient_id', uploadPatientId)
-            formData.append('document_type', uploadDocType)
-            formData.append('notes', uploadNotes)
-            formData.append('run_ocr', runOcr.toString())
-
-            const res = await fetch('/api/documents', {
+            // Step 1: Get presigned upload URL from API
+            const urlRes = await fetch('/api/documents/upload-url', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: uploadPatientId,
+                    file_name: uploadFile.name,
+                    file_size: uploadFile.size,
+                    file_type: uploadFile.type,
+                    document_type: uploadDocType,
+                    notes: uploadNotes,
+                })
             })
 
-            const data = await res.json()
+            const urlData = await urlRes.json()
 
-            if (!res.ok) {
-                toast.error(data.error || 'Erro ao fazer upload')
+            if (!urlRes.ok) {
+                toast.error(urlData.error || 'Erro ao preparar upload')
+                return
+            }
+
+            const { upload_url, token, storage_path, metadata } = urlData.data
+
+            // Step 2: Upload file directly to Supabase Storage via presigned URL
+            const uploadRes = await fetch(upload_url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': uploadFile.type || 'application/octet-stream',
+                    ...(token ? { 'x-upsert': 'true' } : {}),
+                },
+                body: uploadFile,
+            })
+
+            if (!uploadRes.ok) {
+                const errText = await uploadRes.text().catch(() => '')
+                console.error('[UPLOAD_DIRECT] Storage upload failed:', uploadRes.status, errText)
+                toast.error('Erro ao enviar arquivo para o storage. Tente novamente.')
+                return
+            }
+
+            // Step 3: Register document in the database
+            const registerRes = await fetch('/api/documents/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: metadata.patient_id,
+                    file_name: metadata.file_name,
+                    file_url: storage_path,
+                    file_size: metadata.file_size,
+                    file_type: metadata.file_type,
+                    category: metadata.category,
+                    description: metadata.description,
+                })
+            })
+
+            const registerData = await registerRes.json()
+
+            if (!registerRes.ok) {
+                toast.error(registerData.error || 'Erro ao registrar documento')
                 return
             }
 
             toast.success('Documento enviado com sucesso!')
 
-            if (data.ocr?.success) {
-                toast.info('OCR processado com sucesso')
-            }
-
             setShowUploadDialog(false)
             resetUploadForm()
             fetchDocuments()
         } catch (error) {
-            toast.error('Erro ao fazer upload')
-            console.error(error)
+            toast.error('Erro ao fazer upload. Verifique sua conexão e tente novamente.')
+            console.error('[UPLOAD_ERROR]', error)
         } finally {
             setUploading(false)
         }
