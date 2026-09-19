@@ -48,10 +48,18 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Período é obrigatório' }, { status: 400 });
         }
 
-        // 1. Buscar todos os doctors relevantes
+        // 1. Buscar todos os doctors relevantes com dados de usuário
         let doctorQuery = supabase
             .from('doctors')
-            .select('id, name, specialty')
+            .select(`
+                id,
+                specialty,
+                consultation_price,
+                user:users (
+                    full_name,
+                    email
+                )
+            `)
             .eq('clinic_id', profile.clinic_id)
             .eq('is_active', true);
 
@@ -59,9 +67,14 @@ export async function GET(request: NextRequest) {
             doctorQuery = doctorQuery.eq('id', doctorId);
         }
 
-        const { data: doctors } = await doctorQuery;
+        const { data: doctorsData, error: docErr } = await doctorQuery;
 
-        if (!doctors || doctors.length === 0) {
+        if (docErr) {
+            console.error('[FinancialProducao] Erro ao buscar profissionais:', docErr);
+            throw docErr;
+        }
+
+        if (!doctorsData || doctorsData.length === 0) {
             return NextResponse.json({ success: true, data: [] });
         }
 
@@ -78,6 +91,19 @@ export async function GET(request: NextRequest) {
             rulesMap.get(rule.patient_id)!.push(rule);
         }
 
+        // Buscar taxas específicas por paciente (doctor_patient_rates)
+        const { data: customPatientRates } = await supabase
+            .from('doctor_patient_rates')
+            .select('doctor_id, patient_id, rate_type, fixed_value, percentage')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('active', true);
+
+        const customRatesMap = new Map<string, any>();
+        customPatientRates?.forEach(r => {
+            const key = `${r.doctor_id}_${r.patient_id}`;
+            customRatesMap.set(key, r);
+        });
+
         // Buscar lançamentos financeiros vinculados
         const { data: financialEntries } = await supabase
             .from('financial_entries')
@@ -93,24 +119,19 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        const getAppointmentPrice = (appt: any) => {
-            if (financialMap.has(appt.id)) {
-                return financialMap.get(appt.id)!;
-            }
-            const patientRules = rulesMap.get(appt.patient_id);
-            if (patientRules && patientRules.length > 0) {
-                const matchedRule = patientRules.find(
-                    (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
-                ) || patientRules[0];
-                return Number(matchedRule.billing_amount) || 0;
-            }
-            return 0;
-        };
-
         // 2. Buscar agendamentos do período
         let aptQuery = supabase
             .from('appointments')
-            .select('id, doctor_id, status, patient_id, appointment_type, health_insurance_plan_id')
+            .select(`
+                id,
+                doctor_id,
+                status,
+                session_status,
+                patient_id,
+                appointment_type,
+                health_insurance_plan_id,
+                no_show
+            `)
             .eq('clinic_id', profile.clinic_id)
             .gte('appointment_date', periodStart)
             .lte('appointment_date', periodEnd);
@@ -119,39 +140,91 @@ export async function GET(request: NextRequest) {
             aptQuery = aptQuery.eq('doctor_id', doctorId);
         }
         
-        const { data: appointments } = await aptQuery;
+        const { data: appointments, error: aptErr } = await aptQuery;
+        if (aptErr) {
+            console.error('[FinancialProducao] Erro ao buscar agendamentos:', aptErr);
+            throw aptErr;
+        }
 
-        // 3. Buscar contratos para repasse estimado
+        // 3. Buscar contratos vigentes para repasse estimado
         let contractQuery = supabase
             .from('doctor_contracts')
-            .select('doctor_id, percentage')
+            .select('doctor_id, percentage_private, percentage_insurance, fixed_value_private, fixed_value_insurance, contract_type')
+            .eq('clinic_id', profile.clinic_id)
             .eq('is_active', true);
             
         if (doctorId) {
             contractQuery = contractQuery.eq('doctor_id', doctorId);
         }
         const { data: contracts } = await contractQuery;
-        const contractMap = new Map();
-        contracts?.forEach(c => contractMap.set(c.doctor_id, c.percentage));
+        const contractMap = new Map<string, any>();
+        contracts?.forEach(c => contractMap.set(c.doctor_id, c));
 
         // 4. Calcular métricas por doctor
-        const results = doctors.map(doc => {
-            const docApts = (appointments || []).filter(a => a.doctor_id === doc.id);
+        const results = doctorsData.map((doc: any) => {
+            const docApts = (appointments || []).filter((a: any) => a.doctor_id === doc.id);
             
-            const total_atendimentos = docApts.filter(a => a.status === 'COMPLETED').length;
-            const total_faltas = docApts.filter(a => a.status === 'NO_SHOW').length;
+            const completedApts = docApts.filter((a: any) => {
+                if (a.no_show) return false;
+                const statusLower = (a.status || '').toLowerCase();
+                const sessionLower = (a.session_status || '').toLowerCase();
+                if (statusLower.includes('cancel') || statusLower.includes('desmarcad') || statusLower.includes('falt')) return false;
+                return a.status === 'COMPLETED' || sessionLower === 'presente' || sessionLower === 'reposição' || sessionLower === 'reposicao';
+            });
+
+            const total_atendimentos = completedApts.length;
+            const total_faltas = docApts.filter((a: any) => a.status === 'NO_SHOW' || a.no_show === true).length;
             
             let receita_total = 0;
             let receita_particular = 0;
             let receita_convenio = 0;
+            let repasse_calculado = 0;
+
+            const contract = contractMap.get(doc.id);
+            const defaultPrice = Number(doc.consultation_price) || 120.0;
+            const contractPercentage = contract ? Number(contract.percentage_private || 60) : 60;
+            const contractFixed = contract?.fixed_value_private ? Number(contract.fixed_value_private) : null;
             
-            docApts.filter(a => a.status === 'COMPLETED').forEach(a => {
-                const val = getAppointmentPrice(a);
+            completedApts.forEach((a: any) => {
+                // Determinar valor bruto do atendimento
+                let val = 0;
+                if (financialMap.has(a.id)) {
+                    val = financialMap.get(a.id)!;
+                } else {
+                    const patientRules = rulesMap.get(a.patient_id);
+                    if (patientRules && patientRules.length > 0) {
+                        const matchedRule = patientRules.find(
+                            (r: any) => r.therapy_type?.toLowerCase() === (a.appointment_type || '').toLowerCase()
+                        ) || patientRules[0];
+                        val = Number(matchedRule.billing_amount) || defaultPrice;
+                    } else {
+                        val = defaultPrice;
+                    }
+                }
+
                 receita_total += val;
                 if (a.health_insurance_plan_id) {
                     receita_convenio += val;
                 } else {
                     receita_particular += val;
+                }
+
+                // Cálculo do repasse para este atendimento
+                const customRateKey = `${doc.id}_${a.patient_id}`;
+                const customRate = customRatesMap.get(customRateKey);
+
+                if (customRate) {
+                    if (customRate.rate_type === 'FIXED' && customRate.fixed_value != null) {
+                        repasse_calculado += Number(customRate.fixed_value);
+                    } else if (customRate.rate_type === 'PERCENTAGE' && customRate.percentage != null) {
+                        repasse_calculado += (val * Number(customRate.percentage)) / 100;
+                    } else {
+                        repasse_calculado += (val * contractPercentage) / 100;
+                    }
+                } else if (contractFixed != null && contractFixed > 0) {
+                    repasse_calculado += contractFixed;
+                } else {
+                    repasse_calculado += (val * contractPercentage) / 100;
                 }
             });
             
@@ -160,14 +233,14 @@ export async function GET(request: NextRequest) {
                 : 0;
                 
             const ticket_medio = total_atendimentos > 0 ? receita_total / total_atendimentos : 0;
-            
-            const percentual = contractMap.get(doc.id) || 0;
-            const repasse_calculado = receita_total * (percentual / 100);
+
+            const docUser = Array.isArray(doc.user) ? doc.user[0] : doc.user;
+            const docName = docUser?.full_name || docUser?.email || 'Profissional';
 
             return {
                 doctor_id: doc.id,
-                doctor_name: doc.name,
-                specialty: doc.specialty,
+                doctor_name: docName,
+                specialty: doc.specialty || 'Não informada',
                 total_atendimentos,
                 total_faltas,
                 taxa_noshow,
@@ -179,12 +252,17 @@ export async function GET(request: NextRequest) {
             };
         });
 
+        // Ordenar por maior número de atendimentos / receita
+        results.sort((a, b) => b.total_atendimentos - a.total_atendimentos || b.repasse_calculado - a.repasse_calculado);
+
         // Sumarização global (Apenas se for CLINIC_ADMIN, caso contrário null)
         let globalSummary = null;
         if (profile.role === 'CLINIC_ADMIN' || profile.role === 'SUPER_ADMIN') {
+            const totalRepasse = results.reduce((sum, r) => sum + r.repasse_calculado, 0);
             globalSummary = {
                 total_atendimentos: results.reduce((sum, r) => sum + r.total_atendimentos, 0),
                 receita_total: results.reduce((sum, r) => sum + r.receita_total, 0),
+                total_repasse: totalRepasse,
                 ticket_medio_geral: 0
             };
             if (globalSummary.total_atendimentos > 0) {

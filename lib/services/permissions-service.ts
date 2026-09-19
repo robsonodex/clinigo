@@ -7,10 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import {
     type FeatureKey,
+    type ClinicProfileType,
     FEATURE_KEYS,
     FEATURE_METADATA,
     PROTECTED_FEATURES,
     isFeatureInDefaultPlan,
+    isFeatureVisibleForProfile,
 } from '@/lib/constants/features'
 import { isClinicInSessionPlansAllowlist } from '@/lib/constants/session-plans-beta-clinics'
 import type { PlanType } from '@/lib/constants/plans'
@@ -61,7 +63,7 @@ export async function canAccessFeature(
 
     const supabase = await createClient()
 
-    // 1. Check for custom permission override
+    // 1. Check for custom permission override (PRIORIDADE MÁXIMA)
     const { data: customPermission } = await supabase
         .from('clinic_custom_permissions')
         .select('is_enabled')
@@ -73,15 +75,21 @@ export async function canAccessFeature(
         return customPermission.is_enabled
     }
 
-    // 2. No custom permission - use plan default
+    // 2. Check clinic profile (CAMADA DE PERFIL)
     const { data: clinic } = await supabase
         .from('clinics')
-        .select('plan_type')
+        .select('plan_type, clinic_profile')
         .eq('id', clinicId)
         .single()
 
     if (!clinic) return false
 
+    const clinicProfile = ((clinic as any).clinic_profile || 'CLINICA_GERAL') as ClinicProfileType
+    if (!isFeatureVisibleForProfile(featureKey, clinicProfile)) {
+        return false // Feature oculta por perfil (sem override manual)
+    }
+
+    // 3. No custom permission, profile allows — use plan default
     return isFeatureInDefaultPlan(featureKey, clinic.plan_type)
 }
 
@@ -306,10 +314,10 @@ export async function getClinicPermissions(
 ): Promise<Record<FeatureKey, { enabled: boolean; isCustom: boolean }>> {
     const supabase = createServiceRoleClient()
 
-    // Get clinic plan
+    // Get clinic plan and profile
     const { data: clinic } = await supabase
         .from('clinics')
-        .select('plan_type')
+        .select('plan_type, clinic_profile')
         .eq('id', clinicId)
         .single()
 
@@ -352,6 +360,7 @@ export async function getClinicPermissions(
 
     // Build result
     const result = {} as Record<FeatureKey, { enabled: boolean; isCustom: boolean }>
+    const clinicProfile = ((clinic as any).clinic_profile || 'CLINICA_GERAL') as ClinicProfileType
 
     for (const [featureKey, _] of Object.entries(FEATURE_METADATA)) {
         const key = featureKey as FeatureKey
@@ -363,6 +372,13 @@ export async function getClinicPermissions(
         }
 
         const isCustom = customMap.has(key)
+
+        // CAMADA DE PERFIL: se não há override custom e o perfil oculta esta feature, desabilita
+        if (!isCustom && !isFeatureVisibleForProfile(key, clinicProfile)) {
+            result[key] = { enabled: false, isCustom: false }
+            continue
+        }
+
         const enabled = isCustom
             ? customMap.get(key)!
             : isFeatureInDefaultPlan(key, clinic.plan_type)

@@ -703,12 +703,12 @@ export const helpItems: HelpItem[] = [
         category: 'Financeiro',
         icon: TrendingUp,
         href: '/dashboard/financial/producao',
-        whatIsIt: 'Relatório consolidado de produtividade clínica e financeira por profissional: total de atendimentos realizados, taxa de no-show própria, faturamento bruto gerado e valor líquido repassado.',
-        whenToUse: 'Para avaliar o desempenho operacional de cada membro da equipe e planejar ampliações de horários.',
-        howToUse: 'Filtre pelo período desejado e compare a produção entre profissionais ou consulte a evolução mensal de um terapeuta específico.',
+        whatIsIt: 'Relatório consolidado de produtividade clínica e financeira por profissional: total de atendimentos realizados, taxa de no-show, faturamento bruto gerado e valores que cada profissional tem para receber no período selecionado, com exportação direta em planilhas Excel (.xlsx) e CSV.',
+        whenToUse: 'Sempre que a clínica desejar apurar a produção e os repasses de uma semana específica, quinzena ou mês completo para conferência de pagamentos aos profissionais.',
+        howToUse: 'Utilize os botões de atalho como "Esta Semana", "Este Mês" ou defina as datas inicial e final manualmente. Filtre por um profissional específico ou mantenha "Todos" para ver a equipe completa. Para baixar o fechamento consolidado, clique no botão "Exportar Excel" ou "Exportar CSV".',
         minPlan: 'Avançado',
         roles: ['CLINIC_ADMIN', 'FINANCIAL'],
-        tags: ['produção', 'produtividade', 'faturamento individual', 'desempenho médico']
+        tags: ['produção', 'repasses semanais', 'produtividade', 'excel', 'csv', 'faturamento individual', 'desempenho médico']
     },
     {
         id: 'notas-demonstrativos',

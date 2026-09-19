@@ -2,6 +2,18 @@
 
 ## Módulos
 
+### Exportação de Relatórios de Produção e Repasses de Profissionais por Período / Semana (WorldSensory e Geral)
+- **Módulos**:
+  - Financeiro → Repasses & Produção → Produção por Profissional → `app/dashboard/(clinic)/financial/producao/page.tsx` → `ProducaoProfissionalPage()` (implementação completa da exportação em Excel `.xlsx` via `ExcelJS` e CSV com BOM UTF-8, inclusão do indicador de "Total Geral a Repassar", atalhos rápidos de período "Esta Semana", "Este Mês" e "Mês Anterior", atualização de dados em tempo real e layout responsivo sem emojis)
+  - Financeiro → API de Produção → `app/api/financial/producao/route.ts` → `GET` (correção da consulta de profissionais com join em `users(full_name)`, integração com regras individuais de repasse da clínica em `doctor_patient_rates` e contratos `doctor_contracts`, ordenação e sumarização do total a repassar para administradores)
+- **Descrição**:
+  - **Demanda Operacional (WorldSensory)**:
+    - A gestora Patrícia da WorldSensory solicitou saber como exportar os relatórios com os valores que cada profissional tem para receber referente aos atendimentos realizados nesta semana.
+  - **Solução Implementada**:
+    - **Cálculo Preciso Multi-Tenant**: API corrigida para ler o nome dos profissionais e calcular os repasses cruzando os atendimentos concluídos com as taxas específicas por paciente (`doctor_patient_rates`) e contratos vigentes (`doctor_contracts`).
+    - **Exportação Profissional em Excel e CSV**: Desenvolvida a exportação direta em formato `.xlsx` estruturada com título institucional, filtros, cabeçalho estilizado, totalizadores contábeis e todas as colunas formatadas (`R$ #,##0.00`), além de exportação em CSV compatível com Excel.
+    - **Atalhos e Facilidade de Uso**: Inclusão de botões de atalho como "Esta Semana" para preencher instantaneamente a semana corrente (segunda a sábado), exibindo os profissionais com atendimentos e totalizando o valor a repassar.
+
 ### Liberação Cirúrgica de Edição de Perfil de Terapeutas para Comercial e Recepção (Exclusivo Espaço Incluir)
 - **Módulos**:
   - Layout / Menu Lateral → `components/layout/sidebar.tsx` → `Sidebar()` (liberação condicional do menu "Terapeutas" para `role === 'RECEPTIONIST'` estritamente quando `effectiveClinicId === '5163c916-8b82-4d80-8a71-01726836ee46'`; bloqueio mantido para todas as outras clínicas)

@@ -419,3 +419,49 @@ export function getPlanBadge(plans: string[]): string {
     if (plans.includes('ENTERPRISE')) return 'ENT'
     return ''
 }
+
+// ==========================================
+// CLINIC PROFILE TYPES (Segmentação por Perfil)
+// ==========================================
+
+export type ClinicProfileType = 'CLINICA_GERAL' | 'CLINICA_TERAPIA'
+
+/**
+ * Map: quais features ficam OCULTAS para cada perfil.
+ * Se uma feature NÃO está nesta lista, ela é UNIVERSAL (visível para ambos).
+ *
+ * Regra: se a feature está em HIDDEN_FOR_PROFILE[perfil], ela fica
+ * invisível por default (mas pode ser habilitada via override no Master Hub).
+ */
+export const HIDDEN_FOR_PROFILE: Record<ClinicProfileType, FeatureKey[]> = {
+    CLINICA_GERAL: [
+        // Seção Terapia inteira
+        FEATURE_KEYS.FILA_ESPERA,
+        FEATURE_KEYS.ENCAMINHAMENTOS,
+        FEATURE_KEYS.SUPERVISAO,
+        FEATURE_KEYS.BI_TERAPIA,
+        // Prontuário terapêutico
+        FEATURE_KEYS.PLANOS_TERAPEUTICOS,
+        // Camada A (já bloqueada por allowlist, reforço de perfil)
+        FEATURE_KEYS.PSICOMOTRICIDADE,
+        FEATURE_KEYS.PLANO_FISIOTERAPIA,
+        FEATURE_KEYS.EVOLUCAO_WORLD_SENSORY,
+    ],
+    CLINICA_TERAPIA: [
+        // Nenhuma feature ocultada para clínicas de terapia
+        // (elas veem tudo que o plano permite)
+    ],
+}
+
+/**
+ * Verifica se uma feature é visível para um determinado perfil de clínica.
+ * Retorna true se a feature NÃO está na lista de ocultas do perfil.
+ */
+export function isFeatureVisibleForProfile(
+    featureKey: FeatureKey,
+    clinicProfile: ClinicProfileType
+): boolean {
+    const hiddenList = HIDDEN_FOR_PROFILE[clinicProfile]
+    if (!hiddenList) return true // perfil desconhecido → mostra tudo
+    return !hiddenList.includes(featureKey)
+}

@@ -613,6 +613,7 @@ export async function middleware(request: NextRequest) {
         let userRole = user.user_metadata?.role as string | undefined
         let userClinicId = user.user_metadata?.clinic_id as string | undefined
         let userPlanType: PlanType = 'BASICO'
+        let userClinicProfile = 'CLINICA_GERAL'
 
         // Get role from database
         const { data: profile } = await supabase
@@ -641,7 +642,7 @@ export async function middleware(request: NextRequest) {
         if (userRole !== 'SUPER_ADMIN' && userClinicId) {
             const { data: clinic } = await supabase
                 .from('clinics')
-                .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at')
+                .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
                 .eq('id', userClinicId)
                 .single()
 
@@ -719,6 +720,7 @@ export async function middleware(request: NextRequest) {
                     'PRO': 'PROFESSIONAL',
                 }
                 userPlanType = planMapping[dbPlanType] || 'BASICO'
+                userClinicProfile = (clinic as any).clinic_profile || 'CLINICA_GERAL'
             }
         }
 
@@ -806,6 +808,7 @@ export async function middleware(request: NextRequest) {
         if (userRole) requestHeaders.set('x-user-role', userRole)
         if (userClinicId) requestHeaders.set('x-clinic-id', userClinicId)
         requestHeaders.set('x-plan-type', userPlanType)
+        requestHeaders.set('x-clinic-profile', userClinicProfile)
 
         // ----------------------------------------
         // IMPERSONATION CONTEXT (Super Admin only)
