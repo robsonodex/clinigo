@@ -35,6 +35,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import {
     Receipt,
+    ReceiptText,
+    PlusCircle,
     FileText,
     Upload,
     Download,
@@ -50,7 +52,6 @@ import {
     FileCheck,
     Check,
     X,
-    Sparkles,
     Calculator
 } from 'lucide-react'
 
@@ -107,6 +108,12 @@ export function DoctorFinancialDocumentsView() {
     // Modal de upload da NF pelo profissional
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [selectedDoc, setSelectedDoc] = useState<any>(null)
+    const [invoiceMonthReference, setInvoiceMonthReference] = useState<string>(() => {
+        const d = new Date()
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        return `${y}-${m}`
+    })
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
     const [invoiceNumber, setInvoiceNumber] = useState('')
     const [invoiceAmount, setInvoiceAmount] = useState('')
@@ -303,12 +310,23 @@ export function DoctorFinancialDocumentsView() {
 
     const documents = responseData?.documents || []
 
-    // Abrir modal de upload de nota fiscal
-    const handleOpenInvoiceModal = (doc: any) => {
+    // Abrir modal de upload de nota fiscal (vinculado a um documento ou avulso)
+    const handleOpenInvoiceModal = (doc: any = null) => {
         setSelectedDoc(doc)
-        setInvoiceNumber(doc?.invoice_number || '')
-        setInvoiceAmount(doc?.statement_amount ? String(doc.statement_amount) : (doc?.invoice_amount ? String(doc.invoice_amount) : ''))
-        setInvoiceIssueDate(doc?.invoice_issue_date || new Date().toISOString().split('T')[0])
+        if (doc) {
+            setInvoiceMonthReference(doc.month_reference)
+            setInvoiceNumber(doc?.invoice_number || '')
+            setInvoiceAmount(doc?.statement_amount ? String(doc.statement_amount) : (doc?.invoice_amount ? String(doc.invoice_amount) : ''))
+            setInvoiceIssueDate(doc?.invoice_issue_date || new Date().toISOString().split('T')[0])
+        } else {
+            // Envio avulso / novo
+            const now = new Date()
+            const currentMonth = `${selectedYear}-${String(now.getMonth() + 1).padStart(2, '0')}`
+            setInvoiceMonthReference(currentMonth)
+            setInvoiceNumber('')
+            setInvoiceAmount('')
+            setInvoiceIssueDate(now.toISOString().split('T')[0])
+        }
         setInvoiceFile(null)
         setInvoiceModalOpen(true)
     }
@@ -316,9 +334,18 @@ export function DoctorFinancialDocumentsView() {
     // Salvar nota fiscal
     const handleSubmitInvoice = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedDoc) return
 
-        if (!invoiceFile && !selectedDoc.invoice_file_url) {
+        const targetMonth = selectedDoc?.month_reference || invoiceMonthReference
+        if (!targetMonth || !targetMonth.includes('-')) {
+            toast({
+                title: 'Competência inválida',
+                description: 'Por favor, selecione o mês e ano da competência.',
+                variant: 'destructive'
+            })
+            return
+        }
+
+        if (!invoiceFile && !selectedDoc?.invoice_file_url) {
             toast({
                 title: 'Arquivo obrigatório',
                 description: 'Por favor, selecione o arquivo da sua Nota Fiscal (PDF ou XML).',
@@ -331,9 +358,11 @@ export function DoctorFinancialDocumentsView() {
         try {
             const formData = new FormData()
             formData.append('action', 'UPLOAD_INVOICE')
-            formData.append('doctor_id', selectedDoc.doctor_id)
-            formData.append('month_reference', selectedDoc.month_reference)
-            formData.append('invoice_number', invoiceNumber)
+            if (selectedDoc?.doctor_id) {
+                formData.append('doctor_id', selectedDoc.doctor_id)
+            }
+            formData.append('month_reference', targetMonth)
+            formData.append('invoice_number', invoiceNumber.trim())
             formData.append('invoice_amount', invoiceAmount || '0')
             formData.append('invoice_issue_date', invoiceIssueDate)
             if (invoiceFile) {
@@ -349,8 +378,8 @@ export function DoctorFinancialDocumentsView() {
             if (!res.ok) throw new Error(result.error || 'Erro ao enviar nota fiscal')
 
             toast({
-                title: 'Nota Fiscal Enviada!',
-                description: 'Sua nota fiscal foi enviada com sucesso para conferência da clínica.'
+                title: 'Nota Fiscal Enviada com Sucesso!',
+                description: `Sua nota fiscal referente a ${targetMonth} foi enviada para conferência da clínica.`
             })
 
             queryClient.invalidateQueries({ queryKey: ['my-professional-financial-documents', selectedYear] })
@@ -436,19 +465,30 @@ export function DoctorFinancialDocumentsView() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 font-medium">Ano:</span>
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-[100px] h-9 text-xs font-bold rounded-lg border-slate-200 dark:border-slate-800">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                            {[0, 1, 2, 3].map(i => {
-                                const y = (new Date().getFullYear() - i).toString()
-                                return <SelectItem key={y} value={y}>{y}</SelectItem>
-                            })}
-                        </SelectContent>
-                    </Select>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 font-medium">Ano:</span>
+                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                            <SelectTrigger className="w-[100px] h-9 text-xs font-bold rounded-lg border-slate-200 dark:border-slate-800">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent align="end">
+                                {[0, 1, 2, 3].map(i => {
+                                    const y = (new Date().getFullYear() - i).toString()
+                                    return <SelectItem key={y} value={y}>{y}</SelectItem>
+                                })}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button
+                        onClick={() => handleOpenInvoiceModal(null)}
+                        className="min-h-[44px] px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-xl"
+                        title="Anexar nova Nota Fiscal mesmo antes da disponibilização do demonstrativo"
+                    >
+                        <PlusCircle className="w-4 h-4 mr-1.5" />
+                        Enviar Nota Fiscal
+                    </Button>
                 </div>
             </div>
 
@@ -466,11 +506,20 @@ export function DoctorFinancialDocumentsView() {
                             <Calendar className="w-7 h-7" />
                         </div>
                         <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                            Nenhum demonstrativo disponibilizado para o ano de {selectedYear}
+                            Nenhum demonstrativo cadastrado para o ano de {selectedYear}
                         </h3>
                         <p className="text-xs text-slate-500 max-w-md mx-auto">
-                            Assim que a administração da clínica disponibilizar seu demonstrativo mensal de repasse, ele aparecerá aqui para download e envio da sua Nota Fiscal.
+                            Você pode aguardar o demonstrativo mensal da clínica ou já adiantar o envio da sua Nota Fiscal agora mesmo.
                         </p>
+                        <div className="pt-2">
+                            <Button
+                                onClick={() => handleOpenInvoiceModal(null)}
+                                className="min-h-[44px] px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-xl"
+                            >
+                                <PlusCircle className="w-4 h-4 mr-1.5" />
+                                Enviar Nota Fiscal Deste Ano
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             ) : (
@@ -481,7 +530,7 @@ export function DoctorFinancialDocumentsView() {
                         const monthName = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
                         const monthFormatted = monthName.charAt(0).toUpperCase() + monthName.slice(1)
 
-                        const canUploadInvoice = ['PENDING_INVOICE', 'INVOICE_REJECTED', 'INVOICE_SENT'].includes(doc.status)
+                        const canUploadInvoice = ['PENDING_INVOICE', 'INVOICE_REJECTED', 'INVOICE_SENT', 'NO_STATEMENT'].includes(doc.status)
 
                         return (
                             <Card 
@@ -692,11 +741,31 @@ export function DoctorFinancialDocumentsView() {
                             Anexar Nota Fiscal de Serviços (NFS-e)
                         </DialogTitle>
                         <DialogDescription className="text-xs">
-                            Competência: <strong className="text-slate-800 dark:text-slate-200">{selectedDoc?.month_reference}</strong> • Valor do repasse: <strong className="text-emerald-600">{formatCurrency(selectedDoc?.statement_amount)}</strong>
+                            {selectedDoc ? (
+                                <>Competência: <strong className="text-slate-800 dark:text-slate-200">{selectedDoc.month_reference}</strong> • Valor do repasse da clínica: <strong className="text-emerald-600">{formatCurrency(selectedDoc.statement_amount)}</strong></>
+                            ) : (
+                                <>Informe a competência (mês/ano) e anexe sua Nota Fiscal para análise e liberação pela clínica.</>
+                            )}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmitInvoice} className="space-y-4 py-2">
+                        {/* Seletor de Competência (se for envio avulso) */}
+                        {!selectedDoc && (
+                            <div>
+                                <Label className="text-xs font-semibold">Competência (Mês / Ano) *</Label>
+                                <Input
+                                    type="month"
+                                    value={invoiceMonthReference}
+                                    onChange={(e) => setInvoiceMonthReference(e.target.value)}
+                                    required
+                                    className="h-10 text-xs mt-1 font-semibold"
+                                />
+                                <p className="text-[11px] text-slate-500 mt-1">
+                                    Selecione o mês referente aos atendimentos faturados nesta nota fiscal.
+                                </p>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <Label className="text-xs font-semibold">Número da NF *</Label>

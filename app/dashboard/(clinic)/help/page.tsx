@@ -716,12 +716,12 @@ export const helpItems: HelpItem[] = [
         category: 'Financeiro',
         icon: Receipt,
         href: '/dashboard/financial/notas-demonstrativos',
-        whatIsIt: 'Central de intercâmbio financeiro entre a gestão da clínica e os profissionais de saúde. A clínica disponibiliza o demonstrativo detalhado de repasse e o profissional anexa sua respectiva Nota Fiscal de prestação de serviços (com fluxo de aprovação e contestação de inconsistências com justificativa).',
-        whenToUse: 'Mensalmente nos ciclos de fechamento financeiro para liberação dos pagamentos.',
-        howToUse: 'A clínica faz o upload do demonstrativo; o profissional confere, aprova ou aponta inconsistência e anexa sua NF; o financeiro valida e anexa o comprovante bancário com disparo de WhatsApp.',
+        whatIsIt: 'Central de intercâmbio financeiro entre a gestão da clínica e os profissionais de saúde. Permite o envio independente de Notas Fiscais (NFS-e) pelos terapeutas para qualquer competência mesmo antes da liberação do demonstrativo pela clínica, além de conferência de produção, aprovação e contestação de inconsistências.',
+        whenToUse: 'Mensalmente nos ciclos de fechamento financeiro para emissão e protocolo de notas fiscais e liberação dos pagamentos de repasse.',
+        howToUse: 'O profissional pode adiantar o envio da sua Nota Fiscal a qualquer momento clicando em "Enviar Nota Fiscal" e informando a competência, ou aguardar o demonstrativo disponibilizado pela clínica. O financeiro valida a nota, anexa o demonstrativo de conferência e dá baixa no pagamento com notificação aos envolvidos.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'FINANCIAL', 'DOCTOR'],
-        tags: ['notas fiscais', 'demonstrativos', 'repasses', 'comprovantes bancários', 'contestação']
+        tags: ['notas fiscais', 'demonstrativos', 'repasses', 'comprovantes bancários', 'contestação', 'envio avulso nf']
     },
     {
         id: 'auditoria-biometria',

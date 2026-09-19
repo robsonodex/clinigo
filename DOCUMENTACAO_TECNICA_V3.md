@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### Envio de Notas Fiscais pelos Profissionais sem Dependência de Demonstrativo Prévio (World Sensory e Geral)
+- **Módulos**:
+  - Financeiro → Visão do Profissional → `components/financial/DoctorFinancialDocumentsView.tsx` → `DoctorFinancialDocumentsView()` (adição do botão de ação primária "Enviar Nota Fiscal" no topo e no estado vazio da listagem, inclusão do modal com seletor de competência Mês/Ano para envio avulso por iniciativa do próprio profissional, liberação do botão de upload no card mesmo que o status esteja em `NO_STATEMENT`, e substituição de ícones festivos por Lucide sóbrios como `PlusCircle` e `ReceiptText` no padrão corporativo internacional)
+  - Financeiro → Central de Notas Fiscais e Demonstrativos (Gestão da Clínica) → `app/dashboard/(clinic)/financial/notas-demonstrativos/page.tsx` (exibição aprimorada da coluna "Demonstrativo da Clínica", permitindo à administração anexar ou visualizar o arquivo mesmo quando o profissional já tiver antecipado o envio da nota fiscal)
+  - Financeiro → API de Documentos e Notas Fiscais → `app/api/financial/professional-documents/route.ts` → `POST` (ajuste na ação `UPLOAD_INVOICE` com resolução segura do `doctor_id` pelo usuário autenticado, persistência atômica com status `INVOICE_SENT` mesmo sem registro prévio de demonstrativo, e emissão de notificação in-app para os administradores da clínica)
+- **Descrição**:
+  - **Demanda Operacional (World Sensory)**:
+    - A gestora Patrícia da World Sensory relatou que solicita aos profissionais que anexem as notas fiscais no sistema, porém os terapeutas não conseguiam enviar as notas porque o sistema exigia que a Patrícia já tivesse disponibilizado previamente o demonstrativo daquele mês.
+    - Questionamento: É possível que os profissionais anexem suas notas fiscais sem a necessidade da Patrícia liberar o demonstrativo antes?
+  - **Solução Implementada**:
+    - **Independência Operacional e Envio Avulso**: O terapeuta não precisa mais aguardar a criação do demonstrativo da clínica para faturar e enviar sua NFS-e. Ele pode clicar em "Enviar Nota Fiscal", selecionar a competência correspondente (mês/ano), informar número da NF, valor, data de emissão e anexar o arquivo PDF/XML.
+    - **Criação Automática no Banco**: A API cria o registro com status `INVOICE_SENT`, exibindo imediatamente para o financeiro da clínica que a nota fiscal foi protocolada e está aguardando conferência e liberação de pagamento.
+    - **Padrão Visual SaaS Premium**: Zero emojis, ícones vetoriais Lucide elegantes e neutros, área de toque mínima de 44x44px em todos os botões e formulários responsivos.
+
+
 ### Exportação de Relatórios de Produção e Repasses de Profissionais por Período / Semana (WorldSensory e Geral)
 - **Módulos**:
   - Financeiro → Repasses & Produção → Produção por Profissional → `app/dashboard/(clinic)/financial/producao/page.tsx` → `ProducaoProfissionalPage()` (implementação completa da exportação em Excel `.xlsx` via `ExcelJS` e CSV com BOM UTF-8, inclusão do indicador de "Total Geral a Repassar", atalhos rápidos de período "Esta Semana", "Este Mês" e "Mês Anterior", atualização de dados em tempo real e layout responsivo sem emojis)

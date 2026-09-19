@@ -903,7 +903,7 @@ export default function CentralNotasEDemonstrativosPage() {
 
                                                 {/* Coluna 2: Demonstrativo da Clínica */}
                                                 <TableCell className="py-3 px-5">
-                                                    {item.status !== 'NO_STATEMENT' ? (
+                                                    {item.statementFileUrl || item.statementAmount > 0 ? (
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100 text-sm">
                                                                 <DollarSign className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -922,7 +922,19 @@ export default function CentralNotasEDemonstrativosPage() {
                                                                     <Download className="w-3 h-3 shrink-0" />
                                                                 </a>
                                                             ) : (
-                                                                <span className="text-[11px] text-slate-400 italic">Sem arquivo anexado</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[11px] text-slate-400 italic">Sem arquivo anexado</span>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleOpenStatementModal(item)}
+                                                                        className="h-6 px-1.5 text-[10px] border-dashed border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                                                                        title="Anexar arquivo do demonstrativo"
+                                                                    >
+                                                                        <Upload className="w-2.5 h-2.5 mr-1" />
+                                                                        Anexar
+                                                                    </Button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     ) : (
