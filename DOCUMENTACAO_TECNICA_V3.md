@@ -2,6 +2,19 @@
 
 ## Módulos
 
+### Exportação Cadastral do Corpo Clínico / Profissionais em Excel e CSV (WorldSensory e Geral)
+- **Módulos**:
+  - Equipe → Terapeutas / Médicos → `app/dashboard/(clinic)/medicos/page.tsx` → `DoctorsPage()` (inclusão do botão "Exportar" com DropdownMenu interativo para download em Excel `.xlsx` estilizado e CSV padrão brasileiro com delimitador `;` e BOM UTF-8, com estado de carregamento e área de toque mobile de 44x44px)
+  - Utilitários / Exportação → `lib/utils/export-doctors.ts` → `exportDoctorsToExcel()` e `exportDoctorsToCSV()` (novo utilitário dedicado para extração e formatação com nome completo, conselho de classe com UF, especialidade, valor de consulta formatado, duração, e-mail de contato, status na agenda e totalizadores)
+  - Ajuda / Guia Integrado → `app/dashboard/(clinic)/help/page.tsx` (atualização dos verbetes de Terapeutas/Médicos e Pacientes com as orientações de exportação em planilha)
+- **Descrição**:
+  - **Demanda Operacional (WorldSensory e Geral)**:
+    - Solicitação de exportação dos dados cadastrais dos terapeutas/médicos da clínica para controle administrativo e financeiro.
+  - **Solução Implementada**:
+    - **Download em Excel e CSV**: Implementada a geração direta de arquivos `.xlsx` e `.csv` no cabeçalho da tela de Terapeutas/Médicos.
+    - **Padrão Visual SaaS Premium**: Zero emojis, ícones vetoriais Lucide e conformidade com as regras de layout corporativo e responsividade.
+
+
 ### Exportação Completa de Relatórios de Pacientes em Excel e CSV (WorldSensory e Geral)
 - **Módulos**:
   - Equipe → Pacientes → `app/dashboard/(clinic)/pacientes/page.tsx` → `PacientesPage()` (ativação do botão "Exportar" com DropdownMenu interativo para download em Excel `.xlsx` estilizado e CSV padrão brasileiro com BOM UTF-8, respeito aos filtros ativos de faturamento/letra/busca, feedback visual de carregamento, e conexão do botão "Importar" à rota de importação)

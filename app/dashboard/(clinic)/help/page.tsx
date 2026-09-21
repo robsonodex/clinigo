@@ -270,10 +270,10 @@ export const helpItems: HelpItem[] = [
         href: '/dashboard/medicos',
         whatIsIt: 'Gestão completa do corpo clínico da clínica (com rótulo adaptativo conforme a configuração da clínica: "Terapeutas" ou "Médicos"). Gerencia conselhos profissionais (CRM, CREFITO, CRP, CRFa, etc.), especialidades, dados cadastrais, contratos de trabalho, taxas de repasse financeiro e documentos.',
         whenToUse: 'Para cadastrar novos profissionais, atualizar registros profissionais, definir taxas contratuais de comissão e gerenciar permissões de prontuário.',
-        howToUse: 'Acesse o menu Terapeutas/Médicos, clique em "Novo Profissional", preencha nome, conselho com UF, especialidade, e-mail de acesso e parâmetros de remuneração. Salve para liberar o acesso ao sistema.',
+        howToUse: 'Acesse o menu Terapeutas/Médicos, clique em "Novo Profissional", preencha nome, conselho com UF, especialidade, e-mail de acesso e parâmetros de remuneração. Salve para liberar o acesso ao sistema. Para exportar a listagem cadastral do corpo clínico em planilha, clique no botão "Exportar" e selecione Excel (.xlsx) ou CSV (.csv).',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
-        tags: ['médicos', 'terapeutas', 'equipe', 'cadastro profissional', 'crefito', 'crm', 'crp', 'repasse'],
+        tags: ['médicos', 'terapeutas', 'equipe', 'cadastro profissional', 'crefito', 'crm', 'crp', 'repasse', 'exportar excel', 'exportar csv'],
         aliases: ['terapeutas', 'profissionais', 'terapeutas-medicos']
     },
     {

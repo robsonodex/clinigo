@@ -49,11 +49,12 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar, Users, Stethoscope, DollarSign } from 'lucide-react'
+import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar, Users, Stethoscope, DollarSign, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog'
 import { type Doctor, api } from '@/lib/api-client'
 import { formatCurrency, getInitials } from '@/lib/utils'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
+import { exportDoctorsToExcel, exportDoctorsToCSV } from '@/lib/utils/export-doctors'
 
 export default function DoctorsPage() {
     const { clinicId, role } = useRole()
@@ -65,8 +66,43 @@ export default function DoctorsPage() {
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [doctorToDelete, setDoctorToDelete] = useState<Doctor | null>(null)
+    const [isExporting, setIsExporting] = useState(false)
     const profLabel = useProfessionalLabel()
     const searchParams = useSearchParams()
+
+    const handleExportExcel = async () => {
+        if (!doctors || doctors.length === 0) {
+            toast.error(`Nenhum ${profLabel.singular.toLowerCase()} para exportar.`)
+            return
+        }
+
+        setIsExporting(true)
+        try {
+            await exportDoctorsToExcel(doctors, profLabel, `corpo_clinico_${profLabel.plural.toLowerCase()}`)
+            toast.success(`Relação de ${doctors.length} ${profLabel.plural.toLowerCase()} exportada com sucesso em Excel.`)
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao exportar Excel')
+        } finally {
+            setIsExporting(false)
+        }
+    }
+
+    const handleExportCSV = () => {
+        if (!doctors || doctors.length === 0) {
+            toast.error(`Nenhum ${profLabel.singular.toLowerCase()} para exportar.`)
+            return
+        }
+
+        setIsExporting(true)
+        try {
+            exportDoctorsToCSV(doctors, profLabel, `corpo_clinico_${profLabel.plural.toLowerCase()}`)
+            toast.success(`Relação de ${doctors.length} ${profLabel.plural.toLowerCase()} exportada com sucesso em CSV.`)
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao exportar CSV')
+        } finally {
+            setIsExporting(false)
+        }
+    }
 
     useEffect(() => {
         if (searchParams.get('action') === 'novo') {
@@ -177,10 +213,38 @@ export default function DoctorsPage() {
                     <h1 className="text-xl font-semibold text-foreground tracking-tight">{profLabel.plural}</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">Gerencie o corpo clínico e suas informações</p>
                 </div>
-                <Button onClick={handleCreate} className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[36px]">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    {profLabel.novo}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                disabled={isExporting || (doctors && doctors.length === 0)}
+                                className="h-9 min-h-[44px] sm:min-h-[36px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                            >
+                                {isExporting ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-muted-foreground" />
+                                ) : (
+                                    <Download className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                                )}
+                                {isExporting ? 'Exportando...' : 'Exportar'}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52 bg-popover border border-border shadow-md">
+                            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer text-xs py-2">
+                                <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                                Exportar Excel (.xlsx)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer text-xs py-2">
+                                <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                                Exportar CSV (.csv)
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button onClick={handleCreate} className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[44px] sm:min-h-[36px]">
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                        {profLabel.novo}
+                    </Button>
+                </div>
             </div>
 
             {selectedIds.length > 0 && (
