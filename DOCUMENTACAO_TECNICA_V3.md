@@ -2207,5 +2207,19 @@
     - Ajustado o cálculo de permissões no frontend para consumir simultaneamente o hook `useRole()` e o objeto `profile` retornado por `useAuth()`.
     - No backend (`/api/appointments/[id]`), a rota `DELETE` valida a role do usuário no banco (`users.role`); se for diferente de `SUPER_ADMIN`, `CLINIC_ADMIN` ou `RECEPTIONIST`, a requisição é abortada imediatamente com código 403.
 
-
-
+### Item 73: Redesign e Alinhamento da Aba de Agendamentos do Paciente (Padrão SaaS Premium Internacional)
+- **Data**: 21/09/2026
+- **Módulos**: Pacientes → Detalhes do Paciente → Aba Agendamentos
+- **Caminho Completo**:
+  - Pacientes → Detalhes do Paciente → `app/dashboard/(clinic)/pacientes/[id]/page.tsx` → `loadAppointments`, `getStatusBadge`, `TabsContent[value="appointments"]`
+- **Descrição Técnica**:
+  - **1. Causa Raiz do Desalinhamento e Inconsistências Visuais**:
+    - Quando um agendamento não estava elegível para cancelamento (ex.: status `WAITING` ou `COMPLETED`), o botão de checkbox simplesmente não era renderizado. Isso fazia com que a caixa de data saltasse para a extrema esquerda nas linhas não canceláveis, criando um ziguezague visual desalinhado entre as linhas.
+    - A consulta Supabase tentava join com sintaxe `doctors!inner(id, user_id, specialty, users:user_id(full_name))`, o que disparava erro no PostgREST e caía no bloco de fallback sem o relacionamento de médicos. Dessa forma, todos os agendamentos exibiam o nome genérico "Profissional".
+    - Vários status (como `WAITING`, `SCHEDULED`, `IN_SERVICE`) não possuíam mapeamento de badges de status e renderizavam como texto não traduzido e sem estilo refinado.
+  - **2. Resolução Cirúrgica e Redesign Premium**:
+    - Implementado slot fixo de alinhamento (`w-6 shrink-0`) para todas as linhas quando houver agendamentos selecionáveis, garantindo que a coluna de datas permaneça milimetricamente alinhada em todas as linhas.
+    - Reformulada a lógica de carregamento (`loadAppointments`): coleta os IDs de profissionais presentes nos agendamentos e realiza busca direta e indexada em `doctors` + `users(full_name)`, garantindo que o nome real do profissional e sua especialidade sejam sempre apresentados.
+    - Criado padrão visual de calendário institucional para a data: bloco com dia em destaque (`text-base font-bold`) e mês/ano em tipografia sóbria (`text-[10px] font-semibold text-slate-500 uppercase`).
+    - Expandido o `getStatusBadge` cobrindo todos os estados do ciclo de vida clínico (`CONFIRMED`, `WAITING` / Aguardando Atendimento, `SCHEDULED`, `IN_SERVICE`, `COMPLETED`, `CANCELLED`, `NO_SHOW`, `PENDING_PAYMENT`) com paletas suaves e neutras (emerald, amber, sky, violet, slate, rose).
+    - Ajustado o botão de cancelamento individual com toque mínimo acessível (PWA/Mobile), feedback de loading (`Loader2`) e preservação integral dos fluxos existentes.
