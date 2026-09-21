@@ -68,6 +68,7 @@ import {
     Filter,
     ExternalLink,
     UserX,
+    FileSpreadsheet,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -79,6 +80,7 @@ import {
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { exportPatientsToExcel, exportPatientsToCSV } from '@/lib/utils/export-patients'
 
 // Validation schema
 const PatientFormSchema = z.object({
@@ -156,6 +158,65 @@ export default function PacientesPage() {
     const [promoteProgram, setPromoteProgram] = useState('')
     const [isPromoting, setIsPromoting] = useState(false)
     const [showInactive, setShowInactive] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
+
+    const handleExportExcel = async () => {
+        const targetList = filteredPatients.length > 0 ? filteredPatients : (patients || [])
+        if (!targetList.length) {
+            toast({
+                title: 'Nenhum paciente para exportar',
+                description: 'Não foram encontrados registros para os filtros atuais.',
+                variant: 'destructive',
+            })
+            return
+        }
+
+        setIsExporting(true)
+        try {
+            await exportPatientsToExcel(targetList, 'relatorio_pacientes')
+            toast({
+                title: 'Exportação concluída',
+                description: `${targetList.length} paciente(s) exportado(s) com sucesso em Excel.`,
+            })
+        } catch (error: any) {
+            toast({
+                title: 'Erro ao exportar Excel',
+                description: error.message || 'Falha ao processar a planilha.',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsExporting(false)
+        }
+    }
+
+    const handleExportCSV = () => {
+        const targetList = filteredPatients.length > 0 ? filteredPatients : (patients || [])
+        if (!targetList.length) {
+            toast({
+                title: 'Nenhum paciente para exportar',
+                description: 'Não foram encontrados registros para os filtros atuais.',
+                variant: 'destructive',
+            })
+            return
+        }
+
+        setIsExporting(true)
+        try {
+            exportPatientsToCSV(targetList, 'relatorio_pacientes')
+            toast({
+                title: 'Exportação concluída',
+                description: `${targetList.length} paciente(s) exportado(s) com sucesso em CSV.`,
+            })
+        } catch (error: any) {
+            toast({
+                title: 'Erro ao exportar CSV',
+                description: error.message || 'Falha ao processar o arquivo.',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsExporting(false)
+        }
+    }
 
     const handlePromotePatientToStudent = async () => {
         if (!patientToPromote) return
@@ -495,15 +556,44 @@ export default function PacientesPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" className="h-8 rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none">
+                    <Button
+                        onClick={() => router.push('/dashboard/importacao')}
+                        variant="outline"
+                        className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                    >
                         <Upload className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                         Importar
                     </Button>
-                    <Button variant="outline" className="h-8 rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none">
-                        <Download className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                        Exportar
-                    </Button>
-                    <Button onClick={() => setShowCreateModal(true)} className="h-8 rounded-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 text-xs font-medium shadow-none border-0">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                disabled={isExporting || (patients && patients.length === 0)}
+                                className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                            >
+                                {isExporting ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-muted-foreground" />
+                                ) : (
+                                    <Download className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                                )}
+                                {isExporting ? 'Exportando...' : 'Exportar'}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52 bg-popover border border-border shadow-md">
+                            <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer text-xs py-2">
+                                <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                                Exportar Excel (.xlsx)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer text-xs py-2">
+                                <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                                Exportar CSV (.csv)
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                        onClick={() => setShowCreateModal(true)}
+                        className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 text-xs font-medium shadow-none border-0"
+                    >
                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                         <span>Novo Paciente</span>
                     </Button>

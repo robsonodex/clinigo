@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### Exportação Completa de Relatórios de Pacientes em Excel e CSV (WorldSensory e Geral)
+- **Módulos**:
+  - Equipe → Pacientes → `app/dashboard/(clinic)/pacientes/page.tsx` → `PacientesPage()` (ativação do botão "Exportar" com DropdownMenu interativo para download em Excel `.xlsx` estilizado e CSV padrão brasileiro com BOM UTF-8, respeito aos filtros ativos de faturamento/letra/busca, feedback visual de carregamento, e conexão do botão "Importar" à rota de importação)
+  - Utilitários / Exportação → `lib/utils/export-patients.ts` → `exportPatientsToExcel()` e `exportPatientsToCSV()` (novo módulo utilitário dedicado para extração e formatação tabular com dados cadastrais completos, tratamento de datas brasileiras, tipos de faturamento, convênios, cabeçalhos institucionais e totalizadores)
+  - Gestão → Relatórios → `app/dashboard/(clinic)/relatorios/page.tsx` → `ReportsPage()` (inclusão de botões de exportação CSV dedicados nos cabeçalhos das tabelas de "Frequência por Paciente" e "Sessões Realizadas", permitindo o download direto dos dados operacionais e de assiduidade dos pacientes)
+- **Descrição**:
+  - **Demanda Operacional (WorldSensory)**:
+    - A colaboradora Ana da clínica WorldSensory questionou como exportar os relatórios de pacientes pois estava tentando e não conseguia.
+    - Diagnóstico: O botão "Exportar" da tela de Pacientes existia na interface mas não possuía ação `onClick` vinculada, e na tela de Relatórios a exportação padrão exportava apenas os KPIs consolidados e não a listagem tabular das abas inferiores.
+  - **Solução Implementada**:
+    - **Exportação Multiformato (Excel e CSV)**: No menu Equipe → Pacientes, o botão "Exportar" agora abre opções para gerar planilha Excel formatada com padrão corporativo ou arquivo CSV com delimitador `;` e BOM UTF-8 compatível com Excel.
+    - **Exportação Focada em Relatórios**: Adicionados botões dedicados de exportação CSV nas abas "Frequência por Paciente" e "Sessões Realizadas" no módulo Gestão → Relatórios.
+    - **Padrão Visual SaaS Premium e Mobile PWA**: Zero emojis, ícones vetoriais neutros (Lucide), área de toque mínima de 44x44px nos botões interativos e responsividade integral.
+
+
 ### Envio de Notas Fiscais pelos Profissionais sem Dependência de Demonstrativo Prévio (World Sensory e Geral)
 - **Módulos**:
   - Financeiro → Visão do Profissional → `components/financial/DoctorFinancialDocumentsView.tsx` → `DoctorFinancialDocumentsView()` (adição do botão de ação primária "Enviar Nota Fiscal" no topo e no estado vazio da listagem, inclusão do modal com seletor de competência Mês/Ano para envio avulso por iniciativa do próprio profissional, liberação do botão de upload no card mesmo que o status esteja em `NO_STATEMENT`, e substituição de ícones festivos por Lucide sóbrios como `PlusCircle` e `ReceiptText` no padrão corporativo internacional)

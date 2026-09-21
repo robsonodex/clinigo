@@ -189,6 +189,68 @@ export default function ReportsPage() {
         }
     }
 
+    const handleExportFrequencyCSV = () => {
+        if (!frequencyReport.data || frequencyReport.data.length === 0) {
+            toast.error('Nenhum dado de frequência para exportar')
+            return
+        }
+        const headers = ['Paciente', 'Profissional', 'Total Agendamentos', 'Comparecimentos', 'Faltas', 'Cancelados', 'Taxa de Presenca (%)']
+        const rows = [
+            headers.join(';'),
+            ...frequencyReport.data.map((p: any) => [
+                `"${(p.patient_name || '').replace(/"/g, '""')}"`,
+                `"${(p.professional || '').replace(/"/g, '""')}"`,
+                p.total ?? 0,
+                p.completed ?? 0,
+                p.no_show ?? 0,
+                p.cancelled ?? 0,
+                p.attendance_rate ?? 0,
+            ].join(';'))
+        ]
+        const csvContent = rows.join('\r\n')
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `relatorio_frequencia_pacientes_${dateRange}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast.success('Relatório de frequência exportado com sucesso')
+    }
+
+    const handleExportSessionsCSV = () => {
+        if (!sessionsReport.data || sessionsReport.data.length === 0) {
+            toast.error('Nenhum dado de sessões para exportar')
+            return
+        }
+        const headers = ['Data', 'Horario', 'Paciente', 'Profissional', 'Especialidade', 'Convenio', 'Status']
+        const rows = [
+            headers.join(';'),
+            ...sessionsReport.data.map((s: any) => [
+                `"${s.date ? new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}"`,
+                `"${s.start_time?.slice(0, 5) || '-'}"`,
+                `"${(s.patient_name || '').replace(/"/g, '""')}"`,
+                `"${(s.professional || '').replace(/"/g, '""')}"`,
+                `"${(s.specialty || '').replace(/"/g, '""')}"`,
+                `"${(s.insurance || '').replace(/"/g, '""')}"`,
+                `"${s.status === 'COMPLETED' ? 'Realizada' : s.status === 'CONFIRMED' ? 'Confirmada' : s.status === 'NO_SHOW' ? 'Falta' : s.status === 'CANCELLED' ? 'Cancelada' : (s.status || '-')}"`,
+            ].join(';'))
+        ]
+        const csvContent = rows.join('\r\n')
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `relatorio_sessoes_pacientes_${dateRange}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast.success('Relatório de sessões exportado com sucesso')
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
@@ -709,7 +771,22 @@ export default function ReportsPage() {
                             <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold">{frequencyReport.summary.overall_attendance_rate || 0}%</div><p className="text-xs text-muted-foreground">Taxa Presença Geral</p></CardContent></Card>
                         </div>
                         <Card>
-                            <CardHeader><CardTitle>Frequência por Paciente</CardTitle><CardDescription>Ordenado por menor taxa de presença (pacientes que mais faltam aparecem primeiro)</CardDescription></CardHeader>
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                    <CardTitle>Frequência por Paciente</CardTitle>
+                                    <CardDescription>Ordenado por menor taxa de presença (pacientes que mais faltam aparecem primeiro)</CardDescription>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleExportFrequencyCSV}
+                                    disabled={frequencyReport.data.length === 0}
+                                    className="h-8 text-xs font-medium self-start sm:self-auto shrink-0"
+                                >
+                                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                                    Exportar CSV
+                                </Button>
+                            </CardHeader>
                             <CardContent>
                                 {frequencyReport.data.length === 0 ? (
                                     <p className="text-center text-muted-foreground py-8">Sem dados no período</p>
@@ -750,7 +827,22 @@ export default function ReportsPage() {
                             <Card><CardContent className="pt-4 text-center"><div className="text-2xl font-bold text-orange-600">{sessionsReport.summary.cancelled || 0}</div><p className="text-xs text-muted-foreground">Canceladas</p></CardContent></Card>
                         </div>
                         <Card>
-                            <CardHeader><CardTitle>Sessões Realizadas</CardTitle><CardDescription>Listagem detalhada de todas as sessões no período</CardDescription></CardHeader>
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                    <CardTitle>Sessões Realizadas</CardTitle>
+                                    <CardDescription>Listagem detalhada de todas as sessões no período</CardDescription>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleExportSessionsCSV}
+                                    disabled={sessionsReport.data.length === 0}
+                                    className="h-8 text-xs font-medium self-start sm:self-auto shrink-0"
+                                >
+                                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                                    Exportar CSV
+                                </Button>
+                            </CardHeader>
                             <CardContent>
                                 {sessionsReport.data.length === 0 ? (
                                     <p className="text-center text-muted-foreground py-8">Sem dados no período</p>
