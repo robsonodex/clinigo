@@ -2,6 +2,22 @@
 
 ## Módulos
 
+### Restrição e Ocultação de Planos de Saúde e Convênios para Terapeutas/Médicos (WorldSensory e Clínicas)
+- **Módulos**:
+  - API / Segurança & Governança → Pacientes → `app/api/patients/route.ts` → `GET`, `POST`
+  - API / Segurança & Governança → Pacientes → `app/api/patients/[id]/route.ts` → `GET`, `PATCH`
+  - Recepção / Atendimento → Pacientes → `app/dashboard/(clinic)/pacientes/page.tsx` → `handleExportExcel`, `handleExportCSV`, Listagem, Modais
+  - Recepção / Atendimento → Prontuário & Paciente → `app/dashboard/(clinic)/pacientes/[id]/page.tsx` → `loadPatient`, `loadInsurances`, `handleEditSubmit`, `Card 3`, Modal de Edição, Modal Rápido de Convênios
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Solicitação da administração da World Sensory (Patrícia): Os profissionais de saúde e terapeutas não devem ter acesso aos dados financeiros e operacionais de planos de saúde, convênios, número de carteirinha ou validade do convênio. Essas informações são de gestão estritamente administrativa e de recepção.
+  - **Solução Implementada**:
+    - **Proteção Backend / API**: Sanitização automática das rotas `GET /api/patients` e `GET /api/patients/[id]` para usuários com perfil `DOCTOR`, anulando campos sensíveis (`health_insurance_id`, `insurance_card_number`, `insurance_validity`, `insurance_plan_name`, `health_insurances`) e fixando `billing_type` como `particular`. Bloqueio e remoção compulsória desses campos nos métodos `POST` e `PATCH`, impedindo envio ou alteração de dados de convênio por terapeutas.
+    - **Interface da Listagem de Pacientes**: Ocultação de abas de filtro por convênio, badges de planos na tabela e nos cards móveis, ocultação de campos de convênio no modal de cadastro/edição rápida e no drawer de visualização para perfil `DOCTOR`.
+    - **Interface do Prontuário / Detalhes do Paciente**: Ocultação do badge de convênio no cabeçalho, remoção do card "Modalidade de Atendimento & Cobertura" no resumo cadastral, remoção dos seletores de convênio no modal de edição e bloqueio do modal de criação rápida de convênios para perfil `DOCTOR`.
+    - **Exportações Excel e CSV**: Sanitização ativa dos dados antes da geração dos arquivos em tela para perfil `DOCTOR`.
+    - **Padrão Visual SaaS Premium**: Zero emojis, substituição de ícones decorativos por ícones sóbrios (`Layers`), conformidade rigorosa com diretrizes de responsividade PWA e LGPD.
+
 ### Isolamento Estrito de Pacientes e Relatórios por Profissional (LGPD & Sigilo Clínico)
 - **Módulos**:
   - API / Segurança & LGPD → Pacientes → `app/api/patients/route.ts` → `GET` (reestruturação do isolamento para perfil `DOCTOR` não-coordenador: busca consolidada de pacientes por agendamentos `appointments`, evoluções clínicas `session_evolutions` e regras financeiras `doctor_patient_rates`, com bloqueio seguro fail-closed retornando `{ patients: [], total: 0 }` caso o profissional não tenha pacientes ou perfil vinculado)

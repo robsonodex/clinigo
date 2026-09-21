@@ -41,7 +41,7 @@ import {
     Activity,
     ShieldCheck,
     Plus,
-    Sparkles,
+    Layers,
     Copy,
     Check,
 } from 'lucide-react';
@@ -130,6 +130,7 @@ export default function PatientDetailsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user } = useUser();
+    const isDoctor = user?.role === 'DOCTOR';
     const patientId = params.id as string;
 
     const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'info');
@@ -366,6 +367,7 @@ export default function PatientDetailsPage() {
     };
 
     const loadInsurances = async () => {
+        if (isDoctor) return;
         try {
             const res = await fetch('/api/health-insurances?status=ACTIVE&pageSize=100');
             if (res.ok) {
@@ -436,8 +438,18 @@ export default function PatientDetailsPage() {
             return;
         }
 
-        setPatient(data);
         if (data) {
+            if (user?.role === 'DOCTOR') {
+                data.health_insurance_id = null;
+                data.insurance_card_number = null;
+                data.insurance_validity = null;
+                data.insurance_plan_name = null;
+                data.insurance_holder_name = null;
+                data.insurance_holder_cpf = null;
+                data.health_insurances = null;
+                data.billing_type = 'particular';
+            }
+            setPatient(data);
             const d = data as any;
             
             // Helper to format the address object to a readable string
@@ -580,6 +592,16 @@ export default function PatientDetailsPage() {
                 insurance_validity: isConvenioOrBoth ? (data.insurance_validity || null) : null,
                 insurance_plan_name: isConvenioOrBoth ? (data.insurance_plan_name?.trim() || null) : null,
             };
+
+            if (isDoctor) {
+                delete mappedData.billing_type;
+                delete mappedData.health_insurance_id;
+                delete mappedData.insurance_card_number;
+                delete mappedData.insurance_validity;
+                delete mappedData.insurance_plan_name;
+                delete mappedData.insurance_holder_name;
+                delete mappedData.insurance_holder_cpf;
+            }
 
             const response = await fetch(`/api/patients/${patientId}`, {
                 method: 'PATCH',
@@ -751,23 +773,25 @@ export default function PatientDetailsPage() {
                                         Inativo
                                     </Badge>
                                 )}
-                                {patient.billing_type === 'convenio' ? (
-                                    <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60 font-medium text-xs">
-                                        <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
-                                        Convenio: {patient.health_insurances?.name || 'Convenio'}
-                                        {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
-                                    </Badge>
-                                ) : patient.billing_type === 'ambos' ? (
-                                    <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/80 dark:border-sky-800/60 font-medium text-xs">
-                                        <Sparkles className="w-3.5 h-3.5 mr-1 text-sky-600 dark:text-sky-400" />
-                                        Particular & {patient.health_insurances?.name || 'Convenio'}
-                                        {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="outline" className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300 font-medium text-xs">
-                                        <User className="w-3.5 h-3.5 mr-1 text-slate-500" />
-                                        Particular
-                                    </Badge>
+                                {!isDoctor && (
+                                    patient.billing_type === 'convenio' ? (
+                                        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60 font-medium text-xs">
+                                            <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+                                            Convenio: {patient.health_insurances?.name || 'Convenio'}
+                                            {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
+                                        </Badge>
+                                    ) : patient.billing_type === 'ambos' ? (
+                                        <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/80 dark:border-sky-800/60 font-medium text-xs">
+                                            <Layers className="w-3.5 h-3.5 mr-1 text-sky-600 dark:text-sky-400" />
+                                            Particular & {patient.health_insurances?.name || 'Convenio'}
+                                            {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300 font-medium text-xs">
+                                            <User className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                                            Particular
+                                        </Badge>
+                                    )
                                 )}
                             </div>
                             <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -1102,114 +1126,116 @@ export default function PatientDetailsPage() {
                                 </div>
 
                                 {/* Card 3: Modalidade & Cobertura */}
-                                <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
-                                    <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
-                                                    <ShieldCheck className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        Modalidade de Atendimento & Cobertura
-                                                    </CardTitle>
-                                                    <CardDescription className="text-xs">
-                                                        Faturamento, convênio e autorizações
-                                                    </CardDescription>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-4">
-                                        {patient.billing_type === 'particular' ? (
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-lg bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
-                                                        <User className="w-5 h-5" />
+                                {!isDoctor && (
+                                    <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
+                                        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                                        <ShieldCheck className="w-4 h-4" />
                                                     </div>
                                                     <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                                Atendimento 100% Particular
-                                                            </h4>
-                                                            <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs">
-                                                                Particular
-                                                            </Badge>
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                                            Cobrança direta por sessão realizada ou via plano de sessões pré-pago.
-                                                        </p>
+                                                        <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            Modalidade de Atendimento & Cobertura
+                                                        </CardTitle>
+                                                        <CardDescription className="text-xs">
+                                                            Faturamento, convênio e autorizações
+                                                        </CardDescription>
                                                     </div>
                                                 </div>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setShowEditModal(true)}
-                                                    className="min-h-[44px] text-xs font-medium border-slate-200 dark:border-slate-800"
-                                                >
-                                                    Vincular Convênio
-                                                </Button>
                                             </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-                                                <div>
-                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                                                        Modalidade
-                                                    </span>
-                                                    {patient.billing_type === 'ambos' ? (
-                                                        <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-200 text-xs font-medium">
-                                                            <Sparkles className="w-3 h-3 mr-1" />
-                                                            Particular & Convênio
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 text-xs font-medium">
-                                                            <Shield className="w-3 h-3 mr-1" />
-                                                            Convênio
-                                                        </Badge>
-                                                    )}
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            {patient.billing_type === 'particular' ? (
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                                                            <User className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                                    Atendimento 100% Particular
+                                                                </h4>
+                                                                <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs">
+                                                                    Particular
+                                                                </Badge>
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                                Cobrança direta por sessão realizada ou via plano de sessões pré-pago.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowEditModal(true)}
+                                                        className="min-h-[44px] text-xs font-medium border-slate-200 dark:border-slate-800"
+                                                    >
+                                                        Vincular Convênio
+                                                    </Button>
                                                 </div>
-                                                <div>
-                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                                                        Operadora de Saúde
-                                                    </span>
-                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        {patient.health_insurances?.name || 'Não informado'}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                                                        Nº da Carteirinha
-                                                    </span>
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-mono">
-                                                            {patient.insurance_card_number || 'Não informado'}
-                                                        </p>
-                                                        {patient.insurance_card_number && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => copyToClipboard(patient.insurance_card_number!, 'card_number')}
-                                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800"
-                                                                title="Copiar carteirinha"
-                                                            >
-                                                                {copiedField === 'card_number' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                                            </button>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                                                    <div>
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                            Modalidade
+                                                        </span>
+                                                        {patient.billing_type === 'ambos' ? (
+                                                            <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-200 text-xs font-medium">
+                                                                <Layers className="w-3 h-3 mr-1" />
+                                                                Particular & Convênio
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 text-xs font-medium">
+                                                                <Shield className="w-3 h-3 mr-1" />
+                                                                Convênio
+                                                            </Badge>
                                                         )}
                                                     </div>
+                                                    <div>
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                            Operadora de Saúde
+                                                        </span>
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            {patient.health_insurances?.name || 'Não informado'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                            Nº da Carteirinha
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                                                                {patient.insurance_card_number || 'Não informado'}
+                                                            </p>
+                                                            {patient.insurance_card_number && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => copyToClipboard(patient.insurance_card_number!, 'card_number')}
+                                                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800"
+                                                                    title="Copiar carteirinha"
+                                                                >
+                                                                    {copiedField === 'card_number' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                                                            Validade / Plano
+                                                        </span>
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            {patient.insurance_validity
+                                                                ? new Date(patient.insurance_validity + 'T12:00:00').toLocaleDateString('pt-BR')
+                                                                : (patient.insurance_plan_name || 'Vigência indeterminada')}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                                                        Validade / Plano
-                                                    </span>
-                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        {patient.insurance_validity
-                                                            ? new Date(patient.insurance_validity + 'T12:00:00').toLocaleDateString('pt-BR')
-                                                            : (patient.insurance_plan_name || 'Vigência indeterminada')}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                )}
 
                                 {/* Card 4: Biometria Facial */}
                                 <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
@@ -1682,179 +1708,181 @@ export default function PatientDetailsPage() {
                             </div>
 
                             {/* Modalidade de Atendimento: Particular vs Convênio */}
-                            <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
-                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    Tipo de Atendimento *
-                                </Label>
-                                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => form.setValue('billing_type', 'particular')}
-                                        className={cn(
-                                            "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
-                                            form.watch('billing_type') === 'particular'
-                                                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
-                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                                        )}
-                                    >
-                                        <User className="w-4 h-4 shrink-0" />
-                                        <span>Particular</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => form.setValue('billing_type', 'convenio')}
-                                        className={cn(
-                                            "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
-                                            form.watch('billing_type') === 'convenio'
-                                                ? "bg-emerald-600 text-white shadow-xs"
-                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                                        )}
-                                    >
-                                        <Shield className="w-4 h-4 shrink-0" />
-                                        <span>Convênio</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => form.setValue('billing_type', 'ambos')}
-                                        className={cn(
-                                            "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
-                                            form.watch('billing_type') === 'ambos'
-                                                ? "bg-blue-600 text-white shadow-xs"
-                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                                        )}
-                                    >
-                                        <ShieldCheck className="w-4 h-4 shrink-0 text-blue-200" />
-                                        <span>Ambos</span>
-                                    </button>
-                                </div>
-
-                                {form.watch('billing_type') === 'ambos' && (
-                                    <div className="p-3 bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/40 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
-                                        <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                                        <span><strong>Modalidade Híbrida:</strong> O paciente realiza atendimentos particulares e também via convênio. Cadastre os dados do plano abaixo.</span>
-                                    </div>
-                                )}
-
-                                {(form.watch('billing_type') === 'convenio' || form.watch('billing_type') === 'ambos') && (
-                                    <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-3.5">
-                                        <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <Label htmlFor="health_insurance_id" className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
-                                                    Operadora / Convênio *
-                                                </Label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowQuickInsuranceModal(true)}
-                                                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline min-h-[36px] px-1.5"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                    + Novo Convênio
-                                                </button>
-                                            </div>
-                                            <Select
-                                                value={form.watch('health_insurance_id') || ''}
-                                                onValueChange={(val) => form.setValue('health_insurance_id', val)}
-                                            >
-                                                <SelectTrigger className="bg-white dark:bg-slate-900 min-h-[44px] text-sm">
-                                                    <SelectValue placeholder="Selecione o convênio da clínica..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {insurances.length === 0 ? (
-                                                        <div className="p-3 text-xs text-slate-500 text-center">
-                                                            Nenhum convênio cadastrado ainda. Clique em "+ Novo Convênio".
-                                                        </div>
-                                                    ) : (
-                                                        insurances.map((ins: any) => (
-                                                            <SelectItem key={ins.id} value={ins.id}>
-                                                                {ins.name} {ins.code ? `(ANS: ${ins.code})` : ''}
-                                                            </SelectItem>
-                                                        ))
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1">
-                                                <Label htmlFor="insurance_card_number" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
-                                                    Nº Carteirinha / Matrícula
-                                                </Label>
-                                                <Input
-                                                    id="insurance_card_number"
-                                                    placeholder="Ex: 0023456789"
-                                                    className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
-                                                    {...form.register('insurance_card_number')}
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label htmlFor="insurance_validity" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
-                                                    Validade da Carteirinha
-                                                </Label>
-                                                <Input
-                                                    id="insurance_validity"
-                                                    type="date"
-                                                    className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
-                                                    {...form.register('insurance_validity')}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <Label htmlFor="insurance_plan_name" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
-                                                Plano / Categoria (opcional)
-                                            </Label>
-                                            <Input
-                                                id="insurance_plan_name"
-                                                placeholder="Ex: Básico, Executivo, Top Nacional..."
-                                                className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
-                                                {...form.register('insurance_plan_name')}
-                                            />
-                                        </div>
-
-                                        {/* Titularidade */}
-                                        <div className="pt-2 border-t border-emerald-200/40 dark:border-emerald-900/30 space-y-2">
-                                            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 min-h-[44px]">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isHolder}
-                                                    onChange={(e) => setIsHolder(e.target.checked)}
-                                                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                                                />
-                                                O paciente é o próprio titular do plano
-                                            </label>
-
-                                            {!isHolder && (
-                                                <div className="grid grid-cols-2 gap-3 pt-1">
-                                                    <div className="space-y-1">
-                                                        <Label htmlFor="insurance_holder_name" className="text-xs text-slate-600 dark:text-slate-400">
-                                                            Nome do Titular
-                                                        </Label>
-                                                        <Input
-                                                            id="insurance_holder_name"
-                                                            placeholder="Nome do pai/mãe ou titular"
-                                                            className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
-                                                            {...form.register('insurance_holder_name')}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label htmlFor="insurance_holder_cpf" className="text-xs text-slate-600 dark:text-slate-400">
-                                                            CPF do Titular
-                                                        </Label>
-                                                        <Input
-                                                            id="insurance_holder_cpf"
-                                                            placeholder="000.000.000-00"
-                                                            className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
-                                                            {...form.register('insurance_holder_cpf')}
-                                                        />
-                                                    </div>
-                                                </div>
+                            {!isDoctor && (
+                                <div className="space-y-3 pt-3 border-t border-slate-150 dark:border-slate-800">
+                                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                        Tipo de Atendimento *
+                                    </Label>
+                                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-850 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => form.setValue('billing_type', 'particular')}
+                                            className={cn(
+                                                "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                form.watch('billing_type') === 'particular'
+                                                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                                             )}
-                                        </div>
+                                        >
+                                            <User className="w-4 h-4 shrink-0" />
+                                            <span>Particular</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => form.setValue('billing_type', 'convenio')}
+                                            className={cn(
+                                                "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                form.watch('billing_type') === 'convenio'
+                                                    ? "bg-emerald-600 text-white shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                            )}
+                                        >
+                                            <Shield className="w-4 h-4 shrink-0" />
+                                            <span>Convênio</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => form.setValue('billing_type', 'ambos')}
+                                            className={cn(
+                                                "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                form.watch('billing_type') === 'ambos'
+                                                    ? "bg-blue-600 text-white shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                            )}
+                                        >
+                                            <ShieldCheck className="w-4 h-4 shrink-0 text-blue-200" />
+                                            <span>Ambos</span>
+                                        </button>
                                     </div>
-                                )}
-                            </div>
 
-                            {(form.watch('billing_type') === 'particular' || form.watch('billing_type') === 'ambos') && (
+                                    {form.watch('billing_type') === 'ambos' && (
+                                        <div className="p-3 bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/40 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                                            <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                                            <span><strong>Modalidade Híbrida:</strong> O paciente realiza atendimentos particulares e também via convênio. Cadastre os dados do plano abaixo.</span>
+                                        </div>
+                                    )}
+
+                                    {(form.watch('billing_type') === 'convenio' || form.watch('billing_type') === 'ambos') && (
+                                        <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-3.5">
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="health_insurance_id" className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                                                        Operadora / Convênio *
+                                                    </Label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowQuickInsuranceModal(true)}
+                                                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline min-h-[36px] px-1.5"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                        + Novo Convênio
+                                                    </button>
+                                                </div>
+                                                <Select
+                                                    value={form.watch('health_insurance_id') || ''}
+                                                    onValueChange={(val) => form.setValue('health_insurance_id', val)}
+                                                >
+                                                    <SelectTrigger className="bg-white dark:bg-slate-900 min-h-[44px] text-sm">
+                                                        <SelectValue placeholder="Selecione o convênio da clínica..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {insurances.length === 0 ? (
+                                                            <div className="p-3 text-xs text-slate-500 text-center">
+                                                                Nenhum convênio cadastrado ainda. Clique em "+ Novo Convênio".
+                                                            </div>
+                                                        ) : (
+                                                            insurances.map((ins: any) => (
+                                                                <SelectItem key={ins.id} value={ins.id}>
+                                                                    {ins.name} {ins.code ? `(ANS: ${ins.code})` : ''}
+                                                                </SelectItem>
+                                                            ))
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="insurance_card_number" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
+                                                        Nº Carteirinha / Matrícula
+                                                    </Label>
+                                                    <Input
+                                                        id="insurance_card_number"
+                                                        placeholder="Ex: 0023456789"
+                                                        className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                        {...form.register('insurance_card_number')}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="insurance_validity" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
+                                                        Validade da Carteirinha
+                                                    </Label>
+                                                    <Input
+                                                        id="insurance_validity"
+                                                        type="date"
+                                                        className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                        {...form.register('insurance_validity')}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <Label htmlFor="insurance_plan_name" className="text-xs font-semibold text-slate-600 dark:text-slate-350">
+                                                    Plano / Categoria (opcional)
+                                                </Label>
+                                                <Input
+                                                    id="insurance_plan_name"
+                                                    placeholder="Ex: Básico, Executivo, Top Nacional..."
+                                                    className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                    {...form.register('insurance_plan_name')}
+                                                />
+                                            </div>
+
+                                            {/* Titularidade */}
+                                            <div className="pt-2 border-t border-emerald-200/40 dark:border-emerald-900/30 space-y-2">
+                                                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 min-h-[44px]">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isHolder}
+                                                        onChange={(e) => setIsHolder(e.target.checked)}
+                                                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                                                    />
+                                                    O paciente é o próprio titular do plano
+                                                </label>
+
+                                                {!isHolder && (
+                                                    <div className="grid grid-cols-2 gap-3 pt-1">
+                                                        <div className="space-y-1">
+                                                            <Label htmlFor="insurance_holder_name" className="text-xs text-slate-600 dark:text-slate-400">
+                                                                Nome do Titular
+                                                            </Label>
+                                                            <Input
+                                                                id="insurance_holder_name"
+                                                                placeholder="Nome do pai/mãe ou titular"
+                                                                className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                                {...form.register('insurance_holder_name')}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label htmlFor="insurance_holder_cpf" className="text-xs text-slate-600 dark:text-slate-400">
+                                                                CPF do Titular
+                                                            </Label>
+                                                            <Input
+                                                                id="insurance_holder_cpf"
+                                                                placeholder="000.000.000-00"
+                                                                className="bg-white dark:bg-slate-900 min-h-[44px] text-sm"
+                                                                {...form.register('insurance_holder_cpf')}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {(isDoctor || form.watch('billing_type') === 'particular' || form.watch('billing_type') === 'ambos') && (
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                                     <div className="space-y-2">
                                         <Label htmlFor="insurance_holder_name">Nome Completo dos Responsáveis</Label>
@@ -1898,58 +1926,60 @@ export default function PatientDetailsPage() {
             </Dialog>
 
             {/* Quick Create Health Insurance Modal */}
-            <Dialog open={showQuickInsuranceModal} onOpenChange={setShowQuickInsuranceModal}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Shield className="w-5 h-5 text-emerald-600" />
-                            Cadastrar Novo Convênio
-                        </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            Cadastre a operadora de saúde rapidamente. Ela ficará disponível para todos os atendimentos da clínica.
-                        </DialogDescription>
-                    </DialogHeader>
+            {!isDoctor && (
+                <Dialog open={showQuickInsuranceModal} onOpenChange={setShowQuickInsuranceModal}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-emerald-600" />
+                                Cadastrar Novo Convênio
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Cadastre a operadora de saúde rapidamente. Ela ficará disponível para todos os atendimentos da clínica.
+                            </DialogDescription>
+                        </DialogHeader>
 
-                    <form onSubmit={handleQuickCreateInsurance} className="space-y-4 py-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="quick_name_patient_detail">Nome do Convênio / Operadora *</Label>
-                            <Input
-                                id="quick_name_patient_detail"
-                                placeholder="Ex: Unimed, Bradesco Saúde, Amil..."
-                                value={quickInsuranceName}
-                                onChange={(e) => setQuickInsuranceName(e.target.value)}
-                                className="min-h-[44px]"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="quick_code_patient_detail">Registro ANS / Código (opcional)</Label>
-                            <Input
-                                id="quick_code_patient_detail"
-                                placeholder="Ex: 005711"
-                                value={quickInsuranceCode}
-                                onChange={(e) => setQuickInsuranceCode(e.target.value)}
-                                className="min-h-[44px]"
-                            />
-                        </div>
-                        <DialogFooter className="gap-2 pt-2">
-                            <Button type="button" variant="outline" onClick={() => setShowQuickInsuranceModal(false)} className="min-h-[44px]">
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isCreatingQuickInsurance || !quickInsuranceName.trim()} className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] text-white font-semibold">
-                                {isCreatingQuickInsurance ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Salvando...
-                                    </>
-                                ) : (
-                                    'Cadastrar Convênio'
-                                )}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                        <form onSubmit={handleQuickCreateInsurance} className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="quick_name_patient_detail">Nome do Convênio / Operadora *</Label>
+                                <Input
+                                    id="quick_name_patient_detail"
+                                    placeholder="Ex: Unimed, Bradesco Saúde, Amil..."
+                                    value={quickInsuranceName}
+                                    onChange={(e) => setQuickInsuranceName(e.target.value)}
+                                    className="min-h-[44px]"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="quick_code_patient_detail">Registro ANS / Código (opcional)</Label>
+                                <Input
+                                    id="quick_code_patient_detail"
+                                    placeholder="Ex: 005711"
+                                    value={quickInsuranceCode}
+                                    onChange={(e) => setQuickInsuranceCode(e.target.value)}
+                                    className="min-h-[44px]"
+                                />
+                            </div>
+                            <DialogFooter className="gap-2 pt-2">
+                                <Button type="button" variant="outline" onClick={() => setShowQuickInsuranceModal(false)} className="min-h-[44px]">
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" disabled={isCreatingQuickInsurance || !quickInsuranceName.trim()} className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] text-white font-semibold">
+                                    {isCreatingQuickInsurance ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        'Cadastrar Convênio'
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {/* Modal de Cadastro Biométrico */}
             <Dialog open={showEnrollment} onOpenChange={setShowEnrollment}>

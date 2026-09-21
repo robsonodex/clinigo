@@ -147,9 +147,26 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
+        const sanitizedPatients = (patients || []).map((p: any) => {
+            if (userData.role === 'DOCTOR') {
+                return {
+                    ...p,
+                    billing_type: 'particular',
+                    health_insurance_id: null,
+                    insurance_card_number: null,
+                    insurance_validity: null,
+                    insurance_plan_name: null,
+                    insurance_holder_name: null,
+                    insurance_holder_cpf: null,
+                    health_insurances: null,
+                }
+            }
+            return p
+        })
+
         return NextResponse.json({ 
-            patients,
-            total: patients?.length || 0
+            patients: sanitizedPatients,
+            total: sanitizedPatients.length
         })
     } catch (error) {
         console.error('Error in patients API:', error)
@@ -241,14 +258,17 @@ export async function POST(request: NextRequest) {
         const state = addressObj?.state || data.address_state || null
         const zipCode = addressObj?.zip_code || (data.address_zip_code ? data.address_zip_code.replace(/\D/g, '') : null)
 
-        const isConvenioOrBoth = data.billing_type === 'convenio' || data.billing_type === 'ambos'
-        const billingType = ['particular', 'convenio', 'ambos'].includes(data.billing_type as string)
+        const isDoctor = userData.role === 'DOCTOR'
+        const isConvenioOrBoth = !isDoctor && (data.billing_type === 'convenio' || data.billing_type === 'ambos')
+        const billingType = isDoctor ? 'particular' : (['particular', 'convenio', 'ambos'].includes(data.billing_type as string)
             ? data.billing_type
-            : 'particular'
+            : 'particular')
         const healthInsuranceId = isConvenioOrBoth && data.health_insurance_id ? data.health_insurance_id : null
         const insuranceCardNumber = isConvenioOrBoth ? (data.insurance_card_number?.trim() || null) : null
         const insuranceValidity = isConvenioOrBoth && data.insurance_validity ? data.insurance_validity : null
         const insurancePlanName = isConvenioOrBoth ? (data.insurance_plan_name?.trim() || null) : null
+        const insuranceHolderName = isDoctor ? null : (data.insurance_holder_name || null)
+        const insuranceHolderCpf = isDoctor ? null : (data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null)
 
         const insertData = {
             full_name: data.full_name,
@@ -262,16 +282,16 @@ export async function POST(request: NextRequest) {
             insurance_card_number: insuranceCardNumber,
             insurance_validity: insuranceValidity,
             insurance_plan_name: insurancePlanName,
-            insurance_holder_name: data.insurance_holder_name || null,
-            insurance_holder_cpf: data.insurance_holder_cpf ? data.insurance_holder_cpf.replace(/\D/g, '') : null,
+            insurance_holder_name: insuranceHolderName,
+            insurance_holder_cpf: insuranceHolderCpf,
             health_insurance: {
                 billing_type: billingType,
                 health_insurance_id: healthInsuranceId,
                 insurance_card_number: insuranceCardNumber,
                 insurance_validity: insuranceValidity,
                 insurance_plan_name: insurancePlanName,
-                insurance_holder_name: data.insurance_holder_name || null,
-                insurance_holder_cpf: data.insurance_holder_cpf || null,
+                insurance_holder_name: insuranceHolderName,
+                insurance_holder_cpf: insuranceHolderCpf,
             },
             clinic_id: clinicId,
             address: addressObj,
@@ -293,6 +313,18 @@ export async function POST(request: NextRequest) {
         if (error) {
             console.error('Error creating patient:', error)
             return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+
+        if (isDoctor && patient) {
+            patient.billing_type = 'particular'
+            patient.health_insurance_id = null
+            patient.insurance_card_number = null
+            patient.insurance_validity = null
+            patient.insurance_plan_name = null
+            patient.insurance_holder_name = null
+            patient.insurance_holder_cpf = null
+            patient.health_insurances = null
+            patient.health_insurance = null
         }
 
         return NextResponse.json(patient)

@@ -32,6 +32,24 @@ export async function GET(
             return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
         }
 
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role === 'DOCTOR') {
+            patient.billing_type = 'particular'
+            patient.health_insurance_id = null
+            patient.insurance_card_number = null
+            patient.insurance_validity = null
+            patient.insurance_plan_name = null
+            patient.insurance_holder_name = null
+            patient.insurance_holder_cpf = null
+            patient.health_insurances = null
+            patient.health_insurance = null
+        }
+
         return NextResponse.json(patient)
 
     } catch (error) {
@@ -54,12 +72,29 @@ export async function PATCH(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        const isDoctor = userData?.role === 'DOCTOR'
+
         const body = await request.json()
 
         const updatePayload: any = { ...body }
 
-        // Suporte à modalidade híbrida 'ambos' (Particular e Convênio)
-        if (body.billing_type !== undefined) {
+        if (isDoctor) {
+            // Profissionais não têm permissão para cadastrar ou modificar convênios
+            delete updatePayload.billing_type
+            delete updatePayload.health_insurance_id
+            delete updatePayload.insurance_card_number
+            delete updatePayload.insurance_validity
+            delete updatePayload.insurance_plan_name
+            delete updatePayload.insurance_holder_name
+            delete updatePayload.insurance_holder_cpf
+            delete updatePayload.health_insurance
+        } else if (body.billing_type !== undefined) {
             const hasInsurance = body.billing_type === 'convenio' || body.billing_type === 'ambos'
             updatePayload.billing_type = ['particular', 'convenio', 'ambos'].includes(body.billing_type)
                 ? body.billing_type
@@ -127,6 +162,18 @@ export async function PATCH(
         if (error) {
             console.error('Patient update error:', error)
             return NextResponse.json({ error: 'Erro ao atualizar paciente' }, { status: 500 })
+        }
+
+        if (isDoctor && patient) {
+            patient.billing_type = 'particular'
+            patient.health_insurance_id = null
+            patient.insurance_card_number = null
+            patient.insurance_validity = null
+            patient.insurance_plan_name = null
+            patient.insurance_holder_name = null
+            patient.insurance_holder_cpf = null
+            patient.health_insurances = null
+            patient.health_insurance = null
         }
 
         return NextResponse.json(patient)
