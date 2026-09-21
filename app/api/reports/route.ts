@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
         const reportType = searchParams.get('type') || 'kpis'
         const startDate = searchParams.get('start_date') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
         const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0]
-        const doctorId = searchParams.get('doctor_id')
 
         // Type safe user data extraction
         const userRole = (userData as { role?: string }).role
@@ -65,18 +64,52 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
+        // Isolamento de relatórios para DOCTOR não-coordenador
+        let effectiveDoctorId: string | null = searchParams.get('doctor_id')
+        let isDoctorRestricted = false
+
+        if (userRole === 'DOCTOR') {
+            const { data: userFull } = await supabase
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', user.id)
+                .single()
+
+            if (!(userFull as any)?.is_coordinator) {
+                const { data: doctor } = await supabase
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single()
+
+                if (!doctor) {
+                    // Fail-closed se perfil de profissional não for encontrado
+                    return NextResponse.json({ data: [], summary: {}, kpis: {} })
+                }
+
+                // Forçar compulsoriamente o ID do profissional autenticado
+                effectiveDoctorId = doctor.id
+                isDoctorRestricted = true
+            }
+        }
+
+        // Relatórios puramente administrativos/financeiros globais bloqueados para DOCTOR não-coordenador
+        if (isDoctorRestricted && ['dre_costcenter', 'glosas', 'ltv', 'revenue_by_month', 'patients_growth'].includes(reportType)) {
+            return NextResponse.json({ error: 'Acesso restrito à gestão da clínica' }, { status: 403 })
+        }
+
         switch (reportType) {
             case 'kpis':
-                return await getKPIs(supabase, clinicId, startDate, endDate)
+                return await getKPIs(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'revenue_by_doctor':
-                return await getRevenueByDoctor(supabase, clinicId, startDate, endDate)
+                return await getRevenueByDoctor(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'appointments_by_day':
-                return await getAppointmentsByDay(supabase, clinicId, startDate, endDate)
+                return await getAppointmentsByDay(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'appointments_by_status':
-                return await getAppointmentsByStatus(supabase, clinicId, startDate, endDate)
+                return await getAppointmentsByStatus(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'patients_growth':
                 return await getPatientsGrowth(supabase, clinicId, startDate, endDate)
@@ -88,22 +121,22 @@ export async function GET(request: NextRequest) {
                 return await getTopSpecialties(supabase, clinicId, startDate, endDate)
 
             case 'health_insurance_stats':
-                return await getHealthInsuranceStats(supabase, clinicId, startDate, endDate)
+                return await getHealthInsuranceStats(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'agenda_report':
-                return await getAgendaReport(supabase, clinicId, startDate, endDate)
+                return await getAgendaReport(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'reimbursement_report':
-                return await getReimbursementReport(supabase, clinicId, startDate, endDate)
+                return await getReimbursementReport(supabase, clinicId, startDate, endDate, effectiveDoctorId)
 
             case 'patient_frequency': {
                 const patientId = searchParams.get('patient_id')
-                return await getPatientFrequency(supabase, clinicId, startDate, endDate, patientId)
+                return await getPatientFrequency(supabase, clinicId, startDate, endDate, patientId, effectiveDoctorId)
             }
 
             case 'patient_sessions': {
                 const patientId = searchParams.get('patient_id')
-                return await getPatientSessions(supabase, clinicId, startDate, endDate, patientId)
+                return await getPatientSessions(supabase, clinicId, startDate, endDate, patientId, effectiveDoctorId)
             }
 
             case 'ltv':
@@ -124,18 +157,24 @@ export async function GET(request: NextRequest) {
     }
 }
 
-async function getKPIs(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    return await getKPIsManual(supabase, clinicId, startDate, endDate)
+async function getKPIs(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
+    return await getKPIsManual(supabase, clinicId, startDate, endDate, doctorId)
 }
 
-async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: string, startDate: string, endDate: string) {
+async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
     // Get appointment stats with patient_id for reimbursement rule matching
-    const { data: appointments } = await supabase
+    let apptQuery = supabase
         .from('appointments')
         .select('id, status, patient_id, appointment_type')
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
+
+    if (doctorId) {
+        apptQuery = apptQuery.eq('doctor_id', doctorId)
+    }
+
+    const { data: appointments } = await apptQuery
 
     const total = appointments?.length || 0
     const completed = appointments?.filter((a: any) => a.status === 'COMPLETED').length || 0
@@ -143,16 +182,19 @@ async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: strin
     const noShow = appointments?.filter((a: any) => a.status === 'NO_SHOW').length || 0
 
     // Get revenue from financial_entries
-    const { data: financialIncome } = await supabase
-        .from('financial_entries')
-        .select('amount')
-        .eq('clinic_id', clinicId)
-        .eq('entry_type', 'INCOME')
-        .eq('status', 'PAID')
-        .gte('due_date', startDate)
-        .lte('due_date', endDate)
+    let totalRevenue = 0
+    if (!doctorId) {
+        const { data: financialIncome } = await supabase
+            .from('financial_entries')
+            .select('amount')
+            .eq('clinic_id', clinicId)
+            .eq('entry_type', 'INCOME')
+            .eq('status', 'PAID')
+            .gte('due_date', startDate)
+            .lte('due_date', endDate)
 
-    let totalRevenue = financialIncome?.reduce((sum: number, p: { amount: any }) => sum + (Number(p.amount) || 0), 0) || 0
+        totalRevenue = financialIncome?.reduce((sum: number, p: { amount: any }) => sum + (Number(p.amount) || 0), 0) || 0
+    }
 
     // FALLBACK: If no financial_entries in this period, calculate from reimbursement rules
     if (totalRevenue === 0 && completed > 0) {
@@ -160,25 +202,24 @@ async function getKPIsManual(supabase: SupabaseClient<Database>, clinicId: strin
     }
 
     // Get patient counts
-    const { count: newPatients } = await supabase
-        .from('patients')
-        .select('id', { count: 'exact', head: true })
-        .eq('clinic_id', clinicId)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate)
-        .is('deleted_at', null)
+    let newPatients = 0
+    if (doctorId) {
+        const patientIds = [...new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))]
+        newPatients = patientIds.length
+    } else {
+        const { count } = await supabase
+            .from('patients')
+            .select('id', { count: 'exact', head: true })
+            .eq('clinic_id', clinicId)
+            .gte('created_at', startDate)
+            .lte('created_at', endDate)
+            .is('deleted_at', null)
+        newPatients = count || 0
+    }
 
     // Get doctor counts
-    const { count: totalDoctors } = await supabase
-        .from('doctors')
-        .select('id', { count: 'exact', head: true })
-        .eq('clinic_id', clinicId)
-
-    const { count: activeDoctors } = await supabase
-        .from('doctors')
-        .select('id', { count: 'exact', head: true })
-        .eq('clinic_id', clinicId)
-        .eq('is_accepting_appointments', true)
+    const totalDoctors = doctorId ? 1 : ((await supabase.from('doctors').select('id', { count: 'exact', head: true }).eq('clinic_id', clinicId)).count || 0)
+    const activeDoctors = doctorId ? 1 : ((await supabase.from('doctors').select('id', { count: 'exact', head: true }).eq('clinic_id', clinicId).eq('is_accepting_appointments', true)).count || 0)
 
     return NextResponse.json({
         kpis: {
@@ -239,9 +280,9 @@ async function calculateRevenueFromRules(
     return totalRevenue
 }
 
-async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
+async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
     // Get doctors with their appointments in the period (include patient_id and appointment_type)
-    const { data: doctors } = await supabase
+    let docQuery = supabase
         .from('doctors')
         .select(`
             id,
@@ -256,6 +297,12 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
             )
         `)
         .eq('clinic_id', clinicId)
+
+    if (doctorId) {
+        docQuery = docQuery.eq('id', doctorId)
+    }
+
+    const { data: doctors } = await docQuery
 
     // Get financial entries for this clinic in the period
     const { data: financialEntries } = await supabase
@@ -356,13 +403,19 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
     return NextResponse.json({ data: result })
 }
 
-async function getAppointmentsByDay(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    const { data: appointments } = await supabase
+async function getAppointmentsByDay(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
+    let query = supabase
         .from('appointments')
         .select('appointment_date, status')
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
+
+    if (doctorId) {
+        query = query.eq('doctor_id', doctorId)
+    }
+
+    const { data: appointments } = await query
 
     // Group by date
     const grouped: Record<string, any> = {}
@@ -381,13 +434,19 @@ async function getAppointmentsByDay(supabase: SupabaseClient<any, "public", any>
     return NextResponse.json({ data: sortedData })
 }
 
-async function getAppointmentsByStatus(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    const { data: appointments } = await supabase
+async function getAppointmentsByStatus(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
+    let query = supabase
         .from('appointments')
         .select('status')
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
+
+    if (doctorId) {
+        query = query.eq('doctor_id', doctorId)
+    }
+
+    const { data: appointments } = await query
 
     const statusCounts: Record<string, number> = {}
     for (const a of appointments || []) {
@@ -486,8 +545,8 @@ function getStatusLabel(status: string): string {
     return labels[status] || status
 }
 
-async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    const { data: appointments } = await supabase
+async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
+    let query = supabase
         .from('appointments')
         .select(`
             id,
@@ -502,6 +561,12 @@ async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", a
         .eq('payment_type', 'HEALTH_INSURANCE')
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
+
+    if (doctorId) {
+        query = query.eq('doctor_id', doctorId)
+    }
+
+    const { data: appointments } = await query
 
     const stats: Record<string, {
         insuranceName: string,
@@ -539,8 +604,8 @@ async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", a
     return NextResponse.json({ data: result })
 }
 
-async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    const { data: appointments, error } = await supabase
+async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
+    let query = supabase
         .from('appointments')
         .select(`
             id,
@@ -550,6 +615,7 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
             payment_type,
             appointment_type,
             patient_id,
+            doctor_id,
             patients(id, full_name),
             doctors(id, specialty, users(full_name))
         `)
@@ -558,6 +624,12 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
         .lte('appointment_date', endDate)
         .order('appointment_date', { ascending: true })
         .order('appointment_time', { ascending: true })
+
+    if (doctorId) {
+        query = query.eq('doctor_id', doctorId)
+    }
+
+    const { data: appointments, error } = await query
 
     if (error) {
         console.error('Agenda report error:', error)
@@ -656,20 +728,15 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
     })
 }
 
-async function getReimbursementReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
-    const { data: rules } = await supabase
-        .from('patient_reimbursement_rules')
-        .select('*, patients(id, full_name)')
-        .eq('clinic_id', clinicId)
-        .eq('is_active', true)
-
-    const { data: appointments } = await supabase
+async function getReimbursementReport(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
+    let apptQuery = supabase
         .from('appointments')
         .select(`
             id,
             appointment_date,
             status,
             patient_id,
+            doctor_id,
             patients(id, full_name),
             doctors(id, specialty, users(full_name))
         `)
@@ -678,6 +745,40 @@ async function getReimbursementReport(supabase: SupabaseClient<any, "public", an
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
         .order('appointment_date', { ascending: true })
+
+    if (doctorId) {
+        apptQuery = apptQuery.eq('doctor_id', doctorId)
+    }
+
+    const { data: appointments } = await apptQuery
+
+    const apptPatientIds = [...new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))]
+
+    if (doctorId && apptPatientIds.length === 0) {
+        return NextResponse.json({
+            data: [],
+            patient_summary: [],
+            summary: {
+                total_appointments: 0,
+                total_billing: 0,
+                total_reimbursement: 0,
+                total_guides: 0,
+                patients_with_rules: 0,
+            }
+        })
+    }
+
+    let rulesQuery = supabase
+        .from('patient_reimbursement_rules')
+        .select('*, patients(id, full_name)')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+
+    if (doctorId && apptPatientIds.length > 0) {
+        rulesQuery = rulesQuery.in('patient_id', apptPatientIds)
+    }
+
+    const { data: rules } = await rulesQuery
 
     // Cross-reference appointments with reimbursement rules
     const rulesMap = new Map<string, any[]>()
@@ -761,7 +862,8 @@ async function getPatientFrequency(
     clinicId: string,
     startDate: string,
     endDate: string,
-    patientId: string | null
+    patientId: string | null,
+    doctorId?: string | null
 ) {
     let query = supabase
         .from('appointments')
@@ -776,6 +878,7 @@ async function getPatientFrequency(
         .order('appointment_date', { ascending: false })
 
     if (patientId) query = query.eq('patient_id', patientId)
+    if (doctorId) query = query.eq('doctor_id', doctorId)
 
     const { data: appointments, error } = await query
     if (error) throw error
@@ -840,7 +943,8 @@ async function getPatientSessions(
     clinicId: string,
     startDate: string,
     endDate: string,
-    patientId: string | null
+    patientId: string | null,
+    doctorId?: string | null
 ) {
     let query = supabase
         .from('appointments')
@@ -856,6 +960,7 @@ async function getPatientSessions(
         .order('appointment_date', { ascending: true })
 
     if (patientId) query = query.eq('patient_id', patientId)
+    if (doctorId) query = query.eq('doctor_id', doctorId)
 
     const { data, error } = await query
     if (error) throw error

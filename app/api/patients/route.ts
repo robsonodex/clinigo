@@ -75,7 +75,7 @@ export async function GET(request: Request) {
             query = query.neq('is_active', false)
         }
 
-        // DOCTOR não-coordenador: filtrar apenas pacientes com agendamentos do doctor
+        // DOCTOR não-coordenador: isolamento estrito de pacientes por profissional
         if (userData.role === 'DOCTOR') {
             const { data: userFull } = await supabase
                 .from('users')
@@ -91,19 +91,39 @@ export async function GET(request: Request) {
                     .eq('user_id', user.id)
                     .single()
 
-                if (doctor) {
-                    // Buscar patient_ids dos agendamentos deste doctor
-                    const { data: appointments } = await supabase
-                        .from('appointments')
-                        .select('patient_id')
-                        .eq('doctor_id', doctor.id)
+                if (!doctor) {
+                    // Fail-closed: se o perfil de profissional não for encontrado, não vaza nenhum paciente da clínica
+                    return NextResponse.json({ patients: [], total: 0 })
+                }
 
-                    const patientIds = [...new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean))]
-                    if (patientIds.length > 0) {
-                        query = query.in('id', patientIds)
-                    } else {
-                        return NextResponse.json({ patients: [] })
-                    }
+                // 1. Pacientes com agendamentos deste profissional
+                const { data: appointments } = await supabase
+                    .from('appointments')
+                    .select('patient_id')
+                    .eq('doctor_id', doctor.id)
+
+                // 2. Pacientes com evoluções de prontuário deste profissional
+                const { data: evolutions } = await supabase
+                    .from('session_evolutions')
+                    .select('patient_id')
+                    .eq('doctor_id', doctor.id)
+
+                // 3. Pacientes com regras/taxas vinculadas a este profissional
+                const { data: rates } = await supabase
+                    .from('doctor_patient_rates')
+                    .select('patient_id')
+                    .eq('doctor_id', doctor.id)
+
+                const patientIds = Array.from(new Set([
+                    ...(appointments || []).map((a: any) => a.patient_id),
+                    ...(evolutions || []).map((e: any) => e.patient_id),
+                    ...(rates || []).map((r: any) => r.patient_id)
+                ].filter(Boolean)))
+
+                if (patientIds.length > 0) {
+                    query = query.in('id', patientIds)
+                } else {
+                    return NextResponse.json({ patients: [], total: 0 })
                 }
             }
         }

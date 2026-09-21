@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### Isolamento Estrito de Pacientes e Relatórios por Profissional (LGPD & Sigilo Clínico)
+- **Módulos**:
+  - API / Segurança & LGPD → Pacientes → `app/api/patients/route.ts` → `GET` (reestruturação do isolamento para perfil `DOCTOR` não-coordenador: busca consolidada de pacientes por agendamentos `appointments`, evoluções clínicas `session_evolutions` e regras financeiras `doctor_patient_rates`, com bloqueio seguro fail-closed retornando `{ patients: [], total: 0 }` caso o profissional não tenha pacientes ou perfil vinculado)
+  - API / Segurança & LGPD → Relatórios → `app/api/reports/route.ts` → `GET` (resolução compulsória do `doctor_id` pelo usuário autenticado para papéis `DOCTOR`, sobrescrevendo qualquer parâmetro de query string; imposição de filtro restrito por `doctor_id` em "Frequência por Paciente", "Sessões Realizadas", "Agenda", "Regras de Reembolso", KPIs, Faturamento por Médico e Atendimentos por Dia/Status; bloqueio com status 403 para relatórios administrativos globais como DRE, Glosas e LTV)
+- **Descrição**:
+  - **Demanda Operacional & Conformidade LGPD**:
+    - Garantir que cada profissional (terapeuta ou médico) consiga visualizar e baixar relatórios estritamente dos seus próprios pacientes. A terapeuta A só vê e baixa dados dos seus pacientes, a terapeuta B só vê e baixa dados dos seus pacientes, sem que haja qualquer vazamento ou cruzamento de dados sensíveis entre profissionais da clínica.
+  - **Solução Implementada**:
+    - **Proteção Arquitetural no Backend**: O filtro não depende do frontend. Toda chamada feita à API de Pacientes ou Relatórios identifica compulsoriamente a identidade do profissional autenticado e limita as queries apenas aos seus pacientes diretos.
+    - **Bloqueio Fail-Closed**: Se o profissional não tiver nenhum paciente vinculado, a API responde imediatamente com lista vazia, eliminando qualquer risco de retornar a lista global da clínica.
+    - **Governança Preservada**: Usuários administradores e coordenadores da clínica mantêm a visualização global de gestão e faturamento institucional.
+    - **Padrão Visual SaaS Premium**: Zero emojis, conformidade com as regras de sigilo e LGPD (sem PII hardcoded no código).
+
+
+
 ### Exportação Cadastral do Corpo Clínico / Profissionais em Excel e CSV (WorldSensory e Geral)
 - **Módulos**:
   - Equipe → Terapeutas / Médicos → `app/dashboard/(clinic)/medicos/page.tsx` → `DoctorsPage()` (inclusão do botão "Exportar" com DropdownMenu interativo para download em Excel `.xlsx` estilizado e CSV padrão brasileiro com delimitador `;` e BOM UTF-8, com estado de carregamento e área de toque mobile de 44x44px)
