@@ -268,25 +268,55 @@ export default function PatientDetailsPage() {
         setLoadingAppointments(true);
         try {
             const supabase = createClient();
-            const { data, error } = await supabase
+            
+            // 1. Carrega agendamentos do paciente ordenados cronologicamente
+            const { data: rawAppointments, error } = await supabase
                 .from('appointments')
-                .select('*, doctors!inner(id, user_id, specialty, users:user_id(full_name))')
+                .select('*')
                 .eq('patient_id', patientId)
                 .order('appointment_date', { ascending: false })
                 .order('appointment_time', { ascending: false });
 
             if (error) {
                 console.error('[PatientDetail] Error loading appointments:', error);
-                // Fallback without join
-                const { data: fallbackData } = await supabase
-                    .from('appointments')
-                    .select('*')
-                    .eq('patient_id', patientId)
-                    .order('appointment_date', { ascending: false });
-                setAppointments(fallbackData || []);
-            } else {
-                setAppointments(data || []);
+                setAppointments([]);
+                return;
             }
+
+            const apptsList = rawAppointments || [];
+
+            // 2. Coleta IDs unicos dos profissionais para resolucao precisa de nomes
+            const doctorIds = Array.from(new Set(apptsList.map(a => a.doctor_id).filter(Boolean)));
+            const doctorMap: Record<string, { full_name: string; specialty?: string }> = {};
+
+            if (doctorIds.length > 0) {
+                const { data: doctorsData } = await supabase
+                    .from('doctors')
+                    .select('id, specialty, users(full_name)')
+                    .in('id', doctorIds);
+
+                if (doctorsData) {
+                    doctorsData.forEach((doc: any) => {
+                        const userObj = Array.isArray(doc.users) ? doc.users[0] : doc.users;
+                        doctorMap[doc.id] = {
+                            full_name: userObj?.full_name || doc.specialty || 'Profissional',
+                            specialty: doc.specialty || undefined,
+                        };
+                    });
+                }
+            }
+
+            // 3. Mescla dados dos profissionais diretamente nos agendamentos
+            const enrichedAppointments = apptsList.map(apt => {
+                const docInfo = apt.doctor_id ? doctorMap[apt.doctor_id] : null;
+                return {
+                    ...apt,
+                    doctor_display_name: docInfo?.full_name || 'Profissional',
+                    doctor_specialty: docInfo?.specialty || null,
+                };
+            });
+
+            setAppointments(enrichedAppointments);
         } catch (err) {
             console.error('[PatientDetail] Unexpected error loading appointments:', err);
         } finally {
@@ -355,15 +385,64 @@ export default function PatientDetailsPage() {
     };
 
     const getStatusBadge = (status: string) => {
-        const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-            'CONFIRMED': { label: 'Confirmado', variant: 'default' },
-            'PENDING_PAYMENT': { label: 'Pendente', variant: 'secondary' },
-            'COMPLETED': { label: 'Realizado', variant: 'outline' },
-            'CANCELLED': { label: 'Cancelado', variant: 'destructive' },
-            'NO_SHOW': { label: 'Não compareceu', variant: 'destructive' },
-        };
-        const s = map[status] || { label: status, variant: 'secondary' as const };
-        return <Badge variant={s.variant}>{s.label}</Badge>;
+        const normalized = (status || '').toUpperCase();
+        switch (normalized) {
+            case 'CONFIRMED':
+                return (
+                    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium text-xs">
+                        Confirmado
+                    </Badge>
+                );
+            case 'WAITING':
+                return (
+                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-medium text-xs">
+                        Aguardando Atendimento
+                    </Badge>
+                );
+            case 'SCHEDULED':
+                return (
+                    <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300 font-medium text-xs">
+                        Agendado
+                    </Badge>
+                );
+            case 'IN_SERVICE':
+            case 'IN_PROGRESS':
+                return (
+                    <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 font-medium text-xs">
+                        Em Atendimento
+                    </Badge>
+                );
+            case 'COMPLETED':
+                return (
+                    <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium text-xs">
+                        Realizado
+                    </Badge>
+                );
+            case 'CANCELLED':
+                return (
+                    <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300 font-medium text-xs">
+                        Cancelado
+                    </Badge>
+                );
+            case 'NO_SHOW':
+                return (
+                    <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 font-medium text-xs line-through">
+                        Não Compareceu
+                    </Badge>
+                );
+            case 'PENDING_PAYMENT':
+                return (
+                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-medium text-xs">
+                        Pendente
+                    </Badge>
+                );
+            default:
+                return (
+                    <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 font-medium text-xs">
+                        {status}
+                    </Badge>
+                );
+        }
     };
 
     const loadInsurances = async () => {
@@ -1318,18 +1397,18 @@ export default function PatientDetailsPage() {
 
                 {/* Tab: Agendamentos */}
                 <TabsContent value="appointments">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
+                    <Card className="border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900/50">
+                        <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <CalendarDays className="w-5 h-5" />
+                                    <CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                                        <CalendarDays className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                         Agendamentos do Paciente
                                     </CardTitle>
-                                    <CardDescription className="mt-1">
-                                        {appointments.length} agendamento(s) encontrado(s)
+                                    <CardDescription className="text-xs text-muted-foreground mt-1">
+                                        {appointments.length} agendamento(s) registrado(s)
                                         {selectedIds.size > 0 && (
-                                            <span className="ml-2 font-medium text-destructive">
+                                            <span className="ml-2 font-medium text-rose-600 dark:text-rose-400">
                                                 • {selectedIds.size} selecionado(s)
                                             </span>
                                         )}
@@ -1341,14 +1420,14 @@ export default function PatientDetailsPage() {
                                             variant="outline"
                                             size="sm"
                                             onClick={toggleSelectAll}
-                                            className="gap-1.5"
+                                            className="min-h-[38px] text-xs font-medium gap-1.5 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                                         >
                                             {selectedIds.size === cancellableAppointments.length ? (
-                                                <CheckSquare className="w-4 h-4" />
+                                                <CheckSquare className="w-4 h-4 text-emerald-600" />
                                             ) : (
-                                                <Square className="w-4 h-4" />
+                                                <Square className="w-4 h-4 text-slate-400" />
                                             )}
-                                            {selectedIds.size === cancellableAppointments.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                            <span>{selectedIds.size === cancellableAppointments.length ? 'Desmarcar Todos' : 'Selecionar Todos'}</span>
                                         </Button>
                                         {selectedIds.size > 0 && (
                                             <Button
@@ -1356,84 +1435,129 @@ export default function PatientDetailsPage() {
                                                 size="sm"
                                                 onClick={handleBulkCancel}
                                                 disabled={cancellingBulk}
-                                                className="gap-1.5"
+                                                className="min-h-[38px] text-xs font-medium gap-1.5"
                                             >
                                                 {cancellingBulk ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                     <XCircle className="w-4 h-4" />
                                                 )}
-                                                Cancelar {selectedIds.size}
+                                                <span>Cancelar ({selectedIds.size})</span>
                                             </Button>
                                         )}
                                     </div>
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-4">
                             {loadingAppointments ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
                                 </div>
                             ) : appointments.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                    <p>Nenhum agendamento encontrado para este paciente.</p>
+                                <div className="text-center py-12 px-4 border border-dashed rounded-xl bg-slate-50/50 dark:bg-slate-900/40 text-muted-foreground">
+                                    <CalendarDays className="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Nenhum agendamento encontrado</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">Este paciente ainda não possui consultas ou sessões na agenda.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
-                                    {appointments.map((apt) => {
-                                        const doctorName = apt.doctors?.users?.full_name || apt.doctors?.specialty || 'Profissional';
+                                <div className="space-y-2.5">
+                                    {appointments.map((apt: any) => {
+                                        const doctorName = apt.doctor_display_name || apt.doctors?.users?.full_name || apt.doctors?.specialty || 'Profissional';
+                                        const doctorSpecialty = apt.doctor_specialty || apt.doctors?.specialty;
                                         const canCancel = apt.status === 'CONFIRMED' || apt.status === 'PENDING_PAYMENT';
+                                        const isSelected = selectedIds.has(apt.id);
+
+                                        // Formata data e mes
+                                        const dateObj = new Date(apt.appointment_date + 'T00:00:00');
+                                        const dayStr = isNaN(dateObj.getTime()) ? '--' : dateObj.toLocaleDateString('pt-BR', { day: '2-digit' });
+                                        const monthStr = isNaN(dateObj.getTime()) ? '' : dateObj.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
+                                        const yearStr = isNaN(dateObj.getTime()) ? '' : dateObj.getFullYear();
+
                                         return (
                                             <div
                                                 key={apt.id}
-                                                className={`flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors ${selectedIds.has(apt.id) ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                                                className={cn(
+                                                    "p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3.5",
+                                                    isSelected
+                                                        ? "border-rose-300 bg-rose-50/40 dark:border-rose-900 dark:bg-rose-950/20"
+                                                        : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs"
+                                                )}
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    {canCancel && (
-                                                        <button
-                                                            onClick={() => toggleSelect(apt.id)}
-                                                            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-                                                        >
-                                                            {selectedIds.has(apt.id) ? (
-                                                                <CheckSquare className="w-5 h-5 text-destructive" />
+                                                <div className="flex items-center gap-3.5 min-w-0">
+                                                    {/* Slot fixo para checkbox mantendo alinhamento perfeito de todas as linhas */}
+                                                    {cancellableAppointments.length > 0 && (
+                                                        <div className="w-6 shrink-0 flex items-center justify-center">
+                                                            {canCancel ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleSelect(apt.id)}
+                                                                    className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                                                                    aria-label={isSelected ? "Desmarcar" : "Selecionar"}
+                                                                >
+                                                                    {isSelected ? (
+                                                                        <CheckSquare className="w-5 h-5 text-rose-600" />
+                                                                    ) : (
+                                                                        <Square className="w-5 h-5" />
+                                                                    )}
+                                                                </button>
                                                             ) : (
-                                                                <Square className="w-5 h-5" />
+                                                                <span className="w-5 h-5 block" aria-hidden="true" />
                                                             )}
-                                                        </button>
+                                                        </div>
                                                     )}
-                                                    <div className="flex flex-col items-center justify-center w-14 h-14 bg-primary/10 rounded-lg">
-                                                        <span className="text-xs font-medium text-primary">
-                                                            {new Date(apt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+
+                                                    {/* Badge de Data com padrão de calendário refinado */}
+                                                    <div className="w-14 h-14 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center shrink-0">
+                                                        <span className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                                                            {dayStr}
                                                         </span>
-                                                        <span className="text-[10px] text-muted-foreground">
-                                                            {new Date(apt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR', { year: 'numeric' })}
+                                                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">
+                                                            {monthStr}
                                                         </span>
                                                     </div>
-                                                    <div>
-                                                        <p className="font-medium">{doctorName}</p>
-                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                            <Clock className="w-3 h-3" />
+
+                                                    {/* Detalhes do profissional e horário */}
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                                                {doctorName}
+                                                            </p>
+                                                            {doctorSpecialty && (
+                                                                <span className="text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                                    {doctorSpecialty}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                                                            <Clock className="w-3.5 h-3.5 text-slate-400" />
                                                             <span>{apt.appointment_time?.substring(0, 5) || '--:--'}</span>
+                                                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                                                            <span>{yearStr}</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    {getStatusBadge(apt.status)}
+
+                                                {/* Lado direito: status e ação individual */}
+                                                <div className="flex items-center justify-between sm:justify-end gap-3 pl-9 sm:pl-0">
+                                                    <div>
+                                                        {getStatusBadge(apt.status)}
+                                                    </div>
                                                     {canCancel && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            className="min-h-[36px] h-8 px-2 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-transparent hover:border-rose-200 dark:hover:border-rose-900 transition-colors gap-1.5"
                                                             disabled={cancellingId === apt.id}
                                                             onClick={() => handleCancelAppointment(apt.id)}
+                                                            title="Cancelar este agendamento"
                                                         >
                                                             {cancellingId === apt.id ? (
-                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                             ) : (
-                                                                <XCircle className="w-4 h-4" />
+                                                                <XCircle className="w-3.5 h-3.5" />
                                                             )}
+                                                            <span className="hidden sm:inline">Cancelar</span>
                                                         </Button>
                                                     )}
                                                 </div>
