@@ -284,10 +284,10 @@ export const helpItems: HelpItem[] = [
         href: '/dashboard/pacientes',
         whatIsIt: 'Cadastro geral e prontuário administrativo de pacientes. Inclui diretório alfabético A-Z instantâneo, alternância entre visualização em Tabela e Cards interativos, foto de perfil, dados dos pais/responsáveis legais, classificação Particular vs Convênio, trilha LGPD e histórico de assinaturas digitais.',
         whenToUse: 'Ao acolher um novo paciente na clínica, atualizar dados de contato, cadastrar convênios ou acessar o prontuário clínico histórico.',
-        howToUse: 'Clique em "Novo Paciente" para registrar os dados demográficos, endereço e responsáveis. Na lista, use a barra de busca ou filtre pelas letras A-Z para localizar qualquer prontuário imediatamente.',
+        howToUse: 'Clique em "Novo Paciente" para registrar os dados demográficos, endereço e responsáveis. Na lista, use a barra de busca ou filtre pelas letras A-Z para localizar qualquer prontuário imediatamente. Para exportar a listagem cadastral completa ou filtrada em planilha, clique no botão "Exportar" e selecione Excel (.xlsx) ou CSV (.csv).',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE', 'STAFF'],
-        tags: ['pacientes', 'cadastro', 'diretório a-z', 'responsáveis', 'contato', 'prontuário'],
+        tags: ['pacientes', 'cadastro', 'diretório a-z', 'responsáveis', 'contato', 'prontuário', 'exportar excel', 'exportar csv'],
         aliases: ['pacientes-diretorio-a-z']
     },
     {
