@@ -96,10 +96,10 @@ export function ManualPlanChangeModal({
                                 <SelectValue placeholder="Selecione o plano" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="STARTER">Starter (R$ 149/mês)</SelectItem>
-                                <SelectItem value="BASICO">Básico (R$ 299/mês)</SelectItem>
-                                <SelectItem value="AVANCADO">Avançado (R$ 549/mês)</SelectItem>
-                                <SelectItem value="ENTERPRISE">Enterprise (R$ 799/mês)</SelectItem>
+                                <SelectItem value="BASICO">Básico (R$ 149/mês)</SelectItem>
+                                <SelectItem value="AVANCADO">Avançado (R$ 249/mês)</SelectItem>
+                                <SelectItem value="PROFESSIONAL">Professional (R$ 449/mês)</SelectItem>
+                                <SelectItem value="ENTERPRISE">Enterprise (R$ 699/mês)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

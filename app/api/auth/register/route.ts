@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
                 responsible_name: data.full_name,
                 responsible_phone: data.responsible_phone || data.phone,
                 address: data.address || {},
-                plan_type: data.plan_type || 'STARTER', // Default to STARTER for trial
+                plan_type: data.plan_type || 'AVANCADO', // Default to AVANCADO for trial (STARTER is discontinued)
                 is_active: true, // Active for trial period!
                 trial_ends_at: trialEndsAt.toISOString(), // Trial expiration
                 approval_status: 'trial', // Trial status
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
                         <tr><td style="padding: 8px 0; color: #6b7280;">Nome da Clínica/Consultório:</td><td style="padding: 8px 0; font-weight: bold;">${data.clinic_name}</td></tr>
                         <tr><td style="padding: 8px 0; color: #6b7280;">E-mail:</td><td style="padding: 8px 0;">${data.email}</td></tr>
                         <tr><td style="padding: 8px 0; color: #6b7280;">WhatsApp/Telefone:</td><td style="padding: 8px 0; font-weight: bold;">${data.phone || 'Não informado'}</td></tr>
-                        <tr><td style="padding: 8px 0; color: #6b7280;">Plano:</td><td style="padding: 8px 0;">${data.plan_type || 'AVANCADO'}</td></tr>
+                        <tr><td style="padding: 8px 0; color: #6b7280;">Plano:</td><td style="padding: 8px 0; font-weight: bold;">AVANÇADO</td></tr>
                     </table>
                     <div style="text-align: center; margin: 25px 0;">
                         <a href="${approveLink}" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">
