@@ -17,7 +17,7 @@ import {
     Shield,
     FileCheck,
     Check,
-    Sparkles,
+    Target,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -152,8 +152,19 @@ export function SessionPlanFormClient({
     // Status e Salvamento
     const [isSaving, setIsSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(new Date())
-    const [activeTab, setActiveTab] = useState<string>('MOB')
+    const [activeTab, setActiveTab] = useState<string>(
+        template.categories?.[0]?.id || 'MOB'
+    )
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Sincroniza aba ativa caso template mude ou a aba atual não exista no template
+    useEffect(() => {
+        if (template.categories && template.categories.length > 0) {
+            if (!template.categories.some((c) => c.id === activeTab)) {
+                setActiveTab(template.categories[0].id)
+            }
+        }
+    }, [template, activeTab])
 
     // Helper: Atualiza campos dinâmicos de um objetivo selecionado
     const handleObjectiveParamChange = (code: string, fieldId: string, value: any) => {
@@ -607,7 +618,7 @@ export function SessionPlanFormClient({
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div>
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-emerald-600" />
+                                <Target className="w-4 h-4 text-emerald-600" />
                                 2. Seleção dos Objetivos da Sessão
                             </CardTitle>
                             <CardDescription className="text-xs">
@@ -926,12 +937,22 @@ export function SessionPlanFormClient({
                 <Card className="border border-border/80 shadow-xs">
                     <CardHeader className="pb-3 bg-muted/20 border-b border-border/50">
                         <CardTitle className="text-xs font-bold uppercase tracking-wide text-foreground">
-                            22. Qualidade do Movimento
+                            22. {especialidade === 'psicologia' || especialidade === 'intervencao-precoce-aba' || especialidade === 'intervencao_precoce_aba' ? 'Qualidade da Resposta e Engajamento' : 'Qualidade do Movimento e Execução'}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-3 space-y-3 text-xs">
                         <div className="flex flex-wrap gap-1.5">
-                            {template.movementQualityOptions?.map((item) => {
+                            {((template.movementQualityOptions && template.movementQualityOptions.length > 0)
+                                ? template.movementQualityOptions
+                                : [
+                                    'Engajamento colaborativo',
+                                    'Adequada',
+                                    'Necessidade de apoio/intervenção',
+                                    'Oscilação atencional',
+                                    'Fadiga progressiva',
+                                    'Outro'
+                                ]
+                            ).map((item) => {
                                 const active = qualidadeMovimento.itens?.includes(item)
                                 return (
                                     <Badge
@@ -946,7 +967,7 @@ export function SessionPlanFormClient({
                                         }}
                                         className={`cursor-pointer px-2 py-0.5 text-[11px] select-none transition-colors ${
                                             active
-                                                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                                                 : 'hover:bg-muted text-muted-foreground'
                                         }`}
                                     >
@@ -986,7 +1007,23 @@ export function SessionPlanFormClient({
                                     <SelectValue placeholder="Selecione o limitador" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {template.clinicalLimiters?.map((lim) => (
+                                    {((template.clinicalLimiters && template.clinicalLimiters.length > 0)
+                                        ? template.clinicalLimiters
+                                        : [
+                                            'Regulação emocional / Frustração',
+                                            'Engajamento / Motivação',
+                                            'Atenção e concentração',
+                                            'Ansiedade e insegurança',
+                                            'Rigidez cognitiva / Transição',
+                                            'Oposição / Recusa a demandas',
+                                            'Compreensão da tarefa',
+                                            'Fadiga cognitiva',
+                                            'Sobrecarga sensorial',
+                                            'Controle postural e força',
+                                            'Ambiente / Distratores externos',
+                                            'Outro'
+                                        ]
+                                    ).map((lim) => (
                                         <SelectItem key={lim} value={lim}>
                                             {lim}
                                         </SelectItem>

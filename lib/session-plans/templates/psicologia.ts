@@ -2152,5 +2152,34 @@ export const PSICOLOGIA_TEMPLATE: SpecialtyTemplateConfig = {
         "Refeitório",
         "Rotina de sono",
         "Outro"
+    ],
+    "movementQualityOptions": [
+        "Engajamento fluido e colaborativo",
+        "Autorregulação espontânea",
+        "Necessidade de corregulação verbal",
+        "Necessidade de corregulação estruturada",
+        "Oscilação atencional",
+        "Insegurança / Hesitação",
+        "Hiperreatividade emocional",
+        "Labilidade afetiva",
+        "Fadiga cognitiva progressiva",
+        "Resistência a limites / Oposição",
+        "Adequada",
+        "Outro"
+    ],
+    "clinicalLimiters": [
+        "Regulação emocional / Frustração",
+        "Engajamento / Motivação",
+        "Atenção e concentração",
+        "Ansiedade e insegurança",
+        "Rigidez cognitiva / Transição",
+        "Oposição / Recusa a demandas",
+        "Compreensão da tarefa",
+        "Fadiga cognitiva",
+        "Sobrecarga sensorial",
+        "Comunicação / Expressão de sentimentos",
+        "Ambiente / Distratores externos",
+        "Vínculo / Aliança terapêutica",
+        "Outro"
     ]
 }

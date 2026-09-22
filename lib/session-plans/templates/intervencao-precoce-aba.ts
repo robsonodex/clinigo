@@ -2451,5 +2451,30 @@ export const INTERVENCAO_PRECOCE_ABA_TEMPLATE: SpecialtyTemplateConfig = {
         "Refeitório",
         "Rotina de sono",
         "Outro"
+    ],
+    "movementQualityOptions": [
+        "Latência de resposta imediata",
+        "Resposta independente e fluida",
+        "Ausência de comportamentos concorrentes",
+        "Latência aumentada",
+        "Hesitação / Dependência de prompt",
+        "Esquiva ou fuga de demanda",
+        "Desorganização comportamental",
+        "Fadiga ou perda de eficácia reforçadora",
+        "Adequada",
+        "Outro"
+    ],
+    "clinicalLimiters": [
+        "Controle instrucional",
+        "Engajamento e motivação / Operação estabelecedora",
+        "Comportamento concorrente / Interferente",
+        "Tolerância à frustração / Atraso no reforço",
+        "Atenção compartilhada",
+        "Habilidade pré-requisito ausente",
+        "Fadiga ou saciação de reforçadores",
+        "Sobrecarga sensorial",
+        "Dificuldade de transição entre tarefas",
+        "Ambiente / Estímulos distratores",
+        "Outro"
     ]
 }

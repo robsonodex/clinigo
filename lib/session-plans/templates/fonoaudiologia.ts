@@ -2260,5 +2260,30 @@ export const FONOAUDIOLOGIA_TEMPLATE: SpecialtyTemplateConfig = {
         "Refeitório",
         "Rotina de sono",
         "Outro"
+    ],
+    "movementQualityOptions": [
+        "Articulação precisa e inteligível",
+        "Produção fluida sem esforço",
+        "Comunicação funcional efetiva",
+        "Esforço articulatório aumentado",
+        "Imprecisão fonética / fonológica",
+        "Disfonia / Tensão vocal",
+        "Fadiga orofacial progressiva",
+        "Hesitação / Busca articulatória",
+        "Adequada",
+        "Outro"
+    ],
+    "clinicalLimiters": [
+        "Inteligibilidade de fala",
+        "Planejamento motor da fala / Apraxia",
+        "Atenção auditiva e sustentada",
+        "Compreensão linguística",
+        "Engajamento e cooperação",
+        "Fadiga vocal ou neuromuscular",
+        "Tônus e mobilidade orofacial",
+        "Processamento auditivo central",
+        "Acesso físico/cognitivo ao sistema de CAA",
+        "Ambiente / Distratores auditivos ou visuais",
+        "Outro"
     ]
 }

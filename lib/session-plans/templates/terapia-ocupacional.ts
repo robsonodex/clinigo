@@ -2505,5 +2505,31 @@ export const TERAPIA_OCUPACIONAL_TEMPLATE: SpecialtyTemplateConfig = {
         "Refeitório",
         "Rotina de sono",
         "Outro"
+    ],
+    "movementQualityOptions": [
+        "Movimento fluido e coordenado",
+        "Graduação de força adequada",
+        "Estabilidade proximal preservada",
+        "Preensão funcional e adaptada",
+        "Movimento descoordenado / Dismetria",
+        "Instabilidade postural / Fadiga",
+        "Excesso ou déficit de força",
+        "Hesitação práxica",
+        "Defensividade / Reatividade sensorial",
+        "Adequada",
+        "Outro"
+    ],
+    "clinicalLimiters": [
+        "Modulação e processamento sensorial",
+        "Planejamento motor e práxis",
+        "Controle postural proximal e equilíbrio",
+        "Coordenação motora fina e preensão",
+        "Engajamento e motivação",
+        "Atenção e persistência na tarefa",
+        "Fadiga muscular e resistência",
+        "Tolerância a estímulos táteis / vestibulares",
+        "Ambiente / Sobrecarga de estímulos",
+        "Adaptação de materiais e utensílios",
+        "Outro"
     ]
 }

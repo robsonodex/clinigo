@@ -595,6 +595,25 @@
   - Implementado fallback de `clinicId` nas rotas de API de sessões para requisições de Super Admin em ambiente local / impersonation.
   - Validado via script com 20/20 asserções passando nas 5 especialidades (Fisioterapia, Fonoaudiologia, Intervenção Precoce/ABA, Psicologia e Terapia Ocupacional).
 
+### Planos de Sessão — Correção de Abertura de Abas e Dropdown de Análise Clínica (World Sensory)
+- **Módulo**: Prontuários → Planos de Sessão → Folha de Sessão
+- **Caminho**:
+  - `components/session-plans/SessionPlanFormClient.tsx` → `SessionPlanFormClient`
+  - `lib/session-plans/templates/psicologia.ts` → `PSICOLOGIA_TEMPLATE`
+  - `lib/session-plans/templates/fonoaudiologia.ts` → `FONOAUDIOLOGIA_TEMPLATE`
+  - `lib/session-plans/templates/intervencao-precoce-aba.ts` → `INTERVENCAO_PRECOCE_ABA_TEMPLATE`
+  - `lib/session-plans/templates/terapia-ocupacional.ts` → `TERAPIA_OCUPACIONAL_TEMPLATE`
+  - `scripts/test_session_plans_limiters_and_tabs.ts` → Teste automatizado com 49/49 asserções
+- **Descrição**:
+  - **Causa Raiz 1 (Abas de Objetivos)**: O estado `activeTab` na folha de sessão estava estaticamente inicializado como `'MOB'` (categoria existente apenas na Fisioterapia). Em Psicologia, Fonoaudiologia, ABA e Terapia Ocupacional, nenhuma aba correspondia a `'MOB'`, fazendo com que o container de objetivos iniciasse vazio/fechado até interação manual. Corrigido para inicializar dinamicamente com a primeira categoria da especialidade (`template.categories?.[0]?.id`), com sincronização reativa via `useEffect`.
+  - **Causa Raiz 2 (Análise Clínica - Seleção de Limitador)**: O dropdown da Seção 23 (*23. Análise Clínica* - *Principal Limitador do Desempenho*) consumia `template.clinicalLimiters`. Essa lista existia apenas no template de fisioterapia; nos templates de psicologia, fonoaudiologia, ABA e terapia ocupacional a propriedade estava `undefined`. Como o `<SelectContent>` do Radix UI ficava sem itens filhos (`SelectItem`), o clique no trigger não abria o menu.
+  - **Resolução**:
+    - Implementados conjuntos completos de `clinicalLimiters` e `movementQualityOptions` para Psicologia, Fonoaudiologia, ABA e Terapia Ocupacional, respeitando a prática clínica e vocabulário técnico de cada especialidade.
+    - Implementado fallback seguro em `SessionPlanFormClient.tsx` para garantir que o menu da Análise Clínica e os badges de qualidade sempre renderizem opções válidas.
+    - Substituída a iconografia espalhafatosa (`Sparkles` por `Target`) e padronizadas as cores de badge para esmeralda corporativo, atendendo à regra de SaaS médico e Purple Ban.
+  - **Validação**: 49/49 testes automatizados aprovados no script de limitadores e abas, 19/19 testes de isolamento e 20/20 testes de criação e abertura de sessão.
+
+
 ### Planos de Sessão — Remoção do Badge "Rascunho" no Título da Sessão
 - **Módulo**: Prontuários → Planos de Sessão → Folha de Sessão
 - **Caminho**: `components/session-plans/SessionPlanFormClient.tsx` → `SessionPlanFormClient`
