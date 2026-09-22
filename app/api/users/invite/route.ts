@@ -62,10 +62,15 @@ export async function POST(request: NextRequest) {
 
         const hasPassword = Boolean(data.password && data.password.trim().length >= 6)
 
+        // Generate a secure temporary password if none provided (min 6 chars required by Supabase)
+        const tempPassword = data.password && data.password.trim().length >= 6
+            ? data.password.trim()
+            : crypto.randomBytes(12).toString('base64url').slice(0, 16)
+
         // Create auth user first (required by FK constraint users_id_fkey -> auth.users)
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: data.email.toLowerCase(),
-            password: data.password || undefined,
+            password: tempPassword,
             email_confirm: true,
             user_metadata: {
                 full_name: data.name,
