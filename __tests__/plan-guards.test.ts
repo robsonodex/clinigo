@@ -53,9 +53,9 @@ describe('Plan Guards', () => {
         test('BASICO has correct limits', () => {
             const limits = PLAN_DEFINITIONS.BASICO.limits
 
-            expect(limits.max_doctors).toBe(2)
+            expect(limits.max_doctors).toBe(1)
             expect(limits.max_appointments_month).toBe(-1) // unlimited
-            expect(limits.max_patients).toBe(500)
+            expect(limits.max_patients).toBe(-1) // unlimited
             expect(limits.max_storage_gb).toBe(5)
         })
 

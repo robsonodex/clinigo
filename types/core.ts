@@ -191,9 +191,9 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
         price_yearly: 1490,
         tier: 1,
         limits: {
-            max_doctors: 2,
+            max_doctors: 1,
             max_appointments_month: -1,
-            max_patients: 500,
+            max_patients: -1,
             max_storage_gb: 5,
             max_units: 1,
         },
