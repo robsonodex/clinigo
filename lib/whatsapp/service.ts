@@ -635,14 +635,14 @@ export async function getAllClinicSessions(clinicId: string): Promise<any[]> {
 // ========== EXPORTED: NOTIFICAÇÃO DE LEAD PARA O ADMIN ==========
 
 /**
- * Envia notificação de novo Lead / cadastro para o número comercial/admin (21 96557-2247).
+ * Envia notificação de novo Lead / cadastro para o número comercial/admin (21 96696-0684).
  * Tenta enviar via sessão 'comercial' ou qualquer outra sessão ativa no sistema.
  */
 export async function sendWhatsAppToLeadAdmin(
   message: string,
   triggerSource: string = 'lead-notification'
 ): Promise<boolean> {
-  const leadPhone = process.env.ADMIN_LEAD_WHATSAPP_NUMBER || '21965572247'
+  const leadPhone = process.env.ADMIN_LEAD_WHATSAPP_NUMBER || '21966960684'
   
   // Tenta sessões conhecidas em ordem (comercial primeiro)
   const sessionsToTry = [

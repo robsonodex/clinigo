@@ -4,7 +4,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey
 import { sendWhatsAppToLeadAdmin } from '@/lib/whatsapp/service'
 
 async function runTest() {
-  console.log('=== TESTANDO ENVIAR NOTIFICAÇÃO DE REGISTRO PARA 21965572247 ===')
+  console.log('=== TESTANDO ENVIAR NOTIFICAÇÃO DE REGISTRO PARA 21966960684 ===')
   const waMessage = `🎁 *Novo Cliente Trial (7 Dias) se cadastrou!* 🎁\n\n` +
     `👤 *Nome:* Rodrigo Vilela (Reenvio Notificação)\n` +
     `🏥 *Clínica:* Consultório de Rodrigo\n` +
@@ -13,7 +13,7 @@ async function runTest() {
     `🚀 _Acesse em segundos. Sem cartão._`
 
   const success = await sendWhatsAppToLeadAdmin(waMessage, 'trial-notification-fix')
-  console.log('Resultado do envio:', success ? '✅ NOTIFICAÇÃO DO RODRIGO ENTREGUE NO SEU WHATSAPP (21 96557-2247)!' : '❌ FALHOU!')
+  console.log('Resultado do envio:', success ? '✅ NOTIFICAÇÃO DO RODRIGO ENTREGUE NO SEU WHATSAPP (21 96696-0684)!' : '❌ FALHOU!')
 }
 
 runTest().catch(console.error)
