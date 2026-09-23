@@ -214,16 +214,20 @@ export async function POST(request: NextRequest) {
         // Clean CPF if provided
         const cleanCPF = data.cpf ? data.cpf.replace(/\D/g, '') : null
 
-        // Get user clinic if not provided
+        // Get user profile (clinic + role)
         let clinicId = data.clinic_id
+        let userRole: string | null = null
+
+        const { data: profile } = await supabase
+            .from('users')
+            .select('clinic_id, role')
+            .eq('id', user.id)
+            .single()
+
         if (!clinicId) {
-            const { data: profile } = await supabase
-                .from('users')
-                .select('clinic_id')
-                .eq('id', user.id)
-                .single()
             clinicId = profile?.clinic_id
         }
+        userRole = profile?.role || null
 
         if (!clinicId) {
             return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
@@ -258,7 +262,7 @@ export async function POST(request: NextRequest) {
         const state = addressObj?.state || data.address_state || null
         const zipCode = addressObj?.zip_code || (data.address_zip_code ? data.address_zip_code.replace(/\D/g, '') : null)
 
-        const isDoctor = userData.role === 'DOCTOR'
+        const isDoctor = userRole === 'DOCTOR'
         const isConvenioOrBoth = !isDoctor && (data.billing_type === 'convenio' || data.billing_type === 'ambos')
         const billingType = isDoctor ? 'particular' : (['particular', 'convenio', 'ambos'].includes(data.billing_type as string)
             ? data.billing_type
