@@ -10,6 +10,48 @@ import { jwtVerify } from 'jose'
 import { ROUTE_MIN_PLAN } from '@/lib/constants/route-features'
 import { type PlanType } from '@/lib/constants/plans'
 
+// Route to feature_key mapping for custom permission overrides
+const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
+    '/dashboard/financial/payroll': 'repasse_medico',
+    '/dashboard/financial/dre': 'dre',
+    '/dashboard/financial/audit': 'auditoria',
+    '/dashboard/crm': 'fluxomed',
+    '/dashboard/whatsapp': 'whatsapp',
+    '/dashboard/automacao': 'automacao',
+    '/dashboard/importacao': 'importacao',
+    '/dashboard/integracoes': 'integracoes',
+    '/dashboard/tiss': 'faturamento_tiss',
+    '/dashboard/grupos': 'minha_clinica',
+    '/dashboard/terapia/retencao': 'bi_terapia',
+    '/dashboard/terapia/desfechos': 'bi_terapia',
+    '/dashboard/terapia/risco-evasao': 'bi_terapia',
+    '/dashboard/terapia/aderencia': 'bi_terapia',
+    '/dashboard/terapia/carga-trabalho': 'bi_terapia',
+    '/dashboard/terapia/supervisao': 'supervisao',
+    '/dashboard/terapia/encaminhamentos': 'encaminhamentos',
+    '/dashboard/terapia/demografico': 'bi_terapia',
+    '/dashboard/terapia/receita-modalidade': 'bi_terapia',
+    '/dashboard/terapia/sazonalidade': 'bi_terapia',
+    '/dashboard/terapia/nps': 'bi_terapia',
+    '/api/payroll': 'repasse_medico',
+    '/api/crm': 'fluxomed',
+    '/api/whatsapp': 'whatsapp',
+    '/api/tiss': 'faturamento_tiss',
+    '/api/supervision': 'supervisao',
+    '/api/referrals': 'encaminhamentos',
+    '/api/reports/retention': 'bi_terapia',
+    '/api/reports/discharge': 'bi_terapia',
+    '/api/reports/adherence': 'bi_terapia',
+    '/api/reports/therapist-workload': 'bi_terapia',
+    '/api/reports/demographics': 'bi_terapia',
+    '/api/reports/modality-revenue': 'bi_terapia',
+    '/api/reports/seasonality': 'bi_terapia',
+    '/api/patients/evasion-risk': 'bi_terapia',
+    '/api/nps': 'bi_terapia',
+    '/api/groups': 'minha_clinica',
+    '/api/integrations': 'integracoes',
+}
+
 // ============================================
 // CONFIGURATION
 // ============================================
@@ -751,28 +793,46 @@ export async function middleware(request: NextRequest) {
                     const requiredPlanLevel = PLAN_ORDER[minPlan]
 
                     if (currentPlanLevel < requiredPlanLevel) {
-                        // Extract feature name from route
-                        const featureName = route.split('/').pop() || 'recurso'
-                        const featureLabel = featureName.charAt(0).toUpperCase() + featureName.slice(1)
-
-                        if (pathname.startsWith('/api')) {
-                            return NextResponse.json(
-                                {
-                                    error: `Recurso "${featureLabel}" requer plano ${minPlan}`,
-                                    code: 'PLAN_REQUIRED',
-                                    current_plan: userPlanType,
-                                    required_plan: minPlan,
-                                    upgrade_url: '/dashboard/configuracoes/plano'
-                                },
-                                { status: 403 }
-                            )
+                        // Before blocking, check for custom permission override
+                        let hasCustomOverride = false
+                        if (userClinicId) {
+                            const featureKey = ROUTE_TO_FEATURE_KEY[route]
+                            if (featureKey) {
+                                const { data: override } = await supabase
+                                    .from('clinic_custom_permissions')
+                                    .select('is_enabled')
+                                    .eq('clinic_id', userClinicId)
+                                    .eq('feature_key', featureKey)
+                                    .eq('is_enabled', true)
+                                    .maybeSingle()
+                                hasCustomOverride = !!override
+                            }
                         }
 
-                        // Redirect to upgrade page with feature info
-                        const upgradeUrl = new URL('/dashboard/upgrade-required', request.url)
-                        upgradeUrl.searchParams.set('feature', featureLabel)
-                        upgradeUrl.searchParams.set('plan', minPlan)
-                        return NextResponse.redirect(upgradeUrl)
+                        if (!hasCustomOverride) {
+                            // Extract feature name from route
+                            const featureName = route.split('/').pop() || 'recurso'
+                            const featureLabel = featureName.charAt(0).toUpperCase() + featureName.slice(1)
+
+                            if (pathname.startsWith('/api')) {
+                                return NextResponse.json(
+                                    {
+                                        error: `Recurso "${featureLabel}" requer plano ${minPlan}`,
+                                        code: 'PLAN_REQUIRED',
+                                        current_plan: userPlanType,
+                                        required_plan: minPlan,
+                                        upgrade_url: '/dashboard/configuracoes/plano'
+                                    },
+                                    { status: 403 }
+                                )
+                            }
+
+                            // Redirect to upgrade page with feature info
+                            const upgradeUrl = new URL('/dashboard/upgrade-required', request.url)
+                            upgradeUrl.searchParams.set('feature', featureLabel)
+                            upgradeUrl.searchParams.set('plan', minPlan)
+                            return NextResponse.redirect(upgradeUrl)
+                        }
                     }
                     break // Route matched, no need to continue
                 }
