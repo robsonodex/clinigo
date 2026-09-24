@@ -73,7 +73,6 @@ O plano *Avançado* (R$ 249/mês, até 5 profissionais) foi feito pra você:
 
 📅 *Agenda por profissional* — Cada médico ou terapeuta tem sua agenda, mas você controla tudo de um só painel.
 📱 *WhatsApp integrado* — Lembretes automáticos, confirmação de presença, avisos de reagendamento — sem digitar nada na mão.
-💊 *Teleconsulta nativa* — Vídeo-chamada direto na plataforma, sem Zoom, sem Meet.
 💰 *Repasse profissional* — Calcula automaticamente quanto cada médico gerou e o repasse. Fim das planilhas!
 📊 *DRE completo* — Demonstrativo de resultado mensal com gráficos e comparativo.
 
@@ -131,7 +130,6 @@ export const MSG_FLUXO_2_PLANOS = [
 👤 até 5 profissionais | 👥 Ilimitados
 ✔️ Tudo do Básico +
 ✔️ WhatsApp integrado (lembretes automáticos)
-✔️ Teleconsulta nativa
 ✔️ Repasse profissional + DRE
 ✔️ CRM de pacientes
 ✔️ Check-in por QR Code`,
@@ -204,7 +202,7 @@ export const MSG_FLUXO_4_FUNCIONALIDADES = [
 📅 *A* — Agendamento e agenda
 📋 *B* — Prontuário eletrônico
 💰 *C* — Financeiro e repasse
-📱 *D* — WhatsApp e teleconsulta
+📱 *D* — WhatsApp e comunicação com pacientes
 🔵 *E* — Recepção, check-in e TV
 📊 *F* — Faturamento TISS (convênios)
 📦 *G* — Estoque
@@ -256,21 +254,15 @@ export const MSG_FUNC_4C = [
 ]
 
 export const MSG_FUNC_4D = [
-  `📱 Duas das funcionalidades que os clientes _mais amam_ no CliniGo. 🔥
+  `📱 A funcionalidade que os clientes _mais amam_ no CliniGo para acabar com as faltas: 🔥
 
 ━━━━ 💬 *WhatsApp Integrado* ━━━━
 ✅ Lembretes automáticos 24h antes da consulta
-✅ Confirmação de presença do paciente
-✅ Notificação de reagendamento ou cancelamento
-✅ Aviso de falta e oferta de reposição automática
-✅ Tudo isso sem você mandar uma mensagem na mão.
-
-━━━━ 🎥 *Teleconsulta Nativa* ━━━━
-✅ Vídeo-chamada direto na plataforma — sem Zoom, sem Meet
-✅ Link enviado automaticamente pro paciente via WhatsApp
-✅ Paciente entra sem precisar criar conta
-✅ Chat em tempo real durante a consulta
-✅ Compartilhamento de tela
+✅ Confirmação de presença do paciente com 1 toque
+✅ Notificação instantânea de reagendamento ou cancelamento
+✅ Aviso de falta e oferta de reposição automática de horário
+✅ Envio de laudos, recibos e documentos com assinatura digital
+✅ Tudo isso 100% automático, sem você digitar uma mensagem na mão!
 
 Disponível a partir do *Plano Avançado (R$ 249/mês).* 💙${MSG_FUNC_FOOTER}`
 ]

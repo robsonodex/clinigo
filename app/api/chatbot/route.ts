@@ -18,27 +18,39 @@ function getSupabaseAdmin() {
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
-// Modelos free com fallback automático (se um estiver com rate limit, tenta o próximo)
+// Modelos free com fallback automático
 const FREE_MODELS = [
   'meta-llama/llama-3.3-70b-instruct:free',
-  'openai/gpt-oss-120b:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
+  'google/gemini-2.0-flash-lite-preview-02-05:free',
+  'meta-llama/llama-3.1-8b-instruct:free',
 ]
 
 // System prompt REDUZIDO — usado apenas como fallback quando o engine não reconhece a mensagem
-const AI_FALLBACK_PROMPT = `Você é o Clin, assistente virtual de vendas do CliniGo.
-Tom: amigável, direto, consultivo, nunca robótico. Português brasileiro informal mas profissional.
-Nunca invente funcionalidades. Nunca mencione concorrentes.
-Respostas em até 3 parágrafos. Use emojis com moderação.
+const AI_FALLBACK_PROMPT = `Você é o Clin, assistente virtual de vendas do CliniGo (plataforma de gestão de clínicas).
+Tom: simpático, objetivo, ágil e profissional. Responda SEMPRE em português do Brasil (pt-BR).
+Nunca invente funcionalidades fora do escopo. Nunca mencione concorrentes.
+Respostas curtas (máximo 2 a 3 parágrafos curtos).
 
-PLANOS: Básico R$99/mês (1 prof), Avançado R$249/mês (até 5), Professional R$449/mês (até 30), Enterprise R$699+/mês (ilimitado).
-Teste grátis: https://clinigo.app/trial (7 dias, sem cartão).
+PLANOS:
+- Básico: R$ 149/mês (1 profissional, agenda, prontuário eletrônico e financeiro)
+- Avançado: R$ 249/mês (até 5 profissionais, WhatsApp automático, repasses médicos e DRE)
+- Professional: R$ 449/mês (até 30 profissionais, faturamento TISS, check-in facial por biometria, totem e painel TV)
+- Enterprise: R$ 699+/mês (profissionais ilimitados, multiunidades e suporte prioritário)
 
-Quando o lead quiser falar com humano ou demonstração: responda exatamente "TRANSFER_TO_HUMAN".
-Se não souber responder: responda exatamente "TRANSFER_TO_HUMAN".
+BIOMETRIA DIGITAL / FACIAL:
+- O CliniGo POSSUI módulo nativo de biometria facial para check-in de pacientes na recepção e confirmação de presença do corpo clínico.
+- Disponível a partir do plano Professional (R$ 449/mês).
 
-IMPORTANTE: O sistema CliniGo é web e NÃO possui aplicativo para celular (nem Android, nem iOS). Se perguntado, diga que acessa pelo navegador.
-Ao final da resposta, SEMPRE sugira que o usuário escolha uma opção do menu:
+TELECONSULTA:
+- Não ofereça nem mencione teleconsulta.
+
+REGRA RÍGIDA DE RESPOSTA:
+- NUNCA pense em voz alta.
+- NUNCA escreva em inglês ou use meta-comentários como "The user is asking...", "Let's check...", "Now, answer warmly...".
+- Entregue APENAS a resposta final que o cliente deve ler no WhatsApp.
+- Se o usuário perguntar algo muito específico que não saiba, responda "TRANSFER_TO_HUMAN" para transferir a um especialista humano.
+
+Ao final da resposta, sugira que o usuário escolha uma opção do menu:
 1 — O que é o CliniGo
 2 — Planos e preços
 3 — Demonstração gratuita
@@ -391,9 +403,27 @@ async function callAIFallback(sessionId: string, message: string): Promise<strin
 
       if (aiResponse.ok) {
         const data = await aiResponse.json()
-        const content = data.choices?.[0]?.message?.content || ''
+        let content = data.choices?.[0]?.message?.content || ''
         if (content) {
-          return [content.trim()]
+          // Remover tags de thinking / raciocínio interno
+          content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+
+          // Se vazou raciocínio em inglês com meta-comentários, extrair apenas o texto final em português
+          if (content.includes("The user is asking") || content.includes("Let's check") || content.includes("In the previous context")) {
+            const paragraphs = content.split(/\n\s*\n/)
+            const cleanParagraphs = paragraphs.filter(p => 
+              !p.startsWith('The user') && 
+              !p.startsWith("Let's") && 
+              !p.startsWith('Now, answer') && 
+              !p.startsWith('In the previous') &&
+              !p.startsWith('So CliniGo DOES')
+            )
+            content = cleanParagraphs.join('\n\n').trim()
+          }
+
+          if (content) {
+            return [content.trim()]
+          }
         }
       }
 
