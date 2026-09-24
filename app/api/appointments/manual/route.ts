@@ -546,9 +546,23 @@ export async function POST(request: NextRequest) {
 
         // Add optional insurance fields if using health insurance
         if (body.payment.type === 'health_insurance' && body.payment.health_insurance_id) {
-            appointmentData.health_insurance_plan_id = body.payment.health_insurance_id
-            appointmentData.insurance_card_number = body.payment.insurance_card_number || null
+            // Validate that the health insurance plan exists before setting FK
+            const { data: planExists } = await supabase
+                .from('health_insurance_plans')
+                .select('id')
+                .eq('id', body.payment.health_insurance_id)
+                .single()
+
+            if (planExists) {
+                appointmentData.health_insurance_plan_id = body.payment.health_insurance_id
+                appointmentData.insurance_card_number = body.payment.insurance_card_number || null
+            } else {
+                console.warn(`[appointments/manual] health_insurance_plan_id "${body.payment.health_insurance_id}" not found in health_insurance_plans table — skipping FK to avoid constraint violation`)
+                // Still set payment_type as CONVENIO but without the FK reference
+                appointmentData.insurance_card_number = body.payment.insurance_card_number || null
+            }
         }
+
 
         const { error: appointmentError } = await supabase
             .from('appointments')
