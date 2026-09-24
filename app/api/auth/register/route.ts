@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
                 `🚀 _Acesse em segundos. Sem cartão._`
 
             await sendWhatsAppToLeadAdmin(waMessage, 'trial-notification')
-            console.log('[Register] WhatsApp lead notification successfully dispatched to (21) 96557-2247')
+            console.log('[Register] WhatsApp lead notification dispatched to admin.')
         } catch (waError) {
             console.error('[Register] Failed to send WhatsApp notification:', waError)
         }

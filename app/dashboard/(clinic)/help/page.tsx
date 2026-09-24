@@ -1412,6 +1412,84 @@ export const helpItems: HelpItem[] = [
         roles: ['SUPER_ADMIN'],
         tags: ['super admins', 'engenharia', 'segurança central', 'mantenedores']
     },
+    {
+        id: 'faturamento-tiss-lotes',
+        title: 'Faturamento TISS e Lotes XML',
+        category: 'Financeiro',
+        icon: FileArchive,
+        href: '/dashboard/tiss',
+        whatIsIt: 'Módulo de faturamento no padrão ANS TISS com geração e fechamento de lotes de guias (SP/SADT, Consulta e Honorários), validação de regras de schema XSD e exportação de arquivos XML para envio às operadoras de planos de saúde.',
+        whenToUse: 'No encerramento das competências quinzenais ou mensais de faturamento de convênios para envio dos lotes às operadoras.',
+        howToUse: 'Acesse TISS no menu, selecione a operadora desejada, filtre o período de atendimento e clique em Gerar Lote. Revise os alertas de validação estrutural e gere o arquivo XML final para submissão.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['tiss', 'lotes', 'xml', 'faturamento convênio', 'ans', 'guias', 'operadoras']
+    },
+    {
+        id: 'gestao-glosas',
+        title: 'Gestão de Glosas e Recursos TISS',
+        category: 'Financeiro',
+        icon: ShieldAlert,
+        href: '/dashboard/tiss/glosas',
+        whatIsIt: 'Painel analítico e operacional para controle de glosas médicas e administrativas recebidas das operadoras de saúde, cálculo da taxa de perda financeira, identificação de motivos e gestão de recursos/contestações com documentação comprobatória.',
+        whenToUse: 'Após o retorno das faturas pagas pelas operadoras para auditar valores cortados e interpor recursos dentro do prazo contratual.',
+        howToUse: 'Importe o arquivo de retorno ou registre a glosa manualmente vinculada à guia. Informe a justificativa de recurso, anexe laudos ou prontuários complementares e acompanhe o status de recuperação do valor.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['glosas', 'recurso de glosa', 'contestação', 'perdas', 'faturamento', 'tiss']
+    },
+    {
+        id: 'importacao-migracao',
+        title: 'Importação e Migração de Dados em Massa',
+        category: 'Gestão',
+        icon: Upload,
+        href: '/dashboard/importacao/novo',
+        whatIsIt: 'Assistente (Wizard) de importação massiva e migração de dados de sistemas legados. Permite o upload em lote de cadastros de pacientes, médicos/terapeutas, convênios e histórico financeiro via planilhas Excel e CSV com validação prévia de campos.',
+        whenToUse: 'Durante a implantação da clínica, migração de software antigo ou cargas volumétricas periódicas de novos cadastros.',
+        howToUse: 'Selecione o tipo de dado desejado, baixe a planilha modelo padrão do CliniGo, preencha as colunas correspondentes, realize o upload e revise o relatório de inconsistências antes de confirmar a gravação no banco.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN'],
+        tags: ['importação', 'migração', 'planilha', 'excel', 'csv', 'carga de dados', 'wizard']
+    },
+    {
+        id: 'repasse-profissionais',
+        title: 'Repasse Médico e Extratos de Produção',
+        category: 'Financeiro',
+        icon: Wallet,
+        href: '/dashboard/financial/producao',
+        whatIsIt: 'Módulo de cálculo automático de repasse médico e terapêutico baseado em consultas e sessões concluídas. Suporta percentuais contratuais, valores fixos por procedimento ou taxas individuais por paciente (doctor_patient_rates), com emissão de extrato detalhado e exportação em Excel.',
+        whenToUse: 'Semanalmente, quinzenalmente ou no fechamento mensal para apurar os honorários devidos a cada profissional do corpo clínico.',
+        howToUse: 'Acesse Financeiro > Produção por Profissional, selecione o período desejado (ex: Esta Semana ou Este Mês) e clique em Gerar Extrato para auditar atendimentos e repasses devidos.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['repasse', 'honorários', 'comissão', 'médicos', 'produção', 'fechamento', 'folha']
+    },
+    {
+        id: 'gestao-salas-tv',
+        title: 'Gestão de Salas e Painel TV',
+        category: 'Configurações',
+        icon: Building2,
+        href: '/dashboard/configuracoes',
+        whatIsIt: 'Configuração e governança de salas e consultórios físicos da clínica, vinculação de profissionais em atendimento e integração em tempo real com o Painel TV de chamada de pacientes na recepção.',
+        whenToUse: 'Para cadastrar novas salas físicas, alterar a alocação de consultórios entre terapeutas ou configurar os avisos sonoros e visuais da TV de recepção.',
+        howToUse: 'Em Configurações > Consultórios, cadastre as salas, ative o botão de exibição no painel e associe o médico de plantão. A recepção poderá disparar a chamada de tela com 1 clique.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        tags: ['salas', 'consultórios', 'painel tv', 'chamada de senha', 'recepção']
+    },
+    {
+        id: 'notas-fiscais-profissionais',
+        title: 'Central de Notas Fiscais dos Prestadores',
+        category: 'Financeiro',
+        icon: Receipt,
+        href: '/dashboard/financial/notas-demonstrativos',
+        whatIsIt: 'Central de notas fiscais e demonstrativos dos prestadores. Permite que o profissional protocole sua NFS-e de forma autônoma para cada competência mensal, mesmo antes da liberação do demonstrativo pela administração, agilizando a conferência contábil.',
+        whenToUse: 'No encerramento mensal de pagamento dos prestadores para conferência de notas fiscais emitidas contra a clínica.',
+        howToUse: 'O profissional envia a NFS-e e valor pelo Portal do Médico. A administração audita a conformidade fiscal e marca o demonstrativo como aprovado para liquidação financeira.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL', 'DOCTOR'],
+        tags: ['nota fiscal', 'nfse', 'demonstrativo', 'prestadores', 'fiscal', 'impostos']
+    },
 ]
 
 export default function HelpPage() {

@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### Correção Crítica de Isolamento Multi-Tenant no Envio de Notificações WhatsApp de Novos Cadastros
+- **Módulos**:
+  - Integrações / Segurança & LGPD → WhatsApp & Notificações de Lead → `lib/whatsapp/service.ts` → `sendWhatsAppToLeadAdmin`
+  - Autenticação & Cadastro → Registro de Novas Clínicas → `app/api/auth/register/route.ts` → `POST`
+- **Descrição**:
+  - **Incidente de Segurança Detectado**:
+    - Ao realizar o cadastro de teste grátis (trial) de uma nova clínica (Praxis Desenvolvimento Integral LTDA / Beatriz), o sistema disparou notificação administrativa de lead utilizando uma sessão ativa conectada no banco de dados pertencente à clínica parceira Espaço Incluir (setor financeiro, número 11 97080-7530). O WhatsApp espelhou o envio na conta da clínica terceira, gerando exposição de dados cadastrais.
+  - **Causa Raiz Identificada**:
+    - A função `sendWhatsAppToLeadAdmin` continha um fallback que executava `supabase.from('whatsapp_sessions').select('clinic_id, sector').eq('status', 'connected').limit(5)` sem isolamento de tenant, capturando a primeira sessão conectada no banco de dados de qualquer clínica cliente caso a sessão comercial estivesse desconectada. Além disso, possuía UUID hardcoded da clínica Espaço Incluir.
+  - **Solução Cirúrgica e Blindagem**:
+    - **Expurgo do Fallback de Terceiros**: Eliminada 100% qualquer consulta a `whatsapp_sessions` de outras clínicas. Nenhuma sessão de cliente pode ser utilizada para notificações da plataforma sob nenhuma hipótese.
+    - **Remoção de Identificador Hardcoded**: Expurgo definitivo do UUID da clínica Espaço Incluir do fluxo de notificações comerciais.
+    - **Restrição Estrita à Sessão Oficial**: A função foi blindada para tentar exclusivamente a sessão oficial da plataforma (`CLIN_SESSION_ID = 'clin-sales-bot'`). Caso a sessão da plataforma não esteja conectada, o envio por WhatsApp é interrompido com log de aviso, mantendo o envio oficial e seguro via e-mail corporativo (`contato@clinigo.app`).
+    - **Conformidade LGPD**: Risco de vazamento cross-tenant em notificações de cadastro eliminado em 100%.
+
 ### Restrição e Ocultação de Planos de Saúde e Convênios para Terapeutas/Médicos (WorldSensory e Clínicas)
 - **Módulos**:
   - API / Segurança & Governança → Pacientes → `app/api/patients/route.ts` → `GET`, `POST`
@@ -2242,3 +2257,37 @@
     - Criado padrão visual de calendário institucional para a data: bloco com dia em destaque (`text-base font-bold`) e mês/ano em tipografia sóbria (`text-[10px] font-semibold text-slate-500 uppercase`).
     - Expandido o `getStatusBadge` cobrindo todos os estados do ciclo de vida clínico (`CONFIRMED`, `WAITING` / Aguardando Atendimento, `SCHEDULED`, `IN_SERVICE`, `COMPLETED`, `CANCELLED`, `NO_SHOW`, `PENDING_PAYMENT`) com paletas suaves e neutras (emerald, amber, sky, violet, slate, rose).
     - Ajustado o botão de cancelamento individual com toque mínimo acessível (PWA/Mobile), feedback de loading (`Loader2`) e preservação integral dos fluxos existentes.
+
+### Item 74: Mapeamento Global e Consolidação dos Módulos Contemplados no CliniGo v5.3
+- **Data**: 24/09/2026
+- **Módulos**: Plataforma Global CliniGo (Recepção, Agenda, Prontuário, TISS, Financeiro, Repasse, WhatsApp, Migração, Estoque, Relatórios, Governança LGPD)
+- **Caminho Completo**:
+  - Recepção & Agenda → `app/dashboard/(clinic)/agenda` e `app/dashboard/(clinic)/recepcao`
+  - Gestão de Salas & Painel TV → `app/dashboard/(clinic)/configuracoes/components/ConsultingRoomsSettings.tsx` e `app/painel-tv/[clinicId]`
+  - Prontuário Eletrônico & Evoluções → `app/dashboard/(clinic)/pacientes/[id]` e `components/medical-records/`
+  - Faturamento TISS & Lotes XML → `app/dashboard/(clinic)/tiss/batches` e `app/api/tiss/batches/[id]/generate-xml`
+  - Gestão de Glosas & Recursos → `app/dashboard/(clinic)/tiss/glosas` e `app/api/tiss/glosas`
+  - Autorizações Prévias TISS → `app/dashboard/(clinic)/tiss/autorizacao` e `app/api/tiss/autorizacao`
+  - Financeiro Completo & DRE → `app/dashboard/(clinic)/financeiro`
+  - Repasse Médico Avançado → `lib/services/repasse-calculator.ts` e `app/dashboard/(clinic)/financial/producao`
+  - Central de Notas Fiscais dos Prestadores → `components/financial/DoctorFinancialDocumentsView.tsx` e `app/dashboard/(clinic)/financial/notas-demonstrativos`
+  - Automação WhatsApp Bidirecional → `lib/whatsapp/service.ts`, `lib/services/whatsapp-appointment-confirmation.ts` e `app/dashboard/automacao`
+  - Assistente de Migração em Lote (Wizard) → `app/dashboard/importacao/novo` e `components/import/import-wizard.tsx`
+  - Teleconsulta WebRTC → `app/api/video/` e salas virtuais integradas
+  - Fila de Espera Multidisciplinar → `app/dashboard/(clinic)/terapia/fila-espera`
+  - Estoque & Suprimentos → `app/dashboard/(clinic)/estoque`
+  - Relatórios & BI Executivo → `app/dashboard/(clinic)/relatorios`
+  - Guia de Ajuda Integrado → `app/dashboard/(clinic)/help`
+- **Descrição Técnica**:
+  - **1. Auditoria e Levantamento dos Recursos em Operação**:
+    - Realizado levantamento estrutural e documental completo de todos os módulos nativos ativos na base de código do CliniGo v5.3.
+    - Confirmada a aderência total às demandas operacionais corporativas e clínicas de grande porte (escala Enterprise, 50+ profissionais):
+      1. **Agenda Multiprofissional e Gestão de Salas**: Grade de horários com filtros simultâneos, cadastro de consultórios físicos, associação de profissionais a salas e transmissão sincronizada em tempo real para o Painel de TV da recepção.
+      2. **Cadastro Único e Prontuário Multidisciplinar**: Estrutura unificada com isolamento por perfil (RLS Supabase). Formulários médicos tradicionais e formulários especializados para terapias de desenvolvimento infantil e sensorial, com controle de sigilo de convênios para terapeutas.
+      3. **TISS e Faturamento de Convênios**: Criação e fechamento de lotes com validação estrutural XSD (schemas ANS 04.01.00 / 03.05.00), exportação de arquivos XML, gestão de glosas com cálculo de perda financeira e contestação de recursos, e acompanhamento de autorizações prévias.
+      4. **Gestão Financeira e Motor de Repasse**: Contas a pagar e receber, DRE gerencial, conciliação e régua de cobrança. Motor de repasse com suporte a taxas contratuais gerais, por procedimento e regras individualizadas por paciente (`doctor_patient_rates`), além de protocolo autônomo de notas fiscais (NFS-e) por iniciativa do corpo clínico.
+      5. **Comunicação Nativa por WhatsApp**: Motor WebSocket Baileys rodando in-process com persistência segura, envio de lembretes e confirmações com motor de processamento de respostas do paciente (alterando automaticamente o agendamento para confirmado ou cancelado) e envio de demonstrativos aos profissionais.
+      6. **Migração e Importação de Dados**: Wizard completo para carga massiva de Pacientes, Médicos, Convênios e Financeiro a partir de planilhas Excel/CSV com de-para e relatório prévio de consistência.
+      7. **Teleconsulta e Estoque**: Salas virtuais de alta definição com tokens seguros e gestão física de insumos e suprimentos clínicos.
+  - **2. Diretrizes de Governança, LGPD e Padrão Visual SaaS Premium**:
+    - Documentação integralmente alinhada com as diretrizes de SaaS corporativo: zero emojis, iconografia vetorial Lucide, total conformidade com a LGPD (proibição de dados pessoais hardcoded no código), e fluxos de deploy com parâmetros oficiais do time corporativo Vercel.

@@ -635,8 +635,9 @@ export async function getAllClinicSessions(clinicId: string): Promise<any[]> {
 // ========== EXPORTED: NOTIFICAÇÃO DE LEAD PARA O ADMIN ==========
 
 /**
- * Envia notificação de novo Lead / cadastro para o número comercial/admin (21 96696-0684).
- * Tenta enviar via sessão 'comercial' ou qualquer outra sessão ativa no sistema.
+ * Envia notificação de novo Lead / cadastro para o número comercial/admin.
+ * Utiliza EXCLUSIVAMENTE a sessão oficial da plataforma ('clin-sales-bot').
+ * NUNCA utiliza sessões de WhatsApp de clínicas de clientes (isolamento estrito multi-tenant / LGPD).
  */
 export async function sendWhatsAppToLeadAdmin(
   message: string,
@@ -644,48 +645,18 @@ export async function sendWhatsAppToLeadAdmin(
 ): Promise<boolean> {
   const leadPhone = process.env.ADMIN_LEAD_WHATSAPP_NUMBER || '21966960684'
   
-  // Tenta sessões conhecidas em ordem (comercial primeiro)
-  const sessionsToTry = [
-    { clinicId: '5163c916-8b82-4d80-8a71-01726836ee46', sector: 'comercial' },
-    { clinicId: 'de000000-0000-0000-0000-000000000001', sector: 'default' }
-  ]
+  // Utiliza estritamente a sessão oficial do bot CliniGo ou sessão de plataforma configurada
+  const platformClinicId = process.env.PLATFORM_WHATSAPP_CLINIC_ID || CLIN_SESSION_ID
+  const platformSector = process.env.PLATFORM_WHATSAPP_SECTOR || 'default'
 
-  for (const s of sessionsToTry) {
-    try {
-      await sendWhatsAppMessage(s.clinicId, leadPhone, message, triggerSource, s.sector)
-      console.log(`[WhatsApp Lead Admin] ✅ Notificação enviada via ${s.clinicId}/${s.sector}`)
-      return true
-    } catch (err: any) {
-      console.warn(`[WhatsApp Lead Admin] Tentativa via ${s.clinicId}/${s.sector} falhou:`, err.message)
-    }
-  }
-
-  // Tenta qualquer sessão ativa no banco
   try {
-    const supabase = getSupabaseAdmin()
-    const { data: active } = await supabase
-      .from('whatsapp_sessions')
-      .select('clinic_id, sector')
-      .eq('status', 'connected')
-      .limit(5)
-
-    if (active && active.length > 0) {
-      for (const a of active) {
-        try {
-          await sendWhatsAppMessage(a.clinic_id, leadPhone, message, triggerSource, a.sector || 'default')
-          console.log(`[WhatsApp Lead Admin] ✅ Notificação enviada via sessão ativa ${a.clinic_id}/${a.sector}`)
-          return true
-        } catch {
-          /* continua pro próximo */
-        }
-      }
-    }
-  } catch (dbErr) {
-    console.error('[WhatsApp Lead Admin] Erro ao buscar sessões ativas:', dbErr)
+    await sendWhatsAppMessage(platformClinicId, leadPhone, message, triggerSource, platformSector)
+    console.log(`[WhatsApp Lead Admin] ✅ Notificação enviada via sessão oficial da plataforma (${platformClinicId}/${platformSector})`)
+    return true
+  } catch (err: any) {
+    console.warn(`[WhatsApp Lead Admin] Sessão oficial da plataforma (${platformClinicId}/${platformSector}) indisponível:`, err.message)
+    return false
   }
-
-  console.error('[WhatsApp Lead Admin] ❌ Não foi possível entregar a notificação por nenhuma sessão.')
-  return false
 }
 
 // ========== EXPORTED: ENVIAR MENSAGEM ==========
