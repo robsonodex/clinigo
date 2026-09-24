@@ -12,6 +12,10 @@
         {
             "path": "/api/cron/billing/send-scheduled",
             "schedule": "0 10 * * *"
+        },
+        {
+            "path": "/api/cron/restart-whatsapp-bot",
+            "schedule": "0 3 1,16 * *"
         }
     ]
-}
+}
