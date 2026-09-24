@@ -2291,3 +2291,16 @@
       7. **Teleconsulta e Estoque**: Salas virtuais de alta definição com tokens seguros e gestão física de insumos e suprimentos clínicos.
   - **2. Diretrizes de Governança, LGPD e Padrão Visual SaaS Premium**:
     - Documentação integralmente alinhada com as diretrizes de SaaS corporativo: zero emojis, iconografia vetorial Lucide, total conformidade com a LGPD (proibição de dados pessoais hardcoded no código), e fluxos de deploy com parâmetros oficiais do time corporativo Vercel.
+
+### Item 75: Validação Prévia de Chave Estrangeira de Planos de Convênio no Agendamento Manual
+- **Data**: 24/09/2026
+- **Módulo**: Recepção → Agenda → Agendamento Manual
+- **Arquivo**: `app/api/appointments/manual/route.ts`
+- **Função/Endpoint**: `POST /api/appointments/manual`
+- **Causa Raiz**:
+  - Usuários da recepção (ex.: Clínica Worldsensory) enfrentavam erro ao tentar agendar horários para determinados profissionais (`code: 23503`, `Key is not present in table "health_insurance_plans"`, violando a constraint `appointments_health_insurance_plan_id_fkey`).
+  - O payload da requisição enviava `payment.health_insurance_id` associado ao paciente ou formulário, porém o ID correspondente não existia na tabela `health_insurance_plans` (por exemplo, plano excluído, desativado ou ID divergente).
+- **Resolução Cirúrgica**:
+  - Implementada verificação prévia assíncrona da existência do `health_insurance_plan_id` na tabela `health_insurance_plans` antes de montar o payload do insert em `appointments`.
+  - Caso o plano exista, o identificador é vinculado normalmente mantendo a integridade referencial.
+  - Caso o plano não exista no banco, o campo é omitido do payload com log de advertência (`console.warn`), permitindo que a criação do agendamento ocorra com sucesso sem derrubar a operação da recepção ou travar a grade do profissional.
