@@ -2,6 +2,27 @@
 
 ## Módulos
 
+### Concessão de Acesso Cirúrgico à Aba "Minha Clínica" para Recepcionistas e Restauração de Entrega Pública de Logotipos
+- **Módulos**:
+  - Configurações da Clínica → Aba Minha Clínica → `app/dashboard/(clinic)/configuracoes/page.tsx` → `SettingsPage`
+  - Layout & Navegação → Cabeçalho e Menu do Usuário → `components/layout/header.tsx` → `Header`
+  - Layout & Navegação → Menu Lateral → `components/layout/sidebar.tsx` → `SIDEBAR_CONFIG`
+  - Backend & APIs → Atualização Cadastral da Clínica → `app/api/clinics/[id]/route.ts` → `GET`, `PATCH`
+  - Segurança de Rotas & Middleware → Permissões de Endpoint → `middleware.ts` → `ROLE_PROTECTED_ROUTES`
+  - Storage & Banco de Dados → Migrations Supabase → `supabase/migrations/20260925164500_restore_clinic_assets_public_bucket.sql` e `supabase/migrations/20260925170000_allow_receptionist_update_clinic_basic_info.sql`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Ajustar permissões para permitir que usuários com perfil `RECEPTIONIST` acessem e editem exclusivamente a aba "Minha Clínica" em `/dashboard/configuracoes`, mantendo todas as demais abas (Consultórios/TV, Planos/Assinatura, SMTP) e páginas avançadas de configuração (RBAC, Teleconsulta, Terapias, etc.) 100% restritas a `CLINIC_ADMIN` e `SUPER_ADMIN`.
+    - Investigar e solucionar chamado da clínica WorldSensory (Ana) referente à impossibilidade de visualização e atualização do logotipo institucional enviado (PNG, 76 KB, 500x500).
+  - **Causa Raiz Identificada no Logotipo**:
+    - A migration `20260907_make_documents_buckets_private.sql` (focada na privatização de prontuários médicos LGPD) incluiu erroneamente o bucket `clinic-assets` como `public = false`. O gateway de storage do Supabase rejeitava com erro HTTP 400/404 (`NoSuchBucket`) qualquer carregamento de imagem pública em `/storage/v1/object/public/clinic-assets/...`, fazendo com que os uploads concluídos com sucesso no servidor ficassem com imagens quebradas ou invisíveis na interface do usuário.
+  - **Solução Cirúrgica e Blindagem**:
+    - **Restauração do Bucket `clinic-assets`**: Bucket redefinido como público (`public = true`) com limite de 2MB e tipos de imagem estritos via API e migration versionada `20260925164500_restore_clinic_assets_public_bucket.sql`. O logotipo da WorldSensory passou a responder imediatamente com HTTP 200 e exibição correta.
+    - **Fronteira Frontend de Abas**: Em `configuracoes/page.tsx`, o acesso é liberado para `canAccess = isClinicAdmin || isSuperAdmin || isReceptionist`. Quando o perfil for `RECEPTIONIST`, a lista de abas renderiza exclusivamente "Minha Clínica", as abas administrativas são removidas do DOM, e o input de upload de logo é desabilitado com aviso institucional. Perfis `DOCTOR`, `FINANCIAL` e demais continuam 100% bloqueados com o card "Acesso Restrito ao Administrador".
+    - **Navegação & Menus**: `header.tsx` exibe o link "Configurações" no menu do usuário também para `RECEPTIONIST`. `sidebar.tsx` habilita o item "Minha Clínica" para `['CLINIC_ADMIN', 'RECEPTIONIST']`, preservando os outros 8 submódulos exclusivos para administradores.
+    - **Blindagem Backend e Allowlist Estrita**: `middleware.ts` inclui `RECEPTIONIST` no endpoint `/api/clinics`. Na rota `app/api/clinics/[id]/route.ts` (PATCH), caso o perfil seja `RECEPTIONIST`, o sistema valida isolamento multi-tenant (`clinic_id` pertencente à própria clínica do usuário) e aplica allowlist estrita dos 10 campos cadastrais básicos (`name`, `slug`, `email`, `phone`, `address`, `primary_color`, `cnpj`, `whatsapp_number`, `professional_label`, `council_label`). Qualquer tentativa de envio de campos administrativos (planos, limites, faturamento, chaves, status ativo) é sumariamente rejeitada com HTTP 403 Forbidden.
+    - **Migration RLS e Trigger de Segurança**: Criação da migration `20260925170000_allow_receptionist_update_clinic_basic_info.sql` contendo policy RLS isolada por tenant e trigger `trg_check_receptionist_clinic_update` para proteção em profundidade.
+
 ### Correção Crítica de Fluidez de Navegação (Expurgo de Skeletons Route-Level) e Blindagem da API de CRM
 - **Módulos**:
   - Dashboard Global → Remoção de 12 arquivos `loading.tsx` e `components/ui/page-skeleton.tsx` (Agenda, Recepção, Pacientes, Financeiro, Prontuários, Evoluções, Configurações, Médicos, Relatórios, CRM, Convênios, Terapia)

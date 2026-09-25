@@ -4367,5 +4367,24 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
     - Ajustado o cálculo de permissões no frontend para consumir simultaneamente o hook `useRole()` e o objeto `profile` retornado por `useAuth()`.
     - No backend (`/api/appointments/[id]`), a rota `DELETE` valida a role do usuário no banco (`users.role`); se for diferente de `SUPER_ADMIN`, `CLINIC_ADMIN` ou `RECEPTIONIST`, a requisição é abortada imediatamente com código 403.
 
-
-
+### Item 73: Concessão Cirúrgica de Acesso à Aba "Minha Clínica" para Recepcionistas e Restauração de Entrega Pública de Logotipos
+- **Data**: 25/09/2026
+- **Módulos**: Configurações da Clínica, Navegação Global, API de Clínicas, Supabase Storage
+- **Caminho Completo**:
+  - Configurações da Clínica → Aba Minha Clínica → `app/dashboard/(clinic)/configuracoes/page.tsx` → `SettingsPage`
+  - Layout & Navegação → Cabeçalho e Menu do Usuário → `components/layout/header.tsx` → `Header`
+  - Layout & Navegação → Menu Lateral → `components/layout/sidebar.tsx` → `SIDEBAR_CONFIG`
+  - Backend & APIs → Atualização Cadastral da Clínica → `app/api/clinics/[id]/route.ts` → `GET`, `PATCH`
+  - Segurança de Rotas & Middleware → Permissões de Endpoint → `middleware.ts` → `ROLE_PROTECTED_ROUTES`
+  - Storage & Banco de Dados → Migrations Supabase → `supabase/migrations/20260925164500_restore_clinic_assets_public_bucket.sql` e `supabase/migrations/20260925170000_allow_receptionist_update_clinic_basic_info.sql`
+- **Descrição Técnica**:
+  - **1. Contexto e Requisitos**:
+    - O Item 67 da documentação técnica havia restringido a página de configurações exclusivamente a `CLINIC_ADMIN` e `SUPER_ADMIN`.
+    - Ajustado para conceder acesso de visualização e edição da aba "Minha Clínica" (dados básicos) também para o perfil `RECEPTIONIST`, mantendo todas as demais abas (Consultórios/TV, Planos/Assinatura, SMTP) e páginas avançadas 100% restritas a administradores.
+    - Diagnóstico e resolução do chamado da clínica WorldSensory (Ana) referente à atualização e exibição do logotipo institucional (PNG 76 KB, 500x500).
+  - **2. Resolução Cirúrgica**:
+    - **Restauração do Bucket `clinic-assets`**: O bucket foi reconfigurado como público (`public = true`) com migration `20260925164500_restore_clinic_assets_public_bucket.sql`, eliminando o erro HTTP 400/404 (`NoSuchBucket`) que impedia a renderização pública do logotipo. A logo da WorldSensory passou a responder imediatamente com HTTP 200.
+    - **Frontend (`configuracoes/page.tsx`)**: Guarda ajustada para `canAccess = isClinicAdmin || isSuperAdmin || isReceptionist`. Para o perfil `RECEPTIONIST`, renderiza apenas o tab "Minha Clínica", esconde as demais abas do seletor e desabilita o upload de logo. Perfis `DOCTOR`, `FINANCIAL` e demais permanecem 100% bloqueados com o card "Acesso Restrito ao Administrador".
+    - **Navegação (`header.tsx` e `sidebar.tsx`)**: O link "Configurações" foi liberado no dropdown do usuário para recepcionistas, e no menu lateral o item "Minha Clínica" foi associado a `['CLINIC_ADMIN', 'RECEPTIONIST']`.
+    - **Backend e Allowlist (`app/api/clinics/[id]/route.ts`)**: No PATCH, `RECEPTIONIST` é validado contra a clínica do usuário (`clinic_id`) e submetido a uma allowlist estrita dos 10 campos básicos (`name`, `slug`, `email`, `phone`, `address`, `primary_color`, `cnpj`, `whatsapp_number`, `professional_label`, `council_label`), rejeitando qualquer campo administrativo com HTTP 403 Forbidden.
+    - **Migration RLS e Trigger**: Criação da migration `20260925170000_allow_receptionist_update_clinic_basic_info.sql` com RLS por tenant e trigger de verificação de colunas para proteção em profundidade.

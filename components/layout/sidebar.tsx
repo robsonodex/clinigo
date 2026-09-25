@@ -661,7 +661,7 @@ const navigationSections: NavSection[] = [
                 title: 'Minha Clínica',
                 href: '/dashboard/configuracoes',
                 icon: Settings,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
                 featureKey: FEATURE_KEYS.MINHA_CLINICA,
             },
             {

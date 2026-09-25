@@ -56,8 +56,9 @@ export default function SettingsPage() {
     const [uploadingLogo, setUploadingLogo] = useState(false)
     const [previewLogo, setPreviewLogo] = useState<string | null>(null)
     const { isLoading: authLoading } = useAuth()
-    const { clinicId: roleClinicId, isClinicAdmin, isSuperAdmin } = useRole()
+    const { clinicId: roleClinicId, isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
     const isAuthorized = isClinicAdmin || isSuperAdmin
+    const canAccess = isAuthorized || isReceptionist
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [professionalLabel, setProfessionalLabel] = useState('Médico(a)')
@@ -237,8 +238,8 @@ export default function SettingsPage() {
     }
 
     const onSubmit = async (data: ClinicSettingsData) => {
-        if (!isAuthorized) {
-            toast.error('Apenas administradores podem alterar as configurações da clínica.')
+        if (!canAccess) {
+            toast.error('Você não tem permissão para alterar as configurações da clínica.')
             return
         }
 
@@ -248,28 +249,36 @@ export default function SettingsPage() {
         }
 
         try {
-            const supabase = createClient()
+            const payload: Record<string, any> = {
+                name: data.name,
+                slug: data.slug,
+                email: data.email,
+                phone: data.phone,
+                address: data.address,
+                primary_color: data.primary_color,
+                cnpj: data.cnpj ? data.cnpj.replace(/\D/g, '') : null,
+                whatsapp_number: data.whatsapp_number,
+                professional_label: professionalLabel === 'CUSTOM' ? customLabel : professionalLabel,
+                council_label: councilLabel === 'CUSTOM' ? customCouncilLabel : councilLabel,
+            }
 
-            const { error } = await supabase
-                .from('clinics')
-                .update({
-                    name: data.name,
-                    slug: data.slug,
-                    email: data.email,
-                    phone: data.phone,
-                    address: data.address,
-                    primary_color: data.primary_color,
-                    cnpj: data.cnpj ? data.cnpj.replace(/\D/g, '') : null,
-                    whatsapp_number: data.whatsapp_number,
-                    logo_url: data.logo_url,
-                    professional_label: professionalLabel === 'CUSTOM' ? customLabel : professionalLabel,
-                    council_label: councilLabel === 'CUSTOM' ? customCouncilLabel : councilLabel,
-                })
-                .eq('id', clinicId)
+            if (isAuthorized && data.logo_url !== undefined) {
+                payload.logo_url = data.logo_url
+            }
 
-            if (error) {
-                console.error('Error updating clinic:', error)
-                toast.error('Erro ao salvar configurações')
+            const response = await fetch(`/api/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            })
+
+            const result = await response.json()
+
+            if (!response.ok || !result.success) {
+                console.error('Error updating clinic:', result.error)
+                toast.error(result.error?.message || 'Erro ao salvar configurações')
                 return
             }
 
@@ -299,7 +308,7 @@ export default function SettingsPage() {
         )
     }
 
-    if (!isAuthorized) {
+    if (!canAccess) {
         return (
             <div className="space-y-6 max-w-2xl py-8">
                 <Card className="border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10">
@@ -311,7 +320,7 @@ export default function SettingsPage() {
                             Acesso Restrito ao Administrador
                         </CardTitle>
                         <CardDescription className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                            Esta área é de acesso exclusivo para administradores da clínica. Alterações cadastrais, identidade visual e nomenclatura institucional só podem ser realizadas por perfis administrativos.
+                            Esta área é de acesso exclusivo para administradores da clínica. Alterações cadastrais, identidade visual e nomenclatura institucional só podem ser realizadas por perfis autorizados.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center pt-4">
@@ -336,18 +345,28 @@ export default function SettingsPage() {
                 </p>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-4 lg:w-[650px]">
-                    <TabsTrigger value="general">Informações Gerais</TabsTrigger>
-                    <TabsTrigger value="consultorios" className="flex items-center gap-1">
-                        <Building className="h-3 w-3" />
-                        Consultórios & TV
-                    </TabsTrigger>
-                    <TabsTrigger value="plan">Plano e Assinatura</TabsTrigger>
-                    <TabsTrigger value="smtp" className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        E-mail (SMTP)
-                    </TabsTrigger>
+            <Tabs value={activeTab} onValueChange={(tab) => {
+                if (isReceptionist && tab !== 'general') {
+                    toast.error('Acesso restrito ao administrador para outras abas.')
+                    return
+                }
+                setActiveTab(tab)
+            }}>
+                <TabsList className={`grid w-full ${isAuthorized ? 'grid-cols-4 lg:w-[650px]' : 'grid-cols-1 lg:w-[220px]'}`}>
+                    <TabsTrigger value="general">Minha Clínica</TabsTrigger>
+                    {isAuthorized && (
+                        <>
+                            <TabsTrigger value="consultorios" className="flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                Consultórios & TV
+                            </TabsTrigger>
+                            <TabsTrigger value="plan">Plano e Assinatura</TabsTrigger>
+                            <TabsTrigger value="smtp" className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                E-mail (SMTP)
+                            </TabsTrigger>
+                        </>
+                    )}
                 </TabsList>
 
 
@@ -389,10 +408,12 @@ export default function SettingsPage() {
                                                         accept="image/*"
                                                         className="w-full max-w-xs"
                                                         onChange={handleLogoUpload}
-                                                        disabled={uploadingLogo}
+                                                        disabled={uploadingLogo || !isAuthorized}
                                                     />
                                                     <p className="text-[10px] text-muted-foreground">
-                                                        Recomendado: 500x500px, max 2MB (PNG/JPG)
+                                                        {isAuthorized
+                                                            ? 'Recomendado: 500x500px, max 2MB (PNG/JPG)'
+                                                            : 'Apenas administradores podem alterar o logotipo da clínica.'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -629,17 +650,21 @@ export default function SettingsPage() {
                     </form>
                 </TabsContent>
 
-                <TabsContent value="consultorios" className="mt-6">
-                    <ConsultingRoomsSettings />
-                </TabsContent>
+                {isAuthorized && (
+                    <>
+                        <TabsContent value="consultorios" className="mt-6">
+                            <ConsultingRoomsSettings />
+                        </TabsContent>
 
-                <TabsContent value="plan" className="mt-6">
-                    <PlanAndBilling />
-                </TabsContent>
+                        <TabsContent value="plan" className="mt-6">
+                            <PlanAndBilling />
+                        </TabsContent>
 
-                <TabsContent value="smtp" className="mt-6">
-                    <SMTPSettings />
-                </TabsContent>
+                        <TabsContent value="smtp" className="mt-6">
+                            <SMTPSettings />
+                        </TabsContent>
+                    </>
+                )}
             </Tabs>
         </div>
     )

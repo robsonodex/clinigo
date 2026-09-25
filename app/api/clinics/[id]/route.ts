@@ -103,14 +103,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         // Check authorization for non-super-admins
         if (userRole !== 'SUPER_ADMIN') {
-            // Get user's clinic
+            // Get user's clinic and role
             const { data: userProfile } = await supabase
                 .from('users')
-                .select('clinic_id')
+                .select('clinic_id, role')
                 .eq('id', userId)
                 .single()
 
-            // CLINIC_ADMIN can only see their own clinic
+            // CLINIC_ADMIN and RECEPTIONIST can only see their own clinic
             const userClinicId = (userProfile as any)?.clinic_id
             if (userClinicId !== clinicId) {
                 console.log('[GET /api/clinics/[clinicId]] Access denied:', { userClinicId, clinicId, userRole })
@@ -120,8 +120,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 )
             }
 
-            // Hide sensitive data for non-super-admins
+            // Only CLINIC_ADMIN and RECEPTIONIST can view clinic settings
+            if (!['CLINIC_ADMIN', 'RECEPTIONIST'].includes((userProfile as any)?.role)) {
+                return NextResponse.json(
+                    { success: false, error: { message: 'Acesso restrito ao perfil administrativo e recepção', code: 'FORBIDDEN' } },
+                    { status: 403 }
+                )
+            }
+
+            // Hide sensitive integration keys and credentials for non-super-admins
             delete (clinic as any).mercadopago_access_token
+            delete (clinic as any).mercadopago_webhook_secret
+            delete (clinic as any).inter_client_secret
+            delete (clinic as any).inter_key_content
+            delete (clinic as any).inter_cert_content
         }
 
         return NextResponse.json({ success: true, data: clinic })
@@ -147,33 +159,75 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             )
         }
 
-        const body = await request.json()
-        const supabase = (userRole === 'SUPER_ADMIN')
-            ? createServiceRoleClient()
-            : await createClient()
+        // Only SUPER_ADMIN, CLINIC_ADMIN, and RECEPTIONIST can update clinic
+        if (!['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'].includes(userRole || '')) {
+            return NextResponse.json(
+                { success: false, error: { message: 'Acesso negado para este perfil', code: 'FORBIDDEN' } },
+                { status: 403 }
+            )
+        }
 
-        // Check authorization for non-super-admins
+        const body = await request.json()
+
+        // Check authorization and field permissions for non-super-admins
         if (userRole !== 'SUPER_ADMIN') {
-            const { data: user } = await supabase
+            const authClient = await createClient()
+            const { data: user } = await authClient
                 .from('users')
-                .select('clinic_id')
+                .select('clinic_id, role')
                 .eq('id', userId)
                 .single()
 
             if ((user as any)?.clinic_id !== clinicId) {
                 return NextResponse.json(
-                    { success: false, error: { message: 'Acesso negado', code: 'FORBIDDEN' } },
+                    { success: false, error: { message: 'Acesso negado: clínica não pertence ao usuário', code: 'FORBIDDEN' } },
                     { status: 403 }
                 )
             }
 
-            // CLINIC_ADMIN cannot change certain fields
-            delete body.plan_type
-            delete body.plan_limits
-            delete body.is_active
-            delete body.addons
+            if (userRole === 'RECEPTIONIST') {
+                // Strict allowlist of basic clinic fields that a RECEPTIONIST is authorized to edit
+                const ALLOWED_RECEPTIONIST_FIELDS = [
+                    'name',
+                    'slug',
+                    'email',
+                    'phone',
+                    'address',
+                    'primary_color',
+                    'cnpj',
+                    'whatsapp_number',
+                    'professional_label',
+                    'council_label',
+                ]
+
+                const receivedKeys = Object.keys(body).filter(k => k !== 'updated_at')
+                const unauthorizedKeys = receivedKeys.filter(k => !ALLOWED_RECEPTIONIST_FIELDS.includes(k))
+
+                if (unauthorizedKeys.length > 0) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            error: {
+                                message: `Recepcionistas não têm permissão para alterar os seguintes campos: ${unauthorizedKeys.join(', ')}`,
+                                code: 'FORBIDDEN'
+                            }
+                        },
+                        { status: 403 }
+                    )
+                }
+            } else if (userRole === 'CLINIC_ADMIN') {
+                // CLINIC_ADMIN cannot change administrative/plan/billing fields
+                delete body.plan_type
+                delete body.plan_limits
+                delete body.is_active
+                delete body.addons
+                delete body.custom_price
+                delete body.approval_status
+            }
         }
 
+        // Execute update with service role client following strict validation above
+        const supabase = createServiceRoleClient()
         const { data: clinic, error } = await (supabase
             .from('clinics') as any)
             .update({ ...body, updated_at: new Date().toISOString() })

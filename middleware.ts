@@ -147,7 +147,7 @@ const SUPER_ADMIN_ROUTES = [
 
 // Role-protected API routes
 const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
-    '/api/clinics': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // CLINIC_ADMIN pode ver detalhes da própria clínica
+    '/api/clinics': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'], // CLINIC_ADMIN e RECEPTIONIST podem ver/atualizar dados da própria clínica
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
 }

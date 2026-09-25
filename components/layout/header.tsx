@@ -21,7 +21,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
     const { profile, signOut } = useAuth()
-    const { isClinicAdmin, isSuperAdmin } = useRole()
+    const { isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
 
     return (
         <header className="sticky top-0 z-40 bg-white border-b h-16 flex items-center justify-between px-4 lg:px-6">
@@ -72,7 +72,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                                 Meu Perfil
                             </Link>
                         </DropdownMenuItem>
-                        {(isClinicAdmin || isSuperAdmin) && (
+                        {(isClinicAdmin || isSuperAdmin || isReceptionist) && (
                             <DropdownMenuItem asChild>
                                 <Link href="/dashboard/configuracoes" className="w-full flex items-center cursor-pointer">
                                     <Settings className="w-4 h-4 mr-2" />
