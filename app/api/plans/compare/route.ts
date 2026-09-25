@@ -116,10 +116,12 @@ export async function GET(request: NextRequest) {
             .eq('id', userData.clinic_id)
             .single()
 
-        return successResponse({
+        const response = successResponse({
             current_plan: clinic?.plan_type || 'STARTER',
             plans: PLAN_DETAILS,
         })
+        response.headers.set('Cache-Control', 'private, s-maxage=300, stale-while-revalidate=600')
+        return response
     } catch (error) {
         return handleApiError(error)
     }

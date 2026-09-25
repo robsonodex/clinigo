@@ -163,7 +163,7 @@ export default function TerminalPage() {
     useEffect(() => {
         if (deviceToken) {
             fetchQueue(deviceToken)
-            const interval = setInterval(() => fetchQueue(deviceToken), 30000) // refresh a cada 30s
+            const interval = setInterval(() => fetchQueue(deviceToken), 120000) // refresh a cada 2min (safety fallback)
             return () => clearInterval(interval)
         }
     }, [deviceToken, fetchQueue])

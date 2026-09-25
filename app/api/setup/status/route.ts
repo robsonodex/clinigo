@@ -78,7 +78,7 @@ export async function GET() {
         // Default é TRUE caso a coluna seja null/undefined
         const chamadaPainelTvHabilitada = clinic?.chamada_painel_tv_habilitada !== false
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             hasDoctor: (doctorCount || 0) > 0,
             hasPatient: (patientCount || 0) > 0,
             hasSchedule,
@@ -89,6 +89,8 @@ export async function GET() {
             clinicCreatedAt,
             chamadaPainelTvHabilitada,
         })
+        response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=300')
+        return response
     } catch (error) {
         console.error('Error checking setup status:', error)
         return NextResponse.json({

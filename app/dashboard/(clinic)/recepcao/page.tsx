@@ -101,9 +101,9 @@ export default function RecepcaoPage() {
     const [refreshInterval, setRefreshInterval] = useState<number>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('reception-refresh-interval')
-            return saved ? Math.min(Number(saved), 300) : 60
+            return saved ? Math.max(Number(saved), 120) : 300
         }
-        return 60
+        return 300
     })
 
     const [isCreatingPatient, setIsCreatingPatient] = useState(false)
@@ -674,7 +674,7 @@ export default function RecepcaoPage() {
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                    <Label>Intervalo de Atualização Automática</Label>
+                                    <Label>Intervalo de Verificação de Segurança</Label>
                                     <Select
                                         value={refreshInterval.toString()}
                                         onValueChange={(value) => {
@@ -687,19 +687,16 @@ export default function RecepcaoPage() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-xs">
-                                            <SelectItem value="30">30 segundos</SelectItem>
-                                            <SelectItem value="60">1 minuto (recomendado)</SelectItem>
-                                            <SelectItem value="90">1 minuto e 30 segundos</SelectItem>
                                             <SelectItem value="120">2 minutos</SelectItem>
                                             <SelectItem value="180">3 minutos</SelectItem>
-                                            <SelectItem value="240">4 minutos</SelectItem>
-                                            <SelectItem value="300">5 minutos (máximo)</SelectItem>
+                                            <SelectItem value="300">5 minutos (recomendado)</SelectItem>
+                                            <SelectItem value="600">10 minutos</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <p className="text-xs text-muted-foreground">
-                                        A fila será atualizada automaticamente a cada {refreshInterval >= 60
+                                        As atualizações ocorrem em tempo real via conexão direta. Este intervalo é apenas uma verificação de segurança complementar a cada {refreshInterval >= 60
                                             ? `${Math.floor(refreshInterval / 60)} minuto${Math.floor(refreshInterval / 60) > 1 ? 's' : ''}${refreshInterval % 60 ? ` e ${refreshInterval % 60} segundos` : ''}`
-                                            : `${refreshInterval} segundos`}
+                                            : `${refreshInterval} segundos`}.
                                     </p>
                                 </div>
                             </div>

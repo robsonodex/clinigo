@@ -31,7 +31,7 @@ export function useBillingNotifications() {
     const { data: notifications = [], isLoading } = useQuery({
         queryKey: ['billing-notifications'],
         queryFn: fetchNotifications,
-        refetchInterval: 60000, // Check every minute
+        refetchInterval: 300000, // Check every 5 minutes (billing changes are rare events)
     })
 
     const { mutateAsync: markRead } = useMutation({

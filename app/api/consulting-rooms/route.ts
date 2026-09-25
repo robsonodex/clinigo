@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
                 .order('room_number', { ascending: true })
 
             if (error) throw error
-            return NextResponse.json({ rooms: rooms || [] })
+            const response = NextResponse.json({ rooms: rooms || [] })
+            response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300')
+            return response
         }
 
         // Authenticated access
@@ -49,7 +51,9 @@ export async function GET(request: NextRequest) {
             .order('room_number', { ascending: true })
 
         if (error) throw error
-        return NextResponse.json({ rooms: rooms || [] })
+        const response = NextResponse.json({ rooms: rooms || [] })
+        response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120')
+        return response
     } catch (error) {
         console.error('[Consulting Rooms] GET error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

@@ -262,8 +262,8 @@ export default function ClinWhatsAppPage() {
   useEffect(() => {
     // Executa imediatamente ao carregar a página
     const initialRun = setTimeout(() => autoProcessQueue(), 3000)
-    // Depois repete a cada 30 segundos
-    const interval = setInterval(() => autoProcessQueue(), 30000)
+    // Depois repete a cada 2 minutos (mensagens agendadas têm timestamps, não precisam de 30s)
+    const interval = setInterval(() => autoProcessQueue(), 120000)
 
     return () => {
       clearTimeout(initialRun)

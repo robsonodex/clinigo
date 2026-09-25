@@ -488,11 +488,11 @@ export default function PainelTVPage() {
         // Clock update
         const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000)
 
-        // Fallback refresh every 60 seconds
+        // Fallback refresh every 5 minutes (Realtime handles live updates)
         const refreshInterval = setInterval(() => {
             fetchAppointments()
             fetchRooms()
-        }, 60000)
+        }, 300000)
 
         return () => {
             channel.unsubscribe()
