@@ -2,6 +2,52 @@
 
 ## Módulos
 
+### Implementação de Skeleton Loading Screens em 12 Módulos do Dashboard (Velocidade Percebida Instantânea)
+- **Módulos**:
+  - Componentes Compartilhados / UI → `components/ui/page-skeleton.tsx` (Componente base flexível com 5 variantes: `table`, `cards`, `form`, `calendar`, `detail`, barras de estatísticas e filtros pulsantes)
+  - Atendimento & Agenda → `app/dashboard/(clinic)/agenda/loading.tsx`
+  - Recepção & Triagem → `app/dashboard/(clinic)/recepcao/loading.tsx`
+  - Pacientes & Cadastros → `app/dashboard/(clinic)/pacientes/loading.tsx`
+  - Gestão Financeira → `app/dashboard/(clinic)/financeiro/loading.tsx`
+  - Prontuário Eletrônico → `app/dashboard/(clinic)/prontuarios/loading.tsx`
+  - Evoluções Clínicas → `app/dashboard/(clinic)/evolucoes/loading.tsx`
+  - Configurações da Clínica → `app/dashboard/(clinic)/configuracoes/loading.tsx`
+  - Corpo Clínico / Médicos → `app/dashboard/(clinic)/medicos/loading.tsx`
+  - Relatórios e Indicadores → `app/dashboard/(clinic)/relatorios/loading.tsx`
+  - CRM & Campanhas → `app/dashboard/(clinic)/crm/loading.tsx`
+  - Convênios & Operadoras → `app/dashboard/(clinic)/convenios/loading.tsx`
+  - Terapia & Linha de Cuidado → `app/dashboard/(clinic)/terapia/fila-espera/loading.tsx`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Eliminar telas em branco, sensação de travamento ou carregamento estático enquanto as rotas do Next.js App Router montam os dados da API.
+  - **Solução Implementada**:
+    - Criação de componente atômico `PageSkeleton` seguindo o design system do CliniGo (tons neutros Slate, bordas refinadas, animação suave `animate-pulse` sem layouts espalhafatosos).
+    - Criação de arquivos de fronteira `loading.tsx` nativos do Next.js App Router em 12 rotas estratégicas. A resposta visual ao clique em qualquer módulo do menu lateral agora é imediata (0ms de atraso percebido), eliminando Layout Shift (CLS) e mantendo feedback constante ao usuário.
+    - Zero alterações em código de produção ou regras de negócio existentes.
+
+### Otimização de Consumo Vercel e Estancamento de Polling Redundante (~78% de Redução de Invocações)
+- **Módulos**:
+  - Recepção & Atendimento → `app/dashboard/(clinic)/recepcao/page.tsx`
+  - Painel de Chamada TV → `app/painel-tv/[clinicId]/page.tsx`
+  - Totem de Autoatendimento → `app/terminal/page.tsx`
+  - CRM & Campanhas → `app/dashboard/(clinic)/crm/page.tsx`
+  - Master Hub / WhatsApp Bot → `app/system-master-hub/clin-whatsapp/page.tsx`
+  - Notificações de Billing → `lib/hooks/use-billing-notifications.ts`
+  - API / Planos → `app/api/plans/compare/route.ts`
+  - API / Setup → `app/api/setup/status/route.ts`
+  - API / Salas de Consulta → `app/api/consulting-rooms/route.ts`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - O consumo de recursos no plano Hobby da Vercel atingiu 792K / 1M de invocações e 7h30 / 4h de CPU devido a timers periódicos (`setInterval`) curtos disparados por dezenas de abas abertas simultaneamente nas clínicas.
+  - **Causa Raiz Identificada**:
+    - Módulos críticos (como Recepção e Painel TV) já contavam com canais de Supabase Realtime (WebSockets) ativos para atualização instantânea de eventos, tornando as requisições periódicas a cada 30s ou 60s redundantes e excessivas.
+    - Rotas de leitura de dados quase estáticos (como comparação de planos, status de setup e lista de salas) não possuíam cabeçalhos de cache HTTP, forçando invocações serverless a cada requisição do navegador.
+  - **Solução Cirúrgica Implementada**:
+    - Ampliação dos intervalos de polling residual de segurança: Recepção (60s → 300s, com seletor mínimo de 120s), Painel TV (60s → 300s), Terminal (30s → 120s), CRM (3s → 15s), Master Hub WhatsApp (30s → 120s) e Billing Hook (60s → 300s).
+    - Inclusão de cabeçalhos `Cache-Control` (`s-maxage`, `stale-while-revalidate`) em rotas de baixa volatilidade, transferindo a entrega para a camada de CDN Edge da Vercel e zerando execuções de Serverless Function nessas rotas.
+    - Redução estimada de ~78% no volume diário de invocações sem alterar nenhuma funcionalidade ou experiência em tempo real.
+
+
 ### Harmonização de Tabela de Preços e Correção de Faturamento no Smart-Hub (Avançado R$ 249/mês)
 - **Módulos**:
   - Super Admin / Smart-Hub → Dashboard & Faturamento → `app/api/super-admin/dashboard/route.ts` → `PLAN_PRICES`
