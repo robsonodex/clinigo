@@ -35,6 +35,8 @@ const ROLE_PROTECTED_PAGES = {
 // Simulated ROLE_PROTECTED_ROUTES as defined in middleware.ts
 const ROLE_PROTECTED_ROUTES = {
     '/api/clinics': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'],
+    '/api/crm/pipelines': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
+    '/api/crm/pipeline-cards': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR'],
     '/api/crm': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
@@ -71,7 +73,11 @@ function evaluateApiRoute(pathname, userRole) {
         return { allowed: true };
     }
 
-    for (const [route, allowedRoles] of Object.entries(ROLE_PROTECTED_ROUTES)) {
+    const sortedApiRoutes = Object.entries(ROLE_PROTECTED_ROUTES).sort(
+        ([a], [b]) => b.length - a.length
+    );
+
+    for (const [route, allowedRoles] of sortedApiRoutes) {
         if (pathname.startsWith(route)) {
             if (userRole && allowedRoles.includes(userRole)) {
                 return { allowed: true, matchedRoute: route };
@@ -163,6 +169,46 @@ for (const tc of apiCases) {
     console.log(`[PASS] ${tc.desc}`);
 }
 
+// 5. Novas Rotas de Gestão de Múltiplos Funis (/api/crm/pipelines)
+console.log('\n--- TESTANDO GESTÃO DE MÚLTIPLOS FUNIS (/api/crm/pipelines) ---');
+const pipelineManageCases = [
+    { role: 'CLINIC_ADMIN', expected: true, desc: 'CLINIC_ADMIN pode criar/editar/arquivar funis (/api/crm/pipelines)' },
+    { role: 'SUPER_ADMIN', expected: true, desc: 'SUPER_ADMIN pode criar/editar/arquivar funis (/api/crm/pipelines)' },
+    { role: 'DOCTOR', expected: false, desc: 'DOCTOR bloqueado em /api/crm/pipelines com 403' },
+    { role: 'RECEPTIONIST', expected: false, desc: 'RECEPTIONIST bloqueada em /api/crm/pipelines com 403' },
+    { role: 'FINANCIAL', expected: false, desc: 'FINANCIAL bloqueado em /api/crm/pipelines com 403' },
+    { role: 'READONLY', expected: false, desc: 'READONLY bloqueado em /api/crm/pipelines com 403' },
+];
+
+for (const tc of pipelineManageCases) {
+    const res = evaluateApiRoute('/api/crm/pipelines', tc.role);
+    assert.strictEqual(res.allowed, tc.expected, `Falha em pipelines: ${tc.desc}`);
+    if (!tc.expected) {
+        assert.strictEqual(res.status, 403);
+    }
+    console.log(`[PASS] ${tc.desc}`);
+}
+
+// 6. Novas Rotas de Movimentação de Cards (/api/crm/pipeline-cards/move)
+console.log('\n--- TESTANDO MOVIMENTAÇÃO DE CARDS (/api/crm/pipeline-cards/move) ---');
+const cardMoveCases = [
+    { role: 'CLINIC_ADMIN', expected: true, desc: 'CLINIC_ADMIN pode mover cards (/api/crm/pipeline-cards/card-1/move)' },
+    { role: 'SUPER_ADMIN', expected: true, desc: 'SUPER_ADMIN pode mover cards (/api/crm/pipeline-cards/card-1/move)' },
+    { role: 'RECEPTIONIST', expected: true, desc: 'RECEPTIONIST pode mover cards (/api/crm/pipeline-cards/card-1/move)' },
+    { role: 'DOCTOR', expected: true, desc: 'DOCTOR pode mover cards (/api/crm/pipeline-cards/card-1/move)' },
+    { role: 'FINANCIAL', expected: false, desc: 'FINANCIAL bloqueado para mover cards com 403' },
+    { role: 'READONLY', expected: false, desc: 'READONLY bloqueado para mover cards com 403' },
+];
+
+for (const tc of cardMoveCases) {
+    const res = evaluateApiRoute('/api/crm/pipeline-cards/card-1/move', tc.role);
+    assert.strictEqual(res.allowed, tc.expected, `Falha em cards: ${tc.desc}`);
+    if (!tc.expected) {
+        assert.strictEqual(res.status, 403);
+    }
+    console.log(`[PASS] ${tc.desc}`);
+}
+
 console.log('\n======================================================');
-console.log('TODOS OS 17 TESTES DE SEGURANÇA RBAC PASSARAM COM 100% DE SUCESSO');
+console.log('TODOS OS 29 TESTES DE SEGURANÇA RBAC PASSARAM COM 100% DE SUCESSO');
 console.log('======================================================');

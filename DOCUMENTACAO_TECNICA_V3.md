@@ -2,6 +2,27 @@
 
 ## Módulos
 
+### Implementação de Múltiplos Funis (Pipelines) e Etapas Customizáveis no CRM
+- **Módulos**:
+  - CRM → Funil de Vendas e Jornada do Paciente → `app/dashboard/(clinic)/crm/pipeline/page.tsx` → `PipelinePage`
+  - Backend & APIs → Gestão de Funis → `app/api/crm/pipelines/route.ts` → `GET`, `POST`
+  - Backend & APIs → Detalhes, Edição e Arquivamento de Funil → `app/api/crm/pipelines/[id]/route.ts` → `GET`, `PATCH`, `DELETE`
+  - Backend & APIs → Duplicação Estrutural de Funil → `app/api/crm/pipelines/[id]/duplicate/route.ts` → `POST`
+  - Backend & APIs → Movimentação Atômica de Cards → `app/api/crm/pipeline-cards/[cardId]/move/route.ts` → `PATCH`
+  - Segurança de Rotas & Middleware → `middleware.ts` → `ROLE_PROTECTED_ROUTES` (`/api/crm/pipelines`, `/api/crm/pipeline-cards`)
+  - Testes Automatizados RBAC → `scripts/test_rbac_route_protection.mjs` (29/29 testes aprovados)
+  - Banco de Dados & Migrations → `supabase/migrations/20260925200000_create_crm_pipelines_and_stages.sql`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Permitir que cada clínica crie, edite, duplique e arquive múltiplos funis (pipelines) de CRM com etapas totalmente configuráveis (ex: Funil de Vendas, Recuperação de Inativos, Pós-Atendimento e Fidelização, Funil Clínico), superando a limitação anterior de existir apenas um funil fixo com etapas rígidas.
+    - Garantir 100% de compatibilidade retroativa para todas as clínicas já em produção, preservando intactos todos os dados de pacientes e consultas no "Funil Padrão", sem perda de cards ou estados.
+  - **Causa Raiz da Limitação**:
+    - O modelo original baseava-se em um enum estático de 5 etapas (`lead`, `agendou`, `compareceu`, `retornou`, `recorrente`) na tabela `crm_stages`, sem abstração de pipelines independentes por clínica.
+  - **Solução Cirúrgica e Blindagem**:
+    - **Modelagem de Dados**: Criação de `crm_pipelines` e `crm_pipeline_stages` com RLS estrito por `clinic_id`, índices de alta performance e backfill idempotente gerando automaticamente o "Funil Padrão" para cada clínica existente.
+    - **Endpoints RESTful**: Rotas `/api/crm/pipelines` e `/api/crm/pipeline-cards` com allowlist estrita, validação de permissões administrativas (`CLINIC_ADMIN` e `SUPER_ADMIN`), fail-safe de 0 erros 500, e proteção de arquivamento contra funis default ou com cards ativos (HTTP 409).
+    - **Interface Kanban Premium**: Seletor horizontal de funis com contagem de cards, modal de criação multi-step com 4 templates prontos, painel analítico com taxas de conversão e insights inteligentes, suporte a drag-and-drop nativo com fallback touch para mobile PWA (botões com área >= 44x44px), e eliminação total de emojis conforme as diretrizes institucionais de SaaS médico internacional.
+
 ### Concessão de Acesso Cirúrgico à Aba "Minha Clínica" para Recepcionistas e Restauração de Entrega Pública de Logotipos
 - **Módulos**:
   - Configurações da Clínica → Aba Minha Clínica → `app/dashboard/(clinic)/configuracoes/page.tsx` → `SettingsPage`

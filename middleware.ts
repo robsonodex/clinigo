@@ -148,6 +148,8 @@ const SUPER_ADMIN_ROUTES = [
 // Role-protected API routes
 const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
     '/api/clinics': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'], // CLINIC_ADMIN e RECEPTIONIST podem ver/atualizar dados da própria clínica
+    '/api/crm/pipelines': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // Gestão de múltiplos funis (criar, editar, arquivar, duplicar)
+    '/api/crm/pipeline-cards': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR'], // Movimentação e interação com cards do Kanban
     '/api/crm': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // FluxoMed CRM e Pipeline exclusivo de Administradores
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
@@ -908,8 +910,9 @@ export async function middleware(request: NextRequest) {
             }
         }
 
-        // Check role permissions for API routes
-        for (const [route, allowedRoles] of Object.entries(ROLE_PROTECTED_ROUTES)) {
+        // Check role permissions for API routes (ordenado por especificidade)
+        const sortedApiRoutes = Object.entries(ROLE_PROTECTED_ROUTES).sort(([a], [b]) => b.length - a.length)
+        for (const [route, allowedRoles] of sortedApiRoutes) {
             if (pathname.startsWith(route)) {
                 // Allow if user has an allowed role OR if no role requirement specified
                 if (userRole && allowedRoles.includes(userRole)) {

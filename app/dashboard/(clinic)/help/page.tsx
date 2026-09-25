@@ -134,6 +134,19 @@ export const helpItems: HelpItem[] = [
         roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
         tags: ['login', 'acesso', 'portais', 'entrar', 'médico', 'clínica', 'paciente']
     },
+    {
+        id: 'crm-pipelines',
+        title: 'CRM e Múltiplos Funis de Atendimento',
+        category: 'Principal',
+        icon: Layers,
+        href: '/dashboard/crm/pipeline',
+        whatIsIt: 'Gestão visual da jornada de pacientes e leads através de múltiplos funis customizáveis (ex: Funil de Vendas, Recuperação de Inativos, Pós-Atendimento e Fidelização, Funil Clínico Tradicional). Permite movimentar cartões com drag-and-drop, acompanhar taxas de conversão e auditar métricas de avanço.',
+        whenToUse: 'Para planejar campanhas de captação, reativar pacientes inativos há mais de 30 dias, gerenciar propostas e negociar planos de tratamento.',
+        howToUse: 'Acesse o menu CRM > Pipeline. Use as abas superiores para alternar entre funis cadastrados. Clique em "+ Novo Funil" para criar novos fluxos a partir de templates prontos ou com etapas personalizadas. Arraste os cartões entre as colunas para atualizar a fase do paciente.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+        tags: ['crm', 'funil', 'pipeline', 'kanban', 'leads', 'vendas', 'conversão', 'fidelização']
+    },
 
     // ==========================================
     // 2. AGENDAMENTO
