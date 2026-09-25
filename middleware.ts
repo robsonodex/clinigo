@@ -148,8 +148,58 @@ const SUPER_ADMIN_ROUTES = [
 // Role-protected API routes
 const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
     '/api/clinics': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'], // CLINIC_ADMIN e RECEPTIONIST podem ver/atualizar dados da própria clínica
+    '/api/crm': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // FluxoMed CRM e Pipeline exclusivo de Administradores
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+}
+
+// Role-protected Dashboard Pages (Hard Gate no Servidor para URLs diretas coladas no navegador)
+const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
+    // CRM e Pipeline: Apenas administradores
+    '/dashboard/crm': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // Configurações críticas da clínica: Apenas administradores
+    '/dashboard/configuracoes/usuarios': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/plano': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/smtp': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/pagamento': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/teleconsulta': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // Base de configurações: Apenas administradores e recepção (aba Minha Clínica)
+    '/dashboard/configuracoes': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+
+    // Templates de prontuário: Apenas administradores e médicos
+    '/dashboard/configuracoes/templates-prontuario': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
+
+    // Regras de reembolso: Administradores e Financeiro
+    '/dashboard/configuracoes/reembolso': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/reembolso-paciente': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+
+    // Financeiro Geral da Clínica: Administradores e Financeiro (médicos e recepção bloqueados)
+    '/dashboard/financeiro': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+    '/dashboard/financial': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+    '/dashboard/relatorios': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+
+    // Meu Financeiro (Repasse individual de honorários): Apenas médico e administrador
+    '/dashboard/meu-financeiro': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // Prontuários clínicos e Prescrições: Apenas médicos e administradores (recepção bloqueada)
+    '/dashboard/prontuarios': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
+    '/dashboard/prescricoes': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
+
+    // Documentos e Contratos: Apenas Administrador e Recepção
+    '/dashboard/documentos': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+    '/dashboard/contratos': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+
+    // Recepção, Fila e Totem: Apenas recepcionistas e administradores
+    '/dashboard/recepcao': ['RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // WhatsApp e Estoque
+    '/dashboard/whatsapp': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+    '/dashboard/estoque': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+
+    // Notificações administrativas
+    '/dashboard/notificacoes': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
 }
 
 // ============================================
@@ -835,6 +885,25 @@ export async function middleware(request: NextRequest) {
                         }
                     }
                     break // Route matched, no need to continue
+                }
+            }
+        }
+
+        // Check role permissions for Dashboard Pages (Server-side Hard Gate against URL tampering)
+        if (pathname.startsWith('/dashboard') && userRole !== 'SUPER_ADMIN') {
+            const sortedPageRoutes = Object.entries(ROLE_PROTECTED_PAGES).sort(
+                ([a], [b]) => b.length - a.length
+            )
+
+            for (const [route, allowedRoles] of sortedPageRoutes) {
+                if (pathname === route || pathname.startsWith(`${route}/`)) {
+                    if (!userRole || !allowedRoles.includes(userRole)) {
+                        console.warn(`[MIDDLEWARE RBAC BLOCK] User ${user.id} (${userRole}) attempted unauthorized direct access to page ${pathname}. Allowed roles: ${allowedRoles.join(', ')}`)
+                        const redirectUrl = new URL('/dashboard', request.url)
+                        redirectUrl.searchParams.set('error', 'unauthorized_role')
+                        return NextResponse.redirect(redirectUrl)
+                    }
+                    break
                 }
             }
         }

@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import {
     ArrowLeft, RefreshCw, Search, Users, Phone, Mail,
     Calendar, DollarSign, GripVertical, AlertCircle,
-    CheckCircle2, Loader2, X, ExternalLink
+    CheckCircle2, Loader2, X, ExternalLink, ShieldAlert
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRole } from '@/lib/hooks/use-auth'
 
 interface Patient {
     id: string
@@ -51,6 +52,7 @@ function initPipeline(): Pipeline {
 
 export default function PipelinePage() {
     const router = useRouter()
+    const { isClinicAdmin, isSuperAdmin, loading: roleLoading } = useRole()
     const [pipeline, setPipeline] = useState<Pipeline>(initPipeline())
     const [totals, setTotals] = useState<Record<string, number>>({})
     const [totalPatients, setTotalPatients] = useState(0)
@@ -70,9 +72,14 @@ export default function PipelinePage() {
     }, [])
 
     async function loadPipeline() {
+        if (!isClinicAdmin && !isSuperAdmin) return
         setLoading(true)
         try {
             const res = await fetch('/api/crm/pipeline')
+            if (res.status === 403) {
+                toast('Acesso restrito ao administrador', 'error')
+                return
+            }
             const data = await res.json()
             if (data.pipeline) {
                 setPipeline(data.pipeline)
@@ -86,7 +93,15 @@ export default function PipelinePage() {
         }
     }
 
-    useEffect(() => { loadPipeline() }, [])
+    useEffect(() => {
+        if (!roleLoading) {
+            if (isClinicAdmin || isSuperAdmin) {
+                loadPipeline()
+            } else {
+                setLoading(false)
+            }
+        }
+    }, [roleLoading, isClinicAdmin, isSuperAdmin])
 
     // ── Drag handlers ──────────────────────────────
     function onDragStart(e: React.DragEvent, patient: Patient, fromStage: string) {
@@ -183,11 +198,39 @@ export default function PipelinePage() {
         return STAGES.find(s => s.key === stageKey)?.color || '#6b7280'
     }
 
-    if (loading) return (
+    if (loading || roleLoading) return (
         <div className="min-h-screen flex items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
     )
+
+    if (!isClinicAdmin && !isSuperAdmin) {
+        return (
+            <div className="space-y-6 max-w-2xl mx-auto py-12 px-4">
+                <Card className="border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10">
+                    <div className="p-6 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-2">
+                            <ShieldAlert className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-xl font-bold text-red-950 dark:text-red-100">
+                            Acesso Restrito ao Administrador
+                        </h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                            O Pipeline de Pacientes é uma ferramenta restrita à gestão da clínica. Acesso permitido exclusivamente para administradores.
+                        </p>
+                        <div className="pt-2">
+                            <Button asChild variant="outline" className="gap-2">
+                                <Link href="/dashboard">
+                                    <ArrowLeft className="w-4 h-4" />
+                                    Voltar ao Painel
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">

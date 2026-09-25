@@ -43,9 +43,14 @@ export async function GET(request: NextRequest) {
 
         const userId = request.headers.get('x-user-id')
         const clinicId = request.headers.get('x-clinic-id')
+        const userRole = request.headers.get('x-user-role')
 
         if (!userId || !clinicId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Acesso restrito ao administrador', code: 'FORBIDDEN' }, { status: 403 })
         }
 
         const doctorFilter = request.nextUrl.searchParams.get('doctor_id')
@@ -199,6 +204,10 @@ export async function PATCH(request: NextRequest) {
 
         if (!userData?.clinic_id) {
             return NextResponse.json({ error: 'Usuário sem clínica' }, { status: 401 })
+        }
+
+        if (userData.role !== 'CLINIC_ADMIN' && userData.role !== 'SUPER_ADMIN') {
+            return NextResponse.json({ error: 'Acesso restrito ao administrador', code: 'FORBIDDEN' }, { status: 403 })
         }
 
         const body = await request.json()

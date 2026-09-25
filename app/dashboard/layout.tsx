@@ -10,6 +10,7 @@ import { StaffSignatureGate } from '@/components/legal/StaffSignatureGate'
 import { DoctorPendingTermsBanner } from '@/components/doctors/DoctorPendingTermsBanner'
 import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { SystemRefreshListener } from '@/components/system/system-refresh-listener'
+import { AccessDeniedToast } from '@/components/system/access-denied-toast'
 import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
 
 export default async function DashboardRootLayout({
@@ -62,6 +63,7 @@ export default async function DashboardRootLayout({
     return (
         <>
             <StaffSignatureGate>
+                <AccessDeniedToast />
                 <SystemRefreshListener clinicId={effectiveClinicId} />
                 <DashboardLayout>
                     <ImpersonationBanner />

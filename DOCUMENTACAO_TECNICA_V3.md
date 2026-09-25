@@ -2427,3 +2427,24 @@
   - Implementada verificação prévia assíncrona da existência do `health_insurance_plan_id` na tabela `health_insurance_plans` antes de montar o payload do insert em `appointments`.
   - Caso o plano exista, o identificador é vinculado normalmente mantendo a integridade referencial.
   - Caso o plano não exista no banco, o campo é omitido do payload com log de advertência (`console.warn`), permitindo que a criação do agendamento ocorra com sucesso sem derrubar a operação da recepção ou travar a grade do profissional.
+
+### Item 76: Blindagem Global de Rotas por Perfil (RBAC Hard Gate no Middleware e Prevenção de Acesso por Link Direto)
+- **Data**: 25/09/2026
+- **Módulos**: Segurança Global, Middleware, RBAC, Governança LGPD, CRM e Configurações
+- **Caminho Completo**:
+  - Servidor / Edge Middleware → `middleware.ts` → `ROLE_PROTECTED_PAGES` e `ROLE_PROTECTED_ROUTES`
+  - Feedback Visual ao Usuário → `components/system/access-denied-toast.tsx` e `app/dashboard/layout.tsx`
+  - CRM / Pipeline de Pacientes → `app/dashboard/(clinic)/crm/pipeline/page.tsx` e `app/dashboard/(clinic)/crm/page.tsx`
+  - API de CRM Pipeline → `app/api/crm/pipeline/route.ts` (GET e PATCH)
+  - Testes Automatizados de Isolamento → `scripts/test_rbac_route_protection.mjs`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - O controle de acesso por perfil no CliniGo operava primariamente no menu lateral (`components/layout/sidebar.tsx`), ocultando visualmente módulos e telas não permitidos para o perfil logado.
+    - No entanto, caso um usuário sem permissão (como Médico, Terapeuta ou Recepcionista) copiasse e colasse a URL direta no navegador (ex.: `https://clinigo.app/dashboard/crm/pipeline` ou rotas de financeiro/configurações críticas), a página carregava porque o middleware verificava apenas a autenticação básica e o plano da clínica, sem barrar o perfil na camada de borda (SSR/Edge).
+  - **2. Arquitetura de Defesa em Profundidade (Defense-in-Depth)**:
+    - **Camada 1 (Edge Middleware - `middleware.ts`)**: Implementada a tabela de proteção `ROLE_PROTECTED_PAGES` com ordenação por especificidade de rota (`b.length - a.length`). Caso um usuário tente acessar diretamente qualquer página protegida para a qual seu papel (`role`) não esteja expressamente autorizado, a requisição é interceptada no servidor e redirecionada imediatamente para `/dashboard?error=unauthorized_role`.
+    - **Camada 2 (APIs Backend - `ROLE_PROTECTED_ROUTES`)**: Incluído `/api/crm` com exigência estrita de `CLINIC_ADMIN` ou `SUPER_ADMIN`. As rotas `/api/crm/pipeline` (GET e PATCH) validam os cabeçalhos `x-user-role` e rejeitam com `403 Forbidden` qualquer perfil assistencial ou operacional.
+    - **Camada 3 (Frontend / Client-Side Guards)**: Implementado guard de verificação via hook `useRole()` nas páginas do CRM e Pipeline, renderizando card institucional sóbrio de "Acesso Restrito ao Administrador" e impedindo o disparo de requisições de rede indevidas.
+    - **Camada 4 (Notificação Institucional)**: Criado o componente `AccessDeniedToast` dentro do layout do dashboard, exibindo toast discreto de acesso negado e limpando automaticamente o parâmetro `error` da barra de endereços.
+  - **3. Validação e Testes**:
+    - Bateria de testes automatizados executada (`scripts/test_rbac_route_protection.mjs`) com 17 cenários cobrindo todos os perfis (`CLINIC_ADMIN`, `SUPER_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `READONLY`), aprovada com 100% de sucesso.
