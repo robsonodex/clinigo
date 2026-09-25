@@ -234,10 +234,14 @@ export default function PipelinePage() {
     }, [toast])
 
     useEffect(() => {
-        if (!roleLoading && (isClinicAdmin || isSuperAdmin)) {
-            loadPipelines()
+        if (!roleLoading) {
+            if (isClinicAdmin || isSuperAdmin) {
+                loadPipelines()
+            } else {
+                router.replace('/dashboard?error=unauthorized_role')
+            }
         }
-    }, [roleLoading, isClinicAdmin, isSuperAdmin, loadPipelines])
+    }, [roleLoading, isClinicAdmin, isSuperAdmin, loadPipelines, router])
 
     useEffect(() => {
         if (activePipelineId) {
@@ -480,31 +484,7 @@ export default function PipelinePage() {
     }
 
     if (!isClinicAdmin && !isSuperAdmin) {
-        return (
-            <div className="space-y-6 max-w-2xl mx-auto py-12 px-4">
-                <Card className="border-slate-200 bg-white shadow-sm">
-                    <div className="p-8 text-center space-y-4">
-                        <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center mx-auto">
-                            <ShieldAlert className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-xl font-bold text-slate-900">
-                            Acesso Restrito ao Administrador
-                        </h2>
-                        <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                            A gestão de múltiplos funis e pipelines do CRM é restrita aos administradores da clínica.
-                        </p>
-                        <div className="pt-2">
-                            <Button asChild variant="outline" className="gap-2">
-                                <Link href="/dashboard">
-                                    <ArrowLeft className="w-4 h-4" />
-                                    Voltar ao Painel
-                                </Link>
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
-            </div>
-        )
+        return null
     }
 
     return (

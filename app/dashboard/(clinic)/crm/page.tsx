@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -95,6 +96,7 @@ const TRIGGER_LABELS: Record<string, string> = {
 }
 
 export default function CRMPage() {
+    const router = useRouter()
     const { isClinicAdmin, isSuperAdmin, loading: roleLoading } = useRole()
     const [loading, setLoading] = useState(true)
     const [automations, setAutomations] = useState<Automation[]>([])
@@ -193,9 +195,10 @@ export default function CRMPage() {
                 fetchData()
             } else {
                 setLoading(false)
+                router.replace('/dashboard?error=unauthorized_role')
             }
         }
-    }, [roleLoading, isClinicAdmin, isSuperAdmin, fetchData])
+    }, [roleLoading, isClinicAdmin, isSuperAdmin, fetchData, router])
 
     useEffect(() => {
         const hasRunning = campaigns.some(c => c.status === 'RUNNING')
@@ -454,33 +457,9 @@ export default function CRMPage() {
 
             {loading || roleLoading ? (
                 <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-600" />
                 </div>
-            ) : !isClinicAdmin && !isSuperAdmin ? (
-                <div className="space-y-6 max-w-2xl py-6">
-                    <Card className="border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10">
-                        <CardHeader className="text-center pb-2">
-                            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-3">
-                                <ShieldAlert className="w-6 h-6" />
-                            </div>
-                            <CardTitle className="text-xl text-red-950 dark:text-red-100">
-                                Acesso Restrito ao Administrador
-                            </CardTitle>
-                            <CardDescription className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                                O módulo de CRM e Automações é restrito à gestão da clínica. Acesso permitido exclusivamente para administradores.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex justify-center pt-4">
-                            <Button asChild variant="outline" className="gap-2">
-                                <Link href="/dashboard">
-                                    <ArrowLeft className="w-4 h-4" />
-                                    Voltar ao Painel
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            ) : (
+            ) : !isClinicAdmin && !isSuperAdmin ? null : (
                 <Tabs defaultValue="automations">
                     <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
                         <TabsTrigger value="automations" className="gap-2">

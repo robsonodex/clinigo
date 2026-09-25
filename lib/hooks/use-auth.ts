@@ -218,7 +218,7 @@ export function useRequireAuth(redirectTo = '/clinica') {
  * When in impersonation mode (Super Admin), returns CLINIC_ADMIN as effective role
  */
 export function useRole() {
-    const { user, profile } = useAuth()
+    const { user, profile, isLoading } = useAuth()
     const [isImpersonating, setIsImpersonating] = useState(false)
     const [impersonationClinicId, setImpersonationClinicId] = useState<string | null>(null)
 
@@ -266,6 +266,8 @@ export function useRole() {
         isCoordinator: !!profile?.is_coordinator,
         clinicId: effectiveClinicId,
         isImpersonating,
+        loading: isLoading,
+        isLoading,
     }
 }
 
