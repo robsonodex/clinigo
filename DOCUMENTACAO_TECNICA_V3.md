@@ -2,6 +2,25 @@
 
 ## Módulos
 
+### Correção de Responsividade, Rolagem e Hierarquia Visual nos Modais de Convênios e Planos
+- **Módulos**:
+  - Convênios & Operadoras → Cadastro de Operadoras → `app/dashboard/(clinic)/convenios/page.tsx` → `OperadorasTab` (Modal de Nova/Editar Operadora)
+  - Convênios & Operadoras → Cadastro de Planos → `app/dashboard/(clinic)/convenios/page.tsx` → `PlanosTab` (Modal de Novo/Editar Plano)
+  - Componentes Compartilhados / UI → `components/ui/dialog.tsx` → `DialogContent`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Usuários em monitores com baixa resolução vertical ou navegadores com zoom elevado (>100%) relatavam impossibilidade de preencher o formulário de cadastro de operadoras ("não consigo preencher... não aparece os dados de cima, não consigo movimentar essa página").
+  - **Causa Raiz Identificada**:
+    - O modal `Nova Operadora` possuía altura total superior a 750px e ficava centralizado na tela (`top: 50% -translate-y-1/2`) sem limites de altura (`max-h`) e sem barra de rolagem interna (`overflow-y-auto`).
+    - Em resoluções menores, a metade superior do formulário (incluindo o título e o único campo obrigatório: "Nome da Operadora / Convênio *") era empurrada para fora da tela, ficando escondida acima da janela do navegador, sem permitir rolagem.
+  - **Solução Cirúrgica e Blindagem**:
+    - Reestruturação dos modais de Operadoras e Planos com arquitetura de cabeçalho e rodapé fixos (`shrink-0`) e corpo intermediário com rolagem independente (`flex-1 overflow-y-auto px-6 py-4`), contido em `max-h-[85vh]`.
+    - O campo obrigatório "Nome da Operadora / Convênio *" e o botão de ação "Cadastrar Operadora" permanecem imediatamente visíveis e acessíveis em 100% das resoluções de tela.
+    - Clarificação explícita dos campos opcionais ("Código ANS (Opcional)", "Telefone (Opcional)", "Email (Opcional)", "Configuração TISS (Opcional)" e "Observações (Opcional)"), eliminando hesitação ou dúvida no preenchimento.
+    - Inserção de alerta contextual amigável no seletor de operadora da aba "Planos" caso nenhuma operadora tenha sido cadastrada previamente.
+    - Aplicação de salvaguarda global em `components/ui/dialog.tsx` com `max-h-[92vh] overflow-y-auto` para proteção de qualquer outro modal da plataforma em viewports restritas.
+
+
 ### Implementação de Skeleton Loading Screens em 12 Módulos do Dashboard (Velocidade Percebida Instantânea)
 - **Módulos**:
   - Componentes Compartilhados / UI → `components/ui/page-skeleton.tsx` (Componente base flexível com 5 variantes: `table`, `cards`, `form`, `calendar`, `detail`, barras de estatísticas e filtros pulsantes)

@@ -328,8 +328,8 @@ function OperadorasTab() {
 
             {/* Dialog Form */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-3 shrink-0 border-b border-border/40">
                         <DialogTitle>
                             {editingItem ? 'Editar Operadora' : 'Nova Operadora'}
                         </DialogTitle>
@@ -337,7 +337,7 @@ function OperadorasTab() {
                             {editingItem ? 'Atualize os dados da operadora de convênio' : 'Cadastre uma nova operadora de saúde'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-3">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Nome da Operadora / Convênio *</Label>
                             <Input
@@ -351,7 +351,7 @@ function OperadorasTab() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="code">Código ANS</Label>
+                                <Label htmlFor="code">Código ANS (Opcional)</Label>
                                 <Input
                                     id="code"
                                     placeholder="Ex: 302147"
@@ -379,7 +379,7 @@ function OperadorasTab() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="phone">Telefone</Label>
+                                <Label htmlFor="phone">Telefone (Opcional)</Label>
                                 <Input
                                     id="phone"
                                     placeholder="(11) 99999-9999"
@@ -389,7 +389,7 @@ function OperadorasTab() {
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">Email (Opcional)</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -403,7 +403,7 @@ function OperadorasTab() {
 
                         {/* TISS Version Selector */}
                         <div className="pt-2">
-                            <Label className="mb-2 block">Configuração TISS</Label>
+                            <Label className="mb-2 block">Configuração TISS (Opcional)</Label>
                             <TissVersionSelector
                                 currentVersion={formData.tiss_version || '4.01.00'}
                                 insuranceName={formData.name || 'Nova Operadora'}
@@ -414,7 +414,7 @@ function OperadorasTab() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Observações</Label>
+                            <Label htmlFor="notes">Observações (Opcional)</Label>
                             <Textarea
                                 id="notes"
                                 placeholder="Informações adicionais..."
@@ -424,7 +424,7 @@ function OperadorasTab() {
                             />
                         </div>
                     </div>
-                    <DialogFooter className="gap-2">
+                    <DialogFooter className="p-4 pt-3 shrink-0 border-t border-border/40 bg-slate-50/50 dark:bg-slate-900/50 gap-2">
                         <Button variant="outline" onClick={closeDialog} className="min-h-[44px]">
                             Cancelar
                         </Button>
@@ -834,8 +834,8 @@ function PlanosTab() {
 
             {/* Dialog Form */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-3 shrink-0 border-b border-border/40">
                         <DialogTitle>
                             {editingItem ? 'Editar Plano' : 'Novo Plano'}
                         </DialogTitle>
@@ -843,25 +843,31 @@ function PlanosTab() {
                             {editingItem ? 'Atualize os dados do plano de convênio' : 'Cadastre um novo plano vinculado a uma operadora'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-3">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         {!editingItem && (
                             <div className="grid gap-2">
                                 <Label>Operadora *</Label>
-                                <Select
-                                    value={formData.health_insurance_id}
-                                    onValueChange={(v) => setFormData({ ...formData, health_insurance_id: v })}
-                                >
-                                    <SelectTrigger className="min-h-[44px]">
-                                        <SelectValue placeholder="Selecione a operadora" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {insurances.map((ins) => (
-                                            <SelectItem key={ins.id} value={ins.id}>
-                                                {ins.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                {insurances.length === 0 ? (
+                                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg text-xs text-amber-800 dark:text-amber-300">
+                                        Nenhuma operadora cadastrada ainda. Cadastre primeiro a operadora na aba "Operadoras".
+                                    </div>
+                                ) : (
+                                    <Select
+                                        value={formData.health_insurance_id}
+                                        onValueChange={(v) => setFormData({ ...formData, health_insurance_id: v })}
+                                    >
+                                        <SelectTrigger className="min-h-[44px]">
+                                            <SelectValue placeholder="Selecione a operadora" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {insurances.map((ins) => (
+                                                <SelectItem key={ins.id} value={ins.id}>
+                                                    {ins.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                         )}
                         <div className="grid gap-2">
@@ -876,7 +882,7 @@ function PlanosTab() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>Código do Plano</Label>
+                                <Label>Código do Plano (Opcional)</Label>
                                 <Input
                                     placeholder="Ex: PRM001"
                                     value={formData.code}
@@ -885,12 +891,12 @@ function PlanosTab() {
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label>Status</Label>
+                                <Label htmlFor="status">Status</Label>
                                 <Select
                                     value={formData.status}
                                     onValueChange={(v: 'ACTIVE' | 'INACTIVE') => setFormData({ ...formData, status: v })}
                                 >
-                                    <SelectTrigger className="min-h-[44px]">
+                                    <SelectTrigger id="status" className="min-h-[44px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -903,7 +909,7 @@ function PlanosTab() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>Tipo</Label>
+                                <Label>Tipo (Opcional)</Label>
                                 <Select
                                     value={formData.type}
                                     onValueChange={(v: any) => setFormData({ ...formData, type: v })}
@@ -919,7 +925,7 @@ function PlanosTab() {
                                 </Select>
                             </div>
                             <div className="grid gap-2">
-                                <Label>Cobertura</Label>
+                                <Label>Cobertura (Opcional)</Label>
                                 <Select
                                     value={formData.coverage_type}
                                     onValueChange={(v: any) => setFormData({ ...formData, coverage_type: v })}
@@ -936,7 +942,7 @@ function PlanosTab() {
                             </div>
                         </div>
                     </div>
-                    <DialogFooter className="gap-2">
+                    <DialogFooter className="p-4 pt-3 shrink-0 border-t border-border/40 bg-slate-50/50 dark:bg-slate-900/50 gap-2">
                         <Button variant="outline" onClick={closeDialog} className="min-h-[44px]">
                             Cancelar
                         </Button>
