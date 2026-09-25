@@ -222,8 +222,8 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
     AVANCADO: {
         type: 'AVANCADO',
         name: 'Avançado',
-        price_monthly: 299,
-        price_yearly: 2990,
+        price_monthly: 249,
+        price_yearly: 2490,
         tier: 2,
         limits: {
             max_doctors: 5,
@@ -265,8 +265,8 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
     PROFESSIONAL: {
         type: 'PROFESSIONAL',
         name: 'Professional',
-        price_monthly: 549,
-        price_yearly: 5490,
+        price_monthly: 449,
+        price_yearly: 4490,
         tier: 3,
         limits: {
             max_doctors: 30,
@@ -310,8 +310,8 @@ export const PLAN_DEFINITIONS: Record<PlanType, PlanDefinition> = {
     ENTERPRISE: {
         type: 'ENTERPRISE',
         name: 'Enterprise',
-        price_monthly: 799,
-        price_yearly: 7990,
+        price_monthly: 699,
+        price_yearly: 6990,
         tier: 4,
         limits: {
             max_doctors: -1,

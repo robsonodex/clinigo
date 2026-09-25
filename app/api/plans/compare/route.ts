@@ -26,7 +26,7 @@ const PLAN_DETAILS = {
     },
     BASICO: {
         name: 'Básico',
-        price: 299,
+        price: 149,
         features: {
             max_doctors: 3,
             max_units: 1,
@@ -44,7 +44,7 @@ const PLAN_DETAILS = {
     },
     AVANCADO: {
         name: 'Avançado',
-        price: 549,
+        price: 249,
         popular: true,
         features: {
             max_doctors: 10,
@@ -66,7 +66,7 @@ const PLAN_DETAILS = {
     },
     ENTERPRISE: {
         name: 'Enterprise',
-        price: 799,
+        price: 699,
         features: {
             max_doctors: 999999,
             max_units: 999999,

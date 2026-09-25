@@ -5,9 +5,10 @@
 
 export interface PlanPricing {
     STARTER: 149
-    BASICO: 299
-    AVANCADO: 549
-    ENTERPRISE: 799
+    BASICO: 149
+    AVANCADO: 249
+    PROFESSIONAL: 449
+    ENTERPRISE: 699
 }
 
 export interface ProrationResult {
@@ -22,9 +23,10 @@ export interface ProrationResult {
 export class BillingProrationService {
     private pricing: PlanPricing = {
         STARTER: 149,
-        BASICO: 299,
-        AVANCADO: 549,
-        ENTERPRISE: 799,
+        BASICO: 149,
+        AVANCADO: 249,
+        PROFESSIONAL: 449,
+        ENTERPRISE: 699,
     }
 
     /**

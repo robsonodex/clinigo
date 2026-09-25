@@ -6,18 +6,7 @@
 import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-
-const PLAN_PRICES: Record<string, number> = {
-    FREE: 0,
-    STARTER: 149,
-    BASIC: 199,
-    BASICO: 299,
-    PROFESSIONAL: 449,
-    PRO: 399,
-    AVANCADO: 549,
-    ENTERPRISE: 799,
-    NETWORK: 999,
-}
+import { PLAN_PRICES } from '@/lib/constants/plans'
 
 export async function GET(request: NextRequest) {
     try {

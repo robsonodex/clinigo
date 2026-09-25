@@ -1,7 +1,7 @@
 /**
  * Route to Feature Mapping - 4-Tier System
  * Maps routes to minimum required plan level
- * Plans: BASICO (R$149), AVANCADO (R$299), PROFESSIONAL (R$549), ENTERPRISE (R$799)
+ * Plans: BASICO (R$149), AVANCADO (R$249), PROFESSIONAL (R$449), ENTERPRISE (R$699)
  * 
  * ATUALIZADO: 2026-02-09 - Apenas rotas de funcionalidades REAIS
  */
@@ -15,7 +15,7 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
     // Dashboard, Agenda, Prontuários, Financeiro básico, Relatórios
     // These are NOT restricted by default (no entry needed = all plans have access)
 
-    // === AVANÇADO Routes (R$299) - Advanced features ===
+    // === AVANÇADO Routes (R$249) - Advanced features ===
     '/dashboard/financial/payroll': 'AVANCADO',
     '/dashboard/financial/dre': 'AVANCADO',
     '/dashboard/financial/audit': 'AVANCADO',
@@ -28,7 +28,7 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
     '/api/crm': 'AVANCADO',
     '/api/whatsapp': 'AVANCADO',
 
-    // === PROFESSIONAL Routes (R$549) ===
+    // === PROFESSIONAL Routes (R$449) ===
     '/dashboard/tiss': 'PROFESSIONAL',
     '/dashboard/grupos': 'PROFESSIONAL',
     '/api/tiss': 'PROFESSIONAL',

@@ -30,17 +30,17 @@ const PLAN_INFO: Record<string, { name: string; price: number; features: string[
     },
     AVANCADO: {
         name: 'Avançado',
-        price: 299,
+        price: 249,
         features: ['5 Médicos', 'Check-in Facial', 'WhatsApp', 'CRM', 'DRE', 'Importação'],
     },
     PROFESSIONAL: {
         name: 'Professional',
-        price: 549,
+        price: 449,
         features: ['30 Médicos', 'TISS', 'Tudo do Avançado'],
     },
     ENTERPRISE: {
         name: 'Enterprise',
-        price: 799,
+        price: 699,
         features: ['Médicos Ilimitados', 'Suporte 24/7', 'Gerente de Conta'],
     },
 }

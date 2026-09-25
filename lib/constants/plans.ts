@@ -234,3 +234,15 @@ export function migrateLegacyPlan(legacyPlan: string): PlanType {
 }
 
 export const TRIAL_DAYS = 7
+
+export const PLAN_PRICES: Record<string, number> = {
+    FREE: 0,
+    STARTER: 149,
+    BASIC: 149,
+    BASICO: PLANS.BASICO.price,          // 149
+    AVANCADO: PLANS.AVANCADO.price,      // 249
+    PROFESSIONAL: PLANS.PROFESSIONAL.price, // 449
+    PRO: PLANS.PROFESSIONAL.price,       // 449
+    ENTERPRISE: PLANS.ENTERPRISE.price,  // 699
+    NETWORK: PLANS.NETWORK.price,        // 999
+}

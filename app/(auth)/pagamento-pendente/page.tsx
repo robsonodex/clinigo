@@ -31,11 +31,11 @@ interface BoletoResponse {
 
 const PLAN_PRICES: Record<string, { name: string; price: number }> = {
     BASICO: { name: 'CliniGo Básico', price: 149 },
-    AVANCADO: { name: 'CliniGo Avançado', price: 299 },
-    PROFESSIONAL: { name: 'CliniGo Professional', price: 549 },
-    ENTERPRISE: { name: 'CliniGo Enterprise', price: 799 },
+    AVANCADO: { name: 'CliniGo Avançado', price: 249 },
+    PROFESSIONAL: { name: 'CliniGo Professional', price: 449 },
+    ENTERPRISE: { name: 'CliniGo Enterprise', price: 699 },
     NETWORK: { name: 'CliniGo Network', price: 999 },
-    BASIC: { name: 'CliniGo Básico', price: 147 },
+    BASIC: { name: 'CliniGo Básico', price: 149 },
     STARTER: { name: 'Starter', price: 0 },
 }
 

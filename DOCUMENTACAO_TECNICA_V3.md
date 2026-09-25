@@ -2,6 +2,27 @@
 
 ## Módulos
 
+### Harmonização de Tabela de Preços e Correção de Faturamento no Smart-Hub (Avançado R$ 249/mês)
+- **Módulos**:
+  - Super Admin / Smart-Hub → Dashboard & Faturamento → `app/api/super-admin/dashboard/route.ts` → `PLAN_PRICES`
+  - Super Admin / Smart-Hub → Central de Cobranças → `app/api/super-admin/billing/route.ts` → `PLAN_PRICES`
+  - Super Admin / Smart-Hub → Permissões da Clínica → `app/system-master-hub/clinics/[id]/permissions/page.tsx`
+  - Gestão de Planos & Core → Definições e Constantes → `lib/constants/plans.ts` → Export de `PLAN_PRICES` unificado (Básico R$ 149, Avançado R$ 249, Professional R$ 449, Enterprise R$ 699)
+  - Gestão de Planos & Core → Serviços de Permissão → `lib/services/permissions-service.ts` → `PLAN_PRICES`
+  - Gestão de Planos & Core → Proração e Billing → `lib/services/billing-proration.ts` → `PlanPricing`
+  - Gestão de Planos & Core → Comparador e Tipos → `app/api/plans/compare/route.ts`, `types/core.ts`, `components/plans/UpgradeModal.tsx`, `app/dashboard/upgrade-required/page.tsx`, `app/(auth)/pagamento-pendente/page.tsx`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Clínicas cadastradas pelo site com plano Avançado (como BRUNA ALBUQUERQUE e Praxis Desenvolvimento Integral LTDA) exibiam o valor de faturamento de R$ 549 no Smart-Hub, quando o valor correto e divulgado no site para o plano Avançado é R$ 249/mês.
+  - **Causa Raiz Identificada**:
+    - O banco de dados armazena `plan_type: 'AVANCADO'` sem valor fixo (já que `custom_price` é nulo por padrão para clientes que se cadastram de forma autônoma).
+    - O cálculo de faturamento (`revenue`) e MRR do Smart-Hub (`/api/super-admin/dashboard` e `/api/super-admin/billing`) utilizava um dicionário legado onde `AVANCADO` estava mapeado para `549` (preço do antigo plano Professional) em vez do valor oficial de R$ 249/mês definido na landing page e em `lib/constants/plans.ts`.
+  - **Solução Cirúrgica Implementada**:
+    - Unificação da constante `PLAN_PRICES` exportada a partir de `lib/constants/plans.ts`, vinculando os valores oficiais: Básico (R$ 149), Avançado (R$ 249), Professional (R$ 449) e Enterprise (R$ 699).
+    - As rotas `/api/super-admin/dashboard` e `/api/super-admin/billing` agora importam a constante centralizada, corrigindo instantaneamente tanto as clínicas atuais (BRUNA ALBUQUERQUE, Praxis, etc.) quanto qualquer nova clínica que venha a se cadastrar pelo site.
+    - Sincronização em todos os serviços e componentes satélites (`billing-proration`, `permissions-service`, `types/core.ts`, `UpgradeModal`, etc.).
+
+
 ### Correção Crítica de Isolamento Multi-Tenant no Envio de Notificações WhatsApp de Novos Cadastros
 - **Módulos**:
   - Integrações / Segurança & LGPD → WhatsApp & Notificações de Lead → `lib/whatsapp/service.ts` → `sendWhatsAppToLeadAdmin`

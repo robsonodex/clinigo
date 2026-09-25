@@ -8,6 +8,7 @@
 import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError, BadRequestError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { PLAN_PRICES } from '@/lib/constants/plans'
 
 const SUPER_ADMIN_EMAILS = (
     process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
@@ -46,11 +47,6 @@ export async function GET(request: NextRequest) {
 
         if (clinicsError) throw new Error('Erro ao buscar clínicas')
 
-        const PLAN_PRICES: Record<string, number> = {
-            FREE: 0, STARTER: 149, BASIC: 199, BASICO: 299,
-            PROFESSIONAL: 449, PRO: 399, AVANCADO: 549,
-            ENTERPRISE: 799, NETWORK: 999,
-        }
 
         const now = new Date()
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)

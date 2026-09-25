@@ -341,7 +341,7 @@ export default function HelpPage() {
                             <CardContent>
                                 <p className="text-muted-foreground text-sm">
                                     O WhatsApp automático está disponível nos planos Professional
-                                    (R$ 549/mês) e Enterprise (R$ 799/mês).{' '}
+                                    (R$ 449/mês) e Enterprise (R$ 699/mês).{' '}
                                     <Link href="/dashboard/planos" className="text-primary underline">
                                         Veja todos os planos
                                     </Link>

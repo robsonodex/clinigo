@@ -15,7 +15,7 @@ import Link from 'next/link'
 const PLAN_FEATURES = {
     AVANCADO: {
         name: 'Avançado',
-        price: 'R$ 299/mês',
+        price: 'R$ 249/mês',
         features: [
             'CRM Completo',
             'WhatsApp Evolution',
@@ -27,7 +27,7 @@ const PLAN_FEATURES = {
     },
     PROFESSIONAL: {
         name: 'Professional',
-        price: 'R$ 549/mês',
+        price: 'R$ 449/mês',
         features: [
             'Tudo do Avançado +',
             'Faturamento TISS',
@@ -38,7 +38,7 @@ const PLAN_FEATURES = {
     },
     ENTERPRISE: {
         name: 'Enterprise',
-        price: 'R$ 799/mês',
+        price: 'R$ 699/mês',
         features: [
             'Tudo do Professional +',
             'Profissionais Ilimitados',

@@ -363,7 +363,7 @@ export default function ClinicPermissionsPage() {
                             <AlertTitle className="text-emerald-800">Preço customizado ativo</AlertTitle>
                             <AlertDescription className="text-emerald-700">
                                 R$ {pricing.effective_price}/mês (padrão seria R$ {
-                                    { BASICO: 149, AVANCADO: 299, PROFESSIONAL: 549, ENTERPRISE: 799 }[pricing.plan_type] || 0
+                                    { BASICO: 149, AVANCADO: 249, PROFESSIONAL: 449, ENTERPRISE: 699 }[pricing.plan_type] || 0
                                 })
                             </AlertDescription>
                         </Alert>

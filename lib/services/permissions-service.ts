@@ -20,9 +20,9 @@ import type { PlanType } from '@/lib/constants/plans'
 // Standard plan prices
 const PLAN_PRICES: Record<string, number> = {
     BASICO: 149,
-    AVANCADO: 299,
-    PROFESSIONAL: 549,
-    ENTERPRISE: 799,
+    AVANCADO: 249,
+    PROFESSIONAL: 449,
+    ENTERPRISE: 699,
 }
 
 export interface CustomPermission {
