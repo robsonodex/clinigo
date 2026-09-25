@@ -47,14 +47,14 @@ export async function GET(request: NextRequest) {
         const { data: notes, error } = await query.limit(100)
 
         if (error) {
-            console.error('Notes fetch error:', error)
-            return NextResponse.json({ error: 'Erro ao buscar notas' }, { status: 500 })
+            console.warn('Notes fetch warning (fallback to empty list):', error.message)
+            return NextResponse.json({ notes: [] })
         }
 
-        return NextResponse.json({ notes })
+        return NextResponse.json({ notes: notes || [] })
     } catch (error) {
         console.error('Notes error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        return NextResponse.json({ notes: [] })
     }
 }
 
