@@ -2,6 +2,38 @@
 
 ## Módulos
 
+### Flexibilização e Sanitização de Campos Opcionais em Operadoras e Planos de Saúde (Eliminação do Erro "Dados Inválidos")
+- **Módulos**:
+  - Convênios & Operadoras → Cadastro e Edição de Operadoras → `app/dashboard/(clinic)/convenios/page.tsx` → `OperadorasTab`
+  - Convênios & Operadoras → Cadastro e Edição de Planos → `app/dashboard/(clinic)/convenios/page.tsx` → `PlanosTab`
+  - Backend & Validações → Schemas de Convênios → `lib/validations/health-insurance.ts` → `createHealthInsuranceSchema`, `createHealthInsurancePlanSchema`
+  - Backend & Tratamento de Erros → Handler Global de API → `lib/utils/errors.ts` → `handleApiError`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Usuários de clínicas (em especial Praxis Desenvolvimento Integral / Beatriz) relataram erro impeditivo de "Dados inválidos" ao tentar cadastrar operadoras (ex: Unimed Rio Claro) deixando telefone e e-mail em branco, embora ambos estejam explicitamente rotulados na interface como opcionais.
+  - **Causa Raiz Identificada**:
+    - O formulário no frontend inicializava os estados de `phone`, `email`, `code` e `notes` com strings vazias (`""`). Ao submeter o formulário sem preenchê-los, o payload enviava `""`. O validador Zod rejeitava `""` via regex de telefone e validador de e-mail (`ZodError: Telefone inválido, Email inválido`).
+    - O handler global `handleApiError` mascarava o detalhe do erro com a mensagem genérica `message: 'Dados inválidos'`, impedindo que o usuário ou suporte compreendessem o motivo da rejeição.
+  - **Solução Cirúrgica e Blindagem**:
+    - **Schemas Zod**: Atualização de `createHealthInsuranceSchema` e `createHealthInsurancePlanSchema` para aceitar `z.literal('')` e converter automaticamente strings vazias em `null` (`transform`), garantindo persistência íntegra no banco de dados.
+    - **Frontend**: Sanitização no `handleSubmit` dos componentes `OperadorasTab` e `PlanosTab` para converter strings vazias em `null` antes do envio.
+    - **Error Handling**: Atualização de `handleApiError` para expor a primeira mensagem específica do Zod (`error.errors[0]?.message || 'Dados inválidos'`), eliminando mensagens opacas de erro.
+
+
+### Tratamento e Sanitização de Caracteres Especiais na Busca de Pacientes (Prevenção de Erro PGRST100)
+- **Módulos**:
+  - Pacientes → Listagem de Pacientes → `app/api/patients/route.ts` → `GET`
+  - Pacientes → Busca Rápida / Autocomplete → `app/api/patients/search/route.ts` → `GET`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Prevenir erro 500 (`PGRST100: failed to parse logic tree`) disparado no Supabase/PostgREST quando usuários digitavam vírgulas (ex: "Silva, Maria"), parênteses ou caracteres de controle no campo de busca de pacientes.
+  - **Causa Raiz Identificada**:
+    - O PostgREST utiliza a vírgula (`,`) como separador nativo de condições lógicas no método `.or(...)`. Ao interpolar o termo de busca diretamente na query (`full_name.ilike.%${search}%,...`), uma vírgula quebrava a árvore lógica em nós inválidos (`%,%`), resultando em erro de sintaxe `unexpected "%" expecting field name`.
+  - **Solução Cirúrgica e Blindagem**:
+    - Sanitização prévia de caracteres reservados da sintaxe PostgREST (`/[,()]/g`) nos endpoints `app/api/patients/route.ts` e `app/api/patients/search/route.ts`.
+    - Garantia de que buscas vazias ou compostas exclusivamente por caracteres especiais retornem dados íntegros sem disparar exceção no banco.
+
+
 ### Implementação de Múltiplos Funis (Pipelines) e Etapas Customizáveis no CRM
 - **Módulos**:
   - CRM → Funil de Vendas e Jornada do Paciente → `app/dashboard/(clinic)/crm/pipeline/page.tsx` → `PipelinePage`

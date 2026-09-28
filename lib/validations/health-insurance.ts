@@ -25,21 +25,28 @@ export const createHealthInsuranceSchema = z.object({
     code: z.string()
         .max(20, 'Código ANS deve ter no máximo 20 caracteres')
         .optional()
-        .nullable(),
-    phone: z.string()
-        .regex(/^[\d\s\-\(\)]+$/, 'Telefone inválido')
-        .max(20)
-        .optional()
-        .nullable(),
-    email: z.string()
-        .email('Email inválido')
-        .max(100)
-        .optional()
-        .nullable(),
+        .nullable()
+        .or(z.literal(''))
+        .transform((val) => (val === '' ? null : (val ?? null))),
+    phone: z.union([
+        z.string().regex(/^[\d\s\-\(\)]+$/, 'Telefone inválido').max(20),
+        z.literal(''),
+        z.null(),
+        z.undefined(),
+    ]).transform((val) => (val === '' ? null : (val ?? null))),
+    email: z.union([
+        z.string().email('Email inválido').max(100),
+        z.literal(''),
+        z.null(),
+        z.undefined(),
+    ]).transform((val) => (val === '' ? null : (val ?? null))),
     notes: z.string()
         .max(500, 'Observações deve ter no máximo 500 caracteres')
         .optional()
-        .nullable(),
+        .nullable()
+        .or(z.literal(''))
+        .transform((val) => (val === '' ? null : (val ?? null))),
+    status: healthInsuranceStatusSchema.optional().default('ACTIVE'),
     tiss_version: z.enum(['4.01.00', '4.02.00']).optional().nullable().default('4.01.00'),
 })
 
@@ -66,13 +73,17 @@ export const createHealthInsurancePlanSchema = z.object({
     code: z.string()
         .max(50, 'Código do plano deve ter no máximo 50 caracteres')
         .optional()
-        .nullable(),
+        .nullable()
+        .or(z.literal(''))
+        .transform((val) => (val === '' ? null : (val ?? null))),
     type: healthInsurancePlanTypeSchema.optional().default('INDIVIDUAL'),
     coverage_type: healthInsuranceCoverageTypeSchema.optional().default('COMPLETO'),
     notes: z.string()
         .max(500, 'Observações deve ter no máximo 500 caracteres')
         .optional()
-        .nullable(),
+        .nullable()
+        .or(z.literal(''))
+        .transform((val) => (val === '' ? null : (val ?? null))),
 })
 
 export const updateHealthInsurancePlanSchema = createHealthInsurancePlanSchema

@@ -129,8 +129,9 @@ export async function GET(request: Request) {
         }
 
         // Search functionality
-        if (search) {
-            query = query.or(`full_name.ilike.%${search}%,cpf.ilike.%${search}%,email.ilike.%${search}%`)
+        const cleanSearch = search.replace(/[,()]/g, ' ').trim()
+        if (cleanSearch) {
+            query = query.or(`full_name.ilike.%${cleanSearch}%,cpf.ilike.%${cleanSearch}%,email.ilike.%${cleanSearch}%`)
         }
 
         // Limit support (default to 1000 so clinics can see all patients without truncation)

@@ -68,8 +68,11 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Clean query for different search types
-        const cleanQuery = query.trim()
+        // Clean query for different search types (remove caracteres que quebram a arvore logica do PostgREST)
+        const cleanQuery = query.replace(/[,()]/g, ' ').trim()
+        if (cleanQuery.length < 2) {
+            return NextResponse.json({ data: [] })
+        }
         const numericQuery = cleanQuery.replace(/\D/g, '')
 
         // Build search query

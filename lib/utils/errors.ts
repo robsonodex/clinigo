@@ -101,7 +101,7 @@ export function handleApiError(error: unknown): NextResponse {
             {
                 success: false,
                 error: {
-                    message: 'Dados inválidos',
+                    message: error.errors[0]?.message || 'Dados inválidos',
                     code: 'VALIDATION_ERROR',
                     details: error.errors.map((e) => ({
                         field: e.path.join('.'),

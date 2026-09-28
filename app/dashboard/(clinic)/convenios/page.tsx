@@ -179,10 +179,19 @@ function OperadorasTab() {
             return
         }
 
+        const payload = {
+            ...formData,
+            name: formData.name.trim(),
+            code: formData.code?.trim() || null,
+            phone: formData.phone?.trim() || null,
+            email: formData.email?.trim() || null,
+            notes: formData.notes?.trim() || null,
+        }
+
         if (editingItem) {
-            updateMutation.mutate({ id: editingItem.id, data: formData })
+            updateMutation.mutate({ id: editingItem.id, data: payload })
         } else {
-            createMutation.mutate(formData)
+            createMutation.mutate(payload)
         }
     }
 
@@ -649,11 +658,18 @@ function PlanosTab() {
             return
         }
 
+        const payload = {
+            ...formData,
+            name: formData.name.trim(),
+            code: formData.code?.trim() || null,
+            notes: formData.notes?.trim() || null,
+        }
+
         if (editingItem) {
-            const { health_insurance_id, ...updateData } = formData
+            const { health_insurance_id, ...updateData } = payload
             updateMutation.mutate({ id: editingItem.id, data: updateData })
         } else {
-            createMutation.mutate(formData)
+            createMutation.mutate(payload)
         }
     }
 
