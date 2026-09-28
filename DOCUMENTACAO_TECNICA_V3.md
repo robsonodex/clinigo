@@ -2,6 +2,24 @@
 
 ## Módulos
 
+### Correção e Blindagem do Mecanismo de Hard Refresh Remoto por Clínica via System Master Hub
+- **Módulos**:
+  - Super Admin → System Master Hub → `app/system-master-hub/page.tsx` → `hardRefreshClinic`
+  - Backend & APIs → Revalidação de Cache e Notificação Realtime → `app/api/super-admin/revalidate/route.ts` → `POST`
+  - Componentes de Sistema → Listener Realtime de Cache e Recarregamento → `components/system/system-refresh-listener.tsx` → `SystemRefreshListener`
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Verificar e garantir o funcionamento do botão "Hard Refresh" presente na listagem de clínicas do Master Hub (`/system-master-hub`). O objetivo é forçar o recarregamento instantâneo do navegador dos usuários conectados na clínica selecionada, purgando caches locais (Service Worker e CacheStorage) quando houver atualizações urgentes.
+  - **Causa Raiz Identificada**:
+    - Na rota `/api/super-admin/revalidate`, o comando de atualização na tabela `clinics` era executado com o cliente autenticado `createClient()`. Como o usuário `SUPER_ADMIN` possui `clinic_id = null`, a política de RLS (`clinic_admin_update_own_clinic`) bloqueava a atualização com 0 linhas afetadas de forma silenciosa. Consequentemente, nenhum evento de `postgres_changes` era disparado e os navegadores dos clientes nunca recebiam a ordem de reload.
+    - O componente `SystemRefreshListener` escutava exclusivamente `postgres_changes`, ficando vulnerável a bloqueios de RLS ou latência de CDC do banco.
+  - **Solução Cirúrgica e Blindagem**:
+    - **Service Role no Backend**: A rota `/api/super-admin/revalidate` agora utiliza `createServiceRoleClient()` após checagem estrita de privilégios `SUPER_ADMIN`, garantindo que o `updated_at` da clínica seja de fato persistido e o CDC disparado.
+    - **Arquitetura Dupla (Broadcast + CDC)**: Implementado disparo simultâneo via Realtime Broadcast (`event: 'hard-refresh'`) e Postgres Changes. O Broadcast entrega a ordem com latência sub-segundo diretamente aos WebSockets dos navegadores abertos.
+    - **Limpeza de CacheStorage (True Hard Refresh)**: O listener do cliente agora purga ativamente todos os caches locais registrados (`window.caches.delete`) antes de invocar `window.location.reload()`, eliminando assets estáticos ou service workers obsoletos.
+    - **Padrão Visual**: Remoção de emojis nas mensagens de retorno do Master Hub.
+
+
 ### Flexibilização e Sanitização de Campos Opcionais em Operadoras e Planos de Saúde (Eliminação do Erro "Dados Inválidos")
 - **Módulos**:
   - Convênios & Operadoras → Cadastro e Edição de Operadoras → `app/dashboard/(clinic)/convenios/page.tsx` → `OperadorasTab`

@@ -311,16 +311,16 @@ export default function SuperAdminDashboard() {
 
             if (res.ok) {
                 const result = await res.json()
-                alert(`✅ ${result.message}`)
+                alert(result.message)
             } else {
                 const err = await res.json()
-                alert(`❌ Erro: ${err.error}`)
+                alert(`Erro: ${err.error}`)
             }
             // Also reload the master hub data
             await silentRefresh()
         } catch (error) {
             console.error('Hard refresh error:', error)
-            alert('❌ Erro ao limpar cache da clínica')
+            alert('Erro ao limpar cache da clínica')
         } finally {
             setRefreshingClinic(null)
         }
