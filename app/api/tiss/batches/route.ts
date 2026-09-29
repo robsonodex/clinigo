@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verificar permissão (apenas ADMIN pode criar lotes)
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para criar lotes TISS' },
                 { status: 403 }

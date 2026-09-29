@@ -36,6 +36,10 @@ export async function POST(
             );
         }
 
+        const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single();
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile?.role)) {
+            return NextResponse.json({ error: 'Sem permissao para assinar lotes' }, { status: 403 });
+        }
         const batchId = params.id;
 
         // Get batch data

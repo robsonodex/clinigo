@@ -52,7 +52,7 @@ export async function POST(
         }
 
         // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(userProfile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(userProfile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para enviar lotes' },
                 { status: 403 }

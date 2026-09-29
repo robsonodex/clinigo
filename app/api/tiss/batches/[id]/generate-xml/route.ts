@@ -45,10 +45,10 @@ export async function POST(
             );
         }
 
-        // 2. RBAC: Apenas ADMIN pode gerar XML de lote
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
+        // 2. RBAC: CLINIC_ADMIN, SUPER_ADMIN ou FINANCIAL (Seção 5 - Matriz Menor Privilégio)
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
             return NextResponse.json(
-                { success: false, error: 'Sem permissão para gerar XML' },
+                { success: false, error: 'Sem permissão para gerar XML de lotes: restrito a financeiro e administradores' },
                 { status: 403 }
             );
         }
@@ -347,9 +347,13 @@ export async function GET(
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', user.id)
             .single();
+
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes((profile as any)?.role)) {
+            return NextResponse.json({ success: false, error: 'Sem permissao para baixar XML de lote' }, { status: 403 });
+        }
 
         if (!profile?.clinic_id) {
             return NextResponse.json(

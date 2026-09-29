@@ -48,10 +48,13 @@ export async function POST(request: NextRequest) {
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', user.id)
             .single()
 
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes((profile as any)?.role)) {
+            return NextResponse.json({ error: 'Sem permissao para processamento em lote' }, { status: 403 });
+        }
         if (!profile?.clinic_id) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 })
         }

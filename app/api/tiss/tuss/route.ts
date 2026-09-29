@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
             .eq('id', user.id)
             .single()) as { data: any; error: any };
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile?.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile?.role)) {
             return NextResponse.json({ success: false, error: 'Acesso negado: apenas administradores podem importar catálogo TUSS' }, { status: 403 });
         }
 

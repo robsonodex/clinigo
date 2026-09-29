@@ -169,7 +169,7 @@ export async function PUT(
         }
 
         // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para editar lotes' },
                 { status: 403 }
@@ -268,7 +268,7 @@ export async function DELETE(
         }
 
         // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para deletar lotes' },
                 { status: 403 }

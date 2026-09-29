@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para fazer upload de retornos' },
                 { status: 403 }

@@ -97,7 +97,7 @@ export async function POST(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
             return NextResponse.json({ success: false, error: 'Acesso negado: apenas administradores e financeiro podem conciliar retornos' }, { status: 403 });
         }
 

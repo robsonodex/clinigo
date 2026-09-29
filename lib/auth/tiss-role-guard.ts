@@ -20,7 +20,45 @@ export type GuardResult =
  * nunca consigam invocar endpoints de faturamento, XML, regras de convênios ou lotes,
  * mesmo se a chamada for interna ou bypassar o middleware.
  */
+import { canPerformTissAction, TissAction } from '@/lib/tiss/permissions';
+
 export const TISS_ALLOWED_ROLES = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'];
+
+/**
+ * Validação de acesso por ação específica (Menor Privilégio - Seção 5)
+ */
+export async function requireTissAction(
+    request: NextRequest,
+    action: TissAction,
+    customSupabase?: any
+): Promise<GuardResult> {
+    const baseGuard = await enforceTissAdministrativeGuard(request, customSupabase);
+    if (!baseGuard.authorized) {
+        return baseGuard;
+    }
+
+    const { role } = baseGuard.session;
+    if (!canPerformTissAction(role, action)) {
+        return {
+            authorized: false,
+            response: NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: `Acesso negado: seu perfil não tem permissão para a ação '${action}' no módulo de faturamento.`,
+                        code: 'FORBIDDEN_ACTION',
+                        action,
+                    },
+                    code: 'FORBIDDEN_ACTION',
+                },
+                { status: 403 }
+            ),
+        };
+    }
+
+    return baseGuard;
+}
+
 
 export async function enforceTissAdministrativeGuard(
     request: NextRequest,

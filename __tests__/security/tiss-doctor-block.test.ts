@@ -15,6 +15,42 @@ jest.mock('@/lib/supabase/server', () => {
 
 const { createClient, createServiceRoleClient } = require('@/lib/supabase/server');
 
+jest.mock('@/lib/services/tiss/tiss-xml-generator-v2', () => ({
+    createTissGenerator: jest.fn(() => ({
+        generateBatchXML: jest.fn().mockResolvedValue('<xml>lote</xml>'),
+        getVersion: jest.fn().mockReturnValue('4.01.00'),
+    })),
+}));
+
+jest.mock('@/lib/services/tiss/tiss-xsd-validator', () => ({
+    getTISSXSDValidator: jest.fn(() => ({
+        validateXML: jest.fn().mockResolvedValue({
+            valid: true,
+            errors: [],
+            warnings: [],
+            validationMode: 'XSD_PARCIAL',
+        }),
+        isSchemaCached: jest.fn().mockReturnValue(false),
+    })),
+}));
+
+jest.mock('@/lib/services/tiss/tiss-xsd-adapter', () => ({
+    getTissXsdAdapter: jest.fn(() => ({
+        hasOfficialSchemas: jest.fn().mockReturnValue(false),
+        hasXsdSchemas: jest.fn().mockReturnValue(false),
+        getAvailableXsdFiles: jest.fn().mockReturnValue([]),
+        validate: jest.fn().mockResolvedValue({
+            valid: true,
+            errors: [],
+            schemaVersion: '4.01.00',
+            validatedAt: new Date().toISOString(),
+            validation_mode: 'ESTRUTURAL',
+            disclaimer: 'Modo estrutural de homologação interna',
+        }),
+    })),
+}));
+
+
 function getRouteFiles(dir: string): string[] {
     let results: string[] = [];
     if (!fs.existsSync(dir)) return results;
@@ -31,7 +67,7 @@ function getRouteFiles(dir: string): string[] {
     return results;
 }
 
-describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos', () => {
+describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0.1 / Seção 5)', () => {
     const workspaceRoot = process.cwd();
     const tissRoutesDir = path.join(workspaceRoot, 'app/api/tiss');
     const insuranceRoutesDir = path.join(workspaceRoot, 'app/api/insurance');
@@ -77,15 +113,68 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
         },
     };
 
-    // Operações críticas exclusivas de CLINIC_ADMIN/SUPER_ADMIN justificadas por segurança da clínica
-    const isStrictAdminOnlyRoute = (relPath: string, method: string) => {
+    /**
+     * Matriz de Menor Privilégio da Seção 5:
+     * - RECEPTIONIST PODE:
+     *   * Ver guias (GET /api/tiss/guides, GET /api/tiss/guides/[id])
+     *   * Criar, salvar, validar, duplicar guia (POST /api/tiss/guides, POST /api/tiss/guides/from-appointment, POST /api/tiss/guides/validate, PUT /api/tiss/guides/[id])
+     *   * Excluir rascunho próprio (DELETE /api/tiss/guides/[id])
+     *   * Ver operadoras e carteirinhas (GET /api/tiss/operators, GET /api/tiss/patient-insurance, POST /api/tiss/patient-insurance, DELETE /api/tiss/patient-insurance)
+     *   * Elegibilidade interna e autorização (POST /api/insurance/check-eligibility, POST /api/tiss/eligibility, GET/POST /api/tiss/autorizacao)
+     *   * Ver catálogo TUSS (GET /api/tiss/tuss)
+     *   * Visualização de lotes/erros/glosas (GET /api/tiss/batches, GET /api/tiss/batches/[id], GET /api/tiss/batches/[id]/errors, GET /api/tiss/glosas, GET /api/tiss/glosas/reasons, GET /api/tiss/glosas/metrics)
+     * 
+     * - RECEPTIONIST NÃO PODE (DEVE RECEBER 403):
+     *   * Criar/fechar/editar/excluir lote (POST/PUT/DELETE /api/tiss/batches, /api/tiss/batches/[id])
+     *   * Gerar XML de lote (POST /api/tiss/batches/[id]/generate-xml)
+     *   * Assinar ou Enviar lote (POST /api/tiss/batches/[id]/sign, POST /api/tiss/batches/[id]/submit)
+     *   * Processamento em massa de lote (POST /api/tiss/batch-process, POST /api/tiss/guides/batch-generate)
+     *   * Upload/Parse/Undo de retorno (POST /api/tiss/returns/*)
+     *   * Contestar glosa (POST /api/tiss/glosas/[id]/contest)
+     *   * Configuração de preços e TUSS (POST/DELETE /api/tiss/pricing, POST /api/tiss/tuss)
+     */
+    const isReceptionistForbidden = (relPath: string, method: string) => {
         const p = relPath.replace(/\\/g, '/');
-        // 1. Undo de retorno de lote TISS (operação destrutiva crítica)
+
+        // Lotes: Criar, Editar, Deletar
+        if (p === 'app/api/tiss/batches/route.ts' && method === 'POST') return true;
+        if (p === 'app/api/tiss/batches/[id]/route.ts' && ['PUT', 'DELETE'].includes(method)) return true;
+        if (p.includes('batches/[id]/generate-xml')) return true;
+        if (p.includes('batches/[id]/submit')) return true;
+        if (p.includes('batches/[id]/sign') && ['POST', 'PUT'].includes(method)) return true;
+        if (p.includes('batch-process')) return true;
+        if (p.includes('guides/batch-generate')) return true;
+
+        // Retornos: Upload, Parse, URL, Undo
+        if (p.includes('returns/upload')) return true;
+        if (p.includes('returns/generate-upload-url')) return true;
+        if (p.includes('returns/[id]/parse')) return true;
         if (p.includes('returns/[id]/undo')) return true;
-        // 2. Cadastro/contrato de operadora de convênio com CNES na clínica
+
+        // Glosas: Contestar
+        if (p.includes('glosas/[id]/contest') && ['POST', 'PUT'].includes(method)) return true;
+
+        // Pricing & TUSS escrita
+        if (p.includes('pricing') && ['POST', 'DELETE'].includes(method)) return true;
+        if (p.includes('tuss') && method === 'POST') return true;
         if (p.includes('operators') && method === 'POST') return true;
-        // 3. Exclusão de tabela de preços de convênios
+
+        return false;
+    };
+
+    /**
+     * Operações exclusivas de Administrador (CLINIC_ADMIN / SUPER_ADMIN):
+     * - Desfazer retorno financeiro (POST /api/tiss/returns/[id]/undo)
+     * - Configuração/cadastro de operadora no CNES (POST /api/tiss/operators)
+     * - Exclusão de regra de preço (DELETE /api/tiss/pricing)
+     * - Importação de catálogo TUSS (POST /api/tiss/tuss)
+     */
+    const isAdminOnlyRoute = (relPath: string, method: string) => {
+        const p = relPath.replace(/\\/g, '/');
+        if (p.includes('returns/[id]/undo')) return true;
+        if (p.includes('operators') && method === 'POST') return true;
         if (p.includes('pricing') && method === 'DELETE') return true;
+        if (p.includes('tuss') && method === 'POST') return true;
         return false;
     };
 
@@ -164,74 +253,113 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
                     error: null,
                 }),
             },
-            from: jest.fn((_table: string) => createQueryChain()),
-            rpc: jest.fn().mockResolvedValue({ data: { success: true, count: 1 }, error: null }),
+            from: jest.fn(() => createQueryChain()),
             storage: {
                 from: jest.fn(() => ({
-                    upload: jest.fn().mockResolvedValue({ data: { path: 'test.xml' }, error: null }),
-                    download: jest.fn().mockResolvedValue({ data: new Blob(['<xml/>']), error: null }),
-                    getPublicUrl: jest.fn().mockReturnValue({ data: { publicUrl: 'https://test/test.xml' } }),
-                    createSignedUploadUrl: jest.fn().mockResolvedValue({ data: { signedUrl: 'https://test/upload', token: 'tok' }, error: null }),
+                    download: jest.fn().mockResolvedValue({
+                        data: { text: async () => 'numero_guia;status;valor_apresentado;valor_pago;valor_glosado\nG123;APPROVED;150;150;0' },
+                        error: null,
+                    }),
+                    upload: jest.fn().mockResolvedValue({ data: { path: 'dummy-path' }, error: null }),
+                    createSignedUploadUrl: jest.fn().mockResolvedValue({ data: { signedUrl: 'http://signed-url' }, error: null }),
+                    getPublicUrl: jest.fn().mockReturnValue({ data: { publicUrl: 'https://storage.clinigo.com/tiss/xml.xml' } }),
+                    list: jest.fn().mockResolvedValue({ data: [{ name: 'dummy-file' }], error: null }),
                 })),
             },
+            rpc: jest.fn().mockResolvedValue({ data: { success: true }, error: null }),
         };
 
-        createClient.mockResolvedValue(mockClient);
-        createServiceRoleClient.mockReturnValue(mockClient);
+        (createClient as jest.Mock).mockResolvedValue(mockClient);
+        (createServiceRoleClient as jest.Mock).mockReturnValue(mockClient);
+        return mockClient;
     };
 
     const createRequest = (url: string, method: string, role: string, userId: string, relPath: string) => {
-        const hasBody = method === 'POST' || method === 'PUT' || method === 'PATCH';
-        const bodyContent = JSON.stringify({
-            name: 'Teste RBAC',
-            batchId: 'dummy-id-123',
-            guideId: 'dummy-id-123',
-            status: 'active',
-            convenioId: 'dummy-id-123',
-            date: '2026-09-29',
-            batch_id: 'a0000000-0000-0000-0000-000000000001',
-            file_name: 'retorno.xml',
-            file_type: 'XML',
-            file_size: 1024,
-            patient_id: 'patient-uuid-1',
-            doctor_id: 'doctor-uuid-1',
-            health_insurance_id: 'insurance-uuid-1',
-            clinical_indication: 'Indicacao clinica padrao',
-            procedures: [
-                { code: '10101012', description: 'Consulta Medica', category: 'CONSULTA', quantity: 1 }
-            ],
-            notes: 'Observacao de teste',
-            justification: 'Justificativa de teste',
-            operator_id: 'operator-uuid-1',
-        });
-
-        const req = new NextRequest(new URL(url, 'http://localhost:3000'), {
-            method,
-            headers: {
-                'x-user-id': userId,
-                'x-user-role': role,
-                'x-clinic-id': 'clinic-uuid-1',
-                'content-type': 'application/json',
-            },
-            body: hasBody ? bodyContent : undefined,
-        });
-
-        // Suporte a FormData em rotas multipart/excel (ex: import)
-        if (relPath.includes('import')) {
-            (req as any).formData = async () => {
-                const fd = new Map();
-                fd.set('file', {
-                    name: 'guias.xlsx',
-                    arrayBuffer: async () => Buffer.from('mock'),
+        let body: any = null;
+        if (['POST', 'PUT', 'PATCH'].includes(method)) {
+            if (relPath.includes('batches/[id]/submit')) {
+                body = JSON.stringify({ protocol_number: 'PROT-123' });
+            } else if (relPath.includes('batches/[id]/generate-xml')) {
+                body = JSON.stringify({});
+            } else if (relPath.includes('batches') && method === 'POST') {
+                body = JSON.stringify({
+                    insurance_company_id: '11111111-1111-1111-1111-111111111111',
+                    reference_month: 9,
+                    reference_year: 2026,
                 });
-                return fd;
+            } else if (relPath.includes('returns/generate-upload-url')) {
+                body = JSON.stringify({
+                    batch_id: '11111111-1111-1111-1111-111111111111',
+                    file_name: 'retorno.xml',
+                    file_type: 'XML',
+                    file_size: 1024,
+                });
+            } else if (relPath.includes('returns/upload')) {
+                body = JSON.stringify({
+                    batch_id: '11111111-1111-1111-1111-111111111111',
+                    file_name: 'retorno.xml',
+                    file_type: 'XML',
+                    file_content: Buffer.from('<xml></xml>').toString('base64'),
+                });
+            } else if (relPath.includes('glosas/[id]/contest')) {
+                body = JSON.stringify({ contest_reason: 'Justificativa clinica com mais de 10 caracteres' });
+            } else if (relPath.includes('pricing') && method === 'POST') {
+                body = JSON.stringify({
+                    health_insurance_id: '11111111-1111-1111-1111-111111111111',
+                    tuss_code: '10101012',
+                    procedure_name: 'Consulta Medica',
+                    price: 150.0,
+                });
+            } else if (relPath.includes('tuss') && method === 'POST') {
+                body = JSON.stringify({
+                    code: '10101012',
+                    description: 'Consulta Medica Geral',
+                    category: 'CONSULTA',
+                });
+            } else if (relPath.includes('insurance/check-eligibility')) {
+                body = JSON.stringify({
+                    patient_id: '11111111-1111-1111-1111-111111111111',
+                    health_insurance_id: '22222222-2222-2222-2222-222222222222',
+                    card_number: '1234567890',
+                });
+            } else {
+                body = JSON.stringify({
+                    patient_id: '11111111-1111-1111-1111-111111111111',
+                    patient_insurance_id: '22222222-2222-2222-2222-222222222222',
+                    guide_type: 'CONSULTA',
+                    start_date: '2026-09-01',
+                    end_date: '2026-09-29',
+                });
+            }
+        }
+
+        const headers: Record<string, string> = {
+            'content-type': 'application/json',
+            'x-user-role': role,
+            'x-user-id': userId,
+            'x-clinic-id': 'clinic-uuid-1',
+        };
+
+        const init: any = { method, headers };
+        if (body) init.body = body;
+
+        const req = new NextRequest(new URL(url, 'http://localhost:3000'), init);
+
+        if (relPath.includes('import')) {
+            const mockFile = {
+                name: 'teste.csv',
+                type: 'text/csv',
+                arrayBuffer: async () => Buffer.from('numero_guia,paciente_nome\nG1,Paciente Teste'),
             };
+            const mockFormData = {
+                get: (key: string) => (key === 'file' ? mockFile : null),
+            };
+            (req as any).formData = jest.fn().mockResolvedValue(mockFormData);
         }
 
         return req;
     };
 
-    // Estatisticas de contagem por perfil
     const roleStats: Record<string, { total: number; passed: number }> = {
         DOCTOR: { total: 0, passed: 0 },
         READONLY: { total: 0, passed: 0 },
@@ -241,14 +369,11 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
     };
 
     afterAll(() => {
-        console.log('\n========================================');
-        console.log('RBAC MATRIZ REAL - CONTAGEM DE CASOS POR PERFIL:');
-        console.log('----------------------------------------');
-        for (const [role, stats] of Object.entries(roleStats)) {
-            const statusLabel = stats.passed === stats.total ? 'CONFORME' : 'FALHA';
-            console.log(`- Perfil ${role.padEnd(12)}: ${stats.passed}/${stats.total} testes executados e aprovados (${statusLabel})`);
+        console.log('\n=== RESUMO DE AUDITORIA RBAC MULTI-PERFIL (MENOR PRIVILÉGIO) ===');
+        for (const [r, stat] of Object.entries(roleStats)) {
+            console.log(`Perfil: ${r.padEnd(14)} | Total de Testes: ${String(stat.total).padEnd(4)} | Aprovados: ${stat.passed}`);
         }
-        console.log('========================================\n');
+        console.log('==================================================================\n');
     });
 
     routeFiles.forEach((filePath) => {
@@ -259,7 +384,8 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
             HTTP_METHODS.forEach((method) => {
                 if (typeof routeModule[method] === 'function') {
                     const handler = routeModule[method];
-                    const adminOnly = isStrictAdminOnlyRoute(relPath, method);
+                    const recForbidden = isReceptionistForbidden(relPath, method);
+                    const adminOnly = isAdminOnlyRoute(relPath, method);
 
                     // 1. DOCTOR: Sempre Proibido -> 403 estrito
                     it(`[${method}] DOCTOR -> status 403 Forbidden`, async () => {
@@ -275,7 +401,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
                         roleStats.DOCTOR.passed++;
                     });
 
-                    // 2. READONLY: Sempre Proibido -> 403 estrito
+                    // 2. READONLY: Sempre Proibido no módulo TISS -> 403 estrito
                     it(`[${method}] READONLY -> status 403 Forbidden`, async () => {
                         roleStats.READONLY.total++;
                         setupMockSupabase(PROFILES.READONLY);
@@ -289,15 +415,15 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
                         roleStats.READONLY.passed++;
                     });
 
-                    // 3. RECEPTIONIST: Permitido na operacao normal, 403 em operacoes criticas destrutivas
-                    it(`[${method}] RECEPTIONIST -> ${adminOnly ? '403 Forbidden (operacao critica)' : 'autorizado (2xx/4xx)'}`, async () => {
+                    // 3. RECEPTIONIST: Menor Privilégio estrito (403 em lotes/xml/retorno/recurso/pricing/tuss)
+                    it(`[${method}] RECEPTIONIST -> ${recForbidden ? '403 Forbidden (fora do escopo da recepção)' : 'autorizado (2xx/4xx)'}`, async () => {
                         roleStats.RECEPTIONIST.total++;
                         setupMockSupabase(PROFILES.RECEPTIONIST);
                         const req = createRequest(`http://localhost:3000/${relPath.replace('/route.ts', '')}`, method, 'RECEPTIONIST', PROFILES.RECEPTIONIST.id, relPath);
                         const context = { params: Promise.resolve({ id: 'dummy-id-123' }) };
 
                         const res = await handler(req, context);
-                        if (adminOnly) {
+                        if (recForbidden) {
                             expect(res.status).toBe(403);
                         } else {
                             expect(res.status).not.toBe(401);
@@ -307,8 +433,8 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
                         roleStats.RECEPTIONIST.passed++;
                     });
 
-                    // 4. FINANCIAL: Permitido na operacao normal, 403 em operacoes criticas destrutivas
-                    it(`[${method}] FINANCIAL -> ${adminOnly ? '403 Forbidden (operacao critica)' : 'autorizado (2xx/4xx)'}`, async () => {
+                    // 4. FINANCIAL: Acesso ao faturamento e 403 em rotas críticas de admin
+                    it(`[${method}] FINANCIAL -> ${adminOnly ? '403 Forbidden (operacao administrativa restrita)' : 'autorizado (2xx/4xx)'}`, async () => {
                         roleStats.FINANCIAL.total++;
                         setupMockSupabase(PROFILES.FINANCIAL);
                         const req = createRequest(`http://localhost:3000/${relPath.replace('/route.ts', '')}`, method, 'FINANCIAL', PROFILES.FINANCIAL.id, relPath);
@@ -325,7 +451,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Perfis Permitidos e Proibidos
                         roleStats.FINANCIAL.passed++;
                     });
 
-                    // 5. CLINIC_ADMIN: Sempre Permitido -> status 2xx ou 4xx esperado, NUNCA 401, 403 nem 5xx
+                    // 5. CLINIC_ADMIN: Sempre Permitido
                     it(`[${method}] CLINIC_ADMIN -> autorizado (status 2xx/4xx, nao 401/403/5xx)`, async () => {
                         roleStats.CLINIC_ADMIN.total++;
                         setupMockSupabase(PROFILES.CLINIC_ADMIN);

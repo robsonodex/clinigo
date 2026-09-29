@@ -41,11 +41,15 @@ export async function POST(request: Request) {
         // Get clinic_id from user
         const { data: user } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', session.user.id)
             .single()
 
-        const clinicId = (user as any)?.clinic_id
+        const clinicId = (user as any)?.clinic_id;
+        const userRole = (user as any)?.role;
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(userRole)) {
+            return NextResponse.json({ error: 'Sem permissao para importar guias' }, { status: 403 });
+        }
         if (!clinicId) {
             return NextResponse.json(
                 { error: 'Clínica não encontrada' },
