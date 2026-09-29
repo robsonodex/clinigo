@@ -349,7 +349,8 @@ export async function middleware(request: NextRequest) {
         '/api/auth/signup',
         '/api/auth/register',
         '/api/auth/reset-password',
-        '/api/auth/callback'
+        '/api/auth/callback',
+        '/api/auth/session/validate'
     ]
 
     if (AUTH_API_ROUTES.some(route => pathname.startsWith(route))) {
@@ -423,7 +424,7 @@ export async function middleware(request: NextRequest) {
 
             _sessionCache.set(supabaseCookiesKey, {
                 user,
-                expiresAt: now + 3000, // 3 seconds TTL
+                expiresAt: now + 30000, // 30 seconds TTL (reduz drasticamente consultas repetitivas de sessão ao Supabase)
                 cookiesToSet
             })
 

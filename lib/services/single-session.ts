@@ -117,7 +117,7 @@ export async function validateSession(
 
     const { data, error } = await (supabase
         .from('active_sessions') as any)
-        .select('id')
+        .select('id, last_active_at')
         .eq('user_id', userId)
         .eq('session_token', sessionToken)
         .eq('is_active', true)
@@ -127,13 +127,18 @@ export async function validateSession(
         return false
     }
 
-    // Atualiza last_active_at de forma assíncrona (não bloqueia validação)
-    ;(supabase
-        .from('active_sessions') as any)
-        .update({ last_active_at: new Date().toISOString() })
-        .eq('id', data.id)
-        .then(() => {})
-        .catch((err: any) => console.error('[SESSION] Error updating last_active_at:', err))
+    // Throttle: atualiza last_active_at somente se passou mais de 5 minutos desde a ultima gravacao
+    // Evita milhares de updates redundantes no Postgres que disparam o Log Ingestion e WAL
+    const lastActive = data.last_active_at ? new Date(data.last_active_at).getTime() : 0
+    const now = Date.now()
+    if (now - lastActive > 5 * 60 * 1000) {
+        ;(supabase
+            .from('active_sessions') as any)
+            .update({ last_active_at: new Date(now).toISOString() })
+            .eq('id', data.id)
+            .then(() => {})
+            .catch((err: any) => console.error('[SESSION] Error updating last_active_at:', err))
+    }
 
     return true
 }

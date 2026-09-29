@@ -10,7 +10,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-const POLLING_INTERVAL = 10_000 // 10 segundos
+import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
+
+const POLLING_INTERVAL = 60_000 // 60 segundos (reduz consumo em 83% mantendo segurança)
 
 export function useSessionGuard() {
     const router = useRouter()
@@ -18,6 +20,12 @@ export function useSessionGuard() {
     const isCheckingRef = useRef(false)
 
     const checkSession = useCallback(async () => {
+        // Se a aba estiver em segundo plano (minimizada/outra aba), não gastar requisição
+        if (typeof document !== 'undefined' && document.hidden) return
+
+        // Se não houver cookie de sessão do CliniGo, o usuário não está autenticado nesta janela
+        if (typeof document !== 'undefined' && !document.cookie.includes(SESSION_COOKIE_NAME)) return
+
         // Evita verificações paralelas
         if (isCheckingRef.current) return
         isCheckingRef.current = true

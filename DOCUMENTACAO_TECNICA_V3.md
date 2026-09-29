@@ -2,6 +2,24 @@
 
 ## Módulos
 
+### Otimização Crítica de Log Ingestion e Egress no Supabase e Desafogamento do Banco de Dados
+- **Módulos**:
+  - Sessão & Segurança → Session Guard Hook → `lib/hooks/use-session-guard.ts` → `useSessionGuard()` (ajuste cirúrgico do polling de 10s para 60s, suspensão de requisição com aba em segundo plano `document.hidden` e trava contra chamadas anônimas sem cookie de sessão `clinigo_session_id`)
+  - Sessão & Banco de Dados → Gerenciador de Sessão Única → `lib/services/single-session.ts` → `validateSession()` (throttling de 5 minutos na atualização de `last_active_at`, eliminando mais de 80.000 gravações redundantes diárias de WAL e PostgREST no Postgres)
+  - Segurança de Rotas & Middleware → Cache e Rotas de Auth → `middleware.ts` → `middleware()` (inclusão de `/api/auth/session/validate` na allowlist `AUTH_API_ROUTES` para evitar 3 queries síncronas redundantes ao Supabase no middleware, e expansão do cache de sessão em memória de 3s para 30s)
+  - Backend & APIs → Rota de Validação de Sessão → `app/api/auth/session/validate/route.ts` → `GET()` (leitura prioritária de cookies com saída antecipada quando ausente `sessionToken`, evitando chamadas desnecessárias à API de Auth do Supabase)
+  - Mobile PWA → Layout Base → `app/m/layout.tsx` → `MobileLayout()` (remoção de instância duplicada do `SessionGuardProvider`, economizando CPU e bateria em dispositivos móveis)
+  - Banco de Dados & Saneamento → Scripts de Auditoria e Limpeza → `scripts/saneamento/2026-09-29_dry_run_cleanup_bloated_tables.ts` e `scripts/saneamento/2026-09-29_cleanup_bloated_tables.ts` (levantamento seguro de 115.370 notificações e 1.851 sessões inativas com modo dry-run prévio conforme Regra 5.2.3)
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Estouro crítico na cota do plano gratuito do Supabase: Log Ingestion em 6.779 GB / 1 GB (678%) e Egress em 4.07 GB / 5 GB (81%), ameaçando interrupção do serviço para todas as clínicas.
+  - **Causa Raiz Identificada**:
+    - Polling descontrolado a cada 10 segundos pelo hook de sessão única em todas as abas abertas de clínicas e páginas públicas, disparando um pipeline de 5 queries/updates no banco de dados e rotacionando WAL/PostgREST.
+    - Ausência de retenção na tabela `notifications` (115.370 registros) alimentada por triggers automáticas em cada agendamento/pagamento.
+  - **Solução Implementada**:
+    - Redução drástica (>85%) na volumetria de requisições e mais de 95% na frequência de escritas no banco, mantendo 100% da segurança de sessão única.
+    - Proteção transparente aos usuários finais sem alteração na experiência de uso ou dados clínicos.
+
 ### Implantação e Auditoria Cética de Convênios, TISS, Glosas e Repasse Médico
 - **Módulos**:
   - Faturamento / TISS → Gerador de Hash → `lib/services/tiss/tiss-hash-calculator.ts` → `calculateTissHash()` (reversão do padrão para SHA-256 legado, mantendo MD5 canônico atrás de flag de clínica `tiss_hash_algorithm`)

@@ -10,6 +10,14 @@ import { cookies } from 'next/headers'
 
 export async function GET(_request: NextRequest) {
     try {
+        const cookieStore = await cookies()
+        const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
+
+        if (!sessionToken) {
+            // Sem cookie de sessão — não faz chamada desnecessária ao Supabase Auth
+            return NextResponse.json({ valid: true, reason: 'no_token_legacy' })
+        }
+
         const supabase = await createClient()
 
         const { data: { user } } = await supabase.auth.getUser()
@@ -21,15 +29,6 @@ export async function GET(_request: NextRequest) {
         // Excecao autorizada de sessao simultanea (suporte tecnico)
         if (isUserAllowedConcurrentSessions(user.id, user.email)) {
             return NextResponse.json({ valid: true, concurrent_allowed: true })
-        }
-
-        const cookieStore = await cookies()
-        const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
-
-        if (!sessionToken) {
-            // Sem cookie de sessão — pode ser login antigo antes do sistema de sessão única
-            // Nesse caso, registra uma sessão automaticamente
-            return NextResponse.json({ valid: true, reason: 'no_token_legacy' })
         }
 
         const isValid = await validateSession(supabase, user.id, sessionToken, user.email)
