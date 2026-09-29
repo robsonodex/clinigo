@@ -1088,8 +1088,8 @@
   - `components/support/support-assistant-widget.tsx` → Interface interativa com botão flutuante launcher responsivo, chat guiado passo a passo, banner de "Caminho no Sistema" com botão de cópia, e modal pré-preenchido para envio de sugestões.
   - `components/support/support-chat-wrapper.tsx` → Integração direta no Dashboard CliniGo com passagem segura de dados de usuário e clínica.
 - **Descrição Técnica**:
-  - Permite que qualquer colaborador de qualquer clínica tire dúvidas em linguagem natural e receba o caminho exato dos cliques no formato `👉 Caminho: Menu Lateral → [Módulo] → [Ação] → Botão "[Nome]"`.
-  - Caso a funcionalidade solicitada não exista no CliniGo, a IA instrui amigavelmente e ativa o botão "💡 Sugerir Nova Funcionalidade", permitindo registrar a necessidade com dados da clínica e contato para a equipe de produto.
+  - Permite que qualquer colaborador de qualquer clínica tire dúvidas em linguagem natural e receba o caminho exato dos cliques no formato `Caminho: Menu Lateral → [Módulo] → [Ação] → Botão "[Nome]"`.
+  - Caso a funcionalidade solicitada não exista no CliniGo, a IA instrui formalmente e ativa o botão "Sugerir Nova Funcionalidade", permitindo registrar a necessidade com dados da clínica e contato para a equipe de produto.
 
 
 
@@ -2544,7 +2544,7 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Bateria de testes automatizados executada (`scripts/test_rbac_route_protection.mjs`) com 17 cenários cobrindo todos os perfis (`CLINIC_ADMIN`, `SUPER_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `READONLY`), aprovada com 100% de sucesso.
 
 
-### Item 77: Faturamento TISS, Catálogo TUSS, Travas Anti-Glosa e Validação Cética (Fase 6)
+### Item 77: Faturamento TISS, Catálogo TUSS, Travas Anti-Glosa e Validação Cética (Fase 6 a 9)
 - **Data**: 29/09/2026
 - **Módulos**: Faturamento TISS, Convênios, Agenda / Consultas, Segurança RLS e Banco de Dados Supabase
 - **Caminho Completo**:
@@ -2553,72 +2553,100 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Emissão de Guias Pré-Preenchidas → `app/api/tiss/guides/from-appointment/route.ts` e `app/api/tiss/guides/batch-generate/route.ts`
   - Interface de Gestão de Preços e Aviso de Catálogo → `components/tiss/tabela-precos-tab.tsx` e `app/dashboard/(clinic)/convenios/page.tsx`
   - Ações TISS no Módulo de Consultas (com RBAC) → `app/dashboard/(clinic)/consultas/page.tsx`
-  - Motor Criptográfico Hash TISS (MD5 / SHA-256) → `lib/services/tiss/tiss-hash-calculator.ts`
+  - Motor de Hash TISS (MD5 canônico / SHA-256 legado) → `lib/services/tiss/tiss-hash-calculator.ts`
+  - Validador Estrutural TISS → `lib/services/tiss/tiss-xsd-validator.ts`
   - Testes Automatizados → `__tests__/tiss/tiss-hash-comparison.test.ts`, `__tests__/tiss/guide-types-and-therapies.test.ts`, `__tests__/security/tiss-rls-isolation.test.ts`
 - **Descrição Técnica**:
   - **1. Diagnóstico e Causa Raiz**:
     - O sistema demandava digitação manual de guias e faltava pré-preenchimento automático a partir de consultas concluídas com validação de CBO, conselho profissional, validade da carteirinha e saldo de sessões.
-    - O cálculo de hash dos lotes TISS foi auditado: a versão anterior gerava SHA-256 de JSON. Foi implementado o padrão ANS (MD5 canônico), mantendo ambos disponíveis via flag `tiss_hash_algorithm` com fallback seguro.
-    - O catálogo inicial de códigos TUSS foi identificado como não certificado pela ANS.
-  - **2. Solução Implementada e Corrigida**:
-    - **Migration Idempotente com De-duplicação Não-Destrutiva**: `supabase/migrations/20260929120000_tiss_convenios_glosas_repasse.sql` atualizada para marcar duplicatas pré-existentes como `status = 'CANCELLED'` (sem deleção de registros) e criar índice único parcial filtrado (`WHERE status NOT IN ('CANCELLED', 'DENIED')`), permitindo regerar guias canceladas. Isolamento multi-tenant testado e aprovado via RLS em `__tests__/security/tiss-rls-isolation.test.ts`.
-    - **Integridade dos Dados de Referência**: Coluna `source VARCHAR(30) NOT NULL DEFAULT 'NAO_VERIFICADO'` adicionada a `tuss_procedures` e `tiss_glosa_reasons_ans`. Registros importados recebem `source = 'OFICIAL_IMPORTADO'`. Banner informativo incluído em `components/tiss/tabela-precos-tab.tsx` alertando o administrador para carregar a planilha oficial da ANS. Códigos sintéticos não oficiais (ex.: `50000012`) foram removidos e substituídos por códigos confirmados (ex.: `10101012` para Consulta em Consultório).
-    - **Emissão Automática Inteligente**: Endpoint `POST /api/tiss/guides/from-appointment` validado para rotear automaticamente terapias (`20104049`, etc.) para Guia SP/SADT e consultas médicas (`10101012`) para Guia de Consulta, emitindo avisos claros para: CBO/Conselho ausente, carteirinha vencida, procedimento sem preço e saldo de sessões esgotado/baixo. 12 testes aprovados em `__tests__/tiss/guide-types-and-therapies.test.ts`.
-    - **Cálculo de Hash ANS com Vetor Conhecido**: Em `lib/services/tiss/tiss-hash-calculator.ts`, algoritmo `ANS_MD5_CANONICAL` opera com hash MD5 sobre XML canônico e `LEGACY_SHA256_JSON` opera como contingência. Validado contra XSD oficial v4.01.00 com 4 testes aprovados em `__tests__/tiss/tiss-hash-comparison.test.ts`.
+    - O cálculo de hash dos lotes TISS gerava SHA-256 de JSON (padrão legado do sistema). Foi implementado o padrão ANS (MD5 canônico), mantendo ambos disponíveis via flag `tiss_hash_algorithm` na tabela `clinics`, com default seguro `LEGACY_SHA256_JSON`. O modo ANS MD5 canônico NÃO foi validado com operadora real ou vetor oficial da ANS.
+    - O validador de lote opera por checagem estrutural em código (`tiss-xsd-validator.ts`), NÃO substituindo a validação contra os schemas XSD oficiais da ANS.
+    - O arquivo `types/supabase.generated.ts` permanece vazio no repositório e a base contém centenas de erros herdados de compilação TypeScript (`tsc --noEmit`), exigindo bypass no build.
+  - **2. Solução Implementada**:
+    - **Migration Idempotente com Diagnóstico de Duplicatas**: `supabase/migrations/20260929120000_tiss_convenios_glosas_repasse.sql` configurada para emitir aviso em caso de duplicatas ativas sem deletar nem alterar registros, criando o índice único parcial `uq_tiss_guides_appointment_proc` filtrando guias canceladas.
+    - **Integridade dos Dados de Referência**: Coluna `source` (`NAO_VERIFICADO` / `OFICIAL_IMPORTADO`) adicionada a `tuss_procedures` e `tiss_glosa_reasons_ans`. Removidos códigos e textos de exemplo desnecessários (incluindo `20104049` da tabela de preços inicial e o fictício `50000012`). Exibido banner orientador quando a tabela de preços estiver sem regras.
+    - **Emissão Automática Inteligente**: Endpoint `POST /api/tiss/guides/from-appointment` com inferência de tipo de guia (SP/SADT para terapias e CONSULTATION para consultas), com checklist anti-glosa para CBO, Conselho, carteirinha e saldo de autorização.
+    - **Validador Estrutural Simplificado**: `lib/services/tiss/tiss-xsd-validator.ts` rotulado explicitamente como "validação estrutural simplificada (não substitui a validação oficial da operadora)".
   - **3. Status de Validação**:
-    - **Executado e Aprovado**: Testes Jest de hash, XSD, roteamento de guias/terapias e isolamento multi-tenant RLS executados com 100% de aprovação.
-    - **Ressalva Comercial / Pendência de Produção**: O catálogo TUSS oficial e a homologação do hash XML com webservice/portal real de operadora dependem de arquivos e credenciais fornecidos pelo cliente/operadora.
+    - **Executado e Aprovado**: Testes em memória de hash, roteamento de guias e isolamento multi-tenant RLS.
+    - **Declaração de Limitações**: Validação com XSD real e aceitação de hash dependem de arquivos oficiais da ANS e homologação em operadora real.
 
-### Item 78: Conciliação de Retornos TISS, Glosas ANS e Mecanismo de Desfazimento (UNDO) (Fase 6)
+### Item 78: Conciliação de Retornos TISS, Glosas ANS e Mecanismo de Desfazimento (UNDO) (Fase 6 a 9)
 - **Data**: 29/09/2026
 - **Módulos**: Faturamento TISS, Financeiro (Contas a Receber), Glosas e Recursos ANS
 - **Caminho Completo**:
+  - Banco de Dados → `supabase/migrations/20260929130000_tiss_undo_rpc_and_reimport.sql`
   - API de Parse e Conciliação → `app/api/tiss/returns/[id]/parse/route.ts`
   - API de Desfazimento (UNDO) → `app/api/tiss/returns/[id]/undo/route.ts`
   - Catálogo de Motivos de Glosa ANS → `app/api/tiss/glosas/reasons/route.ts`
   - Upload de Retorno e Download de Modelo → `components/tiss/upload-return-dialog-v2.tsx` e `app/dashboard/(clinic)/tiss/batches/[id]/page.tsx`
   - Gestão de Glosas e Recursos → `app/dashboard/(clinic)/tiss/glosas/page.tsx`
-  - Testes Automatizados → `__tests__/tiss/return-parse-and-conciliation.test.ts`
+  - Testes Automatizados → `__tests__/tiss/return-parse-and-conciliation.test.ts`, `__tests__/tiss/tiss-undo-financial.test.ts`
 - **Descrição Técnica**:
   - **1. Diagnóstico e Causa Raiz**:
     - O parser de retorno continha vulnerabilidade ao dividir linhas por `/[;,]/`, o que fragmentava valores monetários com vírgula decimal brasileira (ex.: `150,00`).
     - O formato CSV era proprietário e não havia modelo de download para os faturistas nem mecanismo transacional para desfazimento de conciliações equivocadas.
-  - **2. Solução Implementada e Corrigida**:
-    - **Correção do Parser de Retorno**: Implementada detecção dinâmica de delimitador (ponto-e-vírgula prioritário vs vírgula) em `app/api/tiss/returns/[id]/parse/route.ts`, garantindo que casas decimais com vírgula sejam preservadas sem divisão indevida de colunas.
-    - **Modelo CSV e Disclaimer Comercial**: Incluído botão de download do modelo CSV em `components/tiss/upload-return-dialog-v2.tsx`, acompanhado de texto institucional claro: o CSV é um modelo operacional simplificado do CliniGO para demonstrativos em planilha, e não um padrão imposto pela ANS.
-    - **Mecanismo de Desfazimento (UNDO)**: Criado endpoint `POST /api/tiss/returns/[id]/undo/route.ts` com proteção RBAC (`CLINIC_ADMIN`, `SUPER_ADMIN`, `FINANCIAL`), revertendo o status do lote para `SENT`, limpando valores pagos/glosados das guias, removendo registros de glosa associados, expurgando o lançamento gerado em `financial_entries` e registrando log de auditoria em `audit_logs`.
-    - **Idempotência**: Cálculo de SHA-256 do arquivo em `tiss_return_imports` bloqueia reenvio duplicado do mesmo demonstrativo.
+  - **2. Solução Implementada**:
+    - **Correção do Parser de Retorno**: Implementada detecção dinâmica de delimitador (ponto-e-vírgula prioritário vs vírgula) em `app/api/tiss/returns/[id]/parse/route.ts`, garantindo que casas decimais com vírgula sejam preservadas.
+    - **Modelo CSV Operacional**: Incluído botão de download do modelo CSV em `components/tiss/upload-return-dialog-v2.tsx`, acompanhado de texto institucional claro: o CSV é um modelo operacional simplificado do CliniGO para demonstrativos em planilha, e não um padrão imposto pela ANS.
+    - **Função RPC Atômica de Desfazimento (UNDO)**: Criada migration `20260929130000_tiss_undo_rpc_and_reimport.sql` contendo a função PostgreSQL `tiss_undo_return_import`. Executa de forma atômica o estorno contábil em `financial_entries`, restaura guias e lote para `SENT`, inativa glosas e atualiza a importação para `CANCELLED`.
+    - **Permissão de Reimportação**: Atualizada a constraint de unicidade de `tiss_return_imports` para o índice parcial `uq_tiss_return_file_hash_active` (`WHERE status != 'CANCELLED'`).
   - **3. Status de Validação**:
-    - **Executado e Aprovado**: Testado em `__tests__/tiss/return-parse-and-conciliation.test.ts` (4 testes passando: parsing total/parcial/glosado, detecção de guias de outro lote, idempotência contra arquivo repetido e ciclo completo de conciliação com DESFAZER).
-    - **Ressalva Comercial**: Validado com fixtures sintéticas. Importação em larga escala requer teste com arquivos reais de demonstrativo de cada operadora credenciada.
+    - **Executado e Aprovado**: Testado em `__tests__/tiss/return-parse-and-conciliation.test.ts` e `__tests__/tiss/tiss-undo-financial.test.ts`.
+    - **Declaração de Limitações**: Testado com dados sintéticos e em memória (`pg-mem`). A validação com arquivo real de operadora e em banco de dados PostgreSQL real deve ser executada pelo proprietário em ambiente de staging.
 
-### Item 79: Motor de Repasse Médico, Regimes (Produção x Recebimento), Telas de Configuração e Sigilo RBAC (Fase 6)
+### Item 79: Motor de Repasse Médico, Regimes (Produção x Recebimento), Telas de Configuração e Sigilo RBAC (Fase 6 a 9)
 - **Data**: 29/09/2026
 - **Módulos**: Financeiro, Repasse Médico, Sigilo Médico / LGPD, Telas de Configuração, Middleware RBAC
 - **Caminho Completo**:
   - Calculador de Repasse → `lib/services/repasse-calculator.ts` (`computeAdvancedRepasse` e `computeRepasseFromRules`)
   - API de Resumo de Produção com Sigilo → `app/api/financial/production-summary/route.ts`
   - Aba de Configurações de Repasse e Prazos → `components/tiss/convenios-config-tab.tsx` e `app/dashboard/(clinic)/convenios/page.tsx`
-  - Ocultação de Ações TISS para Médicos → `app/dashboard/(clinic)/consultas/page.tsx`
-  - Proteção de Rota de Elegibilidade no Middleware → `middleware.ts`
-  - Testes Numéricos e de Regressão → `__tests__/financial/repasse-regression.test.ts`, `__tests__/financial/repasse-convenio-glosas.test.ts`, `__tests__/services/repasse-calculator.test.ts`
-  - Testes de Proteção RBAC → `__tests__/security/rbac-handler-routes.test.ts` e `scripts/test_rbac_route_protection.mjs`
+  - Testes Numéricos e de Regressão → `__tests__/financial/repasse-regression.test.ts`, `__tests__/financial/repasse-fixture-comparison.test.ts`, `__tests__/financial/repasse-convenio-glosas.test.ts`
 - **Descrição Técnica**:
   - **1. Diagnóstico e Causa Raiz**:
-    - O cálculo de repasse exigia garantia absoluta de não-regressão nas clínicas existentes (World Sensory, Espaço Incluir, Praxis), mantendo o comportamento clássico de produção como padrão inalterado.
+    - O cálculo de repasse exigia garantia absoluta de não-regressão nas clínicas existentes (World Sensory, Espaço Incluir, Praxis), mantendo o comportamento clássico de produção como padrão inalterado (`PRODUCAO` e `CLINICA_ABSORVE`).
     - O fallback de percentual sem contrato necessitava preservar a precedência original: 1º Override por paciente (`doctor_patient_rates`), 2º Contrato médico (`doctor_contracts`), 3º Percentual do perfil do médico na tabela `doctors` ou fallback padrão (70% particular, 60% convênio).
-    - Faltavam a interface visual para o administrador configurar os regimes e prazos por operadora, o bloqueio visual dos botões TISS para profissionais assistenciais e a proteção no middleware da rota `/api/insurance`.
-  - **2. Solução Implementada e Corrigida**:
-    - **Correção da Regressão no Repasse**: Ajustado `lib/services/repasse-calculator.ts` para que `doctorFallbackPercentage` do médico seja respeitado e, na ausência deste, aplique 70% para particular e 60% para convênio. Teste de regressão estrito centavo a centavo (`__tests__/financial/repasse-regression.test.ts` e `__tests__/financial/repasse-convenio-glosas.test.ts`) confirmou paridade matemática absoluta (100% de correspondência com a lógica legado no regime padrão `PRODUCAO` + `CLINICA_ABSORVE`).
-    - **Interface de Configuração de Regras e Repasse**: Criado `components/tiss/convenios-config-tab.tsx` e acoplado como nova aba em `/dashboard/convenios`, permitindo configurar `repasse_regime` (`PRODUCAO` vs `RECEBIMENTO`), `glosa_policy` (`CLINICA_ABSORVE`, `DESCONTA_PROFISSIONAL`, `DESCONTA_SE_MANTIDA`), dia de corte (`closing_day`) e prazo de recurso (`appeal_deadline_days`) por operadora. Inclui modal com aviso de não-retroatividade ("Esta alteração não afeta competências já fechadas") e registro de auditoria.
-    - **Blindagem de Sigilo Médico e RBAC**:
-      - Em `/dashboard/consultas`, os botões "Gerar Guia TISS" e "Gerar Guias TISS do Período" foram blindados via verificação `canManageTiss = !isDoctor && (isClinicAdmin || isSuperAdmin || isReceptionist)`, ficando invisíveis para `DOCTOR`.
-      - Em `/api/financial/production-summary`, os dados de `health_insurance_name`, `plan_id` e `card_number` são estritamente omitidos das respostas ao perfil `DOCTOR`, tanto na API quanto no Excel exportado.
-      - Em `middleware.ts`, `/api/insurance` foi adicionada a `ROLE_PROTECTED_ROUTES` restringindo o acesso a `CLINIC_ADMIN`, `SUPER_ADMIN`, `FINANCIAL` e `RECEPTIONIST` (bloqueando `DOCTOR`).
+  - **2. Solução Implementada**:
+    - **Correção da Regressão no Repasse**: Ajustado `lib/services/repasse-calculator.ts` para que `doctorFallbackPercentage` do médico seja respeitado e aplique fallback padrão. Teste de regressão centavo a centavo (`repasse-regression.test.ts` e `repasse-fixture-comparison.test.ts`) confirmou paridade matemática com a lógica legada.
+    - **Interface de Configuração de Regras e Repasse**: Criado `components/tiss/convenios-config-tab.tsx` e acoplado como nova aba em `/dashboard/convenios`, permitindo configurar `repasse_regime` (`PRODUCAO` vs `RECEBIMENTO`), `glosa_policy` (`CLINICA_ABSORVE`, `DESCONTA_PROFISSIONAL`, `DESCONTA_SE_MANTIDA`), dia de corte (`closing_day`), prazo de recurso (`appeal_deadline_days`) e algoritmo de hash TISS (`tiss_hash_algorithm`). Inclui modal de confirmação com aviso de não-retroatividade.
+    - **Blindagem de Sigilo**: Em `/api/financial/production-summary`, os dados de `health_insurance_name`, `plan_id` e `card_number` são estritamente omitidos das respostas ao perfil `DOCTOR`.
   - **3. Status de Validação**:
-    - **Executado e Aprovado**:
-      - 15 testes de repasse e regressão aprovados (centavo a centavo).
-      - 9 testes em `repasse-calculator.test.ts` aprovados.
-      - 12 testes em `rbac-handler-routes.test.ts` aprovados simulando requisições com todos os perfis.
-      - 39 checagens em `scripts/test_rbac_route_protection.mjs` aprovadas com 100% de sucesso.
-      - `npm run build` executado com código de saída 0 (Next.js gerou todas as rotas estáticas e dinâmicas).
+    - **Executado e Aprovado**: Testes de repasse e regressão centavo a centavo aprovados numericamente.
+    - **Declaração de Limitações**: Validação executada numericamente e com fixtures em memória. Falta validação com banco de dados real em staging.
+
+### Item 80: Defesa em Profundidade nos Handlers, Saldo de Sessões, Higiene de Projeto e Script de Staging (Fases 8 e 9)
+- **Data**: 29/09/2026
+- **Módulos**: Segurança RBAC, Handlers de API, Saldo de Sessões, Higiene de Código, Validação em Staging
+- **Caminho Completo**:
+  - Guard Centralizado de API → `lib/auth/tiss-role-guard.ts` (`enforceTissAdministrativeGuard`)
+  - Handlers de API Protegidos → `app/api/tiss/**/route.ts` e `app/api/insurance/check-eligibility/route.ts`
+  - Saldo de Sessões → `app/api/tiss/guides/from-appointment/route.ts` e `app/api/tiss/guides/[id]/route.ts`
+  - Modal de Envio de Lote → `components/tiss/batch-list-table.tsx`
+  - Script SQL de Verificação em Staging → `scripts/staging/verify-tiss-migrations.sql`
+  - Guia de Execução em Staging → `scripts/staging/LEIA-ME.md`
+  - Guia de Validação de Hash e XSD → `docs/pendencias/VALIDACAO_HASH_E_XSD.md`
+  - Documentação de Schemas XSD → `lib/services/tiss/schemas/README.md`
+  - Testes Automatizados → `__tests__/security/tiss-doctor-block.test.ts`, `__tests__/tiss/session-balance.test.ts`
+- **Descrição Técnica**:
+  - **1. Defesa em Profundidade nos Handlers de API**:
+    - Criado helper compartilhado `enforceTissAdministrativeGuard` em `lib/auth/tiss-role-guard.ts`, rejeitando diretamente requisições dos papéis `DOCTOR` e `PATIENT` com status `403 Forbidden`.
+    - Integrado em todos os endpoints administrativos de faturamento: `/api/insurance/check-eligibility`, `/api/tiss/batches`, `/api/tiss/batches/[id]/generate-xml`, `/api/tiss/batches/[id]/submit`, `/api/tiss/returns/[id]/undo`, `/api/tiss/returns/[id]/parse`, `/api/tiss/validate-xsd`, `/api/tiss/glosas/reasons`, `/api/tiss/guides/[id]` e `/api/tiss/guides/from-appointment`.
+    - Validado com 11 testes em `__tests__/security/tiss-doctor-block.test.ts` aprovados.
+  - **2. Controle e Devolução do Saldo de Sessões (item 4.2.A)**:
+    - Ao emitir guia a partir de agendamento com número de autorização (`from-appointment`), o contador `sessions_used` é incrementado na tabela `tiss_authorization_requests`.
+    - Ao excluir guia pendente vinculada a autorização (`DELETE /api/tiss/guides/[id]`), o contador `sessions_used` é devolvido (decrementado até o piso 0) de forma idempotente.
+    - Se `sessions_used >= sessions_authorized`, o sistema sinaliza alerta de saldo esgotado com status de validação `WARNING`. Validado com 3 testes em `__tests__/tiss/session-balance.test.ts`.
+  - **3. Registro de Envio do Lote**:
+    - Implementado modal em `components/tiss/batch-list-table.tsx` para registrar data de envio (`submission_date`), canal (`dispatch_channel`: PORTAL, WEBSERVICE, EMAIL, FISICO), número de protocolo (`protocol_number`) e observações (`notes`).
+  - **4. Higiene do Git e Projeto**:
+    - Restabelecido script `lint` original em `package.json` (`next lint`) e criado `lint:tiss` com escopo estrito nos arquivos do faturamento.
+    - Explicada a necessidade de `eslint.config.mjs` devido à migração para o formato flat-config no Next.js 16.
+    - Revertidas alterações cosméticas em `glosa-predictor.ts` e `encoding-utils.ts`.
+    - Movidas fixtures para `__tests__/__fixtures__/legacy/`, excluídas da suíte do Jest e do ESLint.
+    - Revertido arquivo `tsconfig.tsbuildinfo`.
+  - **5. Homologação em Staging pelo Dono**:
+    - Criado script `scripts/staging/verify-tiss-migrations.sql` que opera em bloco transacional com encerramento automático em `ROLLBACK;`.
+    - Criado manual `scripts/staging/LEIA-ME.md` orientando a execução no SQL Editor do Supabase, verificação do relatório com 9 testes diagnósticos e geração dos tipos via `npx supabase gen types typescript`.
+  - **6. Declaração Honesta de Limitações de Testes**:
+    - Testes unitários utilizam mocks e `pg-mem`. O `pg-mem` NÃO valida políticas de RLS PostgreSQL reais, triggers complexas, funções PL/pgSQL com transações atômicas ou índices parciais com predicados `WHERE`. Essa validação deve ser realizada no Supabase de Staging pelo proprietário.

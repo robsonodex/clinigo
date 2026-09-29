@@ -651,7 +651,7 @@ export const helpItems: HelpItem[] = [
         href: '/dashboard/convenios',
         whatIsIt: 'Catálogo de procedimentos TUSS (Terminologia Unificada da Saúde Suplementar da ANS) vinculado às regras de preço negociadas por operadora e plano. Permite definir o valor contratual de cada procedimento, controle de obrigatoriedade de senha/autorização prévia e limite máximo de sessões permitidas.',
         whenToUse: 'Para cadastrar os valores contratuais acordados com cada convênio e configurar as travas anti-glosa que exigem senha prévia.',
-        howToUse: 'Acesse Menu Lateral > Convênios > aba "Tabela de Preços e TUSS". Clique em "Novo Preço / Procedimento", pesquise pelo código TUSS oficial de 8 dígitos ou nome (ex: 10101012 para Consulta em consultório), selecione a operadora, defina o valor em Reais e ative a chave "Exige Autorização". Para importar tabelas completas, utilize o botão "Importar TUSS" com planilha CSV.',
+        howToUse: 'Acesse Menu Lateral > Convênios > aba "Tabela de Preços e TUSS". Clique em "Novo Preço / Procedimento", pesquise pelo código TUSS oficial de 8 dígitos ou nome (ex: 10101012 [EXEMPLO NÃO VERIFICADO] para Consulta em consultório), selecione a operadora, defina o valor em Reais e ative a chave "Exige Autorização". AVISO DE CONFORMIDADE: Todos os códigos de procedimentos (ex: 10101012, 20104049) e o catálogo de glosas exemplificativos possuem a classificação [NÃO VERIFICADO]. Antes de faturar em produção, importe a tabela oficial completa da ANS via botão "Importar TUSS".',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'FINANCIAL'],
         tags: ['tuss', 'tabela de preços', 'procedimentos', 'valores contratados', 'autorização obrigatória', 'anti-glosa']
@@ -1635,7 +1635,45 @@ export const helpItems: HelpItem[] = [
         howToUse: 'O profissional envia a NFS-e e valor pelo Portal do Médico. A administração audita a conformidade fiscal e marca o demonstrativo como aprovado para liquidação financeira.',
         minPlan: 'Professional',
         roles: ['CLINIC_ADMIN', 'FINANCIAL', 'DOCTOR'],
-        tags: ['nota fiscal', 'nfse', 'demonstrativo', 'prestadores', 'fiscal', 'impostos']
+    },
+    {
+        id: 'faturamento-tiss-e-lotes',
+        title: 'Faturamento TISS e Lotes',
+        category: 'Convênios e TISS',
+        icon: FileText,
+        href: '/dashboard/tiss',
+        whatIsIt: 'Central de faturamento de saúde suplementar. Permite gerenciar guias de Consulta e SP/SADT emitidas a partir dos atendimentos, agrupar faturas em lotes mensais por operadora, validar estrutura de dados contra checklist anti-glosa e exportar arquivos XML com assinatura de integridade.',
+        whenToUse: 'Mensalmente para fechamento de faturamento de planos de saúde ou diariamente para acompanhar guias geradas.',
+        howToUse: 'Acesse Faturamento TISS > Lotes, crie um lote para a operadora e competência desejadas, valide os dados com a checagem estrutural e gere o XML para download e envio no portal da operadora.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+        tags: ['tiss', 'lotes', 'xml', 'faturamento', 'guias', 'sadt', 'consulta', 'ans']
+    },
+    {
+        id: 'convenios-precos-repasse',
+        title: 'Gestão de Convênios, Preços e Regras de Repasse',
+        category: 'Convênios e TISS',
+        icon: SlidersHorizontal,
+        href: '/dashboard/convenios',
+        whatIsIt: 'Parametrização completa de operadoras credenciadas, planos aceitos, conferência cadastral de elegibilidade, catálogo de procedimentos TUSS com tabela de preços contratual e definição de políticas de repasse (Produção x Recebimento, absorção ou desconto de glosas e prazos de recurso).',
+        whenToUse: 'Na contratação de novas operadoras, atualização anual de tabelas de preços negociadas ou definição das regras contratuais de repasse médico.',
+        howToUse: 'Em Convênios, utilize as abas Operadoras, Planos, Tabela de Preços e Regras e Repasse para configurar os parâmetros de faturamento e honorários da clínica.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+        tags: ['convênios', 'tuss', 'tabela de preços', 'repasse', 'glosas', 'prazos', 'corte']
+    },
+    {
+        id: 'retorno-tiss-glosas',
+        title: 'Conciliação de Retorno, Glosas e Desfazimento (UNDO)',
+        category: 'Convênios e TISS',
+        icon: ShieldAlert,
+        href: '/dashboard/tiss/glosas',
+        whatIsIt: 'Processamento de demonstrativos de retorno de operadoras (XML ou CSV), identificação automatizada de valores pagos e glosas por procedimento com códigos ANS, conciliação financeira e ferramenta atômica de desfazimento (UNDO) para reversão segura de importações indevidas.',
+        whenToUse: 'Assim que a operadora de saúde disponibilizar o demonstrativo de pagamento ou relatório de análise de contas médicas.',
+        howToUse: 'No lote correspondente, clique em Importar Retorno, envie o arquivo da operadora para conciliação automática. Para contestar cortes, acesse Faturamento TISS > Glosas e protocole o recurso com documentos comprobatórios.',
+        minPlan: 'Professional',
+        roles: ['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'],
+        tags: ['retorno', 'conciliação', 'glosas', 'recursos', 'undo', 'desfazer', 'estorno', 'ans']
     },
 ]
 

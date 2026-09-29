@@ -38,7 +38,7 @@ Para conversar com faturistas, médicos e donos de clínicas com autoridade, voc
 - **TISS (Troca de Informação em Saúde Suplementar):**
   É a "língua universal" que a ANS criou para todas as clínicas e convênios conversarem. Antes do TISS, cada operadora exigia formulários em papéis diferentes. O TISS padronizou os dados em arquivos eletrônicos XML.
 - **TUSS (Terminologia Unificada da Saúde Suplementar):**
-  É o "código de barras" dos procedimentos médicos. Cada consulta, exame ou sessão de terapia tem um código numérico de 8 dígitos fixado pela ANS. Exemplo: 50000012 é Consulta ambulatorial em consultório.
+  É o "código de barras" dos procedimentos médicos. Cada consulta, exame ou sessão de terapia tem um código numérico fixado pela ANS. Exemplo: 10101012 é Consulta em consultório.
 - **Guia TISS:**
   É o documento digital que registra um atendimento. Existem tipos específicos:
   - *Guia de Consulta:* para consultas médicas isoladas.
@@ -390,18 +390,25 @@ Baseie suas respostas comerciais com rigor absoluto no código real do CliniGO:
 
 | Recurso / Funcionalidade | Status Real | Como Apresentar ao Cliente | O que NÃO Pode Afirmar |
 |---|---|---|---|
-| **Geração de Guias TISS** | Implementado com prova | "Gera guias de Consulta e SP/SADT a partir das consultas, checando CBO, CRM e saldo de sessões." | Não diga que emite guias de internação hospitalar cirúrgica complexa ou quimioterapia/radioterapia. |
-| **Geração em Massa** | Implementado com prova | "Gera guias em lote para o período e operadora selecionados." | Não afirme que foi validado com milhares de guias reais em produção sem teste piloto prévio. |
-| **Lotes XML e Padrão ANS** | Parcial | "Exporta lote XML estruturado com validador embutido e hash padrão SHA-256 (com opção de MD5 canônico via flag)." | NÃO afirmar que o XML foi validado contra o servidor XSD remoto oficial da ANS nem que o hash é aceito universalmente sem homologação. |
-| **Envio para Operadoras** | Não implementado (Automático) / Manual | "O sistema gera o arquivo XML pronto para o faturista enviar no portal da operadora e registrar o comprovante/protocolo." | NUNCA diga que o sistema envia sozinho por webservice sem login no portal da operadora. |
-| **Importação de Retorno e Conciliação** | Implementado com prova | "Processa demonstrativos em XML TISS e planilhas CSV com conciliação contábil e botão de desfazimento (UNDO/estorno)." | Testado com dados sintéticos. Deve ser homologado com o layout específico do retorno da operadora antes de uso massivo. |
-| **Gestão de Glosas e Recursos** | Implementado com prova | "Painel para registrar motivos da ANS, anexar documentos comprobatórios e gerenciar prazos de recurso por operadora." | Não prometa que o sistema garante o deferimento do recurso pela operadora. |
-| **Repasse Configurável** | Implementado com prova | "Repasse por produção ou por recebimento, com políticas de absorção ou desconto de glosa e retrocompatibilidade estrita." | Não prometa cálculo retroativo automático para meses anteriores à ativação das novas opções. |
-| **Sigilo Médico e RBAC** | Implementado com prova | "O médico não visualiza operadora, plano, carteirinha ou faturamento institucional (bloqueado em middleware e handlers)." | NENHUM teste de navegador foi realizado; validação comprovada via testes automatizados de handlers e rotas. |
-| **Checagem de Elegibilidade** | Parcial | "Conferência cadastral interna e registro de log manual no portal da operadora." | Não possui consulta online em tempo real via webservice sem homologação prévia da operadora. |
-| **Autorização e Saldo de Sessões** | Parcial | "Cadastro de senha, validade e controle de saldo de sessões autorizadas x executadas com alerta de esgotamento." | Não faz solicitação automática de autorização no portal da operadora. |
-| **Catálogo TUSS e Preços** | Parcial | "Estrutura de precificação por operadora e importação CSV prontas; o catálogo inicial possui status NÃO_VERIFICADO." | Não afirmar que o catálogo base é certificado; o administrador deve importar a planilha oficial da ANS. |
-| **Indicadores e Painel de Glosas** | Implementado com prova | "Métricas de glosas por operadora e motivo, valores a receber e acompanhamento financeiro." | Funciona plenamente sobre os dados conciliados no sistema. |
+| **4.1.1 Geração de Guias TISS** | Implementado com prova (`__tests__/tiss/guide-types-and-therapies.test.ts`) | "Gera guias de Consulta e SP/SADT a partir das consultas, checando CBO, CRM e saldo de sessões." | Não diga que emite guias de internação hospitalar cirúrgica complexa ou quimioterapia/radioterapia. |
+| **4.1.2 Catálogo TUSS e Tabela de Preços** | Parcial (precificação pronta; catálogo ANS oficial pendente de importação) | "Estrutura de precificação por operadora e importação CSV prontas; o catálogo inicial requer carga da planilha oficial da ANS." | Não afirmar que a tabela TUSS completa já vem embutida e certificada sem que o cliente importe a planilha oficial. |
+| **4.1.3 Retorno/Conciliação e 4.2.G** | Implementado, testado só com dados sintéticos e em memória (`__tests__/tiss/return-parse-and-conciliation.test.ts`, `__tests__/tiss/tiss-undo-financial.test.ts`) | "Processa demonstrativos em XML TISS e planilhas CSV com baixa contábil e botão de desfazimento atômico (UNDO)." | Validar com arquivo real e em banco real antes de uso massivo em produção. |
+| **4.1.4 Envio de Lotes** | Manual com Protocolo | "O sistema gera o arquivo XML pronto para o faturista enviar no portal da operadora e registrar o comprovante/protocolo e canal." | NUNCA diga que o sistema envia sozinho por webservice sem login no portal da operadora. |
+| **4.1.5 Elegibilidade de Pacientes** | Parcial (conferência cadastral interna; sem consulta online) | "Conferência cadastral interna de validade da carteirinha e dados no ato do agendamento." | Não possui consulta online em tempo real via webservice com operadoras. |
+| **4.1.6 Repasse por Recebimento e Glosas** | Implementado e testado numericamente (`__tests__/financial/repasse-regression.test.ts`, `__tests__/financial/repasse-convenio-glosas.test.ts`); falta teste com banco real | "Repasse por produção ou por recebimento, com políticas de absorção ou desconto de glosa e retrocompatibilidade estrita." | Não prometa cálculo retroativo para meses anteriores à alteração da regra. |
+| **4.2.A Saldo de Sessões** | Implementado com prova (`__tests__/tiss/session-balance.test.ts`) | "Controle de saldo com incremento na emissão, devolução no cancelamento e alerta de esgotamento." | Não faz autorização online automática junto à operadora. |
+| **4.2.B Checklist Anti-Glosa** | Implementado com prova (`__tests__/tiss/tiss-validator.test.ts`) | "Verificação prévia de CBO, CRM, validade de carteirinha, código de autorização e saldo." | Não garante deferimento do lote pela auditoria médica da operadora. |
+| **4.2.C Prazo de Corte Automático** | Não implementado | "Campos cadastrais de dia de corte disponíveis na operadora, mas o controle de envio é manual pelo faturista." | Não possui robô de fechamento automático de lote na data de corte. |
+| **4.2.D Ciclo de Vida de Guias e Lotes** | Implementado com prova (`__tests__/tiss/tiss-undo-financial.test.ts`) | "Máquina de estados completa para guias e lotes (Rascunho, Gerado, Enviado, Pago, Glosado, Cancelado)." | Não cobre fluxos de internação hospitalar. |
+| **4.2.E Catálogo e Recursos de Glosa** | Implementado com prova (`__tests__/tiss/tiss-glosa-appeal.test.ts`) | "Painel para registrar motivos da ANS, anexar documentos e gerenciar prazos de contestação." | Não garante que o recurso será acatado pela operadora. |
+| **4.2.F Coparticipação no Caixa** | Não implementado | "Coluna de coparticipação no schema de banco de dados, sem integração com frente de caixa nesta versão." | Não afirme que baixa automaticamente coparticipação no caixa da recepção. |
+| **4.2.H Indicadores Avançados / Aging** | Não implementado | "Métricas básicas operacionais no painel TISS; relatórios avançados de aging de glosas não disponíveis nesta versão." | Não prometa gráficos preditivos de aging financeiro de convênios. |
+| **4.2.I Comprovação por Biometria na Guia** | Não implementado | "Biometria e termos funcionam no prontuário, mas não bloqueiam nem são anexados automaticamente ao XML TISS." | Não prometa integração biométrica direta com o portal da operadora. |
+| **4.2.J Trilha de Auditoria** | Implementado com prova (`__tests__/security/doctor-handler-privacy.test.ts`, `__tests__/tiss/session-balance.test.ts`) | "Logs de auditoria em `audit_logs` para criação de guias, desfazimento de retorno e alteração de regras de repasse." | Não cobre logs de visualização passiva (apenas mutações). |
+| **4.2.K Sigilo Médico e RBAC** | Implementado com prova (`__tests__/security/tiss-doctor-block.test.ts`) | "Médico não visualiza dados de faturamento, dados de operadoras nem valores de outros profissionais." | NENHUM teste de navegador foi realizado; validação comprovada via testes automatizados de handlers e rotas. |
+| **4.2.L Modalidade Ambos com Faturamento** | Não implementado | "Cadastro de pacientes suporta Ambos (Particular/Convênio), mas o split financeiro automático na guia TISS não está implementado." | Não prometa emissão de guia e recibo simultâneos com 1 clique. |
+| **4.2.M Padrão TISS/Hash/XSD** | Parcial (hash em modo legado por padrão; modo ANS não validado; validação XSD estrutural) | "Exporta XML com validação estrutural simplificada e hash padrão legado SHA-256 JSON (com modo ANS MD5 canônico sob configuração de clínica)." | NÃO afirmar que o XML foi validado contra XSD oficial da ANS nem que o hash é homologado sem arquivos oficiais da operadora. |
+| **4.2.N Terapias Multidisciplinares em SP/SADT** | Implementado com prova (`__tests__/tiss/guide-types-and-therapies.test.ts`) | "Direcionamento automático de terapias para guia SP/SADT com validação de CBO e conselho profissional." | Não emite guias com múltiplos profissionais executantes no mesmo procedimento. |
 
 ---
 
@@ -410,7 +417,7 @@ Baseie suas respostas comerciais com rigor absoluto no código real do CliniGO:
 Antes de iniciar qualquer reunião com um cliente potencial, verifique esta lista de preparação (5 minutos):
 
 - [ ] Certifique-se de que há pelo menos uma operadora cadastrada (ex: "Unimed") e um plano ativo.
-- [ ] Cadastre ao menos 2 procedimentos na `Tabela de Preços e TUSS` (ex: 50000012 por R$ 120,00 e 50000560 por R$ 85,00).
+- [ ] Cadastre ao menos 2 procedimentos na `Tabela de Preços e TUSS` (ex: 10101012 para Consulta em consultório por R$ 120,00).
 - [ ] Garanta que existe 1 paciente cadastrado com carteirinha e data de validade futura.
 - [ ] Verifique se o médico de teste possui CRM, UF e CBO preenchidos no cadastro.
 - [ ] Tenha 1 atendimento com status `Concluído` pronto na tela de Consultas para clicar no botão `Gerar Guia TISS`.
