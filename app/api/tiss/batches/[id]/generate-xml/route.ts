@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createTissGenerator, type TissGuideData, type TissBatchData, type TissProcedure, type TissBeneficiary, type TissProvider } from '@/lib/services/tiss/tiss-xml-generator-v2';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 /**
  * POST /api/tiss/batches/[id]/generate-xml
@@ -14,6 +15,11 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const { id: batch_id } = await params;
         const supabase = await createClient();
 
@@ -90,7 +96,7 @@ export async function POST(
         // 5. Buscar dados da clínica e operadora
         const { data: clinic } = await supabase
             .from('clinics')
-            .select('corporate_name, cnpj, cnes_code')
+            .select('corporate_name, cnpj, cnes_code, addons')
             .eq('id', profile.clinic_id)
             .single();
 
@@ -160,8 +166,9 @@ export async function POST(
             createdAt: new Date(),
         };
 
-        // 7. Gerar XML via TissXMLGeneratorV2
-        const xmlGenerator = createTissGenerator('4.01.00');
+        // 7. Gerar XML via TissXMLGeneratorV2 com algoritmo de hash configurado (padrão legado)
+        const hashAlgo = ((clinic as any)?.addons?.tiss_hash_algorithm || (clinic as any)?.tiss_hash_algorithm || 'LEGACY_SHA256_JSON') as any;
+        const xmlGenerator = createTissGenerator('4.01.00', hashAlgo);
         let xmlContent: string;
         try {
             xmlContent = await xmlGenerator.generateBatchXML(batchData);

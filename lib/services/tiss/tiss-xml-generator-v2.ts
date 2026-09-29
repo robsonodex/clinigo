@@ -15,6 +15,7 @@
  */
 
 import { XMLBuilder } from 'fast-xml-parser';
+import { calculateTissHash, type TissHashAlgorithm } from './tiss-hash-calculator';
 import {
     type TissVersion,
     getTissConfig,
@@ -145,14 +146,16 @@ export interface TissBatchData {
 
 export class TissXMLGeneratorV2 {
     private version: TissVersion;
-    private config: ReturnType<typeof getTissConfig>;
+    private hashAlgorithm: TissHashAlgorithm;
 
     /**
      * @param version TISS version to generate XML for (defaults to 4.01.00)
+     * @param hashAlgorithm Hash algorithm to use (defaults to LEGACY_SHA256_JSON)
      */
-    constructor(version: TissVersion = '4.01.00') {
+    constructor(version: TissVersion = '4.01.00', hashAlgorithm: TissHashAlgorithm = 'LEGACY_SHA256_JSON') {
         this.version = version;
         this.config = getTissConfig(version);
+        this.hashAlgorithm = hashAlgorithm;
     }
 
     // ==========================================================================
@@ -396,13 +399,10 @@ export class TissXMLGeneratorV2 {
     }
 
     /**
-     * Generate SHA-256 hash for document integrity (v4.02.00 only)
-     * Uses proper cryptographic hashing for TISS compliance
+     * Generate hash for document integrity using configured algorithm
      */
     private generateHash(batchData: TissBatchData): string {
-        const crypto = require('crypto');
-        const content = JSON.stringify(batchData);
-        return crypto.createHash('sha256').update(content).digest('hex');
+        return calculateTissHash(batchData, this.hashAlgorithm);
     }
 }
 
@@ -411,17 +411,15 @@ export class TissXMLGeneratorV2 {
 // ============================================================================
 
 /**
- * Create a TISS XML generator for a specific version
+ * Create a TISS XML generator for a specific version and hash algorithm
  * 
  * @param version TISS version (defaults to recommended version for current date)
+ * @param hashAlgorithm Hash algorithm (defaults to LEGACY_SHA256_JSON)
  * @returns TissXMLGeneratorV2 instance
- * 
- * @example
- * ```ts
- * const generator = createTissGenerator('4.02.00');
- * const xml = await generator.generateBatchXML(data);
- * ```
  */
-export function createTissGenerator(version?: TissVersion): TissXMLGeneratorV2 {
-    return new TissXMLGeneratorV2(version);
+export function createTissGenerator(
+    version?: TissVersion,
+    hashAlgorithm?: TissHashAlgorithm
+): TissXMLGeneratorV2 {
+    return new TissXMLGeneratorV2(version, hashAlgorithm);
 }

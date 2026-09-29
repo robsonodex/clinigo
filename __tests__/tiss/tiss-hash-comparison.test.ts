@@ -1,6 +1,21 @@
 import { calculateTissHash } from '@/lib/services/tiss/tiss-hash-calculator';
 import { TISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
 
+/**
+ * T2: Teste Comparativo de Hash do Lote TISS e Validação de Estrutura
+ * 
+ * NOTA DE AUDITORIA:
+ * Este teste compara o comportamento numérico e estrutural entre os dois algoritmos
+ * suportados pelo CliniGO (LEGACY_SHA256_JSON e ANS_MD5_CANONICAL).
+ * Ele NÃO constitui prova de conformidade ou homologação junto à ANS nem atesta que
+ * uma operadora de saúde específica aceitará o hash gerado em ANS_MD5_CANONICAL.
+ * 
+ * ESPECIFICAÇÃO DO ALGORITMO ANS_MD5_CANONICAL AQUI TESTADO:
+ * - Entrada: XML serializado como string UTF-8.
+ * - Elementos excluídos: Regex remove tags de hash (<ans:hashDocumento>, <ans:hash>, <hash>).
+ * - Normalização: Linhas convertidas para LF (\n) e espaços periféricos removidos (.trim()).
+ * - Hash: MD5 hex digest minúsculo (32 caracteres).
+ */
 describe('T2: Teste Comparativo de Hash do Lote TISS e Validação de Estrutura', () => {
   const sampleBatchData = {
     batchNumber: 'LOTE-20260901',
