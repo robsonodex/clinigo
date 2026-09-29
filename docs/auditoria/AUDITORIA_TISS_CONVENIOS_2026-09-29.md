@@ -148,13 +148,24 @@ O CliniGO possui uma fundação técnica para operadoras de saúde (cadastro de 
 
 Esta matriz deve ser utilizada estritamente pelo setor comercial e nas demonstrações de vendas, evitando promessas incompatíveis com o código real do produto.
 
-| Pode ser afirmado hoje ao cliente | Pode ser afirmado com ressalva | NÃO pode ser afirmado hoje |
-|---|---|---|
-| Cadastro de operadoras de convênio e planos de saúde | Geração de XML TISS: **Ressalva:** Gera XML nas versões 4.01.00 e 4.02.00 para envio manual via portal da operadora (o envio direto via webservice exige homologação com cada operadora). | "Envio automático de lotes para operadoras via API/Webservice sem intervenção humana." |
-| Cadastro de carteirinhas de convênio no perfil do paciente | Gestão de Glosas: **Ressalva:** Permite registrar e gerenciar o status do recurso de glosa, mas a leitura do demonstrativo de retorno exige baixa manual/estruturada. | "Consulta de elegibilidade da carteirinha em tempo real online com as operadoras." |
-| Emissão de recibos detalhados para pacientes na modalidade de Reembolso | Cálculo de Repasse Médico: **Ressalva:** O repasse médico atual é calculado sobre a produção de atendimentos realizados; o regime por recebimento e desconto de glosas entra na versão configurável. | "Importação automática de demonstrativo de pagamento XML de qualquer operadora com baixa instantânea." |
-| Visualização e download de arquivos XML de lotes para prestadores | Lotes TISS: **Ressalva:** Agrupa atendimentos concluídos no mês e gera o arquivo consolidado de faturamento ambulatorial e consulta. | "O sistema desconta automaticamente do médico as glosas não pagas pelo convênio." |
-| Sigilo médico nos prontuários e agendamentos | Validação de Guias: **Ressalva:** Validação estrutural de campos obrigatórios antes do fechamento do lote. | "Tabela TUSS completa já embutida e atualizada automaticamente pela ANS." |
+| Funcionalidade / Recurso | Condição Comercial | Validado em banco real? | O que pode ser dito ao cliente |
+|---|---|---|---|
+| **Cadastros de Convênios e Carteirinhas** | Pode afirmar hoje | **Parcial: testes com dados sintéticos** | Cadastro de operadoras, planos de saúde e carteirinhas vinculadas ao paciente. |
+| **Repasse por Produção** | Pode afirmar hoje | **Não** (Parcial: testes com dados sintéticos, script de conferência disponível para staging) | Cálculo de repasse baseado nos atendimentos realizados com paridade histórica comprovada em suíte de testes. |
+| **Recibos para Reembolso** | Pode afirmar hoje | **Parcial: testes com dados sintéticos** | Emissão de recibos detalhados para pacientes na modalidade de Reembolso. |
+| **Sigilo do Profissional** | Pode afirmar hoje (com ressalva) | **Não** (Parcial: provado via testes automatizados de handlers e middleware, sem teste com login real em produção) | Médicos e profissionais não acessam faturamento geral da clínica nem outros médicos. |
+| **Índice Anti-Duplicidade de Guias** | Pode afirmar SOMENTE após staging | **Não** | Trava de banco que impede emissão duplicada de guia para o mesmo atendimento e procedimento. |
+| **Controle de Saldo de Sessões** | Pode afirmar SOMENTE após staging | **Não** | Débito automático de sessões autorizadas conforme guias são emitidas. |
+| **Geração em Massa de Guias/Lotes** | Pode afirmar SOMENTE após staging | **Não** | Agrupamento de todos os atendimentos do mês para faturamento em um clique. |
+| **Isolamento Multi-tenant (RLS) das Tabelas Novas** | Pode afirmar SOMENTE após staging | **Não** | Garantia de segurança que impede vazamento de dados entre clínicas em tabelas novas. |
+| **Desfazimento Atômico de Retorno (RPC)** | Pode afirmar SOMENTE após staging | **Não** | Estorno transacional de demonstrativos de pagamento com cancelamento de lançamentos e glosas. |
+| **Tabela de Preços por Operadora** | Pode afirmar SOMENTE após staging | **Não** | Precificação customizada de procedimentos TUSS por plano de saúde. |
+| **Conciliação Financeira Automática** | Pode afirmar SOMENTE após staging | **Não** | Baixa contábil automática de valores pagos e glosados no módulo financeiro. |
+| **Rastreabilidade de Hash do Lote** | Pode afirmar SOMENTE após staging | **Não** | Registro do algoritmo (`LEGACY_SHA256_JSON` / `ANS_MD5_CANONICAL`) e hash na tabela de lotes. |
+| **Envio Direto via Webservice SOAP/WSDL** | NÃO pode ser afirmado | **Não** (Ausente) | "Envio automático de lotes para operadoras via API direta sem intervenção humana." |
+| **Validação Formal XSD Oficial da ANS** | NÃO pode ser afirmado | **Não** (Depende de arquivos XSD oficiais) | "Validação formal contra esquemas oficiais da ANS" (atualmente roda em modo estrutural simplificado). |
+| **Elegibilidade Online em Tempo Real** | NÃO pode ser afirmado | **Não** (Mock / Depende de API das operadoras) | "Consulta de elegibilidade da carteirinha em tempo real online com as operadoras." |
+| **Tabela TUSS Completa Sincronizada da ANS** | NÃO pode ser afirmado | **Não** (Carga base / Depende de catálogo completo) | "Tabela TUSS completa com 4.000+ procedimentos atualizada automaticamente pela ANS." |
 
 ---
 
