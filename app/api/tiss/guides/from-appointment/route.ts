@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 const fromAppointmentSchema = z.object({
     appointment_id: z.string().uuid('ID do agendamento inválido'),
@@ -17,6 +18,11 @@ const fromAppointmentSchema = z.object({
  */
 export async function POST(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase = await createClient();
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();

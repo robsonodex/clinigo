@@ -1,7 +1,7 @@
-// app/api/tiss/guides/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 // ============================================
 // SCHEMA DE VALIDAÇÃO PARA EDIÇÃO
@@ -29,6 +29,11 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const { id } = await params
         const supabase = await createClient();
 
@@ -112,6 +117,11 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const { id } = await params
         const supabase = await createClient();
 
@@ -268,6 +278,11 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const { id } = await params
         const supabase = await createClient();
 
@@ -307,7 +322,7 @@ export async function DELETE(
         // Verificar se guia pode ser deletada (apenas PENDING)
         const { data: guide } = await supabase
             .from('tiss_guides')
-            .select('status')
+            .select('status, authorization_code')
             .eq('id', guide_id)
             .eq('clinic_id', profile.clinic_id)
             .single();
@@ -341,9 +356,26 @@ export async function DELETE(
             );
         }
 
+        // Devolver saldo de sessões se a guia possuía autorização vinculada
+        if (guide.authorization_code) {
+            const { data: authRecord } = await supabase
+                .from('tiss_authorization_requests')
+                .select('id, sessions_used')
+                .eq('clinic_id', profile.clinic_id)
+                .eq('authorization_number', guide.authorization_code)
+                .maybeSingle();
+
+            if (authRecord && (authRecord.sessions_used || 0) > 0) {
+                await (supabase
+                    .from('tiss_authorization_requests') as any)
+                    .update({ sessions_used: Math.max(0, (authRecord.sessions_used || 0) - 1) })
+                    .eq('id', authRecord.id);
+            }
+        }
+
         return NextResponse.json({
             success: true,
-            message: 'Guia deletada com sucesso',
+            message: 'Guia deletada com sucesso e saldo de autorização atualizado',
         });
 
     } catch (error: any) {

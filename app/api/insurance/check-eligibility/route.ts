@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 export interface EligibilityResult {
     isActive: boolean;
@@ -38,6 +39,11 @@ const eligibilitySchema = z.object({
  */
 export async function POST(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase = await createClient();
 
         const { data: { user } } = await supabase.auth.getUser();

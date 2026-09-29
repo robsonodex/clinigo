@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 /**
  * POST /api/tiss/batches/[id]/submit
@@ -19,6 +20,11 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const { id: batch_id } = await params;
         const supabase = await createClient();
 

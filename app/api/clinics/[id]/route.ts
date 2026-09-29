@@ -245,6 +245,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             throw error
         }
 
+        // Registrar auditoria se alterou configurações críticas de faturamento/hash/repasse
+        if (body.tiss_hash_algorithm || body.repasse_regime || body.glosa_policy) {
+            await (supabase.from('audit_logs') as any).insert({
+                user_id: userId,
+                action: 'CLINIC_BILLING_SETTINGS_UPDATED',
+                entity_type: 'clinics',
+                entity_id: clinicId,
+                metadata: {
+                    tiss_hash_algorithm: body.tiss_hash_algorithm,
+                    repasse_regime: body.repasse_regime,
+                    glosa_policy: body.glosa_policy,
+                    updated_by: userId,
+                    updated_at: new Date().toISOString(),
+                }
+            });
+        }
+
         return NextResponse.json({ success: true, data: clinic })
     } catch (error) {
         console.error('[PATCH /api/clinics/[clinicId]] Error:', error)

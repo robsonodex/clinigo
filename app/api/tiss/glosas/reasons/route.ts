@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 /**
  * GET /api/tiss/glosas/reasons
@@ -7,6 +8,11 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function GET(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase = await createClient();
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -42,7 +48,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: error.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, data: data || [] });
+        return NextResponse.json({
+            success: true,
+            data: data || [],
+            notice: 'Catálogo de motivos de glosa ANS. Itens marcados como NAO_VERIFICADO requerem importação ou validação com a Tabela Oficial 38/61 da ANS.'
+        });
 
     } catch (err: any) {
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });

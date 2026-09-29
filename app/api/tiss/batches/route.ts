@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import type { CreateTissBatchDTO, TissBatch, TissBatchFilters } from '@/types/tiss';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 // ============================================
 // SCHEMAS DE VALIDAÇÃO
@@ -31,6 +32,11 @@ const batchFiltersSchema = z.object({
 
 export async function GET(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -154,6 +160,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase = await createClient();
 
         // Verificar autenticação
