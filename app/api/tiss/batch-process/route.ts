@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * POST /api/tiss/batch-process
  * Batch processing for multiple TISS guides
@@ -32,6 +33,10 @@ interface BatchResult {
 }
 
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient()
 

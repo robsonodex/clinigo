@@ -1,9 +1,10 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/generate-xml/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createTissGenerator, type TissGuideData, type TissBatchData, type TissProcedure, type TissBeneficiary, type TissProvider } from '@/lib/services/tiss/tiss-xml-generator-v2';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { calculateTissHash, type TissHashAlgorithm } from '@/lib/services/tiss/tiss-hash-calculator';
 
 /**
  * POST /api/tiss/batches/[id]/generate-xml
@@ -14,12 +15,11 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
-
         const { id: batch_id } = await params;
         const supabase = await createClient();
 
@@ -46,7 +46,7 @@ export async function POST(
         }
 
         // 2. RBAC: Apenas ADMIN pode gerar XML de lote
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para gerar XML' },
                 { status: 403 }
@@ -115,7 +115,6 @@ export async function POST(
         };
 
         const guidesData: TissGuideData[] = guides.map((guide: any) => {
-            // Prioriza procedimentos normalizados (tiss_guide_procedures), fallback para colunas flat
             let procedures: TissProcedure[] = [];
 
             if (guide.procedures && guide.procedures.length > 0) {
@@ -167,7 +166,7 @@ export async function POST(
         };
 
         // 7. Gerar XML via TissXMLGeneratorV2 com algoritmo de hash configurado (padrão legado)
-        const hashAlgo = ((clinic as any)?.addons?.tiss_hash_algorithm || (clinic as any)?.tiss_hash_algorithm || 'LEGACY_SHA256_JSON') as any;
+        const hashAlgo: TissHashAlgorithm = ((clinic as any)?.addons?.tiss_hash_algorithm || (clinic as any)?.tiss_hash_algorithm || 'LEGACY_SHA256_JSON') as TissHashAlgorithm;
         const xmlGenerator = createTissGenerator('4.01.00', hashAlgo);
         let xmlContent: string;
         try {
@@ -179,6 +178,11 @@ export async function POST(
                 { status: 500 }
             );
         }
+
+        const calculatedHash = calculateTissHash(
+            hashAlgo === 'LEGACY_SHA256_JSON' ? batchData : xmlContent,
+            hashAlgo
+        );
 
         // 8. Validação XSD offline
         const validator = getTISSXSDValidator();
@@ -209,21 +213,57 @@ export async function POST(
 
         const xmlUrl = urlData.publicUrl;
 
-        // 10. Atualizar máquina de estados do batch
+        // 10. Atualizar máquina de estados do batch com rastreabilidade de hash (tolerante a migration pendente)
         const finalStatus = validationResult.valid ? 'VALID' : 'INVALID';
+        const nowIso = new Date().toISOString();
 
-        await supabase
+        const updatePayloadFull = {
+            xml_content: xmlContent,
+            xml_file_url: xmlUrl,
+            xml_file_size: Buffer.from(xmlContent).length,
+            xml_generated_at: nowIso,
+            hash_algorithm: hashAlgo,
+            hash_value: calculatedHash,
+            status: finalStatus,
+            total_guides: guides.length,
+            total_value: guidesData.reduce((sum, g) => sum + g.totalValue, 0),
+        };
+
+        const updatePayloadLegacy = {
+            xml_content: xmlContent,
+            xml_file_url: xmlUrl,
+            xml_file_size: Buffer.from(xmlContent).length,
+            status: finalStatus,
+            total_guides: guides.length,
+            total_value: guidesData.reduce((sum, g) => sum + g.totalValue, 0),
+        };
+
+        const { error: updateError } = await supabase
             .from('tiss_batches')
-            .update({
-                xml_content: xmlContent,
-                xml_file_url: xmlUrl,
-                xml_file_size: Buffer.from(xmlContent).length,
-                xml_generated_at: new Date().toISOString(),
-                status: finalStatus,
-                total_guides: guides.length,
-                total_value: guidesData.reduce((sum, g) => sum + g.totalValue, 0),
-            })
+            .update(updatePayloadFull)
             .eq('id', batch_id);
+
+        if (updateError) {
+            const errStr = JSON.stringify(updateError).toLowerCase();
+            const isMissingColumn =
+                updateError.code === '42703' ||
+                updateError.code === 'PGRST204' ||
+                errStr.includes('hash_algorithm') ||
+                errStr.includes('hash_value') ||
+                errStr.includes('xml_generated_at') ||
+                errStr.includes('column') ||
+                errStr.includes('does not exist');
+
+            if (isMissingColumn) {
+                console.warn('[TISS WARNING] Colunas de hash ainda não migradas no banco. Aplicando fallback de persistência legado:', updateError);
+                await supabase
+                    .from('tiss_batches')
+                    .update(updatePayloadLegacy)
+                    .eq('id', batch_id);
+            } else {
+                console.error('[TISS ERROR] Erro ao atualizar lote após geração de XML:', updateError);
+            }
+        }
 
         // 11. Limpar e registrar erros de validação se houver
         await supabase.from('tiss_validation_errors').delete().eq('batch_id', batch_id);
@@ -250,6 +290,8 @@ export async function POST(
                 valid: validationResult.valid,
                 guide_count: guides.length,
                 errors_count: validationResult.errors?.length || 0,
+                hash_algorithm: hashAlgo,
+                hash_value: calculatedHash,
             }
         });
 
@@ -261,7 +303,9 @@ export async function POST(
                 guide_count: guides.length,
                 status: finalStatus,
                 validation: validationResult,
-                generated_at: new Date().toISOString(),
+                hash_algorithm: hashAlgo,
+                hash_value: calculatedHash,
+                generated_at: nowIso,
             },
             message: validationResult.valid
                 ? 'XML gerado e validado com sucesso'
@@ -285,6 +329,10 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const { id: batch_id } = await params;
         const supabase = await createClient();
@@ -312,7 +360,7 @@ export async function GET(
 
         const { data: batch } = await supabase
             .from('tiss_batches')
-            .select('batch_number, xml_file_url, xml_content')
+            .select('batch_number, xml_file_url, xml_content, hash_algorithm, hash_value')
             .eq('id', batch_id)
             .eq('clinic_id', profile.clinic_id)
             .single();
@@ -331,13 +379,15 @@ export async function GET(
             );
         }
 
-        // Se tiver xml_content direto, retorna inline
+        // Se tiver xml_content direto, retorna inline com headers de hash
         if (batch.xml_content) {
             return new NextResponse(batch.xml_content, {
                 status: 200,
                 headers: {
                     'Content-Type': 'application/xml',
                     'Content-Disposition': `attachment; filename="${batch.batch_number}.xml"`,
+                    'x-tiss-hash-algorithm': batch.hash_algorithm || 'LEGACY_SHA256_JSON',
+                    'x-tiss-hash-value': batch.hash_value || '',
                 },
             });
         }

@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -17,6 +18,10 @@ const bulkImportTussSchema = z.object({
  * Busca procedimentos TUSS com busca sanitizada (anti PGRST100) e paginação.
  */
 export async function GET(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient();
 
@@ -82,6 +87,10 @@ export async function GET(request: NextRequest) {
  * Importação/cadastro de procedimentos no catálogo TUSS.
  */
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase: any = await createClient();
 
@@ -96,7 +105,7 @@ export async function POST(request: NextRequest) {
             .eq('id', user.id)
             .single()) as { data: any; error: any };
 
-        if (profile?.role !== 'CLINIC_ADMIN' && profile?.role !== 'SUPER_ADMIN') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile?.role)) {
             return NextResponse.json({ success: false, error: 'Acesso negado: apenas administradores podem importar catálogo TUSS' }, { status: 403 });
         }
 

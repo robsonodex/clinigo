@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -5,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const ROLE_HIERARCHY: Record<string, number> = {
   SUPER_ADMIN: 100,
   CLINIC_ADMIN: 80,
+  FINANCIAL: 70,
   DOCTOR: 60,
   RECEPTIONIST: 40,
   NURSE: 30,
@@ -24,6 +26,10 @@ const PLAN_HIERARCHY: Record<string, number> = {
 }
 
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
   try {
     const supabase = await createClient()
 

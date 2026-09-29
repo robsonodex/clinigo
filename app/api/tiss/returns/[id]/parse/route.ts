@@ -1,8 +1,7 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-
 interface ParsedReturnGuide {
     guide_number: string;
     protocol_number?: string;
@@ -73,12 +72,12 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     const { id: return_id } = await params;
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
 
         const supabase: any = await createClient();
 
@@ -98,7 +97,7 @@ export async function POST(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN' && profile.role !== 'FINANCIAL') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
             return NextResponse.json({ success: false, error: 'Acesso negado: apenas administradores e financeiro podem conciliar retornos' }, { status: 403 });
         }
 

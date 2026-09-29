@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/appointments-for-batch/route.ts
 // CliniGo - API para buscar appointments elegíveis para lote TISS
 
@@ -5,6 +6,10 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const { searchParams } = new URL(request.url);
         const insuranceId = searchParams.get('insurance_id');

@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * POST /api/tiss/analyze-glosa-risk
  * AI-powered glosa risk analysis
@@ -25,6 +26,10 @@ const analyzeSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient()
 

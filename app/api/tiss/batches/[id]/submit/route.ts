@@ -1,9 +1,8 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/submit/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-
 /**
  * POST /api/tiss/batches/[id]/submit
  * Marca lote como enviado para a operadora
@@ -19,11 +18,11 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
 
         const { id: batch_id } = await params;
         const supabase = await createClient();
@@ -53,7 +52,7 @@ export async function POST(
         }
 
         // Verificar permissão
-        if (userProfile.role !== 'CLINIC_ADMIN' && userProfile.role !== 'SUPER_ADMIN') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(userProfile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para enviar lotes' },
                 { status: 403 }

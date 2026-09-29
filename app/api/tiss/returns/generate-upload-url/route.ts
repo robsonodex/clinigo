@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/returns/generate-upload-url/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -19,6 +20,10 @@ const generateUrlSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient();
 
@@ -46,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verificar permissão
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
             return NextResponse.json(
                 { success: false, error: 'Sem permissão para fazer upload de retornos' },
                 { status: 403 }

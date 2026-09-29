@@ -20,6 +20,8 @@ export type GuardResult =
  * nunca consigam invocar endpoints de faturamento, XML, regras de convênios ou lotes,
  * mesmo se a chamada for interna ou bypassar o middleware.
  */
+export const TISS_ALLOWED_ROLES = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'];
+
 export async function enforceTissAdministrativeGuard(
     request: NextRequest,
     customSupabase?: any
@@ -42,8 +44,8 @@ export async function enforceTissAdministrativeGuard(
     const headerUserId = getHeader('x-user-id');
     const headerClinicId = getHeader('x-clinic-id');
 
-    // Bloqueio imediato se o cabeçalho já identificar perfil DOCTOR ou PATIENT
-    if (headerRole === 'DOCTOR' || headerRole === 'PATIENT') {
+    // Se o cabeçalho explicitar papel não permitido (ex: DOCTOR, READONLY, PATIENT)
+    if (headerRole && !TISS_ALLOWED_ROLES.includes(headerRole)) {
         return {
             authorized: false,
             response: NextResponse.json(
@@ -67,7 +69,7 @@ export async function enforceTissAdministrativeGuard(
     if (authError || !user) {
         // Se há headers válidos mockados em ambiente de teste ou requisição proxy
         if (headerUserId && headerRole) {
-            if (headerRole === 'DOCTOR' || headerRole === 'PATIENT') {
+            if (!TISS_ALLOWED_ROLES.includes(headerRole)) {
                 return {
                     authorized: false,
                     response: NextResponse.json(
@@ -123,7 +125,7 @@ export async function enforceTissAdministrativeGuard(
 
     const role = profile?.role || headerRole;
 
-    if (!role || role === 'DOCTOR' || role === 'PATIENT') {
+    if (!role || !TISS_ALLOWED_ROLES.includes(role)) {
         return {
             authorized: false,
             response: NextResponse.json(

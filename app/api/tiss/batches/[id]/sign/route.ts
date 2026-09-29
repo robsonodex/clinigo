@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS Batch Signing API Endpoint
  * 
@@ -19,6 +20,10 @@ export async function POST(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         // Authenticate user
         const supabase = await createClient();
@@ -244,6 +249,10 @@ export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();

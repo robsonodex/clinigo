@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/glosas/[id]/contest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -27,6 +28,10 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const { id: glosa_id } = await params;
         const supabase = await createClient();
@@ -48,7 +53,7 @@ export async function POST(
         }
 
         // RBAC: CLINIC_ADMIN ou SUPER_ADMIN
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
             return NextResponse.json({ success: false, error: 'Sem permissão para contestar glosas' }, { status: 403 });
         }
 
@@ -156,6 +161,10 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const { id: glosa_id } = await params;
         const supabase = await createClient();
@@ -208,6 +217,10 @@ export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const { id: glosa_id } = await params;
         const supabase = await createClient();
@@ -227,7 +240,7 @@ export async function PUT(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
             return NextResponse.json({ success: false, error: 'Sem permissão' }, { status: 403 });
         }
 

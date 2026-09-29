@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * API: Send Authorization Request
  * POST /api/tiss/autorizacao/[id]/enviar
@@ -11,6 +12,10 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const { id } = await params
         const service = new AutorizacaoService()

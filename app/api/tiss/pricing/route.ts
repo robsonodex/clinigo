@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -20,6 +21,10 @@ const priceTableSchema = z.object({
  * Lista regras de preços contratadas por operadora e plano.
  */
 export async function GET(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient();
 
@@ -81,6 +86,10 @@ export async function GET(request: NextRequest) {
  * Cadastra ou atualiza preço de procedimento TUSS para operadora/plano.
  */
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient();
 
@@ -99,7 +108,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN' && profile.role !== 'FINANCIAL') {
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
             return NextResponse.json({ success: false, error: 'Acesso negado: permissão insuficiente para gerenciar tabela de preços' }, { status: 403 });
         }
 
@@ -169,6 +178,10 @@ export async function POST(request: NextRequest) {
  * Inativa/exclui regra de precificação.
  */
 export async function DELETE(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient();
 

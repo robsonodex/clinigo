@@ -1,3 +1,4 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS Import - Importação de Guias via Excel
  * POST /api/tiss/import
@@ -22,6 +23,10 @@ interface TissGuideRow {
 }
 
 export async function POST(request: Request) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
         const supabase = await createClient()
         const { data: { session } } = await supabase.auth.getSession()

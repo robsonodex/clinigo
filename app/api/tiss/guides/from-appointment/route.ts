@@ -1,8 +1,7 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-
 const fromAppointmentSchema = z.object({
     appointment_id: z.string().uuid('ID do agendamento inválido'),
     tuss_code: z.string().optional().nullable().or(z.literal('')).transform(v => v || '10101012'), // 10101012 = Consulta em consultório padrão
@@ -17,11 +16,11 @@ const fromAppointmentSchema = z.object({
  * com pré-preenchimento completo, consulta à tabela de preços e proteção contra duplicidade.
  */
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
 
         const supabase = await createClient();
 

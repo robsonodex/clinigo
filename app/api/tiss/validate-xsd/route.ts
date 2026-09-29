@@ -1,14 +1,15 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS XSD Validation API Endpoint
  * 
  * POST /api/tiss/validate-xsd
- * Validates TISS XML against official ANS XSD schemas
+ * Validates TISS XML against official ANS XSD schemas or structural adapter
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { getTissXsdAdapter } from '@/lib/services/tiss/tiss-xsd-adapter';
 
 interface ValidateXSDRequest {
     xml?: string;
@@ -17,12 +18,11 @@ interface ValidateXSDRequest {
 }
 
 export async function POST(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
-
         // Authenticate user
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validate XML
-        const validator = getTISSXSDValidator();
-        const result = await validator.validateXML(xmlContent);
+        // Validate XML via Adaptador
+        const adapter = getTissXsdAdapter();
+        const result = await adapter.validate(xmlContent);
 
         // Log validation attempt
         await supabase
@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
                     valid: result.valid,
                     error_count: result.errors.length,
                     schema_version: result.schemaVersion,
+                    validation_mode: result.validation_mode,
                 },
             })
             .select()
@@ -111,8 +112,11 @@ export async function POST(request: NextRequest) {
             errors: result.errors,
             schemaVersion: result.schemaVersion,
             validatedAt: result.validatedAt,
-            validationType: 'STRUCTURAL_SIMPLIFIED',
-            disclaimer: 'Validação estrutural simplificada (não substitui a validação oficial da operadora)',
+            validation_mode: result.validation_mode,
+            validationType: result.validation_mode,
+            disclaimer: result.disclaimer,
+            schemaFile: result.schemaFile,
+            unsupportedConstructs: result.unsupportedConstructs,
         });
 
     } catch (error) {
@@ -126,15 +130,14 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/tiss/validate-xsd
- * Returns available schema versions and cache status
+ * Returns available schema versions, modes and cache status
  */
 export async function GET(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
-
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -146,9 +149,13 @@ export async function GET(request: NextRequest) {
         }
 
         const validator = getTISSXSDValidator();
+        const adapter = getTissXsdAdapter();
 
         return NextResponse.json({
             availableVersions: ['3.05.00', '4.01.00', '4.02.00'],
+            hasOfficialSchemas: adapter.hasOfficialSchemas(),
+            activeValidationMode: adapter.hasXsdSchemas() ? 'XSD_PARCIAL' : 'ESTRUTURAL',
+            availableXsdFiles: adapter.getAvailableXsdFiles(),
             cachedVersions: {
                 '3.05.00': validator.isSchemaCached('3.05.00'),
                 '4.01.00': validator.isSchemaCached('4.01.00'),

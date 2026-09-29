@@ -1,17 +1,16 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-
 /**
  * GET /api/tiss/glosas/reasons
  * Lista motivos de glosa oficiais da ANS (Tabela 38/61)
  */
 export async function GET(request: NextRequest) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
 
         const supabase = await createClient();
 

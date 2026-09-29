@@ -1,7 +1,6 @@
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-
 /**
  * POST /api/tiss/returns/[id]/undo
  * Desfaz com segurança uma importação de retorno de lote:
@@ -18,11 +17,11 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await enforceTissAdministrativeGuard(request);
+    if (!guard.authorized) {
+        return guard.response;
+    }
     try {
-        const guard = await enforceTissAdministrativeGuard(request);
-        if (!guard.authorized) {
-            return guard.response;
-        }
 
         const { id: returnOrBatchId } = await params;
         const supabase: any = await createClient();

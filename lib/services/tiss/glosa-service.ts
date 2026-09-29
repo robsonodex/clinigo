@@ -54,6 +54,10 @@ export class GlosaService {
         return data
     }
 
+    async getGlosaMetrics(clinicId: string) {
+        return this.getMetrics(clinicId)
+    }
+
     /**
      * Cria uma contestação
      */
