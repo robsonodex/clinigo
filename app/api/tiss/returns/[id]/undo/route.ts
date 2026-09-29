@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 /**
  * POST /api/tiss/returns/[id]/undo
@@ -18,6 +19,11 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const { id: returnOrBatchId } = await params;
         const supabase: any = await createClient();
 
@@ -178,11 +184,11 @@ export async function POST(
             })
             .eq('id', batchId);
 
-        // 9. SOFT-DELETE / INVALIDAÇÃO DO REGISTRO DE IMPORTAÇÃO
+        // 9. INATIVAÇÃO DO REGISTRO DE IMPORTAÇÃO (Permite reimportar via índice parcial)
         await supabase
             .from('tiss_return_imports')
             .update({
-                file_hash: `UNDONE_${Date.now()}_${returnRecord.id}`
+                status: 'CANCELLED',
             })
             .eq('clinic_id', profile.clinic_id)
             .eq('batch_id', batchId);

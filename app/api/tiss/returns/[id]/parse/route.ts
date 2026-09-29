@@ -1,7 +1,7 @@
-// app/api/tiss/returns/[id]/parse/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 interface ParsedReturnGuide {
     guide_number: string;
@@ -75,6 +75,11 @@ export async function POST(
 ) {
     const { id: return_id } = await params;
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase: any = await createClient();
 
         // 1. Auth & Permissão
@@ -163,6 +168,7 @@ export async function POST(
                 .select('id, created_at')
                 .eq('clinic_id', profile.clinic_id)
                 .eq('file_hash', fileHash)
+                .neq('status', 'CANCELLED')
                 .maybeSingle();
 
             if (existingImport) {
