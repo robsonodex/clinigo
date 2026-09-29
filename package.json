@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
     "lint": "next lint",
+    "lint:tiss": "eslint app/api/tiss components/tiss lib/services/tiss lib/services/repasse-calculator.ts app/api/financial/production-summary/route.ts \"app/dashboard/(clinic)/consultas/page.tsx\" \"app/dashboard/(clinic)/convenios/page.tsx\" middleware.ts",
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
