@@ -1404,12 +1404,12 @@ export const helpItems: HelpItem[] = [
         category: 'Configurações',
         icon: Lock,
         href: '/dashboard/seguranca',
-        whatIsIt: 'Painel de segurança avançada com suporte a Autenticação em Duas Etapas (2FA/MFA), gerenciamento de sessões ativas com encerramento remoto de dispositivos desconhecidos e política de senha forte.',
-        whenToUse: 'Para ativar proteção de dois fatores em contas de administradores e auditar de quais computadores a clínica está conectada.',
-        howToUse: 'Ative o 2FA via aplicativo autenticador (Google Authenticator ou similar) e encerre sessões abertas em computadores antigos.',
+        whatIsIt: 'Painel de segurança avançada com suporte a Autenticação em Duas Etapas (2FA/MFA), gerenciamento de sessões ativas com encerramento remoto de dispositivos desconhecidos, controle inteligente de sessão única com validação reativa e política de senha forte.',
+        whenToUse: 'Para ativar proteção de dois fatores em contas de administradores, monitorar acessos simultâneos e auditar de quais computadores a clínica está conectada.',
+        howToUse: 'Ative o 2FA via aplicativo autenticador (Google Authenticator ou similar), encerre sessões abertas em computadores antigos e acompanhe os dispositivos autenticados em tempo real.',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN'],
-        tags: ['segurança', '2fa', 'mfa', 'sessões ativas', 'duplo fator', 'proteção']
+        tags: ['segurança', '2fa', 'mfa', 'sessões ativas', 'sessão única', 'duplo fator', 'proteção']
     },
     {
         id: 'integracoes',
