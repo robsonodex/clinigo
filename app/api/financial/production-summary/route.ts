@@ -1,7 +1,7 @@
-// app/api/financial/production-summary/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id';
+import { computeAdvancedRepasse, type RepasseRegime, type GlosaPolicy } from '@/lib/services/repasse-calculator';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +120,8 @@ export async function GET(request: NextRequest) {
                 therapy_modality,
                 session_format,
                 no_show,
+                payment_type,
+                health_insurance_id,
                 patient_id,
                 patient:patients (
                     id,
@@ -201,12 +203,38 @@ export async function GET(request: NextRequest) {
             });
         }
 
+        // 8. Buscar regime de repasse e política de glosas da clínica
+        const { data: clinicSettings } = await supabaseAdmin
+            .from('clinics')
+            .select('repasse_regime, glosa_policy')
+            .eq('id', resolvedClinicId)
+            .maybeSingle();
+
+        const repasseRegime: RepasseRegime = (clinicSettings?.repasse_regime as any) || 'PRODUCAO';
+        const glosaPolicy: GlosaPolicy = (clinicSettings?.glosa_policy as any) || 'CLINICA_ABSORVE';
+
+        // 9. Buscar guias TISS associadas aos agendamentos para regime de recebimento e desconto de glosa
+        const guidesMap = new Map<string, any>();
+        if (appointmentIds.length > 0) {
+            const { data: guidesList } = await supabaseAdmin
+                .from('tiss_guides')
+                .select('id, appointment_id, status, total_value, paid_value, glosa_value, appeal_status')
+                .in('appointment_id', appointmentIds)
+                .eq('clinic_id', resolvedClinicId);
+
+            guidesList?.forEach((g: any) => {
+                if (g.appointment_id) guidesMap.set(g.appointment_id, g);
+            });
+        }
+
         const defaultPrice = Number(doctorData.consultation_price) || 120.0;
         const defaultContractPercentage = contract ? Number(contract.percentage || contract.percentage_private || 60) : 60;
         const defaultContractFixed = contract?.fixed_value_private ? Number(contract.fixed_value_private) : null;
 
         let totalGross = 0;
         let totalNetRepasse = 0;
+        let totalDiscounts = 0;
+        let totalPendingRecebimento = 0;
         const uniquePatients = new Set<string>();
 
         const detailedItems = validAppointments.map((appt: any) => {
@@ -224,31 +252,64 @@ export async function GET(request: NextRequest) {
                 grossAmount = defaultPrice;
             }
 
-            // Determinar o repasse
-            let repasseAmount = 0;
-            let ruleDescription = '';
-
             const customRate = customRatesMap.get(patientId);
+            const isInsurance = appt.payment_type === 'CONVENIO' || !!appt.health_insurance_id;
+            const guide = guidesMap.get(appt.id);
 
-            if (customRate) {
-                if (customRate.rate_type === 'FIXED' && customRate.fixed_value != null) {
-                    repasseAmount = Number(customRate.fixed_value);
-                    ruleDescription = `Taxa Específica por Paciente: R$ ${repasseAmount.toFixed(2)} (Fixo)`;
-                } else if (customRate.rate_type === 'PERCENTAGE' && customRate.percentage != null) {
-                    const pct = Number(customRate.percentage);
-                    repasseAmount = (grossAmount * pct) / 100;
-                    ruleDescription = `Taxa Específica por Paciente: ${pct}%`;
-                }
-            } else if (defaultContractFixed != null && defaultContractFixed > 0) {
-                repasseAmount = defaultContractFixed;
-                ruleDescription = `Contrato Padrão: R$ ${repasseAmount.toFixed(2)} (Fixo)`;
-            } else {
-                repasseAmount = (grossAmount * defaultContractPercentage) / 100;
-                ruleDescription = `Contrato Padrão: ${defaultContractPercentage}%`;
-            }
+            const guideInfo = guide ? {
+                guideStatus: guide.status,
+                guideTotalValue: Number(guide.total_value) || grossAmount,
+                guidePaidValue: Number(guide.paid_value) || 0,
+                glosaValue: Number(guide.glosa_value) || 0,
+                glosaMaintained: guide.appeal_status === 'REJECTED' || guide.appeal_status === 'CLOSED',
+            } : null;
+
+            const repasseCalc = computeAdvancedRepasse({
+                appointmentValue: grossAmount,
+                override: customRate ? {
+                    id: customRate.id || '',
+                    clinic_id: resolvedClinicId,
+                    doctor_id: requestedDoctorId,
+                    patient_id: patientId,
+                    rate_type: customRate.rate_type,
+                    fixed_value: customRate.fixed_value,
+                    percentage: customRate.percentage,
+                    active: true,
+                } : null,
+                contract: contract || null,
+                doctorFallbackPercentage: defaultContractPercentage,
+                isInsurance,
+                regime: repasseRegime,
+                glosaPolicy,
+                guideInfo,
+            });
 
             totalGross += grossAmount;
-            totalNetRepasse += repasseAmount;
+            totalNetRepasse += repasseCalc.amount;
+            if (repasseCalc.discountAmount > 0) {
+                totalDiscounts += repasseCalc.discountAmount;
+            }
+            if (!repasseCalc.isEligibleForPayment) {
+                totalPendingRecebimento += repasseCalc.originalRepasseAmount;
+            }
+
+            let ruleDesc = '';
+            if (customRate) {
+                ruleDesc = customRate.rate_type === 'FIXED'
+                    ? `Taxa Específica por Paciente: R$ ${Number(customRate.fixed_value).toFixed(2)} (Fixo)`
+                    : `Taxa Específica por Paciente: ${customRate.percentage}%`;
+            } else if (defaultContractFixed != null && defaultContractFixed > 0) {
+                ruleDesc = `Contrato Padrão: R$ ${defaultContractFixed.toFixed(2)} (Fixo)`;
+            } else {
+                ruleDesc = `Contrato Padrão: ${defaultContractPercentage}%`;
+            }
+
+            if (repasseCalc.discountReason) {
+                ruleDesc += ` [${repasseCalc.discountReason}]`;
+            }
+            if (repasseCalc.ineligibleReason) {
+                ruleDesc = repasseCalc.ineligibleReason;
+            }
 
             return {
                 appointment_id: appt.id,
@@ -258,8 +319,12 @@ export async function GET(request: NextRequest) {
                 patient_cpf: appt.patient?.cpf || null,
                 procedure: appt.appointment_type || appt.therapy_modality || doctorData.specialty || 'Sessão Terapêutica',
                 gross_amount: Number(grossAmount.toFixed(2)),
-                repasse_amount: Number(repasseAmount.toFixed(2)),
-                rule_description: ruleDescription,
+                repasse_amount: Number(repasseCalc.amount.toFixed(2)),
+                original_repasse_amount: Number(repasseCalc.originalRepasseAmount.toFixed(2)),
+                discount_amount: Number(repasseCalc.discountAmount.toFixed(2)),
+                discount_reason: repasseCalc.discountReason || null,
+                is_eligible: repasseCalc.isEligibleForPayment,
+                rule_description: ruleDesc,
                 is_custom_rate: !!customRate,
             };
         });
@@ -274,10 +339,14 @@ export async function GET(request: NextRequest) {
                 specialty: doctorData.specialty || 'Terapeuta',
                 crm: doctorData.crm || null,
                 month_reference: monthReference,
+                repasse_regime: repasseRegime,
+                glosa_policy: glosaPolicy,
                 total_appointments: validAppointments.length,
                 unique_patients_count: uniquePatients.size,
                 total_gross: Number(totalGross.toFixed(2)),
                 total_net_repasse: Number(totalNetRepasse.toFixed(2)),
+                total_discounts_glosa: Number(totalDiscounts.toFixed(2)),
+                total_pending_recebimento: Number(totalPendingRecebimento.toFixed(2)),
                 average_per_session: validAppointments.length > 0 ? Number((totalNetRepasse / validAppointments.length).toFixed(2)) : 0,
             },
             items: detailedItems,
