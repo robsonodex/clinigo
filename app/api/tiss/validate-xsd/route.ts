@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
+import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
 interface ValidateXSDRequest {
     xml?: string;
@@ -17,6 +18,11 @@ interface ValidateXSDRequest {
 
 export async function POST(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         // Authenticate user
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -105,6 +111,8 @@ export async function POST(request: NextRequest) {
             errors: result.errors,
             schemaVersion: result.schemaVersion,
             validatedAt: result.validatedAt,
+            validationType: 'STRUCTURAL_SIMPLIFIED',
+            disclaimer: 'Validação estrutural simplificada (não substitui a validação oficial da operadora)',
         });
 
     } catch (error) {
@@ -122,6 +130,11 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
     try {
+        const guard = await enforceTissAdministrativeGuard(request);
+        if (!guard.authorized) {
+            return guard.response;
+        }
+
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 

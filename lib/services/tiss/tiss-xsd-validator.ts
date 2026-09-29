@@ -29,6 +29,8 @@ export interface XSDValidationResult {
     errors: XSDValidationError[];
     schemaVersion: string;
     validatedAt: string;
+    validationType: 'STRUCTURAL_SIMPLIFIED' | 'OFFICIAL_XSD';
+    disclaimer: string;
 }
 
 export interface SchemaInfo {
@@ -219,6 +221,8 @@ export class TISSXSDValidator {
                 errors,
                 schemaVersion: detectedVersion,
                 validatedAt: new Date().toISOString(),
+                validationType: 'STRUCTURAL_SIMPLIFIED',
+                disclaimer: 'Validação estrutural simplificada (não substitui a validação oficial da operadora)',
             };
         } catch (error) {
             return {
@@ -230,6 +234,8 @@ export class TISSXSDValidator {
                 }],
                 schemaVersion: version || 'unknown',
                 validatedAt: new Date().toISOString(),
+                validationType: 'STRUCTURAL_SIMPLIFIED',
+                disclaimer: 'Validação estrutural simplificada (não substitui a validação oficial da operadora)',
             };
         }
     }
