@@ -41,7 +41,8 @@ import {
     Save,
     Building2,
     Info,
-    RotateCcw
+    RotateCcw,
+    Hash
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth, useRole } from '@/lib/hooks/use-auth'
@@ -57,8 +58,10 @@ export function ConveniosConfigTab() {
     // Clinic Settings State
     const [selectedRegime, setSelectedRegime] = useState<'PRODUCAO' | 'RECEBIMENTO'>('PRODUCAO')
     const [selectedPolicy, setSelectedPolicy] = useState<'CLINICA_ABSORVE' | 'DESCONTA_PROFISSIONAL' | 'DESCONTA_SE_MANTIDA'>('CLINICA_ABSORVE')
+    const [selectedHashAlgo, setSelectedHashAlgo] = useState<'LEGACY_SHA256_JSON' | 'ANS_MD5_CANONICAL'>('LEGACY_SHA256_JSON')
     const [initialRegime, setInitialRegime] = useState<'PRODUCAO' | 'RECEBIMENTO'>('PRODUCAO')
     const [initialPolicy, setInitialPolicy] = useState<'CLINICA_ABSORVE' | 'DESCONTA_PROFISSIONAL' | 'DESCONTA_SE_MANTIDA'>('CLINICA_ABSORVE')
+    const [initialHashAlgo, setInitialHashAlgo] = useState<'LEGACY_SHA256_JSON' | 'ANS_MD5_CANONICAL'>('LEGACY_SHA256_JSON')
     const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
 
@@ -89,10 +92,13 @@ export function ConveniosConfigTab() {
         if (clinicData) {
             const regime = (clinicData.repasse_regime as 'PRODUCAO' | 'RECEBIMENTO') || 'PRODUCAO'
             const policy = (clinicData.glosa_policy as 'CLINICA_ABSORVE' | 'DESCONTA_PROFISSIONAL' | 'DESCONTA_SE_MANTIDA') || 'CLINICA_ABSORVE'
+            const hashAlgo = (clinicData.tiss_hash_algorithm as 'LEGACY_SHA256_JSON' | 'ANS_MD5_CANONICAL') || 'LEGACY_SHA256_JSON'
             setSelectedRegime(regime)
             setSelectedPolicy(policy)
+            setSelectedHashAlgo(hashAlgo)
             setInitialRegime(regime)
             setInitialPolicy(policy)
+            setInitialHashAlgo(hashAlgo)
             setLastUpdatedAt(clinicData.updated_at || null)
         }
     }, [clinicData])
@@ -110,7 +116,7 @@ export function ConveniosConfigTab() {
         }
     }, [insurances])
 
-    const hasChanges = selectedRegime !== initialRegime || selectedPolicy !== initialPolicy
+    const hasChanges = selectedRegime !== initialRegime || selectedPolicy !== initialPolicy || selectedHashAlgo !== initialHashAlgo
 
     // Mutation: Update Clinic Settings
     const updateClinicMutation = useMutation({
@@ -122,6 +128,7 @@ export function ConveniosConfigTab() {
                 body: JSON.stringify({
                     repasse_regime: selectedRegime,
                     glosa_policy: selectedPolicy,
+                    tiss_hash_algorithm: selectedHashAlgo,
                 })
             })
 
@@ -132,10 +139,11 @@ export function ConveniosConfigTab() {
             return res.json()
         },
         onSuccess: () => {
-            toast.success('Configurações de repasse atualizadas com sucesso')
+            toast.success('Configurações de faturamento e repasse atualizadas com sucesso')
             setIsConfirmOpen(false)
             setInitialRegime(selectedRegime)
             setInitialPolicy(selectedPolicy)
+            setInitialHashAlgo(selectedHashAlgo)
             queryClient.invalidateQueries({ queryKey: ['clinic-settings-repasse'] })
         },
         onError: (err: any) => {
@@ -213,8 +221,8 @@ export function ConveniosConfigTab() {
                 </div>
             </div>
 
-            {/* Configuração de Regime e Glosa */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Configuração de Regime, Glosa e Hash */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Regime de Repasse */}
                 <Card className="rounded-xl border border-border shadow-xs">
                     <CardHeader className="p-4 pb-3">
@@ -351,6 +359,60 @@ export function ConveniosConfigTab() {
                                     </p>
                                 </>
                             )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Algoritmo de Hash TISS */}
+                <Card className="rounded-xl border border-border shadow-xs md:col-span-2 lg:col-span-1">
+                    <CardHeader className="p-4 pb-3">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                <Hash className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                Algoritmo de Hash do Lote TISS
+                            </CardTitle>
+                            <Badge variant="outline" className="text-[10px]">
+                                {selectedHashAlgo === 'LEGACY_SHA256_JSON' ? 'Histórico (SHA-256)' : 'ANS MD5 (Experimental)'}
+                            </Badge>
+                        </div>
+                        <CardDescription className="text-xs">
+                            Define o algoritmo de cálculo do hash de integridade gravado na mensagem XML do lote
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-1 space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Algoritmo Ativo</Label>
+                            <Select
+                                value={selectedHashAlgo}
+                                onValueChange={(val: 'LEGACY_SHA256_JSON' | 'ANS_MD5_CANONICAL') => setSelectedHashAlgo(val)}
+                                disabled={!canEdit}
+                            >
+                                <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="LEGACY_SHA256_JSON">
+                                        <div className="py-0.5">
+                                            <span className="font-medium text-xs">Padrão Histórico (SHA-256 / Compatibilidade)</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="ANS_MD5_CANONICAL">
+                                        <div className="py-0.5">
+                                            <span className="font-medium text-xs">Padrão ANS (MD5 Canônico - Experimental)</span>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-xs space-y-1.5 border border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200">
+                            <p className="font-semibold flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                Aviso de Homologação:
+                            </p>
+                            <p className="text-[11px] leading-relaxed">
+                                O modo padrão ANS ainda NÃO foi validado com uma operadora real. Não altere sem orientação técnica. O padrão histórico mantém 100% de compatibilidade com os lotes já processados.
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -514,6 +576,7 @@ export function ConveniosConfigTab() {
                         <div className="p-3 bg-muted/40 border border-border rounded-lg space-y-1.5 font-mono text-[11px]">
                             <p><span className="font-semibold text-foreground">Novo Regime:</span> {selectedRegime === 'PRODUCAO' ? 'Por Produção' : 'Por Recebimento'}</p>
                             <p><span className="font-semibold text-foreground">Nova Política de Glosa:</span> {selectedPolicy}</p>
+                            <p><span className="font-semibold text-foreground">Algoritmo de Hash TISS:</span> {selectedHashAlgo === 'LEGACY_SHA256_JSON' ? 'Histórico (SHA-256)' : 'Padrão ANS (MD5 Canônico)'}</p>
                             <p><span className="font-semibold text-foreground">Responsável pela alteração:</span> {user?.email || 'Administrador da Clínica'}</p>
                             <p><span className="font-semibold text-foreground">Data/Hora:</span> {new Date().toLocaleString('pt-BR')}</p>
                         </div>

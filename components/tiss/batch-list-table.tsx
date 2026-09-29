@@ -16,7 +16,35 @@ import {
     ShieldCheck,
     PenTool,
     Loader2,
+    RotateCcw,
 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -123,8 +151,78 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [validatingId, setValidatingId] = useState<string | null>(null);
     const [signingId, setSigningId] = useState<string | null>(null);
+    const [undoBatch, setUndoBatch] = useState<TissBatch | null>(null);
+    const [isUndoing, setIsUndoing] = useState(false);
 
-    // Validar XML do lote
+    // Registro de Envio do Lote
+    const [submitBatch, setSubmitBatch] = useState<TissBatch | null>(null);
+    const [submissionDate, setSubmissionDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [submissionChannel, setSubmissionChannel] = useState<string>('PORTAL_OPERADORA');
+    const [protocolNumber, setProtocolNumber] = useState<string>('');
+    const [submissionNotes, setSubmissionNotes] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Desfazer retorno com confirmação
+    const handleUndoReturn = async () => {
+        if (!undoBatch) return;
+        setIsUndoing(true);
+        try {
+            const res = await fetch(`/api/tiss/returns/${undoBatch.id}/undo`, {
+                method: 'POST',
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Falha ao desfazer retorno');
+            }
+            toast.success(data.message || 'Retorno desfeito com sucesso');
+            setUndoBatch(null);
+            onRefresh();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao desfazer retorno');
+        } finally {
+            setIsUndoing(false);
+        }
+    };
+
+    // Registrar Envio do Lote à Operadora
+    const handleRegisterSubmission = async () => {
+        if (!submitBatch) return;
+        if (!protocolNumber.trim()) {
+            toast.error('Informe o número de protocolo ou comprovante');
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const formattedNotes = submissionNotes
+                ? `${submissionNotes} [Canal: ${submissionChannel}]`
+                : `[Canal: ${submissionChannel}]`;
+
+            const res = await fetch(`/api/tiss/batches/${submitBatch.id}/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    submission_date: submissionDate,
+                    protocol_number: protocolNumber.trim(),
+                    notes: formattedNotes,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Falha ao registrar envio do lote');
+            }
+            toast.success('Envio do lote registrado com sucesso');
+            setSubmitBatch(null);
+            setProtocolNumber('');
+            setSubmissionNotes('');
+            onRefresh();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao registrar envio');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Validação estrutural do XML do lote
     const handleValidateXSD = async (batch: TissBatch) => {
         if (!batch.id) {
             toast.error('Lote inválido');
@@ -143,16 +241,16 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
             const result = await response.json();
 
             if (result.valid) {
-                toast.success('XML válido! Pronto para assinatura.', {
-                    description: `Schema ${result.schemaVersion}`,
+                toast.success('Validação estrutural aprovada.', {
+                    description: `Validação estrutural simplificada (não substitui a validação oficial da operadora). Schema ${result.schemaVersion}`,
                 });
             } else {
-                toast.error(`Erros de validação: ${result.errors.length}`, {
+                toast.error(`Pendências na estrutura: ${result.errors.length}`, {
                     description: result.errors[0]?.message || 'Verifique o XML',
                 });
             }
         } catch (error: any) {
-            toast.error('Erro ao validar XML');
+            toast.error('Erro ao validar XML do lote');
         } finally {
             setValidatingId(null);
         }
@@ -372,7 +470,7 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                                 </DropdownMenuItem>
                                             )}
 
-                                            {/* Validação XSD */}
+                                            {/* Validação Estrutural */}
                                             <DropdownMenuItem
                                                 onClick={() => handleValidateXSD(batch)}
                                                 disabled={validatingId === batch.id}
@@ -382,8 +480,24 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                                 ) : (
                                                     <ShieldCheck className="mr-2 h-4 w-4" />
                                                 )}
-                                                {validatingId === batch.id ? 'Validando...' : 'Validar XSD'}
+                                                {validatingId === batch.id ? 'Validando...' : 'Validação Estrutural'}
                                             </DropdownMenuItem>
+
+                                            {/* Registrar Envio à Operadora */}
+                                            {['DRAFT', 'VALID'].includes(batch.status) && (
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSubmitBatch(batch);
+                                                        setSubmissionDate(new Date().toISOString().split('T')[0]);
+                                                        setProtocolNumber(batch.protocol_number || '');
+                                                        setSubmissionNotes('');
+                                                    }}
+                                                    className="text-emerald-700 dark:text-emerald-400 font-medium cursor-pointer"
+                                                >
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                    Registrar Envio do Lote
+                                                </DropdownMenuItem>
+                                            )}
 
                                             {/* Assinatura Digital */}
                                             <DropdownMenuItem
@@ -397,6 +511,20 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                                 )}
                                                 {signingId === batch.id ? 'Assinando...' : 'Assinar Digitalmente'}
                                             </DropdownMenuItem>
+
+                                            {/* Desfazer Retorno */}
+                                            {['APPROVED', 'PARTIAL', 'DENIED'].includes(batch.status) && (
+                                                <>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => setUndoBatch(batch)}
+                                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                                    >
+                                                        <RotateCcw className="mr-2 h-4 w-4" />
+                                                        Desfazer Retorno
+                                                    </DropdownMenuItem>
+                                                </>
+                                            )}
 
                                             {batch.status === 'DRAFT' && (
                                                 <>
@@ -419,6 +547,131 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                     </TableBody>
                 </Table>
             </CardContent>
-        </Card >
+
+            {/* Modal Padrão de Confirmação para Desfazer Retorno */}
+            <AlertDialog open={!!undoBatch} onOpenChange={(open) => !open && setUndoBatch(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Desfazer Conciliação de Retorno?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação estornará os lançamentos contábeis de retorno do Lote nº <strong>{undoBatch?.batch_number}</strong>, cancelará as glosas associadas e restaurará o lote e suas guias para o status <strong>Enviado</strong>.
+                            <br /><br />
+                            A operação só é permitida se a competência contábil não estiver fechada e não houver recursos ativos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isUndoing}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleUndoReturn}
+                            disabled={isUndoing}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isUndoing ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Desfazendo...
+                                </>
+                            ) : (
+                                'Confirmar Desfazimento'
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Modal de Registro de Envio do Lote à Operadora */}
+            <Dialog open={!!submitBatch} onOpenChange={(open) => !open && setSubmitBatch(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                            <Send className="w-5 h-5 text-emerald-600" />
+                            Registrar Envio do Lote à Operadora
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">
+                            Informe os dados do protocolo e canal utilizados para envio do Lote nº <strong>{submitBatch?.batch_number}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2 text-xs">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold">Data do Envio</Label>
+                            <Input
+                                type="date"
+                                value={submissionDate}
+                                onChange={(e) => setSubmissionDate(e.target.value)}
+                                className="h-10 text-xs min-h-[44px]"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold">Canal de Envio</Label>
+                            <Select
+                                value={submissionChannel}
+                                onValueChange={setSubmissionChannel}
+                            >
+                                <SelectTrigger className="h-10 text-xs min-h-[44px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="PORTAL_OPERADORA">Portal Web da Operadora</SelectItem>
+                                    <SelectItem value="WEBSERVICE">WebService TISS Automático</SelectItem>
+                                    <SelectItem value="EMAIL">E-mail Institucional</SelectItem>
+                                    <SelectItem value="CORREIO_FISICO">Correspondência Física / Malote</SelectItem>
+                                    <SelectItem value="OUTRO">Outro Meio Homologado</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold">Número de Protocolo / Recibo *</Label>
+                            <Input
+                                placeholder="Ex: PROT-2026-987654"
+                                value={protocolNumber}
+                                onChange={(e) => setProtocolNumber(e.target.value)}
+                                className="h-10 text-xs font-mono min-h-[44px]"
+                            />
+                            <p className="text-[11px] text-muted-foreground">
+                                Número gerado pelo portal ou recibo fornecido pela operadora.
+                            </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold">Observações / Anotações</Label>
+                            <Input
+                                placeholder="Ex: Arquivo enviado e validado sem erros no portal"
+                                value={submissionNotes}
+                                onChange={(e) => setSubmissionNotes(e.target.value)}
+                                className="h-10 text-xs min-h-[44px]"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setSubmitBatch(null)}
+                            disabled={isSubmitting}
+                            className="h-10 text-xs min-h-[44px]"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleRegisterSubmission}
+                            disabled={isSubmitting}
+                            className="h-10 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px]"
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                    Registrando...
+                                </>
+                            ) : (
+                                'Confirmar Envio'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Card>
     );
 }

@@ -296,16 +296,28 @@ export function TabelaPrecosTab() {
                 </div>
             </div>
 
-            {/* Aviso de Catálogo TUSS */}
-            <div className="flex items-start gap-3 p-3.5 rounded-lg border border-amber-200 bg-amber-50/70 dark:border-amber-900/50 dark:bg-amber-950/20 text-xs text-amber-900 dark:text-amber-300">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-                <div className="space-y-0.5">
-                    <p className="font-semibold">Catálogo TUSS em revisão cadastral</p>
-                    <p className="text-muted-foreground dark:text-amber-400/80">
-                        Procedimentos cadastrados como catálogo base possuem status não verificado. Para faturamento oficial sem risco de glosa, importe a tabela oficial TUSS da ANS através do botão "Importar TUSS".
-                    </p>
+            {/* Aviso de Catálogo TUSS Orientado por Dados */}
+            {rules.length === 0 ? (
+                <div className="flex items-start gap-3 p-3.5 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-200">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <div className="space-y-0.5">
+                        <p className="font-semibold text-amber-950 dark:text-amber-100">Catálogo TUSS não importado</p>
+                        <p className="text-amber-800 dark:text-amber-300">
+                            Catálogo TUSS não importado. Importe a tabela oficial da ANS antes de faturar.
+                        </p>
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="flex items-start gap-3 p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/30 text-xs text-foreground">
+                    <Info className="w-4 h-4 shrink-0 text-muted-foreground mt-0.5" />
+                    <div className="space-y-0.5">
+                        <p className="font-semibold">Catálogo e Tabela de Preços Ativos</p>
+                        <p className="text-muted-foreground">
+                            Utilize procedimentos homologados pela sua operadora. Em caso de atualizações de rol da ANS, importe a nova planilha oficial pelo botão "Importar TUSS".
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Filtros */}
             <Card className="rounded-xl border border-border shadow-xs">
@@ -330,7 +342,7 @@ export function TabelaPrecosTab() {
                             <div className="relative">
                                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                                 <Input
-                                    placeholder="Ex: 10101012, Consulta..."
+                                    placeholder="Buscar por código ou descrição do procedimento..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-8 h-10 text-xs"
@@ -503,7 +515,7 @@ export function TabelaPrecosTab() {
                                     <div className="relative">
                                         <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                                         <Input
-                                            placeholder="Digite o código (ex: 10101012) ou nome..."
+                                            placeholder="Digite o código TUSS ou nome do procedimento..."
                                             value={formTussSearch}
                                             onChange={(e) => setFormTussSearch(e.target.value)}
                                             className="pl-8 h-10 text-xs"
@@ -616,12 +628,12 @@ export function TabelaPrecosTab() {
                     <div className="space-y-3 py-2">
                         <textarea
                             className="w-full h-44 p-3 font-mono text-xs border border-border rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                            placeholder="10101012;Consulta em consultório (no horário normal ou preestabelecido)&#10;20104049;Sessão de psicoterapia individual&#10;20104103;Sessão de fisioterapia motora"
+                            placeholder="codigo_tuss;descricao_procedimento&#10;Exemplo: cole aqui as linhas do arquivo CSV exportado da operadora ou da ANS"
                             value={csvContent}
                             onChange={(e) => setCsvContent(e.target.value)}
                         />
                         <p className="text-[11px] text-muted-foreground">
-                            Compatível com planilhas oficiais da ANS e tabelas das operadoras.
+                            Aviso de Integridade: Códigos de procedimentos e o catálogo de glosas da ANS são cadastrados inicialmente como [NAO_VERIFICADO]. Importe o arquivo CSV oficial da ANS ou da sua operadora para atualizar a base com segurança.
                         </p>
                     </div>
 
