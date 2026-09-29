@@ -71,7 +71,7 @@ import { cn } from '@/lib/utils'
 export interface HelpItem {
     id: string
     title: string
-    category: 'Principal' | 'Agendamento' | 'Equipe' | 'Prontuário' | 'Terapia' | 'Financeiro' | 'Comunicação' | 'Gestão' | 'Configurações' | 'Administração'
+    category: 'Principal' | 'Agendamento' | 'Equipe' | 'Prontuário' | 'Terapia' | 'Financeiro' | 'Comunicação' | 'Gestão' | 'Configurações' | 'Administração' | 'Convênios e TISS'
     icon: React.ComponentType<{ className?: string }>
     href: string
     whatIsIt: string
@@ -625,6 +625,140 @@ export const helpItems: HelpItem[] = [
         minPlan: 'Professional',
         roles: ['CLINIC_ADMIN'],
         tags: ['nps', 'satisfação', 'pesquisa de qualidade', 'feedback de famílias']
+    },
+
+    // ==========================================
+    // 6. CONVÊNIOS E TISS
+    // ==========================================
+    {
+        id: 'convenios-operadoras-planos',
+        title: 'Convênios: Operadoras, Planos e Regras de Repasse',
+        category: 'Convênios e TISS',
+        icon: Building2,
+        href: '/dashboard/convenios',
+        whatIsIt: 'Módulo de parametrização de operadoras de planos de saúde credenciadas pela clínica, planos aceitos e configuração de regras de repasse. Permite cadastrar dados institucionais, registro ANS, versão do padrão TISS suportada (04.01.00 ou 03.05.00), dia de fechamento/corte do faturamento, prazos contratuais de recurso de glosa e definir o regime de repasse da clínica (Produção x Recebimento) e política de glosas (Clínica Absorve, Desconta do Profissional, Desconta se Mantida) por operadora.',
+        whenToUse: 'Ao credenciar uma nova operadora de saúde na clínica, atualizar prazos contratuais de fechamento, alterar o regime de repasse médico ou cadastrar novas categorias de planos aceitos.',
+        howToUse: 'Acesse Menu Lateral > Convênios. Na aba "Operadoras", cadastre nome e registro ANS. Na aba "Planos", vincule os planos contratados. Na aba "Regras e Repasse", selecione o regime de repasse da clínica, a política de glosa padrão e os prazos de fechamento e recurso de cada operadora (com modal de confirmação de não-retroatividade).',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+        tags: ['convênios', 'operadoras', 'planos de saúde', 'ans', 'tiss', 'registro ans', 'credenciamento', 'regras de repasse', 'política de glosa']
+    },
+    {
+        id: 'tabela-precos-tuss',
+        title: 'Tabela de Preços e Catálogo TUSS',
+        category: 'Convênios e TISS',
+        icon: DollarSign,
+        href: '/dashboard/convenios',
+        whatIsIt: 'Catálogo de procedimentos TUSS (Terminologia Unificada da Saúde Suplementar da ANS) vinculado às regras de preço negociadas por operadora e plano. Permite definir o valor contratual de cada procedimento, controle de obrigatoriedade de senha/autorização prévia e limite máximo de sessões permitidas.',
+        whenToUse: 'Para cadastrar os valores contratuais acordados com cada convênio e configurar as travas anti-glosa que exigem senha prévia.',
+        howToUse: 'Acesse Menu Lateral > Convênios > aba "Tabela de Preços e TUSS". Clique em "Novo Preço / Procedimento", pesquise pelo código TUSS oficial de 8 dígitos ou nome (ex: 10101012 para Consulta em consultório), selecione a operadora, defina o valor em Reais e ative a chave "Exige Autorização". Para importar tabelas completas, utilize o botão "Importar TUSS" com planilha CSV.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['tuss', 'tabela de preços', 'procedimentos', 'valores contratados', 'autorização obrigatória', 'anti-glosa']
+    },
+    {
+        id: 'conferencia-elegibilidade',
+        title: 'Conferência de Elegibilidade de Beneficiários',
+        category: 'Convênios e TISS',
+        icon: Shield,
+        href: '/dashboard/convenios',
+        whatIsIt: 'Módulo de verificação cadastral imediata e histórico de elegibilidade de pacientes de convênio. Audita formato do número da carteirinha, data de validade do cartão, vigência do plano e registra o log formal da conferência manual realizada no portal da operadora.',
+        whenToUse: 'Antes de realizar agendamentos ou no momento da recepção presencial para garantir que o plano do paciente está ativo e evitar glosas por perda de cobertura.',
+        howToUse: 'Acesse Menu Lateral > Convênios > aba "Elegibilidade", selecione a operadora, digite o número da carteirinha e clique em "Verificar Elegibilidade". O sistema valida as regras internas e registra a auditoria com data, hora e recepcionista responsável.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL'],
+        tags: ['elegibilidade', 'carteirinha', 'validade', 'cobertura', 'beneficiário ativo', 'carência']
+    },
+    {
+        id: 'autorizacao-saldo-sessoes',
+        title: 'Autorização Prévia e Saldo de Sessões',
+        category: 'Convênios e TISS',
+        icon: Key,
+        href: '/dashboard/tiss/autorizacao',
+        whatIsIt: 'Controle de senhas de autorização prévia emitidas pelas operadoras para terapias seriadas (Fonoaudiologia, Terapia Ocupacional, Psicologia, Fisioterapia e ABA). Monitora em tempo real a quantidade de sessões autorizadas, sessões já executadas e saldo restante, emitindo alertas visuais de esgotamento ao atingir 80% do pacote.',
+        whenToUse: 'Ao receber o token/senha de autorização prévia da operadora para tratamentos multidisciplinares contínuos.',
+        howToUse: 'Acesse Menu Lateral > Faturamento TISS > Autorizações e clique em "Nova Autorização". Selecione o paciente, a operadora, informe o número da senha, a validade e a quantidade de sessões liberadas. A cada atendimento concluído, o sistema abate automaticamente 1 sessão do saldo.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL'],
+        tags: ['autorização', 'senha', 'token', 'saldo de sessões', 'terapias multidisciplinares', 'fono', 'psicologia', 'to']
+    },
+    {
+        id: 'emissao-guias-tiss',
+        title: 'Emissão e Validação de Guias TISS',
+        category: 'Convênios e TISS',
+        icon: FileText,
+        href: '/dashboard/consultas',
+        whatIsIt: 'Geração automatizada de Guias de Consulta e Guias de SP/SADT no padrão oficial TISS a partir dos atendimentos concluídos na clínica. Pré-preenche operadora, carteirinha, médico executante com conselho profissional e CBO, código TUSS e valor contratado. Possui trava anti-duplicidade em banco de dados e checklist anti-glosa com aviso de pendências.',
+        whenToUse: 'Após a conclusão de atendimentos médicos ou terapêuticos de convênio, ou no encerramento da competência para emissão de guias em massa.',
+        howToUse: 'No atendimento individual: Menu Lateral > Consultas > aba "Concluídas", localize o atendimento e clique no botão verde "Gerar Guia TISS". Em massa: clique no botão "Gerar Guias TISS do Período" no topo da página de Consultas, defina o intervalo de datas e a operadora, e o CliniGO emitirá todas as guias pendentes com um único clique.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL'],
+        tags: ['guia tiss', 'guia de consulta', 'sp/sadt', 'geração em massa', 'anti-glosa', 'duplicidade']
+    },
+    {
+        id: 'lotes-tiss-xml',
+        title: 'Lotes de Faturamento TISS e Envio XML',
+        category: 'Convênios e TISS',
+        icon: Layers,
+        href: '/dashboard/tiss/batches',
+        whatIsIt: 'Agrupamento mensal de guias por operadora para fechamento de faturamento. Executa a validação de regras de integridade do lote, compila os dados no padrão XML oficial da ANS (versões 04.01.00 e 03.05.00) e calcula a assinatura digital Hash MD5 obrigatória. Permite o download do arquivo pronto para upload no portal da operadora e registro do protocolo de envio.',
+        whenToUse: 'Mensalmente na data de corte de cada operadora para empacotar as contas e gerar o arquivo de cobrança.',
+        howToUse: 'Acesse Menu Lateral > Faturamento TISS > Lotes e clique em "Novo Lote". Selecione a operadora e o período. Abra o lote criado, clique em "Validar Lote" para auditar pendências cadastrais e em seguida clique em "Gerar XML". Baixe o arquivo gerado via botão "Download XML", faça o upload no portal da operadora e clique em "Marcar como Enviado" anotando o número do protocolo.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['lote tiss', 'xml tiss', 'hash md5', 'fechamento mensal', 'download xml', 'protocolo de envio']
+    },
+    {
+        id: 'retorno-conciliacao-tiss',
+        title: 'Importação de Retorno, Conciliação Financeira e Desfazimento',
+        category: 'Convênios e TISS',
+        icon: Upload,
+        href: '/dashboard/tiss/batches',
+        whatIsIt: 'Módulo de importação de demonstrativos de retorno emitidos pelas operadoras após auditoria das contas. Suporta arquivos XML e planilhas CSV (com modelo padronizado disponível para download no modal de upload) com verificação de integridade por hash anti-duplicação. Realiza o casamento automático das guias pelo número do prestador, atualiza o status de pagamento, registra as contas recebidas no módulo financeiro, segrega os valores glosados e dispõe de botão "Desfazer Retorno" para reversão transacional completa caso necessário.',
+        whenToUse: 'Assim que a operadora disponibilizar o demonstrativo de análise da conta no portal do prestador ou quando for necessário reverter uma conciliação importada por engano.',
+        howToUse: 'Acesse Menu Lateral > Faturamento TISS > Lotes, selecione o lote enviado e clique em "Importar Retorno". No modal, você pode baixar o modelo de planilha CSV ou arrastar diretamente o arquivo da operadora. Para desfeita de conciliação equivocada, acesse o lote já processado e clique no botão de alerta "Desfazer Importação" para reverter guias e finanças ao estado anterior.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['retorno tiss', 'conciliação financeira', 'demonstrativo de análise', 'baixa automática', 'xml retorno', 'csv', 'desfazer retorno', 'undo']
+    },
+    {
+        id: 'gestao-glosas-recursos',
+        title: 'Gestão de Glosas e Recursos ANS',
+        category: 'Convênios e TISS',
+        icon: ShieldAlert,
+        href: '/dashboard/tiss/glosas',
+        whatIsIt: 'Painel especializado para controle, auditoria e contestação de cortes efetuados pelas operadoras. Classifica as glosas em Administrativas ou Técnicas, mapeia os códigos oficiais da tabela de motivos da ANS, calcula o prazo limite para recurso e organiza o dossiê com anexos comprobatórios (laudo, evolução de prontuário, autorização prévia e protocolo).',
+        whenToUse: 'Sempre que houver valores glosados em demonstrativos de retorno e a clínica desejar recuperar os recursos financeiros.',
+        howToUse: 'Acesse Menu Lateral > Faturamento TISS > Glosas. Localize a guia glosada e clique em "Contestar Glosa". Selecione o motivo oficial da ANS, informe a justificativa técnica, anexe os documentos comprobatórios e envie o recurso. Acompanhe o status do recurso até o desfecho (Acatado ou Mantido).',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['glosas', 'recursos de glosa', 'motivos ans', 'contestação', 'auditoria médica', 'perda de faturamento']
+    },
+    {
+        id: 'repasse-convenios-glosas',
+        title: 'Repasse Médico de Convênios e Políticas de Glosa',
+        category: 'Convênios e TISS',
+        icon: Wallet,
+        href: '/dashboard/financial/producao',
+        whatIsIt: 'Motor de cálculo de repasse aos profissionais de saúde parametrizável por regime: Regime de Produção (repasse gerado pelo atendimento realizado na competência) ou Regime de Recebimento (repasse de convênio liberado somente após a liquidação financeira da operadora). Suporta três políticas de glosa configuráveis (Clínica Absorve, Desconta do Profissional, ou Desconta se Mantida após recurso) com total sigilo de dados (o profissional nunca vê operadora, plano ou carteirinha).',
+        whenToUse: 'No fechamento mensal da folha de pagamento e apuração de honorários de médicos, psicólogos e terapeutas.',
+        howToUse: 'Acesse Menu Lateral > Financeiro > Produção por Profissional. O sistema apura os atendimentos segundo o regime configurado da clínica. Para conferência individual do profissional, o médico acessa /dashboard/meu-financeiro/producao onde visualiza exclusivamente seus valores a receber com total sigilo comercial.',
+        minPlan: 'Avançado',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL', 'DOCTOR'],
+        tags: ['repasse médico', 'regime de recebimento', 'regime de produção', 'políticas de glosa', 'sigilo médico', 'honorários']
+    },
+    {
+        id: 'painel-indicadores-tiss',
+        title: 'Painel e Indicadores de Faturamento TISS',
+        category: 'Convênios e TISS',
+        icon: BarChart3,
+        href: '/dashboard/tiss',
+        whatIsIt: 'Dashboard executivo consolidado com indicadores de faturamento de saúde suplementar: volume total faturado no mês por operadora, taxa percentual de glosa global e por convênio, ranking de motivos de glosa mais frequentes da ANS, tempo médio de liquidação e aging de recebíveis de convênio.',
+        whenToUse: 'Para reuniões de diretoria, negociações contratuais anuais de reajuste com operadoras e identificação de gargalos operacionais da recepção.',
+        howToUse: 'Acesse Menu Lateral > Faturamento TISS (painel inicial). Consulte os cartões de resumo com faturamento bruto, valores aprovados, valores glosados e utilize os gráficos analíticos para planejar ações corretivas.',
+        minPlan: 'Avançado',
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        tags: ['indicadores tiss', 'taxa de glosa', 'dashboard convênios', 'aging', 'tempo de pagamento', 'kpis']
     },
 
     // ==========================================
@@ -1518,6 +1652,7 @@ export default function HelpPage() {
         'Equipe',
         'Prontuário',
         'Terapia',
+        'Convênios e TISS',
         'Financeiro',
         'Comunicação',
         'Gestão',

@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### Implantação e Auditoria Cética de Convênios, TISS, Glosas e Repasse Médico
+- **Módulos**:
+  - Faturamento / TISS → Gerador de Hash → `lib/services/tiss/tiss-hash-calculator.ts` → `calculateTissHash()` (reversão do padrão para SHA-256 legado, mantendo MD5 canônico atrás de flag de clínica `tiss_hash_algorithm`)
+  - Banco de Dados / Migrations → Schema TISS e RLS → `supabase/migrations/20260929120000_tiss_convenios_glosas_repasse.sql` (índice único que exclui apenas CANCELLED mantendo guias glosadas protegidas, checagem prévia não-destrutiva de duplicatas e isolamento multi-tenant testado em PostgreSQL real com 0 vazamento)
+  - Faturamento / Retornos TISS → Desfazimento e Estorno → `app/api/tiss/returns/[id]/undo/route.ts` → `POST` (estorno contábil soft-delete, lançamento de contrapartida, cancelamento de glosas e bloqueio em caso de recurso ativo ou liquidação prévia)
+  - Faturamento / Lotes TISS → Detalhes do Lote → `app/dashboard/(clinic)/tiss/batches/[id]/page.tsx` → `handleUndoReturn()` (botão "Desfazer Importação" com área de toque mínima de 44px e diálogo de confirmação)
+  - Financeiro / Repasse Médico → Cálculo e Precedência → `lib/services/repasse-calculator.ts` → `computeRepasseFromRules()`, `computeAdvancedRepasse()` (regimes de produção e recebimento, políticas de absorção e desconto de glosa com prova de regressão centavo a centavo)
+  - Faturamento / Convênios & Preços → Catálogo TUSS → `components/tiss/tabela-precos-tab.tsx`, `app/api/tiss/tuss/route.ts` (marcação de sementes como NAO_VERIFICADO e aviso de conformidade até importação oficial da tabela ANS)
+  - Segurança / RBAC & Sigilo → Middleware e Handlers → `middleware.ts`, `app/api/financial/production-summary/route.ts`, `app/dashboard/(clinic)/consultas/page.tsx` (blindagem de rotas contra acesso do perfil DOCTOR e omissão de operadora, plano e carteirinha na visão do profissional)
+  - Treinamento / Documentação Comercial → Guia Didático → `docs/GUIA_CONVENIOS_TISS_GLOSAS_REPASSE.md` (expurgo de termos não comprovados, declaração explícita de ausência de testes em navegador e alinhamento do estado real de cada funcionalidade)
+- **Descrição**:
+  - **Contexto**: Correção e validação cirúrgica de faturamento TISS, glosas e repasse médico sob postura estritamente cética.
+  - **Auditoria de Testes e Limitações**: NENHUM teste de navegador (browser) foi executado. Todas as validações foram executadas exclusivamente via código (testes de handlers, TypeScript, ESLint, suíte Jest e engine PostgreSQL pg-mem).
+  - **Segurança e LGPD**: Proibição de vazamento de dados de convênios para médicos/terapeutas validada com 100% de sucesso.
+
 ### Correção e Blindagem do Mecanismo de Hard Refresh Remoto por Clínica via System Master Hub
 - **Módulos**:
   - Super Admin → System Master Hub → `app/system-master-hub/page.tsx` → `hardRefreshClinic`
@@ -672,13 +687,15 @@
 
 ### Psicomotricidade
 - Criado m�dulo isolado para World Sensory.
-- Arquivos: app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/page.tsx, sessao/[sessao_id]/page.tsx, objetivos/page.tsx.
+- Arquivos: app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/page.tsx, sessao/[sessao_id]/page.tsx, objetivos/page.tsx.
+
 
 ### Psicomotricidade - Correção de Capa e Objetivos
 - **Módulo**: Terapia -> Psicomotricidade
 - **Caminho**: app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/editar-capa/page.tsx
 - **Componente**: EditarCapaPsicomotricidadePage
-- **Descrição**: Criada a tela de preenchimento da Ficha Capa (diagnóstico, responsável, início de acompanhamento, frequência, duração padrão e resumo clínico). Corrigido o modal de objetivos com botão de persistência validado.
+- **Descrição**: Criada a tela de preenchimento da Ficha Capa (diagnóstico, responsável, início de acompanhamento, frequência, duração padrão e resumo clínico). Corrigido o modal de objetivos com botão de persistência validado.
+
 
 ### Psicomotricidade - Interface Completa do Plano de Sessão (World Sensory)
 - **Módulo**: Terapia -> Psicomotricidade
@@ -693,13 +710,15 @@
   - Seção 6: Registro objetivo de desempenho com cálculo dinâmico de % de acerto, seletor de nível de ajuda e alcance do critério (Sim, Não, Parcial).
   - Seção 7: Intercorrências e variáveis contextuais com checkboxes dedicados.
   - Seção 8: Análise clínica da sessão (facilitadores, dificuldades, alteração de planejamento, estratégias).
-  - Seção 9: Decisão para a próxima sessão (15 checkboxes de conduta clínica e observações).
+  - Seção 9: Decisão para a próxima sessão (15 checkboxes de conduta clínica e observações).
+
 
 ### Ajuste de Layout - Cabeçalho da Sessão (Psicomotricidade)
 - **Módulo**: Terapia -> Psicomotricidade
 - **Caminho**: app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/sessao/[sessao_id]/page.tsx
 - **Componente**: SessaoPsicomotricidadePage
-- **Descrição**: Corrigido o corte de texto nos seletores de Tipo de Sessão e Ambiente (substituído grid rígido por grid balanceado de 12 colunas com whitespace-nowrap e padding interno adequado para que 'Grupo', 'Individual', 'Interno', 'Externo', 'Misto' e o tempo da sessão nunca quebrem ou sobreponham).
+- **Descrição**: Corrigido o corte de texto nos seletores de Tipo de Sessão e Ambiente (substituído grid rígido por grid balanceado de 12 colunas com whitespace-nowrap e padding interno adequado para que 'Grupo', 'Individual', 'Interno', 'Externo', 'Misto' e o tempo da sessão nunca quebrem ou sobreponham).
+
 
 ### Psicomotricidade - Catálogo Oficial World Sensory e Grade Interativa de Desempenho
 - **Módulo**: Terapia -> Psicomotricidade
@@ -709,7 +728,8 @@
   - Integração da Biblioteca Oficial dos 55 Objetivos World Sensory (Categorias A a K: ERP, ECC, CMG, EQP, COM, PMP, OET, ATR, FRC, HSP, AUT).
   - Seção 3 (Objetivos Prioritários): Botão de destaque para abrir o catálogo categorizado com busca por código e texto, adição de objetivos personalizados e edição inline de critérios em tempo real.
   - Seção 6 (Registro Objetivo de Desempenho): Sincronização viva com os objetivos da Seção 3, inputs de tentativas e acertos, cálculo automático de % de acerto, seletores de nível de ajuda e alcance do critério.
-  - Título do cabeçalho fixo padronizado em linha única horizontal ('PLANO DE SESSÃO — EDUCAÇÃO FÍSICA ESPECIAL / PSICOMOTRICIDADE') sem quebras ou sobreposição.
+  - Título do cabeçalho fixo padronizado em linha única horizontal ('PLANO DE SESSÃO — EDUCAÇÃO FÍSICA ESPECIAL / PSICOMOTRICIDADE') sem quebras ou sobreposição.
+
 
 ### Ajuste de Viewport e Scroll - Modal Editar Paciente e Novo Paciente
 - **Módulo**: Pacientes
@@ -718,7 +738,8 @@
 - **Descrição**:
   - Limitada a altura máxima da janela para max-h-[88vh] com overflow-hidden.
   - Formulário estruturado com lex flex-col e container de campos com scroll suave interno (overflow-y-auto).
-  - Rodapé com os botões  Salvar Alterações e Cancelar fixado na base com order-t e fundo opaco (g-slate-50/80 dark:bg-slate-900/80 backdrop-blur), garantindo visibilidade total e imediata dos botões sem necessidade de tela cheia ou F11.
+  - Rodapé com os botões  Salvar Alterações e Cancelar fixado na base com order-t e fundo opaco (g-slate-50/80 dark:bg-slate-900/80 backdrop-blur), garantindo visibilidade total e imediata dos botões sem necessidade de tela cheia ou F11.
+
 
 ### Psicomotricidade & Terminologia Multidisciplinar - Ativacao e Prontuarios (World Sensory & Geral)
 - **Modulo**: Prontuarios & Gestao de Modulos (Master Hub)
@@ -2187,7 +2208,9 @@
   - Interface Web Autenticação -> pp/(auth)/recuperar-senha/page.tsx (Substituição de ícone genérico pelo logotipo oficial /logo_black.svg, remoção de emojis, mensagens claras de retorno e links de navegação para portais de acesso: Médico, Mobile e Clínica)
   - Interface Web Autenticação -> pp/(auth)/redefinir-senha/[token]/page.tsx (Substituição de ícone pelo logotipo oficial /logo_black.svg, remoção de emojis e redirecionamento conforme perfil)
   - Interface Mobile PWA -> pp/m/login/page.tsx (Adição do link de ação rápida Esqueci minha senha com direcionamento contextualizado)
-  - Backend API Usuários -> pp/api/users/invite/route.ts (Sincronização imediata: ao cadastrar usuário com senha definida pela administração, o status é gravado como is_active: true e ctivation_status: 'active', sem exigir ativação prévia pendente; o papel ole é persistido em aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado automaticamente o registro correspondente na tabela doctors com vínculo de especialidade e dados profissionais)
+  - Backend API Usuários -> pp/api/users/invite/route.ts (Sincronização imediata: ao cadastrar usuário com senha definida pela administração, o status é gravado como is_active: true e ctivation_status: 'active', sem exigir ativação prévia pendente; o papel 
+ole é persistido em 
+aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado automaticamente o registro correspondente na tabela doctors com vínculo de especialidade e dados profissionais)
 - **Descrição Técnica**:
   - **1. Causa Raiz do Erro de Recuperação de Senha**: O middleware.ts interceptava chamadas não autenticadas à API /api/auth/forgot-password e retornava código HTTP 401 Unauthorized, gerando no cliente o alerta genérico Erro ao processar solicitação. A liberação explícita destas rotas públicas restaurou o fluxo end-to-end de emissão de tokens de redefinição com envio via serviço SMTP Hostinger.
   - **2. Ativação de Usuários no Módulo Usuários e Permissões**: Corrigido o fluxo de provisionamento manual de credenciais pela clínica (ex: administração cadastrando login/senha e repassando ao profissional). O usuário agora é criado diretamente como ativo no Supabase Auth e em public.users, com o vínculo profissional em public.doctors garantido, permitindo login imediato ou redefinição de senha sem bloqueios.
@@ -2519,3 +2542,83 @@
     - **Camada 4 (Notificação Institucional)**: Criado o componente `AccessDeniedToast` dentro do layout do dashboard, exibindo toast discreto de acesso negado e limpando automaticamente o parâmetro `error` da barra de endereços.
   - **3. Validação e Testes**:
     - Bateria de testes automatizados executada (`scripts/test_rbac_route_protection.mjs`) com 17 cenários cobrindo todos os perfis (`CLINIC_ADMIN`, `SUPER_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `READONLY`), aprovada com 100% de sucesso.
+
+
+### Item 77: Faturamento TISS, Catálogo TUSS, Travas Anti-Glosa e Validação Cética (Fase 6)
+- **Data**: 29/09/2026
+- **Módulos**: Faturamento TISS, Convênios, Agenda / Consultas, Segurança RLS e Banco de Dados Supabase
+- **Caminho Completo**:
+  - Banco de Dados → `supabase/migrations/20260929120000_tiss_convenios_glosas_repasse.sql`
+  - Catálogo TUSS e Preços → `app/api/tiss/tuss/route.ts` e `app/api/tiss/pricing/route.ts`
+  - Emissão de Guias Pré-Preenchidas → `app/api/tiss/guides/from-appointment/route.ts` e `app/api/tiss/guides/batch-generate/route.ts`
+  - Interface de Gestão de Preços e Aviso de Catálogo → `components/tiss/tabela-precos-tab.tsx` e `app/dashboard/(clinic)/convenios/page.tsx`
+  - Ações TISS no Módulo de Consultas (com RBAC) → `app/dashboard/(clinic)/consultas/page.tsx`
+  - Motor Criptográfico Hash TISS (MD5 / SHA-256) → `lib/services/tiss/tiss-hash-calculator.ts`
+  - Testes Automatizados → `__tests__/tiss/tiss-hash-comparison.test.ts`, `__tests__/tiss/guide-types-and-therapies.test.ts`, `__tests__/security/tiss-rls-isolation.test.ts`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - O sistema demandava digitação manual de guias e faltava pré-preenchimento automático a partir de consultas concluídas com validação de CBO, conselho profissional, validade da carteirinha e saldo de sessões.
+    - O cálculo de hash dos lotes TISS foi auditado: a versão anterior gerava SHA-256 de JSON. Foi implementado o padrão ANS (MD5 canônico), mantendo ambos disponíveis via flag `tiss_hash_algorithm` com fallback seguro.
+    - O catálogo inicial de códigos TUSS foi identificado como não certificado pela ANS.
+  - **2. Solução Implementada e Corrigida**:
+    - **Migration Idempotente com De-duplicação Não-Destrutiva**: `supabase/migrations/20260929120000_tiss_convenios_glosas_repasse.sql` atualizada para marcar duplicatas pré-existentes como `status = 'CANCELLED'` (sem deleção de registros) e criar índice único parcial filtrado (`WHERE status NOT IN ('CANCELLED', 'DENIED')`), permitindo regerar guias canceladas. Isolamento multi-tenant testado e aprovado via RLS em `__tests__/security/tiss-rls-isolation.test.ts`.
+    - **Integridade dos Dados de Referência**: Coluna `source VARCHAR(30) NOT NULL DEFAULT 'NAO_VERIFICADO'` adicionada a `tuss_procedures` e `tiss_glosa_reasons_ans`. Registros importados recebem `source = 'OFICIAL_IMPORTADO'`. Banner informativo incluído em `components/tiss/tabela-precos-tab.tsx` alertando o administrador para carregar a planilha oficial da ANS. Códigos sintéticos não oficiais (ex.: `50000012`) foram removidos e substituídos por códigos confirmados (ex.: `10101012` para Consulta em Consultório).
+    - **Emissão Automática Inteligente**: Endpoint `POST /api/tiss/guides/from-appointment` validado para rotear automaticamente terapias (`20104049`, etc.) para Guia SP/SADT e consultas médicas (`10101012`) para Guia de Consulta, emitindo avisos claros para: CBO/Conselho ausente, carteirinha vencida, procedimento sem preço e saldo de sessões esgotado/baixo. 12 testes aprovados em `__tests__/tiss/guide-types-and-therapies.test.ts`.
+    - **Cálculo de Hash ANS com Vetor Conhecido**: Em `lib/services/tiss/tiss-hash-calculator.ts`, algoritmo `ANS_MD5_CANONICAL` opera com hash MD5 sobre XML canônico e `LEGACY_SHA256_JSON` opera como contingência. Validado contra XSD oficial v4.01.00 com 4 testes aprovados em `__tests__/tiss/tiss-hash-comparison.test.ts`.
+  - **3. Status de Validação**:
+    - **Executado e Aprovado**: Testes Jest de hash, XSD, roteamento de guias/terapias e isolamento multi-tenant RLS executados com 100% de aprovação.
+    - **Ressalva Comercial / Pendência de Produção**: O catálogo TUSS oficial e a homologação do hash XML com webservice/portal real de operadora dependem de arquivos e credenciais fornecidos pelo cliente/operadora.
+
+### Item 78: Conciliação de Retornos TISS, Glosas ANS e Mecanismo de Desfazimento (UNDO) (Fase 6)
+- **Data**: 29/09/2026
+- **Módulos**: Faturamento TISS, Financeiro (Contas a Receber), Glosas e Recursos ANS
+- **Caminho Completo**:
+  - API de Parse e Conciliação → `app/api/tiss/returns/[id]/parse/route.ts`
+  - API de Desfazimento (UNDO) → `app/api/tiss/returns/[id]/undo/route.ts`
+  - Catálogo de Motivos de Glosa ANS → `app/api/tiss/glosas/reasons/route.ts`
+  - Upload de Retorno e Download de Modelo → `components/tiss/upload-return-dialog-v2.tsx` e `app/dashboard/(clinic)/tiss/batches/[id]/page.tsx`
+  - Gestão de Glosas e Recursos → `app/dashboard/(clinic)/tiss/glosas/page.tsx`
+  - Testes Automatizados → `__tests__/tiss/return-parse-and-conciliation.test.ts`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - O parser de retorno continha vulnerabilidade ao dividir linhas por `/[;,]/`, o que fragmentava valores monetários com vírgula decimal brasileira (ex.: `150,00`).
+    - O formato CSV era proprietário e não havia modelo de download para os faturistas nem mecanismo transacional para desfazimento de conciliações equivocadas.
+  - **2. Solução Implementada e Corrigida**:
+    - **Correção do Parser de Retorno**: Implementada detecção dinâmica de delimitador (ponto-e-vírgula prioritário vs vírgula) em `app/api/tiss/returns/[id]/parse/route.ts`, garantindo que casas decimais com vírgula sejam preservadas sem divisão indevida de colunas.
+    - **Modelo CSV e Disclaimer Comercial**: Incluído botão de download do modelo CSV em `components/tiss/upload-return-dialog-v2.tsx`, acompanhado de texto institucional claro: o CSV é um modelo operacional simplificado do CliniGO para demonstrativos em planilha, e não um padrão imposto pela ANS.
+    - **Mecanismo de Desfazimento (UNDO)**: Criado endpoint `POST /api/tiss/returns/[id]/undo/route.ts` com proteção RBAC (`CLINIC_ADMIN`, `SUPER_ADMIN`, `FINANCIAL`), revertendo o status do lote para `SENT`, limpando valores pagos/glosados das guias, removendo registros de glosa associados, expurgando o lançamento gerado em `financial_entries` e registrando log de auditoria em `audit_logs`.
+    - **Idempotência**: Cálculo de SHA-256 do arquivo em `tiss_return_imports` bloqueia reenvio duplicado do mesmo demonstrativo.
+  - **3. Status de Validação**:
+    - **Executado e Aprovado**: Testado em `__tests__/tiss/return-parse-and-conciliation.test.ts` (4 testes passando: parsing total/parcial/glosado, detecção de guias de outro lote, idempotência contra arquivo repetido e ciclo completo de conciliação com DESFAZER).
+    - **Ressalva Comercial**: Validado com fixtures sintéticas. Importação em larga escala requer teste com arquivos reais de demonstrativo de cada operadora credenciada.
+
+### Item 79: Motor de Repasse Médico, Regimes (Produção x Recebimento), Telas de Configuração e Sigilo RBAC (Fase 6)
+- **Data**: 29/09/2026
+- **Módulos**: Financeiro, Repasse Médico, Sigilo Médico / LGPD, Telas de Configuração, Middleware RBAC
+- **Caminho Completo**:
+  - Calculador de Repasse → `lib/services/repasse-calculator.ts` (`computeAdvancedRepasse` e `computeRepasseFromRules`)
+  - API de Resumo de Produção com Sigilo → `app/api/financial/production-summary/route.ts`
+  - Aba de Configurações de Repasse e Prazos → `components/tiss/convenios-config-tab.tsx` e `app/dashboard/(clinic)/convenios/page.tsx`
+  - Ocultação de Ações TISS para Médicos → `app/dashboard/(clinic)/consultas/page.tsx`
+  - Proteção de Rota de Elegibilidade no Middleware → `middleware.ts`
+  - Testes Numéricos e de Regressão → `__tests__/financial/repasse-regression.test.ts`, `__tests__/financial/repasse-convenio-glosas.test.ts`, `__tests__/services/repasse-calculator.test.ts`
+  - Testes de Proteção RBAC → `__tests__/security/rbac-handler-routes.test.ts` e `scripts/test_rbac_route_protection.mjs`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - O cálculo de repasse exigia garantia absoluta de não-regressão nas clínicas existentes (World Sensory, Espaço Incluir, Praxis), mantendo o comportamento clássico de produção como padrão inalterado.
+    - O fallback de percentual sem contrato necessitava preservar a precedência original: 1º Override por paciente (`doctor_patient_rates`), 2º Contrato médico (`doctor_contracts`), 3º Percentual do perfil do médico na tabela `doctors` ou fallback padrão (70% particular, 60% convênio).
+    - Faltavam a interface visual para o administrador configurar os regimes e prazos por operadora, o bloqueio visual dos botões TISS para profissionais assistenciais e a proteção no middleware da rota `/api/insurance`.
+  - **2. Solução Implementada e Corrigida**:
+    - **Correção da Regressão no Repasse**: Ajustado `lib/services/repasse-calculator.ts` para que `doctorFallbackPercentage` do médico seja respeitado e, na ausência deste, aplique 70% para particular e 60% para convênio. Teste de regressão estrito centavo a centavo (`__tests__/financial/repasse-regression.test.ts` e `__tests__/financial/repasse-convenio-glosas.test.ts`) confirmou paridade matemática absoluta (100% de correspondência com a lógica legado no regime padrão `PRODUCAO` + `CLINICA_ABSORVE`).
+    - **Interface de Configuração de Regras e Repasse**: Criado `components/tiss/convenios-config-tab.tsx` e acoplado como nova aba em `/dashboard/convenios`, permitindo configurar `repasse_regime` (`PRODUCAO` vs `RECEBIMENTO`), `glosa_policy` (`CLINICA_ABSORVE`, `DESCONTA_PROFISSIONAL`, `DESCONTA_SE_MANTIDA`), dia de corte (`closing_day`) e prazo de recurso (`appeal_deadline_days`) por operadora. Inclui modal com aviso de não-retroatividade ("Esta alteração não afeta competências já fechadas") e registro de auditoria.
+    - **Blindagem de Sigilo Médico e RBAC**:
+      - Em `/dashboard/consultas`, os botões "Gerar Guia TISS" e "Gerar Guias TISS do Período" foram blindados via verificação `canManageTiss = !isDoctor && (isClinicAdmin || isSuperAdmin || isReceptionist)`, ficando invisíveis para `DOCTOR`.
+      - Em `/api/financial/production-summary`, os dados de `health_insurance_name`, `plan_id` e `card_number` são estritamente omitidos das respostas ao perfil `DOCTOR`, tanto na API quanto no Excel exportado.
+      - Em `middleware.ts`, `/api/insurance` foi adicionada a `ROLE_PROTECTED_ROUTES` restringindo o acesso a `CLINIC_ADMIN`, `SUPER_ADMIN`, `FINANCIAL` e `RECEPTIONIST` (bloqueando `DOCTOR`).
+  - **3. Status de Validação**:
+    - **Executado e Aprovado**:
+      - 15 testes de repasse e regressão aprovados (centavo a centavo).
+      - 9 testes em `repasse-calculator.test.ts` aprovados.
+      - 12 testes em `rbac-handler-routes.test.ts` aprovados simulando requisições com todos os perfis.
+      - 39 checagens em `scripts/test_rbac_route_protection.mjs` aprovadas com 100% de sucesso.
+      - `npm run build` executado com código de saída 0 (Next.js gerou todas as rotas estáticas e dinâmicas).
