@@ -3,7 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Upload, X, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -40,6 +40,21 @@ export function UploadReturnDialogV2({
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [returnId, setReturnId] = useState<string | null>(null);
+
+    const handleDownloadCsvTemplate = () => {
+        const header = 'numero_guia;status;valor_apresentado;valor_pago;valor_glosado;codigo_glosa;motivo_glosa\n';
+        const sample1 = '2026000001;APROVADO;150.00;150.00;0.00;;\n';
+        const sample2 = '2026000002;PARCIAL;150.00;100.00;50.00;1409;Quantidade executada excede a quantidade autorizada\n';
+        const sample3 = '2026000003;NEGADO;150.00;0.00;150.00;1001;Numero da carteira do beneficiario invalido\n';
+        const blob = new Blob([header + sample1 + sample2 + sample3], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'modelo_retorno_clinigo.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     // Drag & Drop handlers
     const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -305,6 +320,31 @@ export function UploadReturnDialogV2({
                                     <span>Selecionar Arquivo</span>
                                 </Button>
                             </label>
+                        </div>
+                    )}
+
+                    {/* Explicação de Formatos e Download de Modelo */}
+                    {step === 'SELECT' && !file && (
+                        <div className="p-3 bg-muted/40 rounded-lg text-xs space-y-2 border border-border">
+                            <p className="font-semibold text-foreground">Orientações sobre os Formatos:</p>
+                            <p className="text-muted-foreground leading-relaxed">
+                                • <strong>XML TISS da ANS:</strong> Arquivos eletrônicos padronizados emitidos pelos portais das operadoras de saúde.
+                            </p>
+                            <p className="text-muted-foreground leading-relaxed">
+                                • <strong>Planilha CSV (Modelo CliniGO):</strong> Modelo estruturado interno criado para permitir a importação de demonstrativos em papel ou PDF das operadoras. <em>(Nota: Este CSV é um modelo do sistema CliniGO, não um formato oficial padrão da ANS).</em>
+                            </p>
+                            <div className="pt-1">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleDownloadCsvTemplate}
+                                    className="h-8 text-xs gap-1.5"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    Baixar Planilha Modelo CSV (CliniGO)
+                                </Button>
+                            </div>
                         </div>
                     )}
 

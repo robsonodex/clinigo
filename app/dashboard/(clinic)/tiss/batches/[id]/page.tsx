@@ -13,6 +13,7 @@ import {
     CheckCircle2,
     AlertCircle,
     Loader2,
+    RotateCcw,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     const [isGeneratingXML, setIsGeneratingXML] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+    const [isUndoing, setIsUndoing] = useState(false);
 
     // Buscar detalhes do lote
     const { data, isLoading } = useQuery({
@@ -134,6 +136,32 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
         }
     };
 
+    // Desfazer retorno com estorno contábil e auditoria
+    const handleUndoReturn = async () => {
+        const confirmed = window.confirm(
+            'ATENÇÃO: Deseja realmente desfazer a importação de retorno deste lote? Esta ação estornará os lançamentos contábeis gerados, cancelará as glosas e retornará o lote e suas guias para o status Enviado.'
+        );
+        if (!confirmed) return;
+
+        setIsUndoing(true);
+        try {
+            const response = await fetch(`/api/tiss/returns/${params.id}/undo`, {
+                method: 'POST',
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Erro ao desfazer retorno');
+            }
+
+            toast.success(result.message || 'Importação desfeita com sucesso!');
+            queryClient.invalidateQueries({ queryKey: ['tiss-batch', params.id] });
+        } catch (error: any) {
+            toast.error('Erro ao desfazer retorno', { description: error.message });
+        } finally {
+            setIsUndoing(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex flex-col gap-6 p-6">
@@ -158,6 +186,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     const canGenerateXML = batch.status === 'DRAFT' || batch.status === 'VALID';
     const canSubmit = batch.status === 'VALID' && batch.xml_file_url;
     const canUploadReturn = batch.status === 'SENT' || batch.status === 'PROCESSING';
+    const canUndoReturn = batch.status === 'APPROVED' || batch.status === 'PARTIAL' || batch.status === 'DENIED';
     const hasErrors = validationErrors.filter((e: any) => e.severity === 'ERROR').length > 0;
 
     return (
@@ -210,6 +239,21 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                         <Button onClick={() => setIsUploadDialogOpen(true)}>
                             <Upload className="mr-2 h-4 w-4" />
                             Upload Retorno
+                        </Button>
+                    )}
+
+                    {canUndoReturn && (
+                        <Button
+                            variant="destructive"
+                            onClick={handleUndoReturn}
+                            disabled={isUndoing}
+                            className="min-h-[44px] touch-manipulation font-medium"
+                        >
+                            {isUndoing ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Estornando...</>
+                            ) : (
+                                <><RotateCcw className="mr-2 h-4 w-4" /> Desfazer Importação</>
+                            )}
                         </Button>
                     )}
                 </div>
