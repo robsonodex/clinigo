@@ -100,8 +100,10 @@ export interface TissBatch {
     submitted_by: string | null;
     submitted_at: string | null;
 
-    // Versionamento
+    // Versionamento e Rastreabilidade de Hash
     tiss_version_used: string | null;
+    hash_algorithm?: string | null;
+    hash_value?: string | null;
 }
 
 /**

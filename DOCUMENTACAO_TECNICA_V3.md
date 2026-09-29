@@ -2423,7 +2423,7 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Estética defasada com bordas pastel saturadas e ausência de hierarquia corporativa.
   - **2. Resolução Cirúrgica Padrão SaaS Internacional**:
     - Substituição da grade comprimida por um painel exclusivo de Exceções de Agenda (`rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 p-3`).
-    - Cada ocorrência clínica foi convertida em um card de ação com largura total (`w-full`), altura mínima de toque de 46px (conforme padrão PWA touch target >= 44px), ícone vetorial temático em badge neutro, título institucional em negrito, microcopy descritivo elegante ("Registro de cancelamento motivado pela profissional", "Ausência do paciente com justificativa ou atestado", "Não comparecimento sem aviso prévio (No-Show)") e seta de fluxo (`ChevronRight`).
+    - Cada ocorrência clínica foi convertida em um card de ação com largura total (`w-full`), altura mínima de toque de 46px (dimensionamento configurado via classes CSS; Não testado em navegador), ícone vetorial temático em badge neutro, título institucional em negrito, microcopy descritivo elegante ("Registro de cancelamento motivado pela profissional", "Ausência do paciente com justificativa ou atestado", "Não comparecimento sem aviso prévio (No-Show)") e seta de fluxo (`ChevronRight`).
     - O `SheetContent` teve a largura ajustada para `w-full sm:max-w-[540px]`, eliminando riscos de overflow horizontal em aparelhos móveis menores que 400px.
     - Correção de classes nos diálogos de confirmação (`rounded-xl`).
 
@@ -2559,7 +2559,7 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 - **Descrição Técnica**:
   - **1. Diagnóstico e Causa Raiz**:
     - O sistema demandava digitação manual de guias e faltava pré-preenchimento automático a partir de consultas concluídas com validação de CBO, conselho profissional, validade da carteirinha e saldo de sessões.
-    - O cálculo de hash dos lotes TISS gerava SHA-256 de JSON (padrão legado do sistema). Foi implementado o padrão ANS (MD5 canônico), mantendo ambos disponíveis via flag `tiss_hash_algorithm` na tabela `clinics`, com default seguro `LEGACY_SHA256_JSON`. O modo ANS MD5 canônico NÃO foi validado com operadora real ou vetor oficial da ANS.
+    - O cálculo de hash dos lotes TISS gera SHA-256 de JSON (padrão legado do sistema). Foi adicionada uma implementação experimental de hash MD5 sem validação com operadoras reais ou vetores oficiais da ANS (CLASSIFICADA COMO NÃO VALIDADA), mantendo-se como padrão ativo e seguro o algoritmo `LEGACY_SHA256_JSON` para preservar 100% da compatibilidade histórica com lotes já emitidos.
     - O validador de lote opera por checagem estrutural em código (`tiss-xsd-validator.ts`), NÃO substituindo a validação contra os schemas XSD oficiais da ANS.
     - O arquivo `types/supabase.generated.ts` permanece vazio no repositório e a base contém centenas de erros herdados de compilação TypeScript (`tsc --noEmit`), exigindo bypass no build.
   - **2. Solução Implementada**:

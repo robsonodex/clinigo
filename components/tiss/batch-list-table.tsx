@@ -241,8 +241,11 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
             const result = await response.json();
 
             if (result.valid) {
-                toast.success('Validação estrutural aprovada.', {
-                    description: `Validação estrutural simplificada (não substitui a validação oficial da operadora). Schema ${result.schemaVersion}`,
+                const isOfficial = result.validation_mode === 'XSD_OFICIAL';
+                toast.success(isOfficial ? 'Validação XSD oficial aprovada' : 'Validação concluída', {
+                    description: isOfficial
+                        ? `Validação realizada contra schema XSD oficial. Schema ${result.schemaVersion}`
+                        : `Validação estrutural simplificada (não substitui a validação oficial da operadora). Schema ${result.schemaVersion}`,
                 });
             } else {
                 toast.error(`Pendências na estrutura: ${result.errors.length}`, {
@@ -434,13 +437,20 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                 </TableCell>
 
                                 <TableCell>
-                                    {batch.tiss_version_used ? (
-                                        <Badge variant="secondary" className="text-xs">
-                                            v{batch.tiss_version_used}
-                                        </Badge>
-                                    ) : (
-                                        <span className="text-muted-foreground text-xs">-</span>
-                                    )}
+                                    <div className="flex flex-col gap-0.5">
+                                        {batch.tiss_version_used ? (
+                                            <Badge variant="secondary" className="text-xs w-fit">
+                                                v{batch.tiss_version_used}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">-</span>
+                                        )}
+                                        {batch.hash_algorithm && (
+                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                {batch.hash_algorithm === 'LEGACY_SHA256_JSON' ? 'SHA-256' : 'MD5'}
+                                            </span>
+                                        )}
+                                    </div>
                                 </TableCell>
 
                                 <TableCell>

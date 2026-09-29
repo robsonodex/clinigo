@@ -23,16 +23,30 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { GuideListTable } from '@/components/tiss/guide-list-table';
 import { ValidationErrorsList } from '@/components/tiss/validation-errors-list';
-import { UploadReturnDialog } from '@/components/tiss/upload-return-dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { toast } from 'sonner';
 
 export default function BatchDetailsPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { profile } = useAuth();
     const [isGeneratingXML, setIsGeneratingXML] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [isUndoing, setIsUndoing] = useState(false);
+    const [isUndoAlertOpen, setIsUndoAlertOpen] = useState(false);
+
+    const isAdmin = profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN';
 
     // Buscar detalhes do lote
     const { data, isLoading } = useQuery({
@@ -136,13 +150,17 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
         }
     };
 
-    // Desfazer retorno com estorno contábil e auditoria
-    const handleUndoReturn = async () => {
-        const confirmed = window.confirm(
-            'ATENÇÃO: Deseja realmente desfazer a importação de retorno deste lote? Esta ação estornará os lançamentos contábeis gerados, cancelará as glosas e retornará o lote e suas guias para o status Enviado.'
-        );
-        if (!confirmed) return;
+    // Abre modal padrão AlertDialog de confirmação para desfazimento de retorno
+    const handleUndoReturn = () => {
+        if (!isAdmin) {
+            toast.error('Acesso negado: apenas administradores da clínica podem desfazer importações de retorno.');
+            return;
+        }
+        setIsUndoAlertOpen(true);
+    };
 
+    // Executa o desfazimento com estorno contábil e auditoria
+    const executeUndoReturn = async () => {
         setIsUndoing(true);
         try {
             const response = await fetch(`/api/tiss/returns/${params.id}/undo`, {
@@ -159,6 +177,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
             toast.error('Erro ao desfazer retorno', { description: error.message });
         } finally {
             setIsUndoing(false);
+            setIsUndoAlertOpen(false);
         }
     };
 
@@ -242,7 +261,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                         </Button>
                     )}
 
-                    {canUndoReturn && (
+                    {canUndoReturn && isAdmin && (
                         <Button
                             variant="destructive"
                             onClick={handleUndoReturn}
@@ -260,7 +279,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
             </div>
 
             {/* Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
                 <Card>
                     <CardHeader className="pb-3">
                         <CardDescription>Total de Guias</CardDescription>
@@ -309,6 +328,20 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                         </Button>
                     </CardContent>
                 </Card>
+
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardDescription>Rastreabilidade de Hash</CardDescription>
+                        <CardTitle className="text-sm font-semibold truncate">
+                            {batch.hash_algorithm || 'LEGACY_SHA256_JSON'}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xs text-muted-foreground font-mono truncate" title={batch.hash_value || undefined}>
+                            {batch.hash_value ? `${batch.hash_value.slice(0, 16)}...` : 'XML não gerado'}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Erros de Validação */}
@@ -353,6 +386,28 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                     queryClient.invalidateQueries({ queryKey: ['tiss-batch', params.id] });
                 }}
             />
+
+            {/* Modal de Confirmação para Desfazer Importação (AlertDialog) */}
+            <AlertDialog open={isUndoAlertOpen} onOpenChange={setIsUndoAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Desfazer Importação de Retorno</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ATENÇÃO: Deseja realmente desfazer a importação de retorno deste lote? Esta ação estornará os lançamentos contábeis gerados no financeiro, cancelará as glosas associadas e retornará o lote e suas guias para o status Enviado.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isUndoing}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={executeUndoReturn}
+                            disabled={isUndoing}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isUndoing ? 'Estornando...' : 'Confirmar Desfazimento'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

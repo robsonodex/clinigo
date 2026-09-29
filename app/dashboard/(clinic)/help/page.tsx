@@ -993,12 +993,12 @@ export const helpItems: HelpItem[] = [
         category: 'Financeiro',
         icon: Receipt,
         href: '/dashboard/tiss',
-        whatIsIt: 'Sistema industrial de faturamento no padrão obrigatório TISS (ANS 3.05.00 / 4.01.00). Gera guias SP/SADT, empacota em lotes XML validados pelo schema da ANS e exporta para envio aos portais de convênios.',
+        whatIsIt: 'Sistema de faturamento no padrão TISS (versões 4.01.00 e 4.02.00). Gera guias de Consulta e SP/SADT a partir de atendimentos concluídos, valida a estrutura do XML via adaptador inteligente, calcula hash (SHA-256 legado ativo ou MD5 experimental configurável) e empacota em lotes para download e envio manual no portal da operadora.',
         whenToUse: 'No fechamento quinzenal ou mensal de faturamento das operadoras de saúde credenciadas.',
-        howToUse: 'Acesse Faturamento TISS, gere o lote com as guias do período, execute a validação de regras de preenchimento e baixe o arquivo XML oficial para upload na operadora.',
+        howToUse: 'Acesse Faturamento TISS, gere as guias do período em lote, confira as travas anti-glosa (CBO, CRM, validade da carteirinha e saldo de sessões), valide a estrutura do XML e baixe o arquivo consolidado para upload no portal da operadora.',
         minPlan: 'Professional',
-        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
-        tags: ['tiss', 'ans', 'guias', 'lotes xml', 'operadoras de saúde', 'convênios'],
+        roles: ['CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+        tags: ['tiss', 'ans', 'guias', 'lotes xml', 'operadoras de saúde', 'convênios', 'matriz comercial', 'hash'],
         aliases: ['guias-e-lotes', 'tiss-guias-e-lotes']
     },
     {
