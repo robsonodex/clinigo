@@ -154,7 +154,16 @@ export async function POST(request: NextRequest) {
             .eq('clinic_id', clinicId)
             .gte('created_at', `${year}-01-01`)
 
-        const guideNumber = `${year}${String((guideCount || 0) + 1).padStart(6, '0')}`
+        let guideNumber: string;
+        const { data: generatedNum, error: rpcErr } = await supabase.rpc('generate_tiss_guide_number', {
+            p_clinic_id: clinicId,
+            p_year: year,
+        });
+        if (!rpcErr && generatedNum) {
+            guideNumber = generatedNum;
+        } else {
+            guideNumber = `${year}${String((guideCount || 0) + 1).padStart(6, '0')}`;
+        }
 
         // Get doctor info
         let professionalData: any = {}

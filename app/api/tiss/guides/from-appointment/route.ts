@@ -234,7 +234,16 @@ export async function POST(request: NextRequest) {
             .gte('created_at', `${year}-01-01`);
 
         const nextNum = (guideCount || 0) + 1;
-        const guideNumber = `${year}${String(nextNum).padStart(6, '0')}`;
+        let guideNumber: string;
+        const { data: generatedNum, error: rpcErr } = await supabase.rpc('generate_tiss_guide_number', {
+            p_clinic_id: profile.clinic_id,
+            p_year: year,
+        });
+        if (!rpcErr && generatedNum) {
+            guideNumber = generatedNum;
+        } else {
+            guideNumber = `${year}${String(nextNum).padStart(6, '0')}`;
+        }
 
         // 8. Inserir Guia TISS
         const { data: newGuide, error: insertError } = await supabase

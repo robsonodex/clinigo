@@ -158,6 +158,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         if (p.includes('pricing') && ['POST', 'DELETE'].includes(method)) return true;
         if (p.includes('tuss') && method === 'POST') return true;
         if (p.includes('operators') && method === 'POST') return true;
+        if (p.includes('settings') && method === 'POST') return true;
 
         return false;
     };
@@ -168,6 +169,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
      * - Configuração/cadastro de operadora no CNES (POST /api/tiss/operators)
      * - Exclusão de regra de preço (DELETE /api/tiss/pricing)
      * - Importação de catálogo TUSS (POST /api/tiss/tuss)
+     * - Ativação/configuração de feature flag (POST /api/tiss/settings/*)
      */
     const isAdminOnlyRoute = (relPath: string, method: string) => {
         const p = relPath.replace(/\\/g, '/');
@@ -175,6 +177,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         if (p.includes('operators') && method === 'POST') return true;
         if (p.includes('pricing') && method === 'DELETE') return true;
         if (p.includes('tuss') && method === 'POST') return true;
+        if (p.includes('settings') && method === 'POST') return true;
         return false;
     };
 
@@ -322,6 +325,8 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
                     health_insurance_id: '22222222-2222-2222-2222-222222222222',
                     card_number: '1234567890',
                 });
+            } else if (relPath.includes('settings/premium')) {
+                body = JSON.stringify({ enabled: true });
             } else {
                 body = JSON.stringify({
                     patient_id: '11111111-1111-1111-1111-111111111111',

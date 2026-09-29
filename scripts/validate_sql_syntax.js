@@ -6,7 +6,9 @@ const filesToValidate = [
     'supabase/migrations/20260929120000_tiss_convenios_glosas_repasse.sql',
     'supabase/migrations/20260929130000_tiss_undo_rpc_and_reimport.sql',
     'supabase/migrations/20260929140000_tiss_batch_hash_tracking.sql',
+    'supabase/migrations/20260929150000_tiss_premium_foundation.sql',
     'scripts/staging/verify-tiss-migrations.sql',
+    'scripts/staging/verify-tiss-premium.sql',
 ];
 
 async function runValidation() {
