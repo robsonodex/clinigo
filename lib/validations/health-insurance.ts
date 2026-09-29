@@ -48,6 +48,8 @@ export const createHealthInsuranceSchema = z.object({
         .transform((val) => (val === '' ? null : (val ?? null))),
     status: healthInsuranceStatusSchema.optional().default('ACTIVE'),
     tiss_version: z.enum(['4.01.00', '4.02.00']).optional().nullable().default('4.01.00'),
+    closing_day: z.number().int().min(1).max(31).optional().nullable(),
+    appeal_deadline_days: z.number().int().min(1).max(365).optional().nullable(),
 })
 
 export const updateHealthInsuranceSchema = createHealthInsuranceSchema.partial().extend({

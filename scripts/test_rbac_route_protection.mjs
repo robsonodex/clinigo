@@ -30,6 +30,8 @@ const ROLE_PROTECTED_PAGES = {
     '/dashboard/whatsapp': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
     '/dashboard/estoque': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
     '/dashboard/notificacoes': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+    '/dashboard/tiss': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
+    '/dashboard/convenios': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
 };
 
 // Simulated ROLE_PROTECTED_ROUTES as defined in middleware.ts
@@ -40,6 +42,8 @@ const ROLE_PROTECTED_ROUTES = {
     '/api/crm': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/api/tiss': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    '/api/health-insurances': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
 };
 
 function evaluatePageRoute(pathname, userRole) {
@@ -209,6 +213,42 @@ for (const tc of cardMoveCases) {
     console.log(`[PASS] ${tc.desc}`);
 }
 
+// 7. Proteção de Rotas TISS e Convênios (DOCTOR bloqueado por sigilo)
+console.log('\n--- TESTANDO PROTEÇÃO TISS E CONVÊNIOS (SIGILO MÉDICO) ---');
+const tissProtectionCases = [
+    { page: '/dashboard/tiss', role: 'CLINIC_ADMIN', expected: true, desc: 'CLINIC_ADMIN acessa /dashboard/tiss' },
+    { page: '/dashboard/tiss', role: 'FINANCIAL', expected: true, desc: 'FINANCIAL acessa /dashboard/tiss' },
+    { page: '/dashboard/tiss', role: 'RECEPTIONIST', expected: true, desc: 'RECEPTIONIST acessa /dashboard/tiss' },
+    { page: '/dashboard/tiss', role: 'DOCTOR', expected: false, desc: 'DOCTOR bloqueado em /dashboard/tiss por sigilo' },
+    { page: '/dashboard/convenios', role: 'CLINIC_ADMIN', expected: true, desc: 'CLINIC_ADMIN acessa /dashboard/convenios' },
+    { page: '/dashboard/convenios', role: 'DOCTOR', expected: false, desc: 'DOCTOR bloqueado em /dashboard/convenios por sigilo' },
+];
+
+for (const tc of tissProtectionCases) {
+    const res = evaluatePageRoute(tc.page, tc.role);
+    assert.strictEqual(res.allowed, tc.expected, `Falha em página TISS: ${tc.desc}`);
+    if (!tc.expected) {
+        assert.strictEqual(res.redirect, '/dashboard?error=unauthorized_role');
+    }
+    console.log(`[PASS] ${tc.desc}`);
+}
+
+const tissApiCases = [
+    { route: '/api/tiss/guides', role: 'CLINIC_ADMIN', expected: true, desc: 'API /api/tiss permitida para CLINIC_ADMIN' },
+    { route: '/api/tiss/guides', role: 'FINANCIAL', expected: true, desc: 'API /api/tiss permitida para FINANCIAL' },
+    { route: '/api/tiss/guides', role: 'DOCTOR', expected: false, desc: 'API /api/tiss bloqueada com 403 para DOCTOR' },
+    { route: '/api/health-insurances', role: 'DOCTOR', expected: false, desc: 'API /api/health-insurances bloqueada com 403 para DOCTOR' },
+];
+
+for (const tc of tissApiCases) {
+    const res = evaluateApiRoute(tc.route, tc.role);
+    assert.strictEqual(res.allowed, tc.expected, `Falha em API TISS: ${tc.desc}`);
+    if (!tc.expected) {
+        assert.strictEqual(res.status, 403);
+    }
+    console.log(`[PASS] ${tc.desc}`);
+}
+
 console.log('\n======================================================');
-console.log('TODOS OS 29 TESTES DE SEGURANÇA RBAC PASSARAM COM 100% DE SUCESSO');
+console.log('TODOS OS TESTES DE SEGURANÇA RBAC PASSARAM COM 100% DE SUCESSO');
 console.log('======================================================');

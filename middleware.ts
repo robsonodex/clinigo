@@ -153,12 +153,19 @@ const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
     '/api/crm': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // FluxoMed CRM e Pipeline exclusivo de Administradores
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/api/tiss': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    '/api/health-insurances': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    '/api/insurance': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
 }
 
 // Role-protected Dashboard Pages (Hard Gate no Servidor para URLs diretas coladas no navegador)
 const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     // CRM e Pipeline: Apenas administradores
     '/dashboard/crm': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // Faturamento TISS e Convênios: Administradores, Financeiro e Recepção (DOCTOR bloqueado por sigilo)
+    '/dashboard/tiss': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
+    '/dashboard/convenios': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
 
     // Configurações críticas da clínica: Apenas administradores
     '/dashboard/configuracoes/usuarios': ['CLINIC_ADMIN', 'SUPER_ADMIN'],

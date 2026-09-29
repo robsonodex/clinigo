@@ -60,18 +60,24 @@ import {
     EyeOff,
     AlertTriangle,
     Shield,
-    Heart
+    Heart,
+    DollarSign,
+    Settings2
 } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { formatCurrency, cn } from '@/lib/utils'
 import type {
     HealthInsurance,
     HealthInsurancePlan,
+    HealthInsurancePlanType,
+    HealthInsuranceCoverageType,
     DoctorHealthInsurance,
     DoctorWithInsurances
 } from '@/lib/types/health-insurance'
 import { TissVersionSelector } from '@/components/tiss/version-selector'
 import type { TissVersion } from '@/lib/types/tiss-versions'
+import { TabelaPrecosTab } from '@/components/tiss/tabela-precos-tab'
+import { ConveniosConfigTab } from '@/components/tiss/convenios-config-tab'
 
 // =============================================================================
 // TAB: OPERADORAS
@@ -91,7 +97,9 @@ function OperadorasTab() {
         email: '',
         notes: '',
         status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
-        tiss_version: '4.01.00' as TissVersion
+        tiss_version: '4.01.00' as TissVersion,
+        closing_day: '25',
+        appeal_deadline_days: '30'
     })
 
     const { data: response, isLoading } = useQuery({
@@ -158,11 +166,23 @@ function OperadorasTab() {
                 email: item.email || '',
                 notes: item.notes || '',
                 status: item.status || 'ACTIVE',
-                tiss_version: (item.tiss_version as TissVersion) || '4.01.00'
+                tiss_version: (item.tiss_version as TissVersion) || '4.01.00',
+                closing_day: item.closing_day?.toString() || '25',
+                appeal_deadline_days: item.appeal_deadline_days?.toString() || '30'
             })
         } else {
             setEditingItem(null)
-            setFormData({ name: '', code: '', phone: '', email: '', notes: '', status: 'ACTIVE', tiss_version: '4.01.00' })
+            setFormData({
+                name: '',
+                code: '',
+                phone: '',
+                email: '',
+                notes: '',
+                status: 'ACTIVE',
+                tiss_version: '4.01.00',
+                closing_day: '25',
+                appeal_deadline_days: '30'
+            })
         }
         setIsDialogOpen(true)
     }
@@ -170,12 +190,35 @@ function OperadorasTab() {
     const closeDialog = () => {
         setIsDialogOpen(false)
         setEditingItem(null)
-        setFormData({ name: '', code: '', phone: '', email: '', notes: '', status: 'ACTIVE', tiss_version: '4.01.00' })
+        setFormData({
+            name: '',
+            code: '',
+            phone: '',
+            email: '',
+            notes: '',
+            status: 'ACTIVE',
+            tiss_version: '4.01.00',
+            closing_day: '25',
+            appeal_deadline_days: '30'
+        })
     }
 
     const handleSubmit = () => {
         if (!formData.name.trim()) {
             toast.error('Nome é obrigatório')
+            return
+        }
+
+        const closingNum = formData.closing_day ? parseInt(formData.closing_day, 10) : null
+        const appealNum = formData.appeal_deadline_days ? parseInt(formData.appeal_deadline_days, 10) : null
+
+        if (closingNum !== null && (isNaN(closingNum) || closingNum < 1 || closingNum > 31)) {
+            toast.error('Dia de corte deve estar entre 1 e 31')
+            return
+        }
+
+        if (appealNum !== null && (isNaN(appealNum) || appealNum < 1 || appealNum > 365)) {
+            toast.error('Prazo de recurso deve estar entre 1 e 365 dias')
             return
         }
 
@@ -186,6 +229,8 @@ function OperadorasTab() {
             phone: formData.phone?.trim() || null,
             email: formData.email?.trim() || null,
             notes: formData.notes?.trim() || null,
+            closing_day: closingNum,
+            appeal_deadline_days: appealNum
         }
 
         if (editingItem) {
@@ -405,6 +450,36 @@ function OperadorasTab() {
                                     placeholder="contato@unimed.com.br"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className="min-h-[44px]"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Prazos de Faturamento e Recurso */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="closing_day">Dia de Corte do Lote (1 a 31)</Label>
+                                <Input
+                                    id="closing_day"
+                                    type="number"
+                                    min={1}
+                                    max={31}
+                                    placeholder="Ex: 25"
+                                    value={formData.closing_day}
+                                    onChange={(e) => setFormData({ ...formData, closing_day: e.target.value })}
+                                    className="min-h-[44px]"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="appeal_deadline_days">Prazo de Recurso de Glosas (Dias)</Label>
+                                <Input
+                                    id="appeal_deadline_days"
+                                    type="number"
+                                    min={1}
+                                    max={365}
+                                    placeholder="Ex: 30"
+                                    value={formData.appeal_deadline_days}
+                                    onChange={(e) => setFormData({ ...formData, appeal_deadline_days: e.target.value })}
                                     className="min-h-[44px]"
                                 />
                             </div>
@@ -1663,6 +1738,10 @@ export default function ConveniosPage() {
                             <CreditCard className="w-3.5 h-3.5 mr-1.5" />
                             Planos
                         </TabsTrigger>
+                        <TabsTrigger value="tabela-precos" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm">
+                            <DollarSign className="w-3.5 h-3.5 mr-1.5" />
+                            Tabela de Preços e TUSS
+                        </TabsTrigger>
                         <TabsTrigger value="medicos" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm">
                             <Users className="w-3.5 h-3.5 mr-1.5" />
                             Médicos
@@ -1670,6 +1749,10 @@ export default function ConveniosPage() {
                         <TabsTrigger value="elegibilidade" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm">
                             <Shield className="w-3.5 h-3.5 mr-1.5" />
                             Elegibilidade
+                        </TabsTrigger>
+                        <TabsTrigger value="configuracoes" className="rounded-lg text-xs font-semibold px-4 py-2 text-slate-650 dark:text-slate-400 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm">
+                            <Settings2 className="w-3.5 h-3.5 mr-1.5" />
+                            Regras e Repasse
                         </TabsTrigger>
                     </TabsList>
                 </div>
@@ -1680,11 +1763,17 @@ export default function ConveniosPage() {
                 <TabsContent value="planos" className="mt-4 outline-none">
                     <PlanosTab />
                 </TabsContent>
+                <TabsContent value="tabela-precos" className="mt-4 outline-none">
+                    <TabelaPrecosTab />
+                </TabsContent>
                 <TabsContent value="medicos" className="mt-4 outline-none">
                     <MedicosTab />
                 </TabsContent>
                 <TabsContent value="elegibilidade" className="mt-4 outline-none">
                     <ElegibilidadeTab />
+                </TabsContent>
+                <TabsContent value="configuracoes" className="mt-4 outline-none">
+                    <ConveniosConfigTab />
                 </TabsContent>
             </Tabs>
         </div>

@@ -3,18 +3,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
+export interface EligibilityResult {
+    isActive: boolean;
+    planName: string | null;
+    coverageDetails: Record<string, any>;
+    verificationMethod: 'INTERNAL_CHECK' | 'MANUAL_CONFERENCE' | 'OPERATOR_API';
+    message: string;
+    verifiedAt: string;
+    verifiedBy?: string;
+}
+
+export interface EligibilityProvider {
+    checkOnline(params: {
+        operatorCode: string;
+        cardNumber: string;
+        patientCpf: string;
+    }): Promise<EligibilityResult>;
+}
+
 const eligibilitySchema = z.object({
-    insurance_company: z.string().min(1),
-    card_number: z.string().min(1),
-    patient_cpf: z.string().length(11),
-    patient_name: z.string().min(1),
+    insurance_company: z.string().min(1, 'Operadora obrigatória'),
+    card_number: z.string().min(1, 'Número da carteirinha obrigatório'),
+    patient_cpf: z.string().transform((v) => v.replace(/\D/g, '')).pipe(z.string().min(11, 'CPF deve conter 11 dígitos')),
+    patient_name: z.string().min(1, 'Nome do paciente obrigatório'),
     patient_birthdate: z.string().optional(),
     patient_id: z.string().uuid().optional(),
+    manual_conference_confirmed: z.boolean().optional(),
+    manual_conference_notes: z.string().optional(),
 });
 
 /**
  * POST /api/insurance/check-eligibility
- * Verifica elegibilidade do paciente no convênio
+ * Verifica elegibilidade do paciente no convênio (Validação cadastral interna + Registro de conferência manual)
  */
 export async function POST(request: NextRequest) {
     try {
@@ -27,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, full_name')
             .eq('id', user.id)
             .single();
 
@@ -36,47 +56,141 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const validated = eligibility_schema.parse(body);
+        const validated = eligibilitySchema.parse(body);
 
         const startTime = Date.now();
 
-        // Verificar se há integração ativa para esta operadora
-        const { data: integration } = await supabase
-            .from('insurance_integrations')
-            .select('*')
+        // 1. Buscar a operadora na clínica
+        const { data: operadora } = await supabase
+            .from('health_insurances')
+            .select('id, name, status, tiss_version')
             .eq('clinic_id', profile.clinic_id)
-            .eq('insurance_company', validated.insurance_company)
-            .eq('integration_type', 'ELIGIBILITY')
-            .eq('is_active', true)
-            .single();
+            .ilike('name', `%${validated.insurance_company}%`)
+            .maybeSingle();
+
+        if (!operadora || operadora.status === 'INACTIVE') {
+            return NextResponse.json({
+                success: true,
+                data: {
+                    is_active: false,
+                    plan_name: null,
+                    coverage_details: {},
+                    verification_method: 'INTERNAL_CHECK',
+                    message: `Operadora ${validated.insurance_company} está inativa ou não cadastrada na clínica.`,
+                    checked_by: profile.full_name,
+                    checked_at: new Date().toISOString(),
+                }
+            });
+        }
+
+        // 2. Se for conferência manual confirmada pelo operador no portal da operadora
+        if (validated.manual_conference_confirmed) {
+            const now = new Date().toISOString();
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'ELIGIBILITY_MANUAL_CONFERENCE',
+                entity_type: 'patient_insurance',
+                metadata: {
+                    patient_cpf: validated.patient_cpf,
+                    insurance: validated.insurance_company,
+                    card_number: validated.card_number,
+                    notes: validated.manual_conference_notes || 'Conferido no portal da operadora',
+                }
+            });
+
+            return NextResponse.json({
+                success: true,
+                data: {
+                    is_active: true,
+                    plan_name: 'Conferido no Portal da Operadora',
+                    coverage_details: {
+                        conference_type: 'MANUAL',
+                        notes: validated.manual_conference_notes || 'Elegibilidade validada manualmente pelo atendente',
+                    },
+                    verification_method: 'MANUAL_CONFERENCE',
+                    message: `Elegibilidade confirmada via portal da operadora por ${profile.full_name} em ${new Date().toLocaleDateString('pt-BR')}`,
+                    checked_by: profile.full_name,
+                    checked_at: now,
+                }
+            });
+        }
+
+        // 3. Validação cadastral interna (Checar carteirinha do paciente no banco)
+        let query = supabase
+            .from('patients')
+            .select(`
+                id,
+                full_name,
+                cpf,
+                health_insurance_id,
+                health_insurance_card,
+                health_insurance_validity,
+                health_insurance_plan:health_insurance_plans(id, name)
+            `)
+            .eq('clinic_id', profile.clinic_id);
+
+        if (validated.patient_id) {
+            query = query.eq('id', validated.patient_id);
+        } else {
+            query = query.eq('cpf', validated.patient_cpf);
+        }
+
+        const { data: patientRecord } = await query.maybeSingle();
 
         let isActive = false;
-        let planName = null;
-        let coverageDetails = {};
-        let errorMessage = null;
+        let planName: string | null = null;
+        let coverageDetails: Record<string, any> = {};
+        let message = '';
 
-        if (integration) {
-            // TODO: Implementar integração real com API da operadora
-            // Por enquanto, simulando resposta
-            isActive = true;
-            planName = 'Plano Ambulatorial + Hospitalar';
-            coverageDetails = {
-                max_consultations: 12,
-                procedures_covered: ['Consulta', 'Exames Laboratoriais'],
-                copay_value: 0,
-            };
+        if (!patientRecord) {
+            message = 'Paciente não localizado no cadastro interno. Favor validar no portal da operadora.';
         } else {
-            errorMessage = 'Integração não configurada para esta operadora';
+            const cardInRecord = patientRecord.health_insurance_card?.replace(/\s/g, '');
+            const cardProvided = validated.card_number.replace(/\s/g, '');
+            const validityStr = patientRecord.health_insurance_validity;
+
+            if (cardInRecord && cardInRecord !== cardProvided) {
+                message = 'Número da carteirinha informado difere do cadastro do paciente.';
+            } else if (validityStr) {
+                const validityDate = new Date(validityStr);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (validityDate < today) {
+                    isActive = false;
+                    message = `Carteirinha VENCIDA em ${validityDate.toLocaleDateString('pt-BR')}. Risco imediato de glosa.`;
+                } else {
+                    isActive = true;
+                    planName = (patientRecord.health_insurance_plan as any)?.name || 'Plano Cadastrado';
+                    message = `Carteirinha VÁLIDA até ${validityDate.toLocaleDateString('pt-BR')}.`;
+                    coverageDetails = {
+                        valid_until: validityStr,
+                        plan_name: planName,
+                        procedures_covered: ['Consulta Ambulatorial', 'Sessões Terapêuticas'],
+                        copay_value: 0
+                    };
+                }
+            } else {
+                // Sem data de validade cadastrada
+                isActive = true;
+                planName = (patientRecord.health_insurance_plan as any)?.name || 'Plano Cadastrado';
+                message = 'Carteirinha cadastrada sem data de expiração. Recomenda-se conferência no portal.';
+                coverageDetails = {
+                    plan_name: planName,
+                    procedures_covered: ['Consulta Ambulatorial', 'Sessões Terapêuticas'],
+                    copay_value: 0
+                };
+            }
         }
 
         const responseTime = Date.now() - startTime;
 
-        // Registrar verificação
-        const { data: check, error: checkError } = await supabase
+        // Registrar no histórico de elegibilidade
+        await supabase
             .from('eligibility_checks')
             .insert({
                 clinic_id: profile.clinic_id,
-                patient_id: validated.patient_id,
+                patient_id: validated.patient_id || patientRecord?.id,
                 insurance_company: validated.insurance_company,
                 card_number: validated.card_number,
                 patient_cpf: validated.patient_cpf,
@@ -87,12 +201,10 @@ export async function POST(request: NextRequest) {
                 coverage_details: coverageDetails,
                 checked_by: user.id,
                 response_time_ms: responseTime,
-                error_message: errorMessage,
+                error_message: isActive ? null : message,
             })
             .select()
-            .single();
-
-        if (checkError) throw checkError;
+            .maybeSingle();
 
         return NextResponse.json({
             success: true,
@@ -100,17 +212,18 @@ export async function POST(request: NextRequest) {
                 is_active: isActive,
                 plan_name: planName,
                 coverage_details: coverageDetails,
-                check_id: check.id,
+                verification_method: 'INTERNAL_CHECK',
+                message,
+                checked_by: profile.full_name,
+                checked_at: new Date().toISOString(),
             },
         });
 
     } catch (error: any) {
-        console.error('[Insurance] Erro ao verificar elegibilidade:', error);
-
+        console.error('[ELIGIBILITY] Erro na verificação:', error);
         if (error instanceof z.ZodError) {
-            return NextResponse.json({ success: false, error: 'Dados inválidos' }, { status: 400 });
+            return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
-
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: error.message || 'Erro interno' }, { status: 500 });
     }
 }

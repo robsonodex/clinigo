@@ -23,6 +23,8 @@ export interface HealthInsurance {
     notes: string | null
     logo_url: string | null
     tiss_version?: '4.01.00' | '4.02.00' | null
+    closing_day?: number | null
+    appeal_deadline_days?: number | null
     status: HealthInsuranceStatus
     deleted_at: string | null
     created_at: string
@@ -38,6 +40,8 @@ export interface CreateHealthInsuranceData {
     phone?: string
     email?: string
     notes?: string
+    closing_day?: number | null
+    appeal_deadline_days?: number | null
 }
 
 export interface UpdateHealthInsuranceData {
@@ -47,6 +51,8 @@ export interface UpdateHealthInsuranceData {
     email?: string
     notes?: string
     status?: HealthInsuranceStatus
+    closing_day?: number | null
+    appeal_deadline_days?: number | null
 }
 
 // =============================================================================
