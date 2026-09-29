@@ -20,7 +20,6 @@ export interface DoctorContractRecord {
   clinic_id: string;
   doctor_id: string;
   contract_type?: string;
-  percentage?: number;
   percentage_private?: number;
   percentage_insurance?: number;
   fixed_value_private?: number | null;
@@ -46,39 +45,6 @@ export interface RepasseCalculationResult {
   rateId: string | null;
   contractId: string | null;
   grossPrice: number;
-}
-
-export type RepasseRegime = 'PRODUCAO' | 'RECEBIMENTO';
-export type GlosaPolicy = 'CLINICA_ABSORVE' | 'DESCONTA_PROFISSIONAL' | 'DESCONTA_SE_MANTIDA';
-
-export interface GuideBillingInfo {
-  guideStatus?: string; // 'DRAFT', 'SENT', 'APPROVED', 'PARTIAL', 'DENIED', etc.
-  guideTotalValue?: number;
-  guidePaidValue?: number;
-  glosaValue?: number;
-  glosaMaintained?: boolean;
-}
-
-export interface AdvancedRepasseParams {
-  appointmentValue: number;
-  override?: DoctorPatientRateOverride | null;
-  contract?: DoctorContractRecord | null;
-  insuranceRulePercentage?: number | null;
-  doctorFallbackPercentage?: number;
-  isInsurance?: boolean;
-  regime?: RepasseRegime;
-  glosaPolicy?: GlosaPolicy;
-  guideInfo?: GuideBillingInfo | null;
-}
-
-export interface AdvancedRepasseResult extends RepasseCalculationResult {
-  regime: RepasseRegime;
-  glosaPolicy: GlosaPolicy;
-  isEligibleForPayment: boolean;
-  ineligibleReason?: string;
-  originalRepasseAmount: number;
-  discountAmount: number;
-  discountReason?: string;
 }
 
 /**
@@ -150,10 +116,10 @@ export function computeRepasseFromRules(params: {
       }
     }
 
-    // Cálculo percentual do contrato com compatibilidade legada estrita
+    // Cálculo percentual do contrato
     let appliedRate = params.isInsurance
-      ? Number(params.contract.percentage_insurance ?? (params.contract.percentage ?? 60))
-      : Number(params.contract.percentage_private ?? (params.contract.percentage ?? 70));
+      ? Number(params.contract.percentage_insurance ?? 60)
+      : Number(params.contract.percentage_private ?? 70);
 
     // Regra específica para o convênio cadastrado
     if (
@@ -176,7 +142,7 @@ export function computeRepasseFromRules(params: {
     };
   }
 
-  // 3. FALLBACK FINAL: Percentual padrão do médico na tabela doctors ou 70% (legado)
+  // 3. FALLBACK FINAL: Percentual padrão do médico na tabela doctors ou 70%
   const fallbackPct = Number(params.doctorFallbackPercentage) || 70;
   const amount = Number(((grossPrice * fallbackPct) / 100).toFixed(2));
   return {
@@ -187,111 +153,6 @@ export function computeRepasseFromRules(params: {
     rateId: null,
     contractId: null,
     grossPrice,
-  };
-}
-
-/**
- * Cálculo avançado de repasse considerando Regime de Recebimento x Produção e Políticas de Glosa.
- * Mantém sigilo médico: não expõe operadora, plano ou carteirinha.
- */
-export function computeAdvancedRepasse(params: AdvancedRepasseParams): AdvancedRepasseResult {
-  const baseResult = computeRepasseFromRules(params);
-  const regime: RepasseRegime = params.regime || 'PRODUCAO';
-  const glosaPolicy: GlosaPolicy = params.glosaPolicy || 'CLINICA_ABSORVE';
-  const originalRepasseAmount = baseResult.amount;
-
-  // Atendimentos particulares seguem 100% o fluxo padrão de produção
-  if (!params.isInsurance) {
-    return {
-      ...baseResult,
-      regime,
-      glosaPolicy,
-      isEligibleForPayment: true,
-      originalRepasseAmount,
-      discountAmount: 0,
-    };
-  }
-
-  const guideInfo = params.guideInfo;
-  let isEligibleForPayment = true;
-  let ineligibleReason: string | undefined;
-  let finalAmount = originalRepasseAmount;
-  let discountAmount = 0;
-  let discountReason: string | undefined;
-
-  // REGIME RECEBIMENTO: Só repassa se a operadora tiver pago a guia
-  if (regime === 'RECEBIMENTO') {
-    const isPaid = guideInfo?.guideStatus === 'APPROVED' || (guideInfo?.guidePaidValue ?? 0) > 0;
-
-    if (!isPaid) {
-      isEligibleForPayment = false;
-      ineligibleReason = 'Aguardando liquidação e pagamento da guia pela operadora de saúde';
-      finalAmount = 0;
-      discountAmount = originalRepasseAmount;
-      discountReason = 'Repasse retido aguardando liquidação da operadora';
-    } else {
-      // Guia paga parcial ou integralmente
-      const guideTotal = Number(guideInfo?.guideTotalValue) || Number(params.appointmentValue) || 1;
-      const guidePaid = Number(guideInfo?.guidePaidValue) || 0;
-
-      if (guidePaid < guideTotal && guideTotal > 0) {
-        if (glosaPolicy === 'CLINICA_ABSORVE') {
-          finalAmount = originalRepasseAmount;
-          discountAmount = 0;
-        } else {
-          // DESCONTA_PROFISSIONAL ou DESCONTA_SE_MANTIDA
-          const paidRatio = Math.min(1, Math.max(0, guidePaid / guideTotal));
-          finalAmount = Number((originalRepasseAmount * paidRatio).toFixed(2));
-          discountAmount = Number((originalRepasseAmount - finalAmount).toFixed(2));
-          discountReason = 'Desconto proporcional de glosa aplicada pela operadora';
-        }
-      }
-    }
-  } else {
-    // REGIME PRODUÇÃO: Paga sobre o atendimento realizado, aplicando política de glosa se configurado
-    if (glosaPolicy === 'DESCONTA_PROFISSIONAL' && (guideInfo?.glosaValue ?? 0) > 0) {
-      const glosaVal = Number(guideInfo?.glosaValue) || 0;
-      const grossVal = Number(params.appointmentValue) || 1;
-      let calculatedDiscount = 0;
-
-      if (baseResult.rateType === 'PERCENTAGE') {
-        calculatedDiscount = (glosaVal * baseResult.rateApplied) / 100;
-      } else {
-        const ratio = Math.min(1, glosaVal / grossVal);
-        calculatedDiscount = originalRepasseAmount * ratio;
-      }
-
-      discountAmount = Number(calculatedDiscount.toFixed(2));
-      finalAmount = Math.max(0, Number((originalRepasseAmount - discountAmount).toFixed(2)));
-      discountReason = 'Estorno de glosa da operadora';
-    } else if (glosaPolicy === 'DESCONTA_SE_MANTIDA' && guideInfo?.glosaMaintained && (guideInfo?.glosaValue ?? 0) > 0) {
-      const glosaVal = Number(guideInfo?.glosaValue) || 0;
-      const grossVal = Number(params.appointmentValue) || 1;
-      let calculatedDiscount = 0;
-
-      if (baseResult.rateType === 'PERCENTAGE') {
-        calculatedDiscount = (glosaVal * baseResult.rateApplied) / 100;
-      } else {
-        const ratio = Math.min(1, glosaVal / grossVal);
-        calculatedDiscount = originalRepasseAmount * ratio;
-      }
-
-      discountAmount = Number(calculatedDiscount.toFixed(2));
-      finalAmount = Math.max(0, Number((originalRepasseAmount - discountAmount).toFixed(2)));
-      discountReason = 'Estorno de glosa mantida após recurso da operadora';
-    }
-  }
-
-  return {
-    ...baseResult,
-    amount: finalAmount,
-    regime,
-    glosaPolicy,
-    isEligibleForPayment,
-    ineligibleReason,
-    originalRepasseAmount,
-    discountAmount,
-    discountReason,
   };
 }
 

@@ -35,6 +35,7 @@ const customJestConfig = {
     testPathIgnorePatterns: [
         '/node_modules/',
         '/tests/e2e/',  // Playwright tests run via `npx playwright test`
+        '/__tests__/__fixtures__/',
     ],
 }
 
