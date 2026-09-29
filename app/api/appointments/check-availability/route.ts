@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { log } from '@/lib/logger'
+import { checkInsuranceEligibilityService } from '@/lib/services/insurance/eligibility-service'
 
 const checkAvailabilitySchema = z.object({
     doctor_id: z.string().uuid(),
@@ -120,21 +121,17 @@ export async function POST(request: NextRequest) {
         let insuranceEligibility = null
         if (validated.patient_id) {
             try {
-                const eligibilityResponse = await fetch(
-                    `${process.env.NEXT_PUBLIC_APP_URL}/api/insurance/check-eligibility`,
+                insuranceEligibility = await checkInsuranceEligibilityService(
                     {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            patient_id: validated.patient_id,
-                            procedure_date: validated.slot_datetime
-                        })
+                        patient_id: validated.patient_id,
+                        procedure_date: validated.slot_datetime
+                    },
+                    supabase,
+                    {
+                        userId: user.id,
+                        clinicId: profile.clinic_id,
                     }
                 )
-
-                if (eligibilityResponse.ok) {
-                    insuranceEligibility = await eligibilityResponse.json()
-                }
             } catch (error) {
                 // Opcional: não bloquear se verificação de convênio falhar
                 log.warn('Insurance check failed', { error, patient_id: validated.patient_id })
