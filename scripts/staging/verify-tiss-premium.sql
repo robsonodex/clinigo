@@ -13,6 +13,7 @@ CREATE TEMP TABLE test_results (
     status TEXT NOT NULL,
     detalhe TEXT NOT NULL
 );
+ALTER TABLE test_results ENABLE ROW LEVEL SECURITY;
 
 DO $$
 DECLARE
@@ -30,6 +31,25 @@ DECLARE
     c_user_b   UUID := '00000000-0000-0000-0000-000000000bb2';
     c_batch_a  UUID := '00000000-0000-0000-0000-00000000ba01';
 BEGIN
+    -- Obter clínicas existentes em staging ou criar temporariamente na transação para satisfazer FK
+    SELECT id INTO c_clinic_a FROM clinics ORDER BY created_at ASC LIMIT 1;
+    IF c_clinic_a IS NOT NULL THEN
+        SELECT id INTO c_clinic_b FROM clinics WHERE id <> c_clinic_a ORDER BY created_at ASC LIMIT 1;
+    END IF;
+
+    IF c_clinic_a IS NULL THEN
+        c_clinic_a := '00000000-0000-0000-0000-0000000000a1';
+        INSERT INTO clinics (id, name, cnpj) 
+        VALUES (c_clinic_a, 'Clinica Teste A', '00000000000191')
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+
+    IF c_clinic_b IS NULL THEN
+        c_clinic_b := '00000000-0000-0000-0000-0000000000b2';
+        INSERT INTO clinics (id, name, cnpj) 
+        VALUES (c_clinic_b, 'Clinica Teste B', '00000000000272')
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
     -- -------------------------------------------------------------------------
     -- TESTE 1: Existência das Novas Tabelas (B1.5, L4, C9)
     -- -------------------------------------------------------------------------
