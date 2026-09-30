@@ -152,6 +152,7 @@ describe('D5: Tolerância de Migration na Geração de XML (generate-xml)', () =
             storage: {
                 from: jest.fn(() => ({
                     upload: jest.fn().mockResolvedValue({ data: { path: 'xml.xml' }, error: null }),
+                    createSignedUrl: jest.fn().mockResolvedValue({ data: { signedUrl: 'https://storage/signed/xml.xml' }, error: null }),
                     getPublicUrl: jest.fn().mockReturnValue({ data: { publicUrl: 'https://storage/xml.xml' } }),
                 })),
             },
@@ -268,6 +269,7 @@ describe('D5: Tolerância de Migration na Geração de XML (generate-xml)', () =
             storage: {
                 from: jest.fn(() => ({
                     upload: jest.fn().mockResolvedValue({ data: { path: 'xml.xml' }, error: null }),
+                    createSignedUrl: jest.fn().mockResolvedValue({ data: { signedUrl: 'https://storage/signed/xml.xml' }, error: null }),
                     getPublicUrl: jest.fn().mockReturnValue({ data: { publicUrl: 'https://storage/xml.xml' } }),
                 })),
             },

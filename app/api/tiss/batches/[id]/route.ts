@@ -3,6 +3,7 @@ import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/ti
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { TissBatch, TissBatchStats } from '@/types/tiss';
+import { normalizeBatchStatus, canTransitionBatch } from '@/lib/tiss/state-machine';
 
 // ============================================
 // GET /api/tiss/batches/[id] - Detalhes do Lote
@@ -191,27 +192,88 @@ export async function PUT(
             );
         }
 
-        // Se for reabertura de lote (status = DRAFT com lote previamente fechado)
-        if (updates.status === 'DRAFT') {
+        // Se for reabertura de lote (status = DRAFT ou OPEN)
+        if (updates.status === 'DRAFT' || updates.status === 'OPEN') {
             const { data: currentBatch } = await supabase
                 .from('tiss_batches')
-                .select('status, batch_number')
+                .select('id, status, batch_number')
                 .eq('id', batch_id)
+                .eq('clinic_id', profile.clinic_id)
                 .single();
 
-            if (currentBatch && currentBatch.status !== 'DRAFT') {
-                await supabase.from('audit_logs').insert({
-                    user_id: user.id,
-                    action: 'TISS_BATCH_REOPEN',
-                    entity_type: 'tiss_batch',
-                    entity_id: batch_id,
-                    metadata: {
-                        previous_status: currentBatch.status,
-                        new_status: 'DRAFT',
-                        reason: body.reason || body.reopen_reason || 'Reabertura de lote solicitada pelo faturamento',
-                        batch_number: currentBatch.batch_number,
-                    }
-                });
+            if (!currentBatch) {
+                return NextResponse.json(
+                    { success: false, error: 'Lote não encontrado' },
+                    { status: 404 }
+                );
+            }
+
+            const normalizedCurrent = normalizeBatchStatus(currentBatch.status);
+            // Reabertura permitida somente a partir de Fechado (CLOSED / VALID) e antes de Enviado (SENT)
+            if (normalizedCurrent !== 'CLOSED' || !canTransitionBatch(currentBatch.status, 'OPEN', { hasReopenReason: true })) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'Reabertura permitida somente a partir do status Fechado e antes de Enviado.',
+                        code: 'INVALID_STATUS_FOR_REOPEN',
+                    },
+                    { status: 409 }
+                );
+            }
+
+            // Motivo obrigatório (mínimo 10 caracteres)
+            const reason = (body.reason || body.reopen_reason || '').trim();
+            if (!reason || reason.length < 10) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'Motivo da reabertura é obrigatório (mínimo 10 caracteres).',
+                        code: 'REOPEN_REASON_REQUIRED',
+                    },
+                    { status: 400 }
+                );
+            }
+
+            updates.status = 'DRAFT';
+            updates.reopened_at = new Date().toISOString();
+            updates.reopened_by = user.id;
+            updates.reopen_reason = reason;
+
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'TISS_BATCH_REOPEN',
+                entity_type: 'tiss_batch',
+                entity_id: batch_id,
+                metadata: {
+                    previous_status: currentBatch.status,
+                    new_status: 'DRAFT',
+                    reason,
+                    batch_number: currentBatch.batch_number,
+                }
+            });
+        } else if (updates.status) {
+            const { data: currentBatch } = await supabase
+                .from('tiss_batches')
+                .select('status')
+                .eq('id', batch_id)
+                .eq('clinic_id', profile.clinic_id)
+                .single();
+
+            if (currentBatch && !canTransitionBatch(currentBatch.status, updates.status)) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: `Transição inválida de lote: não é permitido alterar de ${currentBatch.status} para ${updates.status}.`,
+                        code: 'INVALID_STATUS_TRANSITION',
+                    },
+                    { status: 409 }
+                );
+            }
+
+            if (updates.status === 'VALID' || updates.status === 'CLOSED') {
+                updates.status = 'VALID'; // Compatibilidade retroativa com schema e enums existentes
+                updates.closed_at = new Date().toISOString();
+                updates.closed_by = user.id;
             }
         }
 

@@ -89,7 +89,7 @@ export async function POST(
         }
 
         // Verificar se lote não foi enviado ainda
-        if (batch.status !== 'DRAFT' && batch.status !== 'VALID') {
+        if (batch.status !== 'DRAFT' && batch.status !== 'VALID' && batch.status !== 'CLOSED') {
             return NextResponse.json(
                 { success: false, error: 'Lote já foi enviado anteriormente' },
                 { status: 400 }

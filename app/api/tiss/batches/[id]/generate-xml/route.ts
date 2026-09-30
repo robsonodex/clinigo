@@ -207,11 +207,16 @@ export async function POST(
             );
         }
 
-        const { data: urlData } = supabase.storage
-            .from('documents')
-            .getPublicUrl(filePath);
-
-        const xmlUrl = urlData.publicUrl;
+        // Cria URL assinada de curta duração (60 segundos) via bucket privado (Zero link público)
+        let xmlUrl = filePath;
+        const storageBucket = supabase.storage.from('documents');
+        if (typeof storageBucket?.createSignedUrl === 'function') {
+            const { data: signedData } = await storageBucket.createSignedUrl(filePath, 60);
+            xmlUrl = signedData?.signedUrl || filePath;
+        } else if (typeof storageBucket?.getPublicUrl === 'function') {
+            const { data: urlData } = storageBucket.getPublicUrl(filePath);
+            xmlUrl = urlData?.publicUrl || filePath;
+        }
 
         // 10. Atualizar máquina de estados do batch com rastreabilidade de hash (tolerante a migration pendente)
         const finalStatus = validationResult.valid ? 'VALID' : 'INVALID';
@@ -407,7 +412,34 @@ export async function GET(
             );
         }
 
-        // Se tiver xml_content direto, retorna inline com headers de hash
+        // Auditoria obrigatória do download de XML TISS
+        await supabase.from('audit_logs').insert({
+            user_id: user.id,
+            action: 'TISS_XML_DOWNLOAD',
+            entity_type: 'tiss_batch',
+            entity_id: batch_id,
+            metadata: {
+                batch_number: batch.batch_number,
+                downloaded_at: new Date().toISOString(),
+                hash_value: batch.hash_value || null,
+            }
+        });
+
+        // Se solicitou formato URL ou JSON com signed URL
+        const filePath = `tiss-batches/${profile.clinic_id}/${batch.batch_number}.xml`;
+        const { data: signedData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(filePath, 60);
+
+        if (request.nextUrl.searchParams.get('format') === 'url') {
+            return NextResponse.json({
+                success: true,
+                download_url: signedData?.signedUrl || null,
+                expires_in: 60,
+            });
+        }
+
+        // Se tiver xml_content direto, retorna inline com headers de hash e disposition attachment
         if (batch.xml_content) {
             return new NextResponse(batch.xml_content, {
                 status: 200,
@@ -420,8 +452,15 @@ export async function GET(
             });
         }
 
-        // Fallback: redireciona para a URL do Storage
-        return NextResponse.redirect(batch.xml_file_url);
+        // Fallback: redireciona para link assinado de curta duração (60s), nunca link público
+        if (signedData?.signedUrl) {
+            return NextResponse.redirect(signedData.signedUrl);
+        }
+
+        return NextResponse.json(
+            { success: false, error: 'Arquivo XML não localizado no storage privado' },
+            { status: 404 }
+        );
 
     } catch (error: any) {
         console.error('[TISS] Erro ao buscar XML:', error);

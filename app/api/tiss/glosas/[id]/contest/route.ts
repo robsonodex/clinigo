@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 const createContestSchema = z.object({
     contest_reason: z.string().min(10, 'Justificativa deve ter ao menos 10 caracteres'),
-    deadline_days: z.number().min(1).max(90).optional().default(30),
+    deadline_days: z.number().min(1).max(180).optional(),
 });
 
 const updateContestSchema = z.object({
@@ -93,9 +93,34 @@ export async function POST(
             );
         }
 
-        // Calcular deadline
+        // Buscar prazo de recurso (appeal_deadline_days) da operadora associada à guia
+        let deadlineDays = validated.deadline_days;
+        if (!deadlineDays && glosa.guide_id) {
+            const { data: guideWithInsurance } = await supabase
+                .from('tiss_guides')
+                .select('health_insurance_id, batch:tiss_batches(insurance_company_id)')
+                .eq('id', glosa.guide_id)
+                .single();
+
+            const insuranceId = guideWithInsurance?.health_insurance_id || (guideWithInsurance as any)?.batch?.insurance_company_id;
+            if (insuranceId) {
+                const { data: insurance } = await supabase
+                    .from('health_insurances')
+                    .select('appeal_deadline_days')
+                    .eq('id', insuranceId)
+                    .single();
+
+                if (insurance?.appeal_deadline_days) {
+                    deadlineDays = Number(insurance.appeal_deadline_days);
+                }
+            }
+        }
+
+        const effectiveDays = deadlineDays || 30;
+
+        // Calcular deadline a partir do prazo da operadora
         const deadline = new Date();
-        deadline.setDate(deadline.getDate() + validated.deadline_days);
+        deadline.setDate(deadline.getDate() + effectiveDays);
 
         // Criar contest
         const { data: contest, error: createError } = await supabase

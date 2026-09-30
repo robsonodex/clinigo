@@ -94,10 +94,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const validated = postGlosaSchema.parse(body);
 
-        // Calculate a sample deadline (e.g., 30 days from now)
-        const deadline = new Date();
-        deadline.setDate(deadline.getDate() + 30);
-
         // Check if a glosa row already exists for this guide to prevent duplicates causing issues
         const { data: existingGlosa } = await supabase
             .from('tiss_glosas')
@@ -109,6 +105,17 @@ export async function POST(request: NextRequest) {
         if (existingGlosa) {
             return NextResponse.json({ success: false, error: 'Esta guia já possui um registro ativo em TISS Glosas.' }, { status: 400 });
         }
+
+        // Buscar prazo de recurso (appeal_deadline_days) da operadora da guia
+        const { data: guideInsurance } = await supabase
+            .from('tiss_guides')
+            .select('health_insurance_id, health_insurance:health_insurances(appeal_deadline_days)')
+            .eq('id', validated.guide_id)
+            .maybeSingle();
+
+        const appealDays = Number((guideInsurance as any)?.health_insurance?.appeal_deadline_days) || 30;
+        const deadline = new Date();
+        deadline.setDate(deadline.getDate() + appealDays);
 
         // Insert new glosa record with status PENDING_APPEAL
         const { data: newGlosa, error: insertError } = await supabase
