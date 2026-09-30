@@ -17,7 +17,13 @@ import {
     PenTool,
     Loader2,
     RotateCcw,
+    Lock,
+    Link,
 } from 'lucide-react';
+import { LinkGuidesDialog } from '@/components/tiss/link-guides-dialog';
+import { CloseBatchDialog } from '@/components/tiss/close-batch-dialog';
+import { ManualDispatchDialog } from '@/components/tiss/manual-dispatch-dialog';
+import { HistoryDrawer } from '@/components/tiss/HistoryDrawer';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -161,6 +167,12 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
     const [protocolNumber, setProtocolNumber] = useState<string>('');
     const [submissionNotes, setSubmissionNotes] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Diálogos de Gestão de Lotes (L2, L3, L7, F2)
+    const [linkBatch, setLinkBatch] = useState<TissBatch | null>(null);
+    const [closeBatch, setCloseBatch] = useState<TissBatch | null>(null);
+    const [manualDispatchBatch, setManualDispatchBatch] = useState<TissBatch | null>(null);
+    const [historyBatch, setHistoryBatch] = useState<TissBatch | null>(null);
 
     // Desfazer retorno com confirmação
     const handleUndoReturn = async () => {
@@ -498,21 +510,38 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                                 {validatingId === batch.id ? 'Validando...' : 'Validação Estrutural'}
                                             </DropdownMenuItem>
 
-                                            {/* Registrar Envio à Operadora */}
-                                            {['DRAFT', 'VALID'].includes(batch.status) && (
+                                            {/* Vincular / Desvincular Guias (L2) */}
+                                            {['DRAFT', 'OPEN'].includes(batch.status) && (
+                                                <DropdownMenuItem onClick={() => setLinkBatch(batch)}>
+                                                    <Link className="mr-2 h-4 w-4" />
+                                                    Vincular Guias
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            {/* Fechar Lote com Verificação Prévia (L3) */}
+                                            {['DRAFT', 'OPEN'].includes(batch.status) && (
+                                                <DropdownMenuItem onClick={() => setCloseBatch(batch)}>
+                                                    <Lock className="mr-2 h-4 w-4" />
+                                                    Fechar Lote
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            {/* Registrar Envio à Operadora (L7) */}
+                                            {['DRAFT', 'VALID', 'CLOSED'].includes(batch.status) && (
                                                 <DropdownMenuItem
-                                                    onClick={() => {
-                                                        setSubmitBatch(batch);
-                                                        setSubmissionDate(new Date().toISOString().split('T')[0]);
-                                                        setProtocolNumber(batch.protocol_number || '');
-                                                        setSubmissionNotes('');
-                                                    }}
+                                                    onClick={() => setManualDispatchBatch(batch)}
                                                     className="text-emerald-700 dark:text-emerald-400 font-medium cursor-pointer"
                                                 >
                                                     <Send className="mr-2 h-4 w-4" />
-                                                    Registrar Envio do Lote
+                                                    Registrar Envio Manual
                                                 </DropdownMenuItem>
                                             )}
+
+                                            {/* Histórico e Auditoria (F2) */}
+                                            <DropdownMenuItem onClick={() => setHistoryBatch(batch)}>
+                                                <Clock className="mr-2 h-4 w-4" />
+                                                Histórico do Lote
+                                            </DropdownMenuItem>
 
                                             {/* Assinatura Digital */}
                                             <DropdownMenuItem
@@ -687,6 +716,50 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal L2: Vincular Guias */}
+            {linkBatch && (
+                <LinkGuidesDialog
+                    open={!!linkBatch}
+                    onOpenChange={(open) => !open && setLinkBatch(null)}
+                    batchId={linkBatch.id}
+                    batchNumber={linkBatch.batch_number}
+                    onSuccess={onRefresh}
+                />
+            )}
+
+            {/* Modal L3: Fechar Lote */}
+            {closeBatch && (
+                <CloseBatchDialog
+                    open={!!closeBatch}
+                    onOpenChange={(open) => !open && setCloseBatch(null)}
+                    batchId={closeBatch.id}
+                    batchNumber={closeBatch.batch_number}
+                    onSuccess={onRefresh}
+                />
+            )}
+
+            {/* Modal L7: Registrar Envio Manual */}
+            {manualDispatchBatch && (
+                <ManualDispatchDialog
+                    open={!!manualDispatchBatch}
+                    onOpenChange={(open) => !open && setManualDispatchBatch(null)}
+                    batchId={manualDispatchBatch.id}
+                    batchNumber={manualDispatchBatch.batch_number}
+                    onSuccess={onRefresh}
+                />
+            )}
+
+            {/* Gaveta F2: Histórico e Auditoria */}
+            {historyBatch && (
+                <HistoryDrawer
+                    open={!!historyBatch}
+                    onOpenChange={(open) => !open && setHistoryBatch(null)}
+                    entityType="tiss_batch"
+                    entityId={historyBatch.id}
+                    title={`Histórico do Lote ${historyBatch.batch_number}`}
+                />
+            )}
         </Card>
     );
 }
