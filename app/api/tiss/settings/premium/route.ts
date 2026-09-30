@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isFaturamentoPremiumEnabled, setFaturamentoPremiumStatus } from '@/lib/tiss/feature-flag';
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { z } from 'zod';
 
 const toggleSchema = z.object({
@@ -9,7 +9,7 @@ const toggleSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'config.premium.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'config.premium.editar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -70,13 +70,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        // Restrito a administradores
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            return NextResponse.json(
-                { error: 'Apenas administradores da clínica podem ativar ou desativar o faturamento premium' },
-                { status: 403 }
-            );
-        }
+        // Permissão validada via requireTissAction('config.premium.editar')
 
         const body = await request.json();
         const parsed = toggleSchema.safeParse(body);

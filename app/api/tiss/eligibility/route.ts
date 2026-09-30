@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -26,7 +26,7 @@ const PLAN_HIERARCHY: Record<string, number> = {
 }
 
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.validar');
     if (!guard.authorized) {
         return guard.response;
     }

@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/returns/notify-upload-complete/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -17,7 +17,7 @@ const notifySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'retorno.importar');
     if (!guard.authorized) {
         return guard.response;
     }

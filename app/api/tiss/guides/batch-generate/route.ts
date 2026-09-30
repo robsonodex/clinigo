@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ const batchGenerateSchema = z.object({
  * Geração em massa de guias TISS para atendimentos concluídos no período.
  */
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.criar_em_massa');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -37,9 +37,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
-            return NextResponse.json({ success: false, error: 'Acesso negado' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('guia.criar_em_massa')
 
         const body = await request.json();
         const validated = batchGenerateSchema.parse(body);

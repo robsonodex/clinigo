@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * API: TISS Glosas Metrics
  * GET /api/tiss/glosas/metrics
@@ -10,7 +10,7 @@ import { successResponse } from '@/lib/utils/responses'
 import { GlosaService } from '@/lib/services/tiss/glosa-service'
 
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'retorno.ver');
     if (!guard.authorized) {
         return guard.response;
     }

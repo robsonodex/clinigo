@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -30,7 +30,7 @@ const batchFiltersSchema = z.object({
 // ============================================
 
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
 // ============================================
 
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.criar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -190,12 +190,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verificar permissão (apenas ADMIN pode criar lotes)
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
-            return NextResponse.json(
-                { success: false, error: 'Sem permissão para criar lotes TISS' },
-                { status: 403 }
-            );
-        }
+        // Permissão validada via requireTissAction('lote.criar')
 
         const clinic_id = profile.clinic_id;
 

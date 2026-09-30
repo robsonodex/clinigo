@@ -48,6 +48,7 @@ import {
     Upload,
     FileArchive,
     ClipboardList,
+    ClipboardPen,
     UserX,
     Layers,
     ExternalLink,
@@ -304,6 +305,21 @@ export const helpItems: HelpItem[] = [
         aliases: ['pacientes-diretorio-a-z']
     },
     {
+        id: 'pre-cadastros',
+        title: 'Pré-cadastros (Ficha Cadastral por Link)',
+        category: 'Equipe',
+        icon: ClipboardPen,
+        href: '/dashboard/pre-cadastros',
+        whatIsIt: 'Módulo de onboarding digital de pacientes. Permite que a recepção gere links únicos ou utilize o link fixo da clínica (com QR Code para recepção física) para que o próprio paciente ou responsável preencha seus dados cadastrais, endereço, convênio com foto da carteirinha e aceite os termos da LGPD pelo celular. As fichas preenchidas caem em uma fila de aprovação onde a recepção pode revisar, solicitar correções pontuais via WhatsApp ou aprovar com 1 clique, criando o paciente no prontuário eletrônico automaticamente.',
+        whenToUse: 'Antes de primeiras consultas, no agendamento inicial via WhatsApp, ou na recepção física da clínica via totem/QR Code para eliminar digitação manual e filas no balcão.',
+        howToUse: 'Acesse Pré-cadastros no menu lateral. Para enviar a um novo paciente, clique em "Novo Link", insira nome e telefone (opcional) e envie diretamente pelo WhatsApp conectado. Na aba "Fichas Recebidas", clique em "Revisar" sobre qualquer ficha pendente: audite os dados, compare com pacientes existentes em caso de CPF já cadastrado, edite campos se necessário e clique em "Aprovar e Criar Paciente". Para recepção física, acesse a aba "Link Fixo / QR Code", imprima o QR Code ou copie o link para totens.',
+        minPlan: 'Básico',
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        tags: ['pré-cadastro', 'ficha cadastral', 'onboarding', 'link', 'whatsapp', 'qr code', 'aprovação', 'lgpd', 'carteirinha'],
+        aliases: ['pre-cadastro', 'intake', 'ficha-paciente']
+    },
+    {
+
         id: 'aniversariantes',
         title: 'Aniversariantes de Pacientes',
         category: 'Equipe',

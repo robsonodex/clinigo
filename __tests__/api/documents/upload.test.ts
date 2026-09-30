@@ -131,10 +131,22 @@ describe('API /api/documents', () => {
 
             // Re-setup mock for this specific test with data
             const eqMock = jest.fn().mockResolvedValue({ data: mockDocuments, error: null })
-            const limitMock = jest.fn().mockReturnValue({ eq: eqMock })
+            const neqMock = jest.fn().mockReturnValue({ eq: eqMock })
+            const limitMock = jest.fn().mockReturnValue({ neq: neqMock, eq: eqMock })
             const orderMock = jest.fn().mockReturnValue({ limit: limitMock })
             const selectMock = jest.fn().mockReturnValue({ order: orderMock })
-            mockSupabase.from.mockReturnValue({ select: selectMock })
+            mockSupabase.from.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return {
+                        select: jest.fn().mockReturnValue({
+                            eq: jest.fn().mockReturnValue({
+                                single: jest.fn().mockResolvedValue({ data: { is_coordinator: true }, error: null })
+                            })
+                        })
+                    }
+                }
+                return { select: selectMock }
+            })
 
             ;(createClient as jest.Mock).mockResolvedValue(mockSupabase)
 

@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 /**
@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
  * Lista motivos de glosa oficiais da ANS (Tabela 38/61)
  */
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'retorno.ver');
     if (!guard.authorized) {
         return guard.response;
     }

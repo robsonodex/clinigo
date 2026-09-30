@@ -22,6 +22,7 @@ export type TissAction =
     | 'guia.imprimir'
     | 'guia.excluir_rascunho'
     | 'guia.cancelar'
+    | 'guia.criar_em_massa'
     // Lotes
     | 'lote.ver'
     | 'lote.criar'
@@ -33,6 +34,7 @@ export type TissAction =
     | 'lote.baixar_xml'
     | 'lote.registrar_envio'
     | 'lote.transmitir'
+    | 'lote.assinar'
     // Retorno e Conciliação
     | 'retorno.ver'
     | 'retorno.importar'
@@ -54,7 +56,15 @@ export type TissAction =
     | 'config.tuss.editar'
     | 'config.operadoras.ver'
     | 'config.operadoras.editar'
-    | 'config.demonstracao.ativar';
+    | 'config.demonstracao.ativar'
+    | 'config.premium.ver'
+    | 'config.premium.editar'
+    // Convênios de Pacientes e Autorizações
+    | 'paciente_convenio.ver'
+    | 'paciente_convenio.editar'
+    | 'autorizacao.ver'
+    | 'autorizacao.solicitar'
+    | 'autorizacao.enviar';
 
 export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     // Guias
@@ -66,6 +76,7 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'guia.imprimir': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
     'guia.excluir_rascunho': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.cancelar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'guia.criar_em_massa': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
 
     // Lotes
     'lote.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
@@ -78,6 +89,7 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'lote.baixar_xml': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'lote.registrar_envio': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'lote.transmitir': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'lote.assinar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
 
     // Retorno e Conciliação
     'retorno.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
@@ -98,11 +110,20 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     // Configurações & Tabelas
     'config.tabelas_preco.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'config.tabelas_preco.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
-    'config.tuss.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'config.tuss.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
     'config.tuss.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
-    'config.operadoras.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    'config.operadoras.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
     'config.operadoras.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     'config.demonstracao.ativar': ['SUPER_ADMIN'],
+    'config.premium.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'config.premium.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
+
+    // Convênios de Pacientes e Autorizações
+    'paciente_convenio.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'paciente_convenio.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    'autorizacao.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'autorizacao.solicitar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    'autorizacao.enviar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
 };
 
 /**

@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/generate-xml/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -15,7 +15,7 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.gerar_xml');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -280,6 +280,30 @@ export async function POST(
             await supabase.from('tiss_validation_errors').insert(errorInserts);
         }
 
+        // 11.1 Versionamento do XML do Lote (L4 do Prompt B)
+        try {
+            const { count } = await supabase
+                .from('tiss_batch_xml_versions')
+                .select('*', { count: 'exact', head: true })
+                .eq('batch_id', batch_id);
+
+            const nextVersion = (count || 0) + 1;
+            await supabase.from('tiss_batch_xml_versions').insert({
+                batch_id,
+                version_number: nextVersion,
+                xml_content: xmlContent,
+                hash_value: calculatedHash,
+                hash_algorithm: hashAlgo,
+                created_by: user.id,
+                xml_file_url: xmlUrl,
+                file_size: Buffer.from(xmlContent).length,
+                validation_status: finalStatus,
+                errors_count: validationResult.errors?.length || 0,
+            });
+        } catch (versionErr) {
+            console.warn('[TISS WARNING] Não foi possível gravar histórico em tiss_batch_xml_versions:', versionErr);
+        }
+
         // 12. Audit log
         await supabase.from('audit_logs').insert({
             user_id: user.id,
@@ -329,7 +353,7 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.baixar_xml');
     if (!guard.authorized) {
         return guard.response;
     }

@@ -123,7 +123,9 @@ const PUBLIC_ROUTES = [
     '/api/reception/queue', // Public TV panel access (controlled by clinicId param)
     '/api/device/', // Dispositivos pareados - autenticacao via header x-clinigo-device-token
     '/api/reception/pin-login', // Login temporario por PIN no terminal da recepcao
+    '/api/public/intake/', // Pre-cadastro public APIs (sem login para pacientes)
 ]
+
 
 // Patient portal routes (JWT auth, separate from Supabase)
 const PATIENT_PORTAL_ROUTES = [
@@ -153,9 +155,11 @@ const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
     '/api/crm': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // FluxoMed CRM e Pipeline exclusivo de Administradores
     '/api/admin': ['SUPER_ADMIN'],
     '/api/ai/predict-diagnosis': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/api/tiss/settings': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     '/api/tiss': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     '/api/health-insurances': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     '/api/insurance': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    '/api/intake': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'], // Pré-cadastros: apenas admin e recepção
 }
 
 // Role-protected Dashboard Pages (Hard Gate no Servidor para URLs diretas coladas no navegador)
@@ -206,6 +210,9 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     // WhatsApp e Estoque
     '/dashboard/whatsapp': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
     '/dashboard/estoque': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+
+    // Pré-cadastros: apenas admin e recepção
+    '/dashboard/pre-cadastros': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
 
     // Notificações administrativas
     '/dashboard/notificacoes': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
@@ -670,6 +677,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/paciente/registro') ||
         pathname.startsWith('/video/') || // Patient video room via token link
         pathname.startsWith('/assinar/') || // Public digital signature for parents/guardians
+        pathname.startsWith('/pre-cadastro/') || // Public patient intake form
         pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
         pathname.startsWith('/totem/') || // Public totem for clinics (gate de plano feito nas APIs)
         pathname === '/terminal' || // Terminal quiosque para salas

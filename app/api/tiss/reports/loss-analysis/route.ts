@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/reports/loss-analysis/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/server';
  *   - insurance_company: string (opcional)
  */
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'config.premium.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'start_date e end_date obrigatórios' }, { status: 400 });
         }
 
-        // Buscar todas as guias do período
+        // Buscar todas as guias do período (excluindo canceladas e soft-deleted)
         let query = supabase
             .from('tiss_guides')
             .select(`
@@ -58,7 +58,9 @@ export async function GET(request: NextRequest) {
         batch:tiss_batches!inner(insurance_company)
       `)
             .gte('execution_date', startDate)
-            .lte('execution_date', endDate);
+            .lte('execution_date', endDate)
+            .neq('status', 'CANCELLED')
+            .is('deleted_at', null);
 
         if (insuranceCompany) {
             query = query.eq('batch.insurance_company', insuranceCompany);

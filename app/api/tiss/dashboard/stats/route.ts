@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/dashboard/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * Retorna estatísticas consolidadas para o dashboard TISS
  */
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -70,11 +70,13 @@ export async function GET(request: NextRequest) {
             (sum, b) => sum + (b.glosa_value || 0), 0
         ) || 0;
 
-        // Buscar guias para calcular aprovação
+        // Buscar guias para calcular aprovação (excluindo canceladas e excluídas da contagem)
         const { data: allGuides } = await supabase
             .from('tiss_guides')
             .select('status')
-            .eq('clinic_id', clinic_id);
+            .eq('clinic_id', clinic_id)
+            .neq('status', 'CANCELLED')
+            .is('deleted_at', null);
 
         const approvedGuides = allGuides?.filter(g => g.status === 'APPROVED').length || 0;
         const totalGuides = allGuides?.length || 1; // Evitar divisão por zero
@@ -112,7 +114,7 @@ export async function GET(request: NextRequest) {
             .order('created_at', { ascending: false })
             .limit(5);
 
-        // Alertas (exemplo)
+        // Alertas
         const alerts = [];
 
         // Verificar lotes com erros de validação

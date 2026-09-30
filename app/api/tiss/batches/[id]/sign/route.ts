@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS Batch Signing API Endpoint
  * 
@@ -20,7 +20,7 @@ export async function POST(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.assinar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -37,9 +37,7 @@ export async function POST(
         }
 
         const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single();
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile?.role)) {
-            return NextResponse.json({ error: 'Sem permissao para assinar lotes' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('lote.assinar')
         const batchId = params.id;
 
         // Get batch data
@@ -253,7 +251,7 @@ export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.assinar');
     if (!guard.authorized) {
         return guard.response;
     }

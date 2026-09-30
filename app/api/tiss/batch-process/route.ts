@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * POST /api/tiss/batch-process
  * Batch processing for multiple TISS guides
@@ -33,7 +33,7 @@ interface BatchResult {
 }
 
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.criar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -52,9 +52,7 @@ export async function POST(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes((profile as any)?.role)) {
-            return NextResponse.json({ error: 'Sem permissao para processamento em lote' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('lote.criar')
         if (!profile?.clinic_id) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 })
         }

@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -12,7 +12,7 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -137,7 +137,7 @@ export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.fechar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -169,12 +169,7 @@ export async function PUT(
         }
 
         // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
-            return NextResponse.json(
-                { success: false, error: 'Sem permissão para editar lotes' },
-                { status: 403 }
-            );
-        }
+        // Permissão validada via requireTissAction('lote.fechar')
 
         const batch_id = id;
         const body = await request.json();
@@ -194,6 +189,30 @@ export async function PUT(
                 { success: false, error: 'Nenhum campo para atualizar' },
                 { status: 400 }
             );
+        }
+
+        // Se for reabertura de lote (status = DRAFT com lote previamente fechado)
+        if (updates.status === 'DRAFT') {
+            const { data: currentBatch } = await supabase
+                .from('tiss_batches')
+                .select('status, batch_number')
+                .eq('id', batch_id)
+                .single();
+
+            if (currentBatch && currentBatch.status !== 'DRAFT') {
+                await supabase.from('audit_logs').insert({
+                    user_id: user.id,
+                    action: 'TISS_BATCH_REOPEN',
+                    entity_type: 'tiss_batch',
+                    entity_id: batch_id,
+                    metadata: {
+                        previous_status: currentBatch.status,
+                        new_status: 'DRAFT',
+                        reason: body.reason || body.reopen_reason || 'Reabertura de lote solicitada pelo faturamento',
+                        batch_number: currentBatch.batch_number,
+                    }
+                });
+            }
         }
 
         // Atualizar lote
@@ -236,7 +255,7 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.reabrir');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -268,12 +287,7 @@ export async function DELETE(
         }
 
         // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
-            return NextResponse.json(
-                { success: false, error: 'Sem permissão para deletar lotes' },
-                { status: 403 }
-            );
-        }
+        // Permissão validada via requireTissAction('lote.reabrir')
 
         const batch_id = id;
 

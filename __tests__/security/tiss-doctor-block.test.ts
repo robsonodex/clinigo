@@ -136,30 +136,56 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
     const isReceptionistForbidden = (relPath: string, method: string) => {
         const p = relPath.replace(/\\/g, '/');
 
-        // Lotes: Criar, Editar, Deletar
+        // Lotes: Criar, Editar, Deletar, Assinar, Transmitir
         if (p === 'app/api/tiss/batches/route.ts' && method === 'POST') return true;
         if (p === 'app/api/tiss/batches/[id]/route.ts' && ['PUT', 'DELETE'].includes(method)) return true;
         if (p.includes('batches/[id]/generate-xml')) return true;
         if (p.includes('batches/[id]/submit')) return true;
-        if (p.includes('batches/[id]/sign') && ['POST', 'PUT'].includes(method)) return true;
+        if (p.includes('batches/[id]/sign')) return true;
+        if (p.includes('batches/[id]/errors') && method === 'PATCH') return true;
         if (p.includes('batch-process')) return true;
         if (p.includes('guides/batch-generate')) return true;
 
-        // Retornos: Upload, Parse, URL, Undo
+        // Guias: Deletar guia em lote exige perfil financeiro (guia.cancelar)
+        if (p.includes('guides/[id]') && method === 'DELETE') return true;
+
+        // Importação em massa: Recepção não pode (C3)
+        if (p.includes('import') && method === 'POST') return true;
+
+        // Retornos: Upload, Parse, URL, Notificar, Undo
         if (p.includes('returns/upload')) return true;
         if (p.includes('returns/generate-upload-url')) return true;
+        if (p.includes('returns/notify-upload-complete')) return true;
         if (p.includes('returns/[id]/parse')) return true;
         if (p.includes('returns/[id]/undo')) return true;
 
-        // Glosas: Contestar
+        // Glosas: Contestar, Análise de risco de glosa
         if (p.includes('glosas/[id]/contest') && ['POST', 'PUT'].includes(method)) return true;
+        if (p.includes('analyze-glosa-risk')) return true;
 
-        // Pricing & TUSS escrita
-        if (p.includes('pricing') && ['POST', 'DELETE'].includes(method)) return true;
+        // Pricing, TUSS e Configurações: Recepção não gerencia tabelas contratuais
+        if (p.includes('pricing')) return true;
         if (p.includes('tuss') && method === 'POST') return true;
         if (p.includes('operators') && method === 'POST') return true;
-        if (p.includes('settings') && method === 'POST') return true;
+        if (p.includes('settings')) return true;
+        if (p.includes('audit')) return true;
+        if (p.includes('reports/loss-analysis')) return true;
+        if (p.includes('validate-xsd') && method === 'POST') return true;
 
+        return false;
+    };
+
+    /**
+     * Matriz de Menor Privilégio para READONLY (Seção 5):
+     * Leitura e impressão permitida; mutações e configurações sensíveis proibidas (403).
+     */
+    const isReadOnlyForbidden = (relPath: string, method: string) => {
+        const p = relPath.replace(/\\/g, '/');
+        if (p.includes('guides/[id]/xml') && method === 'POST') return false; // Impressão de espelho
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
+        if (p.includes('batches/[id]/generate-xml')) return true;
+        if (p.includes('batches/[id]/sign')) return true;
+        if (p.includes('pricing') || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
         return false;
     };
 
@@ -175,7 +201,8 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         const p = relPath.replace(/\\/g, '/');
         if (p.includes('returns/[id]/undo')) return true;
         if (p.includes('operators') && method === 'POST') return true;
-        if (p.includes('pricing') && method === 'DELETE') return true;
+        // C3: escrita em pricing e tuss restrita a ADMIN (FINANCIAL só leitura)
+        if (p.includes('pricing') && ['POST', 'DELETE'].includes(method)) return true;
         if (p.includes('tuss') && method === 'POST') return true;
         if (p.includes('settings') && method === 'POST') return true;
         return false;
@@ -390,6 +417,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
                 if (typeof routeModule[method] === 'function') {
                     const handler = routeModule[method];
                     const recForbidden = isReceptionistForbidden(relPath, method);
+                    const roForbidden = isReadOnlyForbidden(relPath, method);
                     const adminOnly = isAdminOnlyRoute(relPath, method);
 
                     // 1. DOCTOR: Sempre Proibido -> 403 estrito
@@ -406,17 +434,23 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
                         roleStats.DOCTOR.passed++;
                     });
 
-                    // 2. READONLY: Sempre Proibido no módulo TISS -> 403 estrito
-                    it(`[${method}] READONLY -> status 403 Forbidden`, async () => {
+                    // 2. READONLY: Leitura e impressao apenas; mutações e configurações sensíveis -> 403
+                    it(`[${method}] READONLY -> ${roForbidden ? '403 Forbidden' : 'autorizado (2xx/4xx)'}`, async () => {
                         roleStats.READONLY.total++;
                         setupMockSupabase(PROFILES.READONLY);
                         const req = createRequest(`http://localhost:3000/${relPath.replace('/route.ts', '')}`, method, 'READONLY', PROFILES.READONLY.id, relPath);
                         const context = { params: Promise.resolve({ id: 'dummy-id-123' }) };
 
                         const res = await handler(req, context);
-                        expect(res.status).toBe(403);
-                        const data = await res.json();
-                        expect(data.code || data.error?.code).toBe('FORBIDDEN');
+                        if (roForbidden) {
+                            expect(res.status).toBe(403);
+                            const data = await res.json();
+                            expect(data.code || data.error?.code).toBe('FORBIDDEN');
+                        } else {
+                            expect(res.status).not.toBe(401);
+                            expect(res.status).not.toBe(403);
+                            expect(res.status).toBeLessThan(500);
+                        }
                         roleStats.READONLY.passed++;
                     });
 

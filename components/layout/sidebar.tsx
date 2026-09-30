@@ -59,6 +59,7 @@ import {
     Plus,
     Tablet,
     FileSignature,
+    ClipboardPen,
 } from 'lucide-react'
 import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
@@ -169,6 +170,13 @@ const navigationSections: NavSection[] = [
                 icon: UserPlus,
                 roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE', 'STAFF'],
                 featureKey: FEATURE_KEYS.PACIENTES,
+            },
+            {
+                title: 'Pre-cadastros',
+                href: '/dashboard/pre-cadastros',
+                icon: ClipboardPen,
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+                featureKey: FEATURE_KEYS.PRE_CADASTROS,
             },
         ],
     },

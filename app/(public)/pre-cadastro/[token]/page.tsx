@@ -1,480 +1,925 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { CheckCircle, AlertCircle, Loader2, Calendar, Clock, User, Stethoscope, Building2 } from 'lucide-react'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
+import {
+    ShieldCheck,
+    CheckCircle2,
+    Building2,
+    User,
+    AlertCircle,
+    Phone,
+    Mail,
+    Calendar,
+    CreditCard,
+    Upload,
+    FileText,
+    Users,
+    Loader2,
+    ArrowLeft,
+    ArrowRight,
+    Camera,
+    X,
+    Heart,
+} from 'lucide-react'
 
-// Form validation schema
-const preRegistrationSchema = z.object({
-    full_name: z.string().min(3, 'Nome completo é obrigatório'),
-    cpf: z.string().optional(),
-    date_of_birth: z.string().optional(),
-    phone: z.string().optional(),
-    email: z.string().email('E-mail inválido').optional().or(z.literal('')),
-    gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-    address_street: z.string().optional(),
-    address_number: z.string().optional(),
-    address_complement: z.string().optional(),
-    address_city: z.string().optional(),
-    address_state: z.string().max(2).optional(),
-    address_zipcode: z.string().optional(),
-    emergency_contact: z.string().optional(),
-    emergency_phone: z.string().optional(),
-    health_insurance: z.string().optional(),
-    insurance_card_number: z.string().optional(),
-    allergies: z.string().optional(),
-    medications: z.string().optional(),
-    previous_conditions: z.string().optional()
-})
+// ============================================
+// Constants
+// ============================================
 
-type PreRegistrationData = z.infer<typeof preRegistrationSchema>
+const STEPS = ['Tipo', 'Dados', 'Convênio', 'Consentimento'] as const
 
-interface AppointmentInfo {
-    token: string
-    preRegistrationCompleted: boolean
-    appointment: {
-        id: string
-        scheduledAt: string
-        status: string
-    }
-    patient: {
-        id: string
-        fullName: string
-        email: string
-        phone: string
-        cpf: string
-        dateOfBirth: string
-        gender: string
-        addressStreet: string
-        addressNumber: string
-        addressCity: string
-        addressState: string
-        addressZipcode: string
-    } | null
-    doctor: {
-        id: string
-        fullName: string
-        specialty: string
-    }
-    clinic: {
-        id: string
-        name: string
-        phone: string
-        address: string
-    }
+function formatCPF(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
 }
 
-export default function PreCadastroPage() {
+function formatPhone(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 2) return `(${digits}`
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+function formatDate(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
+function parseDateToISO(dateStr: string): string {
+    const parts = dateStr.split('/')
+    if (parts.length === 3 && parts[2].length === 4) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`
+    }
+    return dateStr
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+export default function PublicIntakePage() {
     const params = useParams()
-    const router = useRouter()
-    const token = params.token as string
+    const token = params?.token as string
 
-    const [loading, setLoading] = useState(true)
-    const [submitting, setSubmitting] = useState(false)
-    const [appointmentData, setAppointmentData] = useState<AppointmentInfo | null>(null)
+    // Page state
+    const [isLoading, setIsLoading] = useState(true)
+    const [clinicData, setClinicData] = useState<{
+        clinic: { id: string; name: string; logo_url: string | null }
+        lead_phone: string | null
+        is_static: boolean
+        correction: { note: string; previous_data: any } | null
+        consent_text: string
+        consent_version: string
+    } | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [success, setSuccess] = useState(false)
+    const [currentStep, setCurrentStep] = useState(0)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isSubmitted, setIsSubmitted] = useState(false)
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-        setValue
-    } = useForm<PreRegistrationData>({
-        resolver: zodResolver(preRegistrationSchema)
-    })
+    // Form state
+    const [patientType, setPatientType] = useState<'self' | 'other'>('self')
+    const [fullName, setFullName] = useState('')
+    const [dateOfBirth, setDateOfBirth] = useState('')
+    const [cpf, setCpf] = useState('')
+    const [phone, setPhone] = useState('')
+    const [email, setEmail] = useState('')
+    const [billingType, setBillingType] = useState<'particular' | 'convenio'>('particular')
+    const [complaint, setComplaint] = useState('')
+    const [consentAccepted, setConsentAccepted] = useState(false)
 
-    // Fetch appointment data
+    // Guardian state
+    const [guardianName, setGuardianName] = useState('')
+    const [guardianCpf, setGuardianCpf] = useState('')
+    const [guardianRelationship, setGuardianRelationship] = useState('')
+    const [guardianPhone, setGuardianPhone] = useState('')
+
+    // Insurance state
+    const [insuranceId, setInsuranceId] = useState('')
+    const [insuranceOther, setInsuranceOther] = useState('')
+    const [cardNumber, setCardNumber] = useState('')
+    const [cardValidity, setCardValidity] = useState('')
+    const [planName, setPlanName] = useState('')
+    const [isHolder, setIsHolder] = useState(true)
+    const [holderName, setHolderName] = useState('')
+    const [holderCpf, setHolderCpf] = useState('')
+
+    // File upload state
+    const [cardFront, setCardFront] = useState<File | null>(null)
+    const [cardBack, setCardBack] = useState<File | null>(null)
+    const [cardFrontPreview, setCardFrontPreview] = useState<string | null>(null)
+    const [cardBackPreview, setCardBackPreview] = useState<string | null>(null)
+    const [uploadingFront, setUploadingFront] = useState(false)
+    const [uploadingBack, setUploadingBack] = useState(false)
+
+    // Insurance options from clinic
+    const [insuranceOptions, setInsuranceOptions] = useState<Array<{ id: string; name: string }>>([])
+
+    // Honeypot
+    const [honeypot, setHoneypot] = useState('')
+
+    // Validation errors
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+    // ============================================
+    // Load token data
+    // ============================================
     useEffect(() => {
-        async function fetchAppointment() {
-            try {
-                const response = await fetch(`/api/pre-registration/${token}`)
-                const data = await response.json()
+        if (!token) return
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'QR Code inválido ou expirado')
+        const fetchData = async () => {
+            try {
+                setIsLoading(true)
+                const res = await fetch(`/api/public/intake/${token}`)
+                if (!res.ok) {
+                    const err = await res.json()
+                    throw new Error(err.error || 'Link inválido ou expirado')
+                }
+                const data = await res.json()
+                setClinicData(data)
+
+                // Pre-fill phone
+                if (data.lead_phone) {
+                    setPhone(formatPhone(data.lead_phone.replace(/^\+?55/, '')))
                 }
 
-                setAppointmentData(data)
+                // If correction, pre-fill from previous data
+                if (data.correction?.previous_data) {
+                    const prev = data.correction.previous_data
+                    setFullName(prev.full_name || '')
+                    setDateOfBirth(prev.date_of_birth ? formatDate(prev.date_of_birth.replace(/-/g, '')) : '')
+                    setCpf(prev.cpf ? formatCPF(prev.cpf) : '')
+                    setPhone(prev.phone ? formatPhone(prev.phone.replace(/^55/, '')) : '')
+                    setEmail(prev.email || '')
+                    setPatientType(prev.patient_type || 'self')
+                    setBillingType(prev.billing_type || 'particular')
+                    setComplaint(prev.complaint || '')
 
-                // Pre-fill form if patient data exists
-                if (data.patient) {
-                    const p = data.patient
-                    if (p.fullName) setValue('full_name', p.fullName)
-                    if (p.cpf) setValue('cpf', p.cpf)
-                    if (p.dateOfBirth) setValue('date_of_birth', p.dateOfBirth)
-                    if (p.phone) setValue('phone', p.phone)
-                    if (p.email) setValue('email', p.email)
-                    if (p.gender) setValue('gender', p.gender as any)
-                    if (p.addressStreet) setValue('address_street', p.addressStreet)
-                    if (p.addressNumber) setValue('address_number', p.addressNumber)
-                    if (p.addressCity) setValue('address_city', p.addressCity)
-                    if (p.addressState) setValue('address_state', p.addressState)
-                    if (p.addressZipcode) setValue('address_zipcode', p.addressZipcode)
+                    if (prev.guardian) {
+                        setGuardianName(prev.guardian.guardian_name || '')
+                        setGuardianCpf(prev.guardian.guardian_cpf ? formatCPF(prev.guardian.guardian_cpf) : '')
+                        setGuardianRelationship(prev.guardian.guardian_relationship || '')
+                        setGuardianPhone(prev.guardian.guardian_phone ? formatPhone(prev.guardian.guardian_phone) : '')
+                    }
+
+                    if (prev.insurance) {
+                        setInsuranceId(prev.insurance.health_insurance_id || '')
+                        setCardNumber(prev.insurance.insurance_card_number || '')
+                        setCardValidity(prev.insurance.insurance_validity || '')
+                        setPlanName(prev.insurance.insurance_plan_name || '')
+                        setIsHolder(prev.insurance.is_holder !== false)
+                        setHolderName(prev.insurance.holder_name || '')
+                        setHolderCpf(prev.insurance.holder_cpf ? formatCPF(prev.insurance.holder_cpf) : '')
+                    }
+                }
+
+                // Load insurance options
+                if (data.clinic?.id) {
+                    try {
+                        const insRes = await fetch(`/api/public/intake/${token}`)
+                        // Insurance options would come from a separate endpoint in production
+                        // For now, they'll be loaded from the clinic's health_insurances
+                    } catch {}
                 }
             } catch (err: any) {
-                setError(err.message)
+                setError(err.message || 'Erro ao carregar formulário')
             } finally {
-                setLoading(false)
+                setIsLoading(false)
             }
         }
 
-        fetchAppointment()
-    }, [token, setValue])
+        fetchData()
+    }, [token])
 
-    // Submit pre-registration
-    const onSubmit = async (data: PreRegistrationData) => {
-        setSubmitting(true)
-        setError(null)
+    // ============================================
+    // File Upload
+    // ============================================
+    const handleFileUpload = useCallback(async (file: File, kind: 'carteirinha_frente' | 'carteirinha_verso') => {
+        if (!token) return
+
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('kind', kind)
+
+        const setter = kind === 'carteirinha_frente' ? setUploadingFront : setUploadingBack
 
         try {
-            const response = await fetch(`/api/pre-registration/${token}/submit`, {
+            setter(true)
+            const res = await fetch(`/api/public/intake/${token}/upload`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: formData,
             })
 
-            const result = await response.json()
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Erro ao enviar dados')
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro no upload')
             }
 
-            setSuccess(true)
+            // Show preview
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                if (kind === 'carteirinha_frente') {
+                    setCardFrontPreview(reader.result as string)
+                } else {
+                    setCardBackPreview(reader.result as string)
+                }
+            }
+            reader.readAsDataURL(file)
         } catch (err: any) {
-            setError(err.message)
+            setFieldErrors(prev => ({
+                ...prev,
+                [kind]: err.message,
+            }))
         } finally {
-            setSubmitting(false)
+            setter(false)
+        }
+    }, [token])
+
+    // ============================================
+    // Submit
+    // ============================================
+    const handleSubmit = async () => {
+        if (!clinicData || isSubmitting) return
+
+        // Validate current step
+        const errors: Record<string, string> = {}
+
+        if (!fullName || fullName.length < 3) errors.full_name = 'Nome obrigatório (mín. 3 caracteres)'
+        if (!dateOfBirth || dateOfBirth.length < 10) errors.date_of_birth = 'Data de nascimento obrigatória'
+        if (!phone || phone.replace(/\D/g, '').length < 10) errors.phone = 'Telefone obrigatório'
+
+        if (patientType === 'other') {
+            if (!guardianName) errors.guardian_name = 'Nome do responsável obrigatório'
+            if (!guardianCpf) errors.guardian_cpf = 'CPF do responsável obrigatório'
+            if (!guardianRelationship) errors.guardian_relationship = 'Parentesco obrigatório'
+            if (!guardianPhone) errors.guardian_phone = 'Telefone do responsável obrigatório'
+        }
+
+        if (billingType === 'convenio') {
+            if (!cardNumber) errors.insurance_card_number = 'Número da carteirinha obrigatório'
+        }
+
+        if (!consentAccepted) errors.consent = 'Aceite o consentimento LGPD para continuar'
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors)
+            return
+        }
+
+        setFieldErrors({})
+        setIsSubmitting(true)
+
+        try {
+            const payload: Record<string, any> = {
+                patient_type: patientType,
+                full_name: fullName.trim(),
+                date_of_birth: parseDateToISO(dateOfBirth),
+                cpf: cpf.replace(/\D/g, '') || '',
+                phone: phone.replace(/\D/g, ''),
+                email: email.trim() || '',
+                billing_type: billingType,
+                complaint: complaint.trim() || '',
+                consent: {
+                    accepted: true,
+                    consent_text: clinicData.consent_text,
+                    consent_version: clinicData.consent_version,
+                    accepted_at: new Date().toISOString(),
+                },
+                _hp_field: honeypot,
+            }
+
+            if (patientType === 'other') {
+                payload.guardian = {
+                    guardian_name: guardianName.trim(),
+                    guardian_cpf: guardianCpf.replace(/\D/g, ''),
+                    guardian_relationship: guardianRelationship.trim(),
+                    guardian_phone: guardianPhone.replace(/\D/g, ''),
+                }
+            }
+
+            if (billingType === 'convenio') {
+                payload.insurance = {
+                    health_insurance_id: insuranceId || undefined,
+                    health_insurance_other: insuranceOther || undefined,
+                    insurance_card_number: cardNumber.trim(),
+                    insurance_validity: cardValidity || undefined,
+                    insurance_plan_name: planName || undefined,
+                    is_holder: isHolder,
+                    holder_name: !isHolder ? holderName.trim() : undefined,
+                    holder_cpf: !isHolder ? holderCpf.replace(/\D/g, '') : undefined,
+                }
+            }
+
+            const res = await fetch(`/api/public/intake/${token}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao enviar ficha')
+            }
+
+            setIsSubmitted(true)
+        } catch (err: any) {
+            setFieldErrors({ submit: err.message })
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
-    // Loading state
-    if (loading) {
+    // ============================================
+    // Step Navigation
+    // ============================================
+    const effectiveSteps = billingType === 'particular'
+        ? [STEPS[0], STEPS[1], STEPS[3]]
+        : [...STEPS]
+
+    const canGoNext = () => {
+        if (currentStep === 0) return true
+        if (currentStep === 1) {
+            return fullName.length >= 3 && dateOfBirth.length >= 10 && phone.replace(/\D/g, '').length >= 10
+        }
+        return true
+    }
+
+    const goNext = () => {
+        if (currentStep < effectiveSteps.length - 1) {
+            setCurrentStep(prev => prev + 1)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+    }
+
+    const goBack = () => {
+        if (currentStep > 0) {
+            setCurrentStep(prev => prev - 1)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+    }
+
+    // ============================================
+    // Render States
+    // ============================================
+
+    if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
-                <div className="text-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mx-auto mb-4" />
-                    <p className="text-gray-600">Carregando...</p>
+            <div className="intake-page">
+                <div className="intake-container">
+                    <div className="intake-loading">
+                        <Loader2 className="intake-spinner" />
+                        <p>Carregando formulário...</p>
+                    </div>
                 </div>
             </div>
         )
     }
 
-    // Error state (no appointment data)
-    if (error && !appointmentData) {
+    if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader>
-                        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                        <CardTitle className="text-center text-red-700">Link Inválido</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                        <p className="text-center text-muted-foreground mt-4">
-                            Este link pode ter expirado ou já foi utilizado.
-                            Entre em contato com a clínica para obter um novo QR Code.
-                        </p>
-                    </CardContent>
-                </Card>
+            <div className="intake-page">
+                <div className="intake-container">
+                    <div className="intake-error">
+                        <AlertCircle className="intake-error-icon" />
+                        <h2>Link indisponível</h2>
+                        <p>{error}</p>
+                    </div>
+                </div>
             </div>
         )
     }
 
-    // Success state
-    if (success) {
+    if (isSubmitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader>
-                        <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
-                        <CardTitle className="text-center text-emerald-700">Cadastro Concluído!</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                        <p className="text-gray-600 mb-4">
-                            Seus dados foram enviados com sucesso.
-                        </p>
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                            <p className="text-emerald-800 font-medium mb-2">
-                                📱 Guarde este QR Code!
-                            </p>
-                            <p className="text-sm text-emerald-700">
-                                Apresente-o na recepção da clínica no dia da consulta para fazer check-in rápido.
-                            </p>
+            <div className="intake-page">
+                <div className="intake-container">
+                    <div className="intake-success">
+                        <div className="intake-success-icon-wrapper">
+                            <CheckCircle2 className="intake-success-icon" />
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    // Already completed
-    if (appointmentData?.preRegistrationCompleted) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader>
-                        <CheckCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-                        <CardTitle className="text-center text-blue-700">Pré-cadastro já realizado</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                        <p className="text-gray-600">
-                            Você já completou seu pré-cadastro para esta consulta.
+                        <h2>Ficha enviada com sucesso</h2>
+                        <p>
+                            Sua ficha foi recebida pela {clinicData?.clinic?.name || 'clínica'}.
+                            Em breve a equipe irá revisar seus dados.
                         </p>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                            <p className="text-sm text-blue-700">
-                                Lembre-se de apresentar o QR Code na recepção no dia da consulta.
-                            </p>
+                        <div className="intake-success-note">
+                            <ShieldCheck size={16} />
+                            <span>Seus dados estão protegidos conforme a LGPD.</span>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
         )
     }
 
-    // Form view
-    const scheduledDate = appointmentData?.appointment?.scheduledAt
-        ? new Date(appointmentData.appointment.scheduledAt)
-        : null
-
+    // ============================================
+    // Main Form Render
+    // ============================================
     return (
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 py-8 px-4">
-            <div className="max-w-2xl mx-auto">
+        <div className="intake-page">
+            <div className="intake-container">
                 {/* Header */}
-                <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Pré-Cadastro</h1>
-                    <p className="text-gray-600">{appointmentData?.clinic.name}</p>
+                <header className="intake-header">
+                    {clinicData?.clinic?.logo_url ? (
+                        <img
+                            src={clinicData.clinic.logo_url}
+                            alt={clinicData.clinic.name}
+                            className="intake-clinic-logo"
+                        />
+                    ) : (
+                        <div className="intake-clinic-icon">
+                            <Building2 size={28} />
+                        </div>
+                    )}
+                    <h1 className="intake-clinic-name">{clinicData?.clinic?.name || 'Clínica'}</h1>
+                    <p className="intake-subtitle">Ficha de pre-cadastro</p>
+                </header>
+
+                {/* Correction Banner */}
+                {clinicData?.correction && (
+                    <div className="intake-correction-banner">
+                        <AlertCircle size={18} />
+                        <div>
+                            <strong>Correção solicitada:</strong>
+                            <p>{clinicData.correction.note}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Progress */}
+                <div className="intake-progress">
+                    {effectiveSteps.map((step, i) => (
+                        <div
+                            key={step}
+                            className={`intake-progress-step ${i <= currentStep ? 'active' : ''} ${i < currentStep ? 'completed' : ''}`}
+                        >
+                            <div className="intake-progress-dot">
+                                {i < currentStep ? <CheckCircle2 size={14} /> : <span>{i + 1}</span>}
+                            </div>
+                            <span className="intake-progress-label">{step}</span>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Appointment Info Card */}
-                <Card className="mb-6 border-emerald-200 bg-white/80 backdrop-blur">
-                    <CardContent className="pt-6">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <Stethoscope className="h-4 w-4 text-emerald-600" />
-                                <span className="text-gray-600">Médico:</span>
-                                <span className="font-medium">Dr(a). {appointmentData?.doctor.fullName}</span>
+                {/* Step Content */}
+                <div className="intake-form">
+                    {/* STEP 0: Patient Type */}
+                    {currentStep === 0 && (
+                        <div className="intake-step">
+                            <h2 className="intake-step-title">Quem é o paciente?</h2>
+                            <p className="intake-step-desc">Selecione quem será atendido</p>
+
+                            <div className="intake-type-options">
+                                <button
+                                    type="button"
+                                    className={`intake-type-card ${patientType === 'self' ? 'selected' : ''}`}
+                                    onClick={() => setPatientType('self')}
+                                >
+                                    <User size={32} />
+                                    <strong>Eu mesmo(a)</strong>
+                                    <span>Sou adulto(a) e vou preencher meus dados</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={`intake-type-card ${patientType === 'other' ? 'selected' : ''}`}
+                                    onClick={() => setPatientType('other')}
+                                >
+                                    <Users size={32} />
+                                    <strong>Outra pessoa</strong>
+                                    <span>Criança, dependente ou pessoa sob minha responsabilidade</span>
+                                </button>
                             </div>
-                            {scheduledDate && (
-                                <>
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-emerald-600" />
-                                        <span className="text-gray-600">Data:</span>
-                                        <span className="font-medium">
-                                            {scheduledDate.toLocaleDateString('pt-BR')}
-                                        </span>
+                        </div>
+                    )}
+
+                    {/* STEP 1: Patient Data */}
+                    {currentStep === 1 && (
+                        <div className="intake-step">
+                            <h2 className="intake-step-title">Dados {patientType === 'other' ? 'do paciente' : 'pessoais'}</h2>
+
+                            <div className="intake-field">
+                                <label>Nome completo *</label>
+                                <div className="intake-input-wrapper">
+                                    <User size={18} />
+                                    <input
+                                        type="text"
+                                        value={fullName}
+                                        onChange={e => setFullName(e.target.value)}
+                                        placeholder="Nome completo do paciente"
+                                        autoComplete="name"
+                                    />
+                                </div>
+                                {fieldErrors.full_name && <span className="intake-field-error">{fieldErrors.full_name}</span>}
+                            </div>
+
+                            <div className="intake-field">
+                                <label>Data de nascimento *</label>
+                                <div className="intake-input-wrapper">
+                                    <Calendar size={18} />
+                                    <input
+                                        type="text"
+                                        value={dateOfBirth}
+                                        onChange={e => setDateOfBirth(formatDate(e.target.value))}
+                                        placeholder="DD/MM/AAAA"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                    />
+                                </div>
+                                {fieldErrors.date_of_birth && <span className="intake-field-error">{fieldErrors.date_of_birth}</span>}
+                            </div>
+
+                            <div className="intake-field">
+                                <label>CPF</label>
+                                <div className="intake-input-wrapper">
+                                    <CreditCard size={18} />
+                                    <input
+                                        type="text"
+                                        value={cpf}
+                                        onChange={e => setCpf(formatCPF(e.target.value))}
+                                        placeholder="000.000.000-00"
+                                        inputMode="numeric"
+                                        maxLength={14}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="intake-field">
+                                <label>Telefone *</label>
+                                <div className="intake-input-wrapper">
+                                    <Phone size={18} />
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={e => setPhone(formatPhone(e.target.value))}
+                                        placeholder="(00) 00000-0000"
+                                        inputMode="tel"
+                                        maxLength={15}
+                                    />
+                                </div>
+                                {fieldErrors.phone && <span className="intake-field-error">{fieldErrors.phone}</span>}
+                            </div>
+
+                            <div className="intake-field">
+                                <label>E-mail</label>
+                                <div className="intake-input-wrapper">
+                                    <Mail size={18} />
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        placeholder="seu@email.com"
+                                        autoComplete="email"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="intake-field">
+                                <label>Queixa ou motivo da consulta</label>
+                                <textarea
+                                    value={complaint}
+                                    onChange={e => setComplaint(e.target.value)}
+                                    placeholder="Descreva brevemente o motivo (opcional)"
+                                    maxLength={500}
+                                    rows={3}
+                                />
+                            </div>
+
+                            {/* Guardian Fields */}
+                            {patientType === 'other' && (
+                                <div className="intake-guardian-section">
+                                    <h3 className="intake-section-title">Dados do responsável</h3>
+
+                                    <div className="intake-field">
+                                        <label>Nome do responsável *</label>
+                                        <input
+                                            type="text"
+                                            value={guardianName}
+                                            onChange={e => setGuardianName(e.target.value)}
+                                            placeholder="Nome completo do responsável legal"
+                                        />
+                                        {fieldErrors.guardian_name && <span className="intake-field-error">{fieldErrors.guardian_name}</span>}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4 text-emerald-600" />
-                                        <span className="text-gray-600">Horário:</span>
-                                        <span className="font-medium">
-                                            {scheduledDate.toLocaleTimeString('pt-BR', {
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
-                                        </span>
+
+                                    <div className="intake-field">
+                                        <label>CPF do responsável *</label>
+                                        <input
+                                            type="text"
+                                            value={guardianCpf}
+                                            onChange={e => setGuardianCpf(formatCPF(e.target.value))}
+                                            placeholder="000.000.000-00"
+                                            inputMode="numeric"
+                                            maxLength={14}
+                                        />
+                                        {fieldErrors.guardian_cpf && <span className="intake-field-error">{fieldErrors.guardian_cpf}</span>}
+                                    </div>
+
+                                    <div className="intake-field">
+                                        <label>Parentesco *</label>
+                                        <select
+                                            value={guardianRelationship}
+                                            onChange={e => setGuardianRelationship(e.target.value)}
+                                        >
+                                            <option value="">Selecione</option>
+                                            <option value="mae">Mãe</option>
+                                            <option value="pai">Pai</option>
+                                            <option value="avo">Avô/Avó</option>
+                                            <option value="tio">Tio/Tia</option>
+                                            <option value="tutor">Tutor Legal</option>
+                                            <option value="outro">Outro</option>
+                                        </select>
+                                        {fieldErrors.guardian_relationship && <span className="intake-field-error">{fieldErrors.guardian_relationship}</span>}
+                                    </div>
+
+                                    <div className="intake-field">
+                                        <label>Telefone do responsável *</label>
+                                        <input
+                                            type="tel"
+                                            value={guardianPhone}
+                                            onChange={e => setGuardianPhone(formatPhone(e.target.value))}
+                                            placeholder="(00) 00000-0000"
+                                            inputMode="tel"
+                                            maxLength={15}
+                                        />
+                                        {fieldErrors.guardian_phone && <span className="intake-field-error">{fieldErrors.guardian_phone}</span>}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Billing Type */}
+                            <div className="intake-billing-section">
+                                <h3 className="intake-section-title">Modalidade de atendimento</h3>
+                                <div className="intake-billing-options">
+                                    <button
+                                        type="button"
+                                        className={`intake-billing-btn ${billingType === 'particular' ? 'selected' : ''}`}
+                                        onClick={() => setBillingType('particular')}
+                                    >
+                                        <CreditCard size={20} />
+                                        <span>Particular</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`intake-billing-btn ${billingType === 'convenio' ? 'selected' : ''}`}
+                                        onClick={() => setBillingType('convenio')}
+                                    >
+                                        <Heart size={20} />
+                                        <span>Convênio</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 2: Insurance (only if billingType === 'convenio') */}
+                    {currentStep === 2 && billingType === 'convenio' && (
+                        <div className="intake-step">
+                            <h2 className="intake-step-title">Dados do convênio</h2>
+
+                            <div className="intake-field">
+                                <label>Número da carteirinha *</label>
+                                <input
+                                    type="text"
+                                    value={cardNumber}
+                                    onChange={e => setCardNumber(e.target.value)}
+                                    placeholder="Número impresso na carteirinha"
+                                />
+                                {fieldErrors.insurance_card_number && <span className="intake-field-error">{fieldErrors.insurance_card_number}</span>}
+                            </div>
+
+                            <div className="intake-field">
+                                <label>Validade da carteirinha</label>
+                                <input
+                                    type="text"
+                                    value={cardValidity}
+                                    onChange={e => setCardValidity(formatDate(e.target.value))}
+                                    placeholder="DD/MM/AAAA"
+                                    inputMode="numeric"
+                                    maxLength={10}
+                                />
+                            </div>
+
+                            <div className="intake-field">
+                                <label>Nome do plano</label>
+                                <input
+                                    type="text"
+                                    value={planName}
+                                    onChange={e => setPlanName(e.target.value)}
+                                    placeholder="Ex: Básico, Especial, Enfermaria"
+                                />
+                            </div>
+
+                            {/* Holder */}
+                            <div className="intake-field">
+                                <label>Titularidade</label>
+                                <div className="intake-billing-options">
+                                    <button
+                                        type="button"
+                                        className={`intake-billing-btn ${isHolder ? 'selected' : ''}`}
+                                        onClick={() => setIsHolder(true)}
+                                    >
+                                        Titular
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`intake-billing-btn ${!isHolder ? 'selected' : ''}`}
+                                        onClick={() => setIsHolder(false)}
+                                    >
+                                        Dependente
+                                    </button>
+                                </div>
+                            </div>
+
+                            {!isHolder && (
+                                <>
+                                    <div className="intake-field">
+                                        <label>Nome do titular</label>
+                                        <input
+                                            type="text"
+                                            value={holderName}
+                                            onChange={e => setHolderName(e.target.value)}
+                                            placeholder="Nome do titular do plano"
+                                        />
+                                    </div>
+                                    <div className="intake-field">
+                                        <label>CPF do titular</label>
+                                        <input
+                                            type="text"
+                                            value={holderCpf}
+                                            onChange={e => setHolderCpf(formatCPF(e.target.value))}
+                                            placeholder="000.000.000-00"
+                                            inputMode="numeric"
+                                            maxLength={14}
+                                        />
                                     </div>
                                 </>
                             )}
-                            <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-emerald-600" />
-                                <span className="text-gray-600">Local:</span>
-                                <span className="font-medium">{appointmentData?.clinic.name}</span>
+
+                            {/* Card Photos */}
+                            <div className="intake-upload-section">
+                                <h3 className="intake-section-title">Foto da carteirinha</h3>
+
+                                <div className="intake-upload-grid">
+                                    <div className="intake-upload-card">
+                                        <label>
+                                            <span>Frente</span>
+                                            {cardFrontPreview ? (
+                                                <div className="intake-upload-preview">
+                                                    <img src={cardFrontPreview} alt="Frente da carteirinha" />
+                                                    <button type="button" onClick={() => { setCardFront(null); setCardFrontPreview(null) }}>
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="intake-upload-placeholder">
+                                                    {uploadingFront ? <Loader2 className="intake-spinner-sm" /> : <Camera size={24} />}
+                                                    <span>{uploadingFront ? 'Enviando...' : 'Tirar foto ou escolher arquivo'}</span>
+                                                </div>
+                                            )}
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp,application/pdf"
+                                                capture="environment"
+                                                onChange={e => {
+                                                    const f = e.target.files?.[0]
+                                                    if (f) { setCardFront(f); handleFileUpload(f, 'carteirinha_frente') }
+                                                }}
+                                                hidden
+                                            />
+                                        </label>
+                                    </div>
+
+                                    <div className="intake-upload-card">
+                                        <label>
+                                            <span>Verso</span>
+                                            {cardBackPreview ? (
+                                                <div className="intake-upload-preview">
+                                                    <img src={cardBackPreview} alt="Verso da carteirinha" />
+                                                    <button type="button" onClick={() => { setCardBack(null); setCardBackPreview(null) }}>
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="intake-upload-placeholder">
+                                                    {uploadingBack ? <Loader2 className="intake-spinner-sm" /> : <Camera size={24} />}
+                                                    <span>{uploadingBack ? 'Enviando...' : 'Tirar foto ou escolher arquivo'}</span>
+                                                </div>
+                                            )}
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp,application/pdf"
+                                                capture="environment"
+                                                onChange={e => {
+                                                    const f = e.target.files?.[0]
+                                                    if (f) { setCardBack(f); handleFileUpload(f, 'carteirinha_verso') }
+                                                }}
+                                                hidden
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
+                    )}
 
-                {/* Form Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Complete seus dados</CardTitle>
-                        <CardDescription>
-                            Preencha as informações para agilizar seu atendimento
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            {/* Personal Data */}
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    Dados Pessoais
-                                </h3>
+                    {/* STEP 3 (or 2 if particular): Consent */}
+                    {currentStep === effectiveSteps.length - 1 && (
+                        <div className="intake-step">
+                            <h2 className="intake-step-title">Consentimento LGPD</h2>
+                            <p className="intake-step-desc">
+                                Leia e aceite o termo de consentimento para continuar
+                            </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <Label htmlFor="full_name">Nome Completo *</Label>
-                                        <Input id="full_name" {...register('full_name')} />
-                                        {errors.full_name && (
-                                            <p className="text-sm text-red-500 mt-1">{errors.full_name.message}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="cpf">CPF</Label>
-                                        <Input id="cpf" placeholder="000.000.000-00" {...register('cpf')} />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="date_of_birth">Data de Nascimento</Label>
-                                        <Input id="date_of_birth" type="date" {...register('date_of_birth')} />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="phone">Telefone</Label>
-                                        <Input id="phone" placeholder="(00) 00000-0000" {...register('phone')} />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="email">E-mail</Label>
-                                        <Input id="email" type="email" {...register('email')} />
-                                        {errors.email && (
-                                            <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="gender">Gênero</Label>
-                                        <Select onValueChange={(v) => setValue('gender', v as any)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="MALE">Masculino</SelectItem>
-                                                <SelectItem value="FEMALE">Feminino</SelectItem>
-                                                <SelectItem value="OTHER">Outro</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
+                            <div className="intake-consent-box">
+                                <pre className="intake-consent-text">
+                                    {clinicData?.consent_text || ''}
+                                </pre>
                             </div>
 
-                            {/* Address */}
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-gray-900">Endereço</h3>
+                            <label className="intake-consent-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={consentAccepted}
+                                    onChange={e => setConsentAccepted(e.target.checked)}
+                                />
+                                <span>Li e aceito os termos de consentimento acima</span>
+                            </label>
+                            {fieldErrors.consent && <span className="intake-field-error">{fieldErrors.consent}</span>}
+                        </div>
+                    )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="md:col-span-2">
-                                        <Label htmlFor="address_street">Rua</Label>
-                                        <Input id="address_street" {...register('address_street')} />
-                                    </div>
+                    {/* Honeypot (invisible) */}
+                    <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0 }} aria-hidden="true">
+                        <input
+                            type="text"
+                            name="website"
+                            tabIndex={-1}
+                            autoComplete="off"
+                            value={honeypot}
+                            onChange={e => setHoneypot(e.target.value)}
+                        />
+                    </div>
 
-                                    <div>
-                                        <Label htmlFor="address_number">Número</Label>
-                                        <Input id="address_number" {...register('address_number')} />
-                                    </div>
+                    {/* Error */}
+                    {fieldErrors.submit && (
+                        <div className="intake-submit-error">
+                            <AlertCircle size={16} />
+                            <span>{fieldErrors.submit}</span>
+                        </div>
+                    )}
 
-                                    <div>
-                                        <Label htmlFor="address_complement">Complemento</Label>
-                                        <Input id="address_complement" {...register('address_complement')} />
-                                    </div>
+                    {/* Navigation */}
+                    <div className="intake-nav">
+                        {currentStep > 0 && (
+                            <button type="button" className="intake-btn-secondary" onClick={goBack}>
+                                <ArrowLeft size={18} />
+                                Voltar
+                            </button>
+                        )}
 
-                                    <div>
-                                        <Label htmlFor="address_city">Cidade</Label>
-                                        <Input id="address_city" {...register('address_city')} />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <Label htmlFor="address_state">UF</Label>
-                                            <Input id="address_state" maxLength={2} {...register('address_state')} />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="address_zipcode">CEP</Label>
-                                            <Input id="address_zipcode" placeholder="00000-000" {...register('address_zipcode')} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Emergency Contact */}
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-gray-900">Contato de Emergência</h3>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="emergency_contact">Nome</Label>
-                                        <Input id="emergency_contact" {...register('emergency_contact')} />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="emergency_phone">Telefone</Label>
-                                        <Input id="emergency_phone" placeholder="(00) 00000-0000" {...register('emergency_phone')} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Health Info */}
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-gray-900">Informações de Saúde (Opcional)</h3>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="health_insurance">Convênio</Label>
-                                        <Input id="health_insurance" {...register('health_insurance')} />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="insurance_card_number">Número da Carteirinha</Label>
-                                        <Input id="insurance_card_number" {...register('insurance_card_number')} />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="allergies">Alergias</Label>
-                                    <Textarea id="allergies" placeholder="Descreva suas alergias, se houver" {...register('allergies')} />
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="medications">Medicamentos em Uso</Label>
-                                    <Textarea id="medications" placeholder="Liste os medicamentos que está tomando" {...register('medications')} />
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="previous_conditions">Condições Pré-Existentes</Label>
-                                    <Textarea id="previous_conditions" placeholder="Diabetes, hipertensão, etc." {...register('previous_conditions')} />
-                                </div>
-                            </div>
-
-                            {/* Error Alert */}
-                            {error && (
-                                <Alert variant="destructive">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>{error}</AlertDescription>
-                                </Alert>
-                            )}
-
-                            {/* Submit Button */}
-                            <Button
-                                type="submit"
-                                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                                size="lg"
-                                disabled={submitting}
+                        {currentStep < effectiveSteps.length - 1 ? (
+                            <button
+                                type="button"
+                                className="intake-btn-primary"
+                                onClick={goNext}
+                                disabled={!canGoNext()}
                             >
-                                {submitting ? (
+                                Continuar
+                                <ArrowRight size={18} />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="intake-btn-submit"
+                                onClick={handleSubmit}
+                                disabled={!consentAccepted || isSubmitting}
+                            >
+                                {isSubmitting ? (
                                     <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        <Loader2 className="intake-spinner-sm" />
                                         Enviando...
                                     </>
                                 ) : (
-                                    'Concluir Cadastro'
+                                    <>
+                                        <CheckCircle2 size={18} />
+                                        Enviar ficha
+                                    </>
                                 )}
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <footer className="intake-footer">
+                    <ShieldCheck size={14} />
+                    <span>Dados protegidos pela LGPD</span>
+                </footer>
             </div>
         </div>
     )

@@ -1,10 +1,10 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List insurance operators
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'config.operadoras.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
 // POST: Add operator to clinic
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'config.operadoras.editar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -91,10 +91,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
-        // Check admin permissions
-        if (!['SUPER_ADMIN', 'CLINIC_ADMIN'].includes((userData as any)?.role)) {
-            return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-        }
+        // Permissão validada via requireTissAction('config.operadoras.editar')
 
         const body = await request.json()
         const {

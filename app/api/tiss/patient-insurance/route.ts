@@ -1,10 +1,10 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Get patient insurance cards
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'paciente_convenio.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
 // POST: Add insurance to patient
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH: Update patient insurance
 export async function PATCH(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -228,7 +228,7 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE: Deactivate patient insurance
 export async function DELETE(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
     }

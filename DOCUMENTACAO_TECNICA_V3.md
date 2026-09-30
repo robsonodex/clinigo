@@ -2,6 +2,63 @@
 
 ## Módulos
 
+### Pré-cadastros: Ficha Cadastral por Link Externo, Aprovação da Recepção e Criação Automática de Pacientes (Multitenant)
+- **Módulos**:
+  - Banco de Dados / Migrations → `supabase/migrations/20260930100000_create_patient_intake_module.sql` → Criação das tabelas `patient_intake_links`, `patient_intake_submissions` e `patient_intake_files`, com chaves estrangeiras, índices de performance (`clinic_id`, `token_hash`, `cpf`, `status`), RLS multitenant estrito, trigger automática de expiração de links e configuração de storage bucket seguro `intake-files`.
+  - Validações & Schemas → `lib/validations/patient-intake.ts` → `CreateLinkSchema`, `IntakeSubmissionSchema`, `EditSubmissionSchema`, com validação matemática estrita de CPF, validação de datas, formato de telefone BR e restrições de tamanho/tipo de arquivos.
+  - Serviços de Negócio → `lib/services/patient-intake.ts` → Implementação de todo o ciclo de vida: geração segura de tokens com SHA-256 (`createIntakeLink`), gestão de link fixo institucional com QR Code (`getClinicStaticLink`), submissão pública (`submitIntake`), aprovação atômica com criação em `patients` (`approveSubmission`), resolução e mesclagem de CPF duplicado (`approveAndUpdateExisting`), solicitação de correção com notificação WhatsApp (`requestCorrection`), cancelamento com justificativa (`cancelSubmission`), reabertura (`reopenSubmission`) e exclusão física (`deleteSubmission`).
+  - APIs Públicas (Mobile-First) →
+    - `app/api/intake/public/[token]/route.ts` → `GET()` (busca dados da clínica e valida expiração/uso), `POST()` (recebe e valida submissão de paciente/responsável, endereço, convênio e consentimento LGPD).
+    - `app/api/intake/public/[token]/upload/route.ts` → `POST()` (upload seguro de fotos da carteirinha e documentos de identificação com Service Role isolado).
+  - APIs Internas (Dashboard Recepção / Admin) →
+    - `app/api/intake/links/route.ts` → `GET()` (listagem de links criados), `POST()` (geração de novo link com envio automático via Evolution WhatsApp).
+    - `app/api/intake/static-link/route.ts` → `GET()` (obtenção e regeneração do link estático da clínica).
+    - `app/api/intake/submissions/route.ts` → `GET()` (listagem de fichas recebidas com filtros por status).
+    - `app/api/intake/submissions/[id]/route.ts` → `GET()` (detalhes com URLs assinadas de arquivos), `PATCH()` (ações de aprovação, edição inline, correção, cancelamento e reabertura), `DELETE()` (exclusão definitiva).
+  - Interface Pública Mobile PWA →
+    - `app/pre-cadastro/[token]/page.tsx` → `PatientIntakePage` (wizard de 4 passos com validação em tempo real, formatação automática BR de CPF/telefone/CEP, upload com prévia, área de toque touch ≥ 44px, suporte safe-area-inset e feedback visual).
+    - `app/pre-cadastro/[token]/intake.css` → Folha de estilos mobile-first de padrão médico corporativo internacional, com paleta neutra e verde institucional, sem emojis.
+    - `app/pre-cadastro/[token]/layout.tsx` → `IntakeLayout` (metadados com noindex/nofollow para privacidade, importação do CSS).
+  - Interface Administrativa (Dashboard) →
+    - `app/dashboard/(clinic)/pre-cadastros/page.tsx` → `PreCadastrosPage` (painel gerencial completo com 3 abas: "Fichas Recebidas" com badges de status e contadores, "Links Enviados" com monitor de cliques/preenchimentos, e "Link Fixo / QR Code" com suporte a impressão e download para totens; modais de revisão detalhada com visualização de carteirinha, edição inline, solicitação de correção via WhatsApp com feedback instantâneo e resolução de CPFs duplicados).
+  - Permissões & Navegação →
+    - `lib/constants/features.ts` → Registro da chave `FEATURE_KEYS.PRE_CADASTROS` no `FEATURE_METADATA` e habilitação para todos os planos (`BASICO`, `AVANCADO`, `PROFESSIONAL`, `ENTERPRISE`).
+    - `components/layout/sidebar.tsx` → Item de menu "Pre-cadastros" integrado na seção "Equipe", com ícone vetorial `ClipboardPen` para `CLINIC_ADMIN` e `RECEPTIONIST`.
+  - Central de Ajuda →
+    - `app/dashboard/(clinic)/help/page.tsx` → Artigo detalhado documentando funcionalidade, cenários de uso, atalhos e boas práticas para a recepção.
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Eliminar o retrabalho e filas no balcão da recepção, permitindo que os pacientes preencham seus próprios dados cadastrais e enviem fotos de documentos e carteirinhas antes do atendimento.
+  - **Solução Implementada**:
+    - Módulo 100% multitenant e isolado por `clinic_id`, compatível com todas as clínicas do sistema.
+    - Processo de aprovação humana com validação de duplicidade por CPF: a recepção revisa e tem o poder de criar um novo paciente ou atualizar prontuário existente com os novos dados.
+    - Suporte a links individuais com expiração configurável (24h a 7 dias) e link institucional estático reutilizável com QR Code para balcão/totem.
+    - Conformidade estrita com LGPD: registro formal de consentimento, IP, User-Agent e data/hora no envio da ficha.
+    - Zero emojis em todas as interfaces, diálogos, tabelas e toasts, em conformidade com o padrão SaaS médico corporativo internacional.
+
+### Faturamento Premium TISS: Correções B2.1 e Consolidação B3-B5 (Lotes, Retorno e Recursos de Glosa)
+
+- **Módulos**:
+  - Faturamento / Feature Flag & UI → `lib/tiss/use-faturamento-premium.ts` → `useFaturamentoPremium()` (chaveamento estrito entre componentes legados e premium)
+  - Faturamento / Guias TISS → `app/dashboard/(clinic)/tiss/new-guide-dialog.tsx` → `NewGuideDialog` (isolamento de UI legada vs assistente de 3 passos, debounce de 2000ms com indicador "Salvo às HH:MM" e renomeação de elegibilidade cadastral interna)
+  - Faturamento / Tabela de Guias → `components/tiss/guide-list-table.tsx` → `GuideListTable` (renderização condicional de tabela legada de 6 colunas sem ações vs tabela premium com menu de ações e seleção em lote)
+  - Faturamento / Página Principal → `app/dashboard/(clinic)/tiss/page.tsx` → `TissPage` (alternância transparente entre visualização legada e premium baseada na flag de clínica)
+  - Faturamento / Exclusão & Cancelamento → `app/api/tiss/guides/[id]/route.ts` → `DELETE()` (verificação dinâmica: exclusão de rascunhos com `guia.excluir_rascunho` vs cancelamento de guias validadas/em lote com `guia.cancelar`, impedindo recepção com 403)
+  - Banco de Dados / Migrations → Status Cancelado & Versionamento → `supabase/migrations/20260929170000_tiss_guide_cancelled_status.sql` (enum `CANCELLED`, tabela `tiss_batch_xml_versions` para histórico L4 e auditoria)
+  - Faturamento / Relatórios & Dashboard → `app/api/tiss/reports/loss-analysis/route.ts` e `app/api/tiss/dashboard/stats/route.ts` (expurgo de status `CANCELLED` e guias soft-deleted do cômputo de glosas e perdas)
+  - Faturamento / Impressão de Espelho → `components/tiss/guide-print-modal.tsx` → `GuidePrintModal` (disclaimer institucional oficial ANS e suporte à impressão em lote de múltiplas guias selecionadas com quebra de página)
+  - Faturamento / Duplicação para Múltiplas Sessões (G5) → `app/api/tiss/guides/[id]/duplicate/route.ts` → `POST()` (checagem de saldo de autorização, numeração atômica sequencial e relatório de criados vs recusados)
+  - Faturamento / Lotes TISS (L0-L7) → `app/api/tiss/batches/[id]/route.ts` e `app/api/tiss/batches/[id]/generate-xml/route.ts` (versionamento automático de XML em `tiss_batch_xml_versions` e auditoria de reabertura de lotes em `audit_logs`)
+  - Segurança / RBAC & Testes → `__tests__/security/receptionist-delete-guide-restriction.test.ts` e `__tests__/tiss/feature-flag-render.test.tsx` (validação de menor privilégio e prova de renderização isolada da flag)
+  - Infraestrutura & Deploy → `docs/DEPLOY_ORDEM_MIGRATIONS.md` (sequenciamento rigoroso de migrations 120000 a 170000 antes do deploy)
+- **Descrição**:
+  - **Demanda Operacional**:
+    - Concluir as correções da Fase B2.1 (segregação de feature flag, cancelamento correto sem inflar glosas, disclaimer em elegibilidade interna, espelho de impressão, duplicação G5 com saldo e autosave G2) e consolidar os pilares B3 (Lotes), B4 (Retorno e Conciliação) e B5 (Recursos de Glosa).
+  - **Solução Implementada**:
+    - Todas as inovações visuais e funcionais operam atrás da feature flag `faturamento_premium`, preservando 100% de estabilidade para clínicas sem a flag.
+    - Zero emojis em todas as interfaces, diálogos e mensagens, cumprindo integralmente o padrão SaaS médico corporativo premium internacional.
+    - 51 suítes de teste (691 testes) e build de produção (460 rotas) aprovados com 100% de sucesso.
+
 ### Otimização Crítica de Log Ingestion e Egress no Supabase e Desafogamento do Banco de Dados
 - **Módulos**:
   - Sessão & Segurança → Session Guard Hook → `lib/hooks/use-session-guard.ts` → `useSessionGuard()` (ajuste cirúrgico do polling de 10s para 60s, suspensão de requisição com aba em segundo plano `document.hidden` e trava contra chamadas anônimas sem cookie de sessão `clinigo_session_id`)
@@ -2668,3 +2725,32 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Criado manual `scripts/staging/LEIA-ME.md` orientando a execução no SQL Editor do Supabase, verificação do relatório com 9 testes diagnósticos e geração dos tipos via `npx supabase gen types typescript`.
   - **6. Declaração Honesta de Limitações de Testes**:
     - Testes unitários utilizam mocks e `pg-mem`. O `pg-mem` NÃO valida políticas de RLS PostgreSQL reais, triggers complexas, funções PL/pgSQL com transações atômicas ou índices parciais com predicados `WHERE`. Essa validação deve ser realizada no Supabase de Staging pelo proprietário.
+
+---
+
+### [30/09/2026] - Faturamento TISS Premium · Fundação e Hardening Técnico (C1 a C7)
+- **Status**: Homologado em Staging com 100% de Aprovação (9/9 Testes PASS).
+- **Mapeamento de Arquivos**:
+  - Faturamento → Numeração Atômica → `supabase/migrations/20260929160000_tiss_premium_hardening.sql` → `generate_tiss_guide_number`
+  - Faturamento → Handlers de Guias → `app/api/tiss/guides/route.ts` e `app/api/tiss/guides/from-appointment/route.ts`
+  - Faturamento → Matriz RBAC → `lib/tiss/permissions.ts` e 18 rotas em `app/api/tiss/**/route.ts`
+  - Faturamento → Middleware e Feature Flag → `middleware.ts` e `app/api/tiss/settings/premium/route.ts`
+  - Faturamento → Auditoria e Script Staging → `scripts/staging/verify-tiss-premium.sql` e `scripts/staging/LEIA-ME.md`
+- **Descrição Técnica**:
+  - **1. Prevenção de Colisão de Numeração (C1)**:
+    - Backfill idempotente na tabela `tiss_guide_counters` capturando o maior número sequencial histórico por clínica e ano.
+    - Função `generate_tiss_guide_number` recalcula o próximo número como `GREATEST(contador, max_existente) + 1` sob bloqueio de linha `FOR UPDATE` com laço de garantia anti-colisão em `tiss_guides`.
+    - Criado índice único condicional `uq_tiss_guides_clinic_number` para guias não deletadas.
+  - **2. Segurança da RPC e Fallback Estrito (C2)**:
+    - RPC configurada como `SECURITY DEFINER` com `SET search_path = public, pg_temp`, validando pertença de clínica para usuários autenticados com erro `42501`. Concedido `GRANT EXECUTE` para `authenticated` e `service_role`.
+    - Handlers de emissão de guia agora restringem fallback para contagem legada exclusivamente quando a função não existe no banco (`42883`, `PGRST202`). Qualquer outro erro emite status 500 com log impeditivo.
+  - **3. Fonte Única de Permissões RBAC (C3)**:
+    - 18 rotas do faturamento unificadas sob `requireTissAction()`. Bloqueado perfil `FINANCIAL` para escrita de tabelas de preço e TUSS; bloqueado `RECEPTIONIST` para importação em lote; restrito `lote.assinar` para financeiro e administradores.
+  - **4. Proteção de Rotas e Feature Flag (C4)**:
+    - Middlewares protegem rotas do faturamento e barram perfil `DOCTOR`.
+    - Flag `faturamento_premium` armazenada em `clinics.addons->>'faturamento_premium'`. Telas exibem EmptyState honesto quando a flag está inativa.
+  - **5. Homologação Completa em Staging (C5)**:
+    - Script `scripts/staging/verify-tiss-premium.sql` executado dentro de transação com rollback, atestando 9 de 9 testes aprovados (PASS), incluindo fixtures, tabelas, 7 colunas de versionamento, segurança RPC, GRANTs, RLS, anti-colisão C1, anti-spoofing C2 e isolamento multi-tenant C5.3 com `SET LOCAL ROLE authenticated`.
+  - **6. Build, Lint e Auditoria de Botões (C6 e C7)**:
+    - Build limpo com 221 rotas estáticas e dinâmicas geradas no App Router; lint TISS com 0 erros; Jest com 615 testes aprovados.
+    - Auditoria dos 29 botões de faturamento registrada e item B0.3 rotulado como validado em staging.

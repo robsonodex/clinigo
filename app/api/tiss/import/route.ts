@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS Import - Importação de Guias via Excel
  * POST /api/tiss/import
@@ -23,7 +23,7 @@ interface TissGuideRow {
 }
 
 export async function POST(request: Request) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request as any, 'guia.criar_em_massa');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -47,9 +47,7 @@ export async function POST(request: Request) {
 
         const clinicId = (user as any)?.clinic_id;
         const userRole = (user as any)?.role;
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(userRole)) {
-            return NextResponse.json({ error: 'Sem permissao para importar guias' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('guia.criar_em_massa') - RECEPTIONIST bloqueado
         if (!clinicId) {
             return NextResponse.json(
                 { error: 'Clínica não encontrada' },

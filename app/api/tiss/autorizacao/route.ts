@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * API: TISS Authorization Requests
  * GET /api/tiss/autorizacao - List requests
@@ -27,7 +27,7 @@ const createAuthSchema = z.object({
  * GET - List authorization requests
  */
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'autorizacao.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
  * POST - Create authorization request
  */
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'autorizacao.solicitar');
     if (!guard.authorized) {
         return guard.response;
     }

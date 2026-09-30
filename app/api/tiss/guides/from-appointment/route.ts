@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ const fromAppointmentSchema = z.object({
  * com pré-preenchimento completo, consulta à tabela de preços e proteção contra duplicidade.
  */
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.criar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -39,10 +39,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        // Restrição RBAC: Apenas Administrador, Faturamento ou Recepção podem emitir guias
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN' && profile.role !== 'FINANCIAL' && profile.role !== 'RECEPTIONIST') {
-            return NextResponse.json({ success: false, error: 'Acesso negado: sem permissão para gerar guias TISS' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('guia.criar')
 
         const body = await request.json();
         const validated = fromAppointmentSchema.parse(body);
@@ -227,22 +224,44 @@ export async function POST(request: NextRequest) {
 
         // 6. Gerar Número Sequencial da Guia
         const year = new Date().getFullYear();
-        const { count: guideCount } = await supabase
-            .from('tiss_guides')
-            .select('id', { count: 'exact', head: true })
-            .eq('clinic_id', profile.clinic_id)
-            .gte('created_at', `${year}-01-01`);
-
-        const nextNum = (guideCount || 0) + 1;
         let guideNumber: string;
-        const { data: generatedNum, error: rpcErr } = await supabase.rpc('generate_tiss_guide_number', {
-            p_clinic_id: profile.clinic_id,
-            p_year: year,
-        });
+        let generatedNum: string | null = null;
+        let rpcErr: any = null;
+
+        if (typeof supabase.rpc === 'function') {
+            const rpcRes = await supabase.rpc('generate_tiss_guide_number', {
+                p_clinic_id: profile.clinic_id,
+                p_year: year,
+            });
+            generatedNum = rpcRes.data;
+            rpcErr = rpcRes.error;
+        } else {
+            rpcErr = { code: '42883', message: 'Método rpc não disponível no cliente Supabase' };
+        }
+
         if (!rpcErr && generatedNum) {
             guideNumber = generatedNum;
-        } else {
+        } else if (
+            rpcErr &&
+            (rpcErr.code === '42883' ||
+                rpcErr.code === 'PGRST202' ||
+                rpcErr.message?.toLowerCase().includes('does not exist') ||
+                rpcErr.message?.toLowerCase().includes('não existe'))
+        ) {
+            console.warn('[TISS] Alerta: Função generate_tiss_guide_number inexistente no banco. Utilizando numeração legada provisória.', rpcErr);
+            const { count: guideCount } = await supabase
+                .from('tiss_guides')
+                .select('id', { count: 'exact', head: true })
+                .eq('clinic_id', profile.clinic_id)
+                .gte('created_at', `${year}-01-01`);
+            const nextNum = (guideCount || 0) + 1;
             guideNumber = `${year}${String(nextNum).padStart(6, '0')}`;
+        } else {
+            console.error('[TISS] Falha crítica ao gerar número sequencial atômico via RPC:', rpcErr);
+            return NextResponse.json(
+                { success: false, error: `Erro ao gerar número da guia: ${rpcErr?.message || 'Falha no contador atômico'}` },
+                { status: 500 }
+            );
         }
 
         // 8. Inserir Guia TISS

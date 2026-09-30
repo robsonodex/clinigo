@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS XSD Validation API Endpoint
  * 
@@ -18,7 +18,7 @@ interface ValidateXSDRequest {
 }
 
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.gerar_xml');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
  * Returns available schema versions, modes and cache status
  */
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
     }

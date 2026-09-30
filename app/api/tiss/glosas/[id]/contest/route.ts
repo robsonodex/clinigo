@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/glosas/[id]/contest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -28,7 +28,7 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'recurso.criar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -52,10 +52,7 @@ export async function POST(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        // RBAC: CLINIC_ADMIN ou SUPER_ADMIN
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
-            return NextResponse.json({ success: false, error: 'Sem permissão para contestar glosas' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('recurso.criar')
 
         // Validar body
         const body = await request.json();
@@ -161,7 +158,7 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'recurso.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -217,7 +214,7 @@ export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'recurso.justificar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -240,9 +237,7 @@ export async function PUT(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL'].includes(profile.role)) {
-            return NextResponse.json({ success: false, error: 'Sem permissão' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('recurso.justificar')
 
         const body = await request.json();
         const validated = updateContestSchema.parse(body);

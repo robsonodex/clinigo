@@ -1,10 +1,10 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List TISS guides
 export async function GET(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
 // POST: Create TISS guide
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.criar');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -147,22 +147,44 @@ export async function POST(request: NextRequest) {
             .single()
 
         // Generate guide number
-        const year = new Date().getFullYear()
-        const { count: guideCount } = await supabase
-            .from('tiss_guides')
-            .select('id', { count: 'exact', head: true })
-            .eq('clinic_id', clinicId)
-            .gte('created_at', `${year}-01-01`)
-
+        const year = new Date().getFullYear();
         let guideNumber: string;
-        const { data: generatedNum, error: rpcErr } = await supabase.rpc('generate_tiss_guide_number', {
-            p_clinic_id: clinicId,
-            p_year: year,
-        });
+        let generatedNum: string | null = null;
+        let rpcErr: any = null;
+
+        if (typeof supabase.rpc === 'function') {
+            const rpcRes = await supabase.rpc('generate_tiss_guide_number', {
+                p_clinic_id: clinicId,
+                p_year: year,
+            });
+            generatedNum = rpcRes.data;
+            rpcErr = rpcRes.error;
+        } else {
+            rpcErr = { code: '42883', message: 'Método rpc não disponível no cliente Supabase' };
+        }
+
         if (!rpcErr && generatedNum) {
             guideNumber = generatedNum;
-        } else {
+        } else if (
+            rpcErr &&
+            (rpcErr.code === '42883' ||
+                rpcErr.code === 'PGRST202' ||
+                rpcErr.message?.toLowerCase().includes('does not exist') ||
+                rpcErr.message?.toLowerCase().includes('não existe'))
+        ) {
+            console.warn('[TISS] Alerta: Função generate_tiss_guide_number inexistente no banco. Utilizando numeração legada provisória.', rpcErr);
+            const { count: guideCount } = await supabase
+                .from('tiss_guides')
+                .select('id', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId)
+                .gte('created_at', `${year}-01-01`);
             guideNumber = `${year}${String((guideCount || 0) + 1).padStart(6, '0')}`;
+        } else {
+            console.error('[TISS] Falha crítica ao gerar número sequencial atômico via RPC:', rpcErr);
+            return NextResponse.json(
+                { error: `Erro ao gerar número da guia: ${rpcErr?.message || 'Falha no contador atômico'}` },
+                { status: 500 }
+            );
         }
 
         // Get doctor info

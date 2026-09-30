@@ -1,7 +1,9 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { canPerformTissAction } from '@/lib/tiss/permissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+
 // ============================================
 // SCHEMA DE VALIDAÇÃO PARA EDIÇÃO
 // ============================================
@@ -27,13 +29,12 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.ver');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-
-        const { id } = await params
+        const { id } = await params;
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -115,13 +116,12 @@ export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.salvar_rascunho');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-
-        const { id } = await params
+        const { id } = await params;
         const supabase = await createClient();
 
         // Verificar autenticação
@@ -133,7 +133,7 @@ export async function PUT(
             );
         }
 
-        // Obter clinic_id  do usuário
+        // Obter clinic_id do usuário
         const { data: profile } = await supabase
             .from('users')
             .select('clinic_id, role')
@@ -143,14 +143,6 @@ export async function PUT(
         if (!profile?.clinic_id) {
             return NextResponse.json(
                 { success: false, error: 'Clínica não encontrada' },
-                { status: 403 }
-            );
-        }
-
-        // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
-            return NextResponse.json(
-                { success: false, error: 'Sem permissão para editar guias' },
                 { status: 403 }
             );
         }
@@ -269,23 +261,23 @@ export async function PUT(
 }
 
 // ============================================
-// DELETE /api/tiss/guides/[id] - Deletar Guia
+// DELETE /api/tiss/guides/[id] - Deletar Rascunho ou Cancelar Guia (B2.1)
 // ============================================
 
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
-    if (!guard.authorized) {
-        return guard.response;
+    const baseGuard = await enforceTissAdministrativeGuard(request);
+    if (!baseGuard.authorized) {
+        return baseGuard.response;
     }
-    try {
 
-        const { id } = await params
+    try {
+        const { id } = await params;
         const supabase = await createClient();
 
-        // Verificar autenticação
+        // 1. Autenticar usuário
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
             return NextResponse.json(
@@ -294,7 +286,7 @@ export async function DELETE(
             );
         }
 
-        // Obter clinic_id do usuário
+        // 2. Obter perfil e clinic_id
         const { data: profile } = await supabase
             .from('users')
             .select('clinic_id, role')
@@ -308,49 +300,152 @@ export async function DELETE(
             );
         }
 
-        // Verificar permissão
-        if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'FINANCIAL', 'RECEPTIONIST'].includes(profile.role)) {
-            return NextResponse.json(
-                { success: false, error: 'Sem permissão para deletar guias' },
-                { status: 403 }
-            );
-        }
+        const role = request.headers.get('x-user-role') || profile.role;
+        const clinicId = profile.clinic_id;
 
-        const guide_id = id;
-
-        // Verificar se guia pode ser deletada (apenas PENDING)
-        const { data: guide } = await supabase
+        // 3. Buscar a guia no banco para inspecionar seu estado real
+        const { data: guide, error: fetchError } = await supabase
             .from('tiss_guides')
-            .select('status, authorization_code')
-            .eq('id', guide_id)
-            .eq('clinic_id', profile.clinic_id)
+            .select('id, status, validation_status, batch_id, authorization_code, notes')
+            .eq('id', id)
+            .eq('clinic_id', clinicId)
             .single();
 
-        if (!guide) {
+        if (fetchError || !guide) {
             return NextResponse.json(
                 { success: false, error: 'Guia não encontrada' },
                 { status: 404 }
             );
         }
 
-        if (guide.status !== 'PENDING') {
+        // 4. Trava impeditiva para guias já transmitidas ou faturadas
+        if (guide.status === 'SENT' || guide.status === 'APPROVED' || guide.status === 'PAID') {
             return NextResponse.json(
-                { success: false, error: 'Apenas guias pendentes podem ser deletadas' },
+                {
+                    success: false,
+                    error: 'Guias já transmitidas ou faturadas junto à operadora não podem ser excluídas nem canceladas sem pedido formal de estorno',
+                },
                 { status: 400 }
             );
         }
 
-        // Deletar guia
+        // 5. Determinar se a operação é Cancelamento de Guia Validada ou em Lote vs Exclusão de Rascunho
+        const isCancelOperation =
+            Boolean(guide.batch_id) ||
+            guide.validation_status === 'VALID' ||
+            guide.status === 'VALID' ||
+            guide.status === 'VALIDATED';
+
+        if (isCancelOperation) {
+            // Regra B2.1: Cancelar guia validada ou em lote exige a ação 'guia.cancelar' (restrita a FINANCIAL e ADMIN; RECEPTIONIST bloqueada)
+            if (!canPerformTissAction(role, 'guia.cancelar')) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: "Sem permissão: cancelamento de guias validadas ou vinculadas a lote exige perfil financeiro ou administrativo (guia.cancelar).",
+                        code: 'FORBIDDEN',
+                        action: 'guia.cancelar',
+                    },
+                    { status: 403 }
+                );
+            }
+
+            // Exige justificativa com ao menos 5 caracteres
+            let reason = request.nextUrl.searchParams.get('reason') || '';
+            if (!reason) {
+                try {
+                    const body = await request.json();
+                    if (body && typeof body.reason === 'string') {
+                        reason = body.reason.trim();
+                    }
+                } catch {
+                    // Corpo JSON opcional
+                }
+            }
+
+            if (!reason || reason.trim().length < 5) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'O cancelamento de guia validada exige justificativa com ao menos 5 caracteres',
+                    },
+                    { status: 400 }
+                );
+            }
+
+            const updatedNotes = guide.notes
+                ? `${guide.notes} | Cancelada em ${new Date().toLocaleDateString('pt-BR')}: ${reason}`
+                : `Cancelada em ${new Date().toLocaleDateString('pt-BR')}: ${reason}`;
+
+            // Regra B2.1: Nunca gravar DENIED no cancelamento. Usar CANCELLED.
+            const { error: cancelError } = await supabase
+                .from('tiss_guides')
+                .update({
+                    status: 'CANCELLED',
+                    validation_status: 'INVALID',
+                    cancellation_reason: reason,
+                    cancelled_at: new Date().toISOString(),
+                    cancelled_by: user.id,
+                    notes: updatedNotes,
+                    deleted_at: new Date().toISOString(),
+                })
+                .eq('id', id)
+                .eq('clinic_id', clinicId);
+
+            if (cancelError) {
+                console.error('[TISS] Erro ao cancelar guia validada:', cancelError);
+                return NextResponse.json(
+                    { success: false, error: 'Erro ao cancelar guia validada' },
+                    { status: 500 }
+                );
+            }
+
+            // Devolver saldo de sessões se havia autorização vinculada
+            if (guide.authorization_code) {
+                const { data: authRecord } = await supabase
+                    .from('tiss_authorization_requests')
+                    .select('id, sessions_used')
+                    .eq('clinic_id', clinicId)
+                    .eq('authorization_number', guide.authorization_code)
+                    .maybeSingle();
+
+                if (authRecord && (authRecord.sessions_used || 0) > 0) {
+                    await (supabase
+                        .from('tiss_authorization_requests') as any)
+                        .update({ sessions_used: Math.max(0, (authRecord.sessions_used || 0) - 1) })
+                        .eq('id', authRecord.id);
+                }
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: 'Guia validada cancelada com sucesso com justificativa registrada',
+            });
+        }
+
+        // 6. Caso de Exclusão de Rascunho puro (status PENDING/DRAFT e sem lote): exige 'guia.excluir_rascunho' (RECEPTIONIST pode)
+        if (!canPerformTissAction(role, 'guia.excluir_rascunho')) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Sem permissão: seu perfil não tem permissão para excluir rascunhos de guia.",
+                    code: 'FORBIDDEN',
+                    action: 'guia.excluir_rascunho',
+                },
+                { status: 403 }
+            );
+        }
+
         const { error: deleteError } = await supabase
             .from('tiss_guides')
             .delete()
-            .eq('id', guide_id)
-            .eq('clinic_id', profile.clinic_id);
+            .eq('id', id)
+            .eq('clinic_id', clinicId);
 
         if (deleteError) {
-            console.error('[TISS] Erro ao deletar guia:', deleteError);
+            console.error('[TISS] Erro ao deletar rascunho de guia:', deleteError);
             return NextResponse.json(
-                { success: false, error: 'Erro ao deletar guia' },
+                { success: false, error: 'Erro ao deletar rascunho de guia' },
                 { status: 500 }
             );
         }
@@ -360,7 +455,7 @@ export async function DELETE(
             const { data: authRecord } = await supabase
                 .from('tiss_authorization_requests')
                 .select('id, sessions_used')
-                .eq('clinic_id', profile.clinic_id)
+                .eq('clinic_id', clinicId)
                 .eq('authorization_number', guide.authorization_code)
                 .maybeSingle();
 
@@ -374,11 +469,11 @@ export async function DELETE(
 
         return NextResponse.json({
             success: true,
-            message: 'Guia deletada com sucesso e saldo de autorização atualizado',
+            message: 'Guia em rascunho excluída com sucesso',
         });
 
     } catch (error: any) {
-        console.error('[TISS] Erro ao deletar guia:', error);
+        console.error('[TISS] Erro inesperado ao excluir/cancelar guia:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }

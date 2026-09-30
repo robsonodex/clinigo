@@ -69,10 +69,10 @@ describe('Teste Arquitetural: Defesa em Profundidade TISS e Convênios', () => {
                         if (isExported) {
                             totalHandlersInspected++;
                             const bodyText = node.body ? node.body.getText(sourceFile) : '';
-                            const hasGuard = bodyText.includes('enforceTissAdministrativeGuard');
+                            const hasGuard = bodyText.includes('enforceTissAdministrativeGuard') || bodyText.includes('requireTissAction');
 
                             if (!hasGuard) {
-                                failures.push(`${relPath} [${funcName}] não invoca enforceTissAdministrativeGuard`);
+                                failures.push(`${relPath} [${funcName}] não invoca enforceTissAdministrativeGuard nem requireTissAction`);
                             }
                         }
                     }

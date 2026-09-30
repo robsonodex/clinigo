@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 /**
@@ -17,7 +17,7 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'retorno.desfazer');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -42,9 +42,7 @@ export async function POST(
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        if (profile.role !== 'CLINIC_ADMIN' && profile.role !== 'SUPER_ADMIN') {
-            return NextResponse.json({ success: false, error: 'Acesso negado: apenas administradores podem desfazer importação de retorno' }, { status: 403 });
-        }
+        // Permissão validada via requireTissAction('retorno.desfazer') - Apenas administradores
 
         // 2. Buscar o registro de retorno (por ID de retorno ou por batch_id)
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(returnOrBatchId);

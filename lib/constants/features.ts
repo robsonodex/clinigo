@@ -26,6 +26,7 @@ export const FEATURE_KEYS = {
     PLANOS_TERAPEUTICOS: 'planos_terapeuticos',
     EVOLUCOES: 'evolucoes',
     CONTROLE_FALTAS: 'controle_faltas',
+    PRE_CADASTROS: 'pre_cadastros',
 
     // Terapia & Desenvolvimento
     FILA_ESPERA: 'fila_espera',
@@ -144,6 +145,13 @@ export const FEATURE_METADATA: Record<FeatureKey, FeatureMetadata> = {
         category: 'EQUIPE',
         defaultPlans: ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
     },
+    [FEATURE_KEYS.PRE_CADASTROS]: {
+        label: 'Pré-cadastros',
+        category: 'EQUIPE',
+        defaultPlans: ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
+        description: 'Ficha de cadastro por link externo e aprovação pela recepção',
+    },
+
 
     // Prontuário
     [FEATURE_KEYS.PRONTUARIOS]: {
