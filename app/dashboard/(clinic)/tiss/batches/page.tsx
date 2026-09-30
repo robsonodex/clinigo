@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateBatchDialog } from '@/components/tiss/create-batch-dialog';
 import { BatchListTable } from '@/components/tiss/batch-list-table';
+import { StatusFilterTabs, type StatusFilterOption } from '@/components/tiss/status-filter-tabs';
 import type { TissBatch, TissBatchStatus } from '@/types/tiss';
 
 // ============================================
@@ -78,6 +79,15 @@ export default function TissBatchesPage() {
         totalValue: data.reduce((sum, b) => sum + (b.total_value || 0), 0),
         approvedValue: data.reduce((sum, b) => sum + (b.approved_value || 0), 0),
     } : null;
+
+    const batchStatusOptions: StatusFilterOption[] = [
+        { value: 'ALL', label: 'Todos os Lotes', count: data?.length || 0 },
+        { value: 'DRAFT', label: 'Rascunho', count: data?.filter(b => b.status === 'DRAFT').length || 0 },
+        { value: 'VALID', label: 'Validado', count: data?.filter(b => b.status === 'VALID').length || 0 },
+        { value: 'SENT', label: 'Enviados', count: data?.filter(b => b.status === 'SENT' || b.status === 'PROCESSING').length || 0 },
+        { value: 'APPROVED', label: 'Aprovados', count: data?.filter(b => b.status === 'APPROVED' || b.status === 'PARTIAL').length || 0 },
+        { value: 'DENIED', label: 'Negados', count: data?.filter(b => b.status === 'DENIED').length || 0 },
+    ];
 
     return (
         <div className="flex flex-col gap-6 p-6">
@@ -242,6 +252,16 @@ export default function TissBatchesPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Filtro por Status com Contadores F1 */}
+            <div className="flex items-center justify-between">
+                <StatusFilterTabs
+                    value={statusFilter}
+                    onValueChange={(v) => setStatusFilter(v as any)}
+                    options={batchStatusOptions}
+                    urlParamKey="status"
+                />
+            </div>
 
             {/* Tabela de Lotes */}
             <BatchListTable

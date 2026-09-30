@@ -34,6 +34,8 @@ import { GuideValidationPanel } from '@/components/tiss/guide-validation-panel'
 import { CancelGuideDialog } from '@/components/tiss/cancel-guide-dialog'
 import { GuidePrintModal } from '@/components/tiss/guide-print-modal'
 import { useFaturamentoPremium } from '@/lib/tiss/use-faturamento-premium'
+import { StatusFilterTabs, type StatusFilterOption } from '@/components/tiss/status-filter-tabs'
+import { HistoryDrawer } from '@/components/tiss/HistoryDrawer'
 
 interface TissGuia {
     id: string
@@ -383,6 +385,16 @@ function PremiumTissPage() {
     const [cancelGuide, setCancelGuide] = useState<TissGuia | null>(null)
     const [printGuide, setPrintGuide] = useState<TissGuia | null>(null)
     const [isDuplicatingId, setIsDuplicatingId] = useState<string | null>(null)
+    const [historyGuideId, setHistoryGuideId] = useState<string | null>(null)
+
+    const statusOptions: StatusFilterOption[] = [
+        { value: 'all', label: 'Todas', count: guias.length },
+        { value: 'pendente', label: 'Pendentes', count: guias.filter((g) => g.status === 'pendente').length },
+        { value: 'enviada', label: 'Enviadas', count: guias.filter((g) => g.status === 'enviada').length },
+        { value: 'aprovada', label: 'Aprovadas', count: guias.filter((g) => g.status === 'aprovada').length },
+        { value: 'negada', label: 'Negadas', count: guias.filter((g) => g.status === 'negada').length },
+        { value: 'paga', label: 'Pagas', count: guias.filter((g) => g.status === 'paga').length },
+    ]
 
     const fetchGuias = async () => {
         setIsLoading(true)
@@ -559,15 +571,15 @@ function PremiumTissPage() {
                 </CardContent>
             </Card>
 
-            <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="all">Todas</TabsTrigger>
-                    <TabsTrigger value="pendente">Pendentes</TabsTrigger>
-                    <TabsTrigger value="enviada">Enviadas</TabsTrigger>
-                    <TabsTrigger value="aprovada">Aprovadas</TabsTrigger>
-                </TabsList>
+            <div className="space-y-4">
+                <StatusFilterTabs
+                    value={tab}
+                    onValueChange={setTab}
+                    options={statusOptions}
+                    urlParamKey="status"
+                />
 
-                <TabsContent value={tab} className="space-y-3">
+                <div className="space-y-3">
                     {filteredGuias
                         .filter((g) => tab === 'all' || g.status === tab)
                         .map((guia) => (
@@ -605,7 +617,7 @@ function PremiumTissPage() {
                                                 {getStatusBadge(guia.status)}
                                             </div>
 
-                                            {/* Ações completas B2 */}
+                                            {/* Ações completas B2 + F2 */}
                                             <div className="flex items-center gap-1.5">
                                                 <Button
                                                     variant="outline"
@@ -639,6 +651,17 @@ function PremiumTissPage() {
                                                 </Button>
 
                                                 <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setHistoryGuideId(guia.id)}
+                                                    className="h-8 text-xs gap-1"
+                                                    title="Histórico e auditoria da guia"
+                                                >
+                                                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                                    Histórico
+                                                </Button>
+
+                                                <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => setCancelGuide(guia)}
@@ -664,8 +687,8 @@ function PremiumTissPage() {
                             </CardContent>
                         </Card>
                     )}
-                </TabsContent>
-            </Tabs>
+                </div>
+            </div>
 
             {/* Painel de Validação G3 */}
             {validationGuide && (
@@ -707,6 +730,15 @@ function PremiumTissPage() {
                     } as any}
                 />
             )}
+
+            {/* Gaveta de Histórico e Auditoria F2 */}
+            <HistoryDrawer
+                open={Boolean(historyGuideId)}
+                onOpenChange={(open) => !open && setHistoryGuideId(null)}
+                entityType="tiss_guide"
+                entityId={historyGuideId || ''}
+                title="Histórico da Guia TISS"
+            />
         </div>
     )
 }
