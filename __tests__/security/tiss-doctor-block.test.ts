@@ -181,11 +181,11 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
      */
     const isReadOnlyForbidden = (relPath: string, method: string) => {
         const p = relPath.replace(/\\/g, '/');
-        if (p.includes('guides/[id]/xml') && method === 'POST') return false; // Impressão de espelho
+        // Toda escrita (POST, PUT, DELETE, PATCH) dá 403 em READONLY
         if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
         if (p.includes('batches/[id]/generate-xml')) return true;
         if (p.includes('batches/[id]/sign')) return true;
-        if (p.includes('pricing') || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
+        if ((p.includes('pricing') && !p.includes('pricing/lookup')) || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
         return false;
     };
 

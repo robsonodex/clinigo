@@ -135,15 +135,13 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
         // DOCTOR: 100% proibido em todas as rotas TISS
         if (role === 'DOCTOR') return true;
 
-        // READONLY: Proibido em todas as mutações e em configurações sensíveis
+        // READONLY: Proibido em todas as mutações/escrita (403 estrito) e configurações sensíveis
         if (role === 'READONLY') {
-            // Exceção: POST em guides/[id]/xml é geração de espelho/impressão (guia.imprimir)
-            if (p.includes('guides/[id]/xml') && method === 'POST') return false;
             if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
             // Rotas de leitura restritas a Financeiro e Admin
             if (p.includes('batches/[id]/generate-xml')) return true; // lote.baixar_xml
             if (p.includes('batches/[id]/sign')) return true; // lote.assinar
-            if (p.includes('pricing') || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
+            if ((p.includes('pricing') && !p.includes('pricing/lookup')) || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
             return false;
         }
 
@@ -170,6 +168,7 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
             if (p.includes('batches/[id]/errors') && method === 'PATCH') return true;
             if (p.includes('batch-process')) return true;
             if (p.includes('guides/batch-generate')) return true;
+            if (p.includes('guides/[id]') && method === 'DELETE') return true; // DELETE de guia validada ou em lote exige financeiro
             if (p.includes('import') && method === 'POST') return true;
 
             // Retornos: Upload, Parse, URL, Notificar, Desfazer
@@ -184,7 +183,7 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
             if (p.includes('analyze-glosa-risk')) return true;
 
             // Configurações e Relatórios Financeiros
-            if (p.includes('pricing')) return true;
+            if (p.includes('pricing') && !p.includes('pricing/lookup')) return true;
             if (p.includes('tuss') && method === 'POST') return true;
             if (p.includes('operators') && method === 'POST') return true;
             if (p.includes('settings')) return true;

@@ -96,7 +96,8 @@ export function handleApiError(error: unknown): NextResponse {
     console.error('API Error:', error)
 
     // Handle Zod validation errors
-    if (error instanceof ZodError) {
+    if (error instanceof ZodError || (error as any)?.name === 'ZodError') {
+        const zodErr = error as ZodError;
         return NextResponse.json(
             {
                 success: false,

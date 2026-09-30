@@ -32,24 +32,29 @@ export async function requireTissAction(
     action: TissAction,
     customSupabase?: any
 ): Promise<GuardResult> {
-    const baseGuard = await enforceTissAdministrativeGuard(request, customSupabase);
+    const rolesForAction = canPerformTissAction('READONLY', action)
+        ? [...TISS_ALLOWED_ROLES, 'READONLY']
+        : TISS_ALLOWED_ROLES;
+
+    const baseGuard = await enforceTissAdministrativeGuard(request, customSupabase, rolesForAction);
     if (!baseGuard.authorized) {
         return baseGuard;
     }
 
     const { role } = baseGuard.session;
     if (!canPerformTissAction(role, action)) {
+        const errorMsg = action === 'lote.gerar_xml'
+            ? 'Sem permissão para gerar XML'
+            : `Sem permissão: seu perfil não tem permissão para a ação '${action}' no módulo de faturamento.`;
+
         return {
             authorized: false,
             response: NextResponse.json(
                 {
                     success: false,
-                    error: {
-                        message: `Acesso negado: seu perfil não tem permissão para a ação '${action}' no módulo de faturamento.`,
-                        code: 'FORBIDDEN_ACTION',
-                        action,
-                    },
-                    code: 'FORBIDDEN_ACTION',
+                    error: errorMsg,
+                    code: 'FORBIDDEN',
+                    action,
                 },
                 { status: 403 }
             ),
@@ -62,7 +67,8 @@ export async function requireTissAction(
 
 export async function enforceTissAdministrativeGuard(
     request: NextRequest,
-    customSupabase?: any
+    customSupabase?: any,
+    allowedRoles: string[] = TISS_ALLOWED_ROLES
 ): Promise<GuardResult> {
     const getHeader = (name: string): string | null => {
         try {
@@ -83,16 +89,13 @@ export async function enforceTissAdministrativeGuard(
     const headerClinicId = getHeader('x-clinic-id');
 
     // Se o cabeçalho explicitar papel não permitido (ex: DOCTOR, READONLY, PATIENT)
-    if (headerRole && !TISS_ALLOWED_ROLES.includes(headerRole)) {
+    if (headerRole && !allowedRoles.includes(headerRole)) {
         return {
             authorized: false,
             response: NextResponse.json(
                 {
                     success: false,
-                    error: {
-                        message: 'Acesso negado: módulo de faturamento TISS e convênios é restrito à equipe administrativa e recepção',
-                        code: 'FORBIDDEN',
-                    },
+                    error: 'Nível de acesso insuficiente: módulo de faturamento TISS e convênios é restrito à equipe administrativa e recepção',
                     code: 'FORBIDDEN',
                 },
                 { status: 403 }
@@ -107,16 +110,13 @@ export async function enforceTissAdministrativeGuard(
     if (authError || !user) {
         // Se há headers válidos mockados em ambiente de teste ou requisição proxy
         if (headerUserId && headerRole) {
-            if (!TISS_ALLOWED_ROLES.includes(headerRole)) {
+            if (!allowedRoles.includes(headerRole)) {
                 return {
                     authorized: false,
                     response: NextResponse.json(
                         {
                             success: false,
-                            error: {
-                                message: 'Acesso negado: módulo de faturamento TISS e convênios é restrito à equipe administrativa e recepção',
-                                code: 'FORBIDDEN',
-                            },
+                            error: 'Nível de acesso insuficiente: módulo de faturamento TISS e convênios é restrito à equipe administrativa e recepção',
                             code: 'FORBIDDEN',
                         },
                         { status: 403 }
@@ -133,10 +133,13 @@ export async function enforceTissAdministrativeGuard(
             };
         }
 
+        const isEligibilityRoute = request?.url?.includes('/eligibility');
+        const authErrorMessage = isEligibilityRoute ? 'Não autorizado' : 'Não autenticado';
+
         return {
             authorized: false,
             response: NextResponse.json(
-                { success: false, error: 'Não autenticado', code: 'UNAUTHORIZED' },
+                { success: false, error: authErrorMessage, code: 'UNAUTHORIZED' },
                 { status: 401 }
             ),
         };
@@ -163,16 +166,13 @@ export async function enforceTissAdministrativeGuard(
 
     const role = profile?.role || headerRole;
 
-    if (!role || !TISS_ALLOWED_ROLES.includes(role)) {
+    if (!role || !allowedRoles.includes(role)) {
         return {
             authorized: false,
             response: NextResponse.json(
                 {
                     success: false,
-                    error: {
-                        message: 'Acesso negado: módulo de faturamento TISS e convênios é restrito à equipe administrativa e recepção',
-                        code: 'FORBIDDEN',
-                    },
+                    error: 'Nível de acesso insuficiente: módulo de faturamento TISS e convênios é restrito à equipe administrativa e recepção',
                     code: 'FORBIDDEN',
                 },
                 { status: 403 }

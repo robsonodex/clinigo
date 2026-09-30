@@ -51,6 +51,7 @@ export type TissAction =
     | 'recurso.registrar_resultado'
     // Configurações & Tabelas
     | 'config.tabelas_preco.ver'
+    | 'config.tabelas_preco.consultar_item'
     | 'config.tabelas_preco.editar'
     | 'config.tuss.ver'
     | 'config.tuss.editar'
@@ -73,7 +74,7 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'guia.salvar_rascunho': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.validar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.duplicar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
-    'guia.imprimir': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'guia.imprimir': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.excluir_rascunho': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.cancelar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'guia.criar_em_massa': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
@@ -109,6 +110,7 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
 
     // Configurações & Tabelas
     'config.tabelas_preco.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'config.tabelas_preco.consultar_item': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
     'config.tabelas_preco.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     'config.tuss.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
     'config.tuss.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],

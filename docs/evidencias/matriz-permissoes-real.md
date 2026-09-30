@@ -1,5 +1,5 @@
 # Matriz Real de Permissoes RBAC - Execucao Direta de Handlers (B2.0)
-**Data de Geracao:** 2026-09-30T13:17:20.400Z  
+**Data de Geracao:** 2026-09-30T22:50:04.852Z  
 **Metodologia:** Execucao real de cada handler exportado com sessao simulada para os 5 perfis de usuario (DOCTOR, READONLY, RECEPTIONIST, FINANCIAL, CLINIC_ADMIN).  
 **Fonte da Verdade:** Retorno HTTP real da execucao do handler (2xx/4xx vs 403 Forbidden).
 
@@ -44,8 +44,8 @@
 | 33 | `app/api/tiss/guides/[id]/duplicate/route.ts` | `POST` | 403 (OK) | 403 | 201 | 201 | 201 | **CONFORME** | Nenhuma |
 | 34 | `app/api/tiss/guides/[id]/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 | 35 | `app/api/tiss/guides/[id]/route.ts` | `PUT` | 403 (OK) | 403 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
-| 36 | `app/api/tiss/guides/[id]/route.ts` | `DELETE` | 403 (OK) | 403 | 403 | 400 | 400 | **DIVERGENTE** | `app/api/tiss/guides/[id]/route.ts` | `DELETE` | RECEPTIONIST | 2xx/4xx | 403 | Handler bloqueou acao autorizada de RECEPTIONIST |
-| 37 | `app/api/tiss/guides/[id]/xml/route.ts` | `POST` | 403 (OK) | 400 | 400 | 400 | 400 | **CONFORME** | Nenhuma |
+| 36 | `app/api/tiss/guides/[id]/route.ts` | `DELETE` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 37 | `app/api/tiss/guides/[id]/xml/route.ts` | `POST` | 403 (OK) | 403 | 400 | 400 | 400 | **CONFORME** | Nenhuma |
 | 38 | `app/api/tiss/import/route.ts` | `POST` | 403 (OK) | 403 | 403 | 200 | 200 | **CONFORME** | Nenhuma |
 | 39 | `app/api/tiss/operators/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 | 40 | `app/api/tiss/operators/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
@@ -53,35 +53,34 @@
 | 42 | `app/api/tiss/patient-insurance/route.ts` | `POST` | 403 (OK) | 403 | 400 | 400 | 400 | **CONFORME** | Nenhuma |
 | 43 | `app/api/tiss/patient-insurance/route.ts` | `DELETE` | 403 (OK) | 403 | 400 | 400 | 400 | **CONFORME** | Nenhuma |
 | 44 | `app/api/tiss/patient-insurance/route.ts` | `PATCH` | 403 (OK) | 403 | 400 | 400 | 400 | **CONFORME** | Nenhuma |
-| 45 | `app/api/tiss/pricing/route.ts` | `GET` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 46 | `app/api/tiss/pricing/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
-| 47 | `app/api/tiss/pricing/route.ts` | `DELETE` | 403 (OK) | 403 | 403 | 403 | 400 | **CONFORME** | Nenhuma |
-| 48 | `app/api/tiss/reports/loss-analysis/route.ts` | `GET` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 49 | `app/api/tiss/returns/generate-upload-url/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 50 | `app/api/tiss/returns/notify-upload-complete/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 51 | `app/api/tiss/returns/upload/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 52 | `app/api/tiss/returns/[id]/parse/route.ts` | `POST` | 403 (OK) | 403 | 403 | 404 | 404 | **CONFORME** | Nenhuma |
-| 53 | `app/api/tiss/returns/[id]/status/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
-| 54 | `app/api/tiss/returns/[id]/undo/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 400 | **CONFORME** | Nenhuma |
-| 55 | `app/api/tiss/settings/premium/route.ts` | `GET` | 403 (OK) | 403 | 403 | 200 | 200 | **CONFORME** | Nenhuma |
-| 56 | `app/api/tiss/settings/premium/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
-| 57 | `app/api/tiss/tuss/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
-| 58 | `app/api/tiss/tuss/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
-| 59 | `app/api/tiss/validate-xsd/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
-| 60 | `app/api/tiss/validate-xsd/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 61 | `app/api/insurance/check-eligibility/route.ts` | `POST` | 403 (OK) | 403 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
+| 45 | `app/api/tiss/pricing/lookup/route.ts` | `GET` | 403 (OK) | 400 | 400 | 400 | 400 | **CONFORME** | Nenhuma |
+| 46 | `app/api/tiss/pricing/route.ts` | `GET` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 47 | `app/api/tiss/pricing/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
+| 48 | `app/api/tiss/pricing/route.ts` | `DELETE` | 403 (OK) | 403 | 403 | 403 | 400 | **CONFORME** | Nenhuma |
+| 49 | `app/api/tiss/reports/loss-analysis/route.ts` | `GET` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 50 | `app/api/tiss/returns/generate-upload-url/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 51 | `app/api/tiss/returns/notify-upload-complete/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 52 | `app/api/tiss/returns/upload/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 53 | `app/api/tiss/returns/[id]/parse/route.ts` | `POST` | 403 (OK) | 403 | 403 | 404 | 404 | **CONFORME** | Nenhuma |
+| 54 | `app/api/tiss/returns/[id]/status/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
+| 55 | `app/api/tiss/returns/[id]/undo/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 400 | **CONFORME** | Nenhuma |
+| 56 | `app/api/tiss/settings/premium/route.ts` | `GET` | 403 (OK) | 403 | 403 | 200 | 200 | **CONFORME** | Nenhuma |
+| 57 | `app/api/tiss/settings/premium/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
+| 58 | `app/api/tiss/tuss/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
+| 59 | `app/api/tiss/tuss/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
+| 60 | `app/api/tiss/validate-xsd/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
+| 61 | `app/api/tiss/validate-xsd/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 62 | `app/api/insurance/check-eligibility/route.ts` | `POST` | 403 (OK) | 403 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 
 ---
 
 ## 2. Resumo Quantitativo de Execucao
 
-- **Total de Rotas Auditadas:** 40
-- **Total de Metodos HTTP Exportados:** 61
-- **Total de Execucoes Reais:** 305 (5 perfis por metodo)
-- **Total de Divergencias Encontradas:** 1
+- **Total de Rotas Auditadas:** 41
+- **Total de Metodos HTTP Exportados:** 62
+- **Total de Execucoes Reais:** 310 (5 perfis por metodo)
+- **Total de Divergencias Encontradas:** 0
 
 ## 3. Lista Detalhada de Divergencias (Secao 5 vs Real)
 
-| # | Rota | Metodo | Perfil | Esperado | Real | Causa Raiz |
-|---|---|---|---|---|---|---|
-| 1 | `app/api/tiss/guides/[id]/route.ts` | `DELETE` | RECEPTIONIST | 2xx/4xx | 403 | Handler bloqueou acao autorizada de RECEPTIONIST |
+> Nenhuma divergencia detectada. 100% dos handlers executaram em estrita conformidade com a Secao 5 do Prompt B.

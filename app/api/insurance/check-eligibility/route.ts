@@ -1,4 +1,4 @@
-import { enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/insurance/check-eligibility/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -10,7 +10,7 @@ import { checkInsuranceEligibilityService, checkEligibilityInputSchema } from '@
  * Verifica elegibilidade do paciente no convênio (Validação cadastral interna + Registro de conferência manual)
  */
 export async function POST(request: NextRequest) {
-    const guard = await enforceTissAdministrativeGuard(request);
+    const guard = await requireTissAction(request, 'guia.validar');
     if (!guard.authorized) {
         return guard.response;
     }

@@ -156,7 +156,7 @@ describe('TISS 1.2 API - Guide XML Generation and Validation', () => {
         mockValidator.validateXML.mockResolvedValue({ valid: false, errors: [{ message: 'Missing node' }] })
 
         mockSupabase.from = jest.fn((table) => {
-            if (table === 'users') return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { clinic_id: 'test-clinic' } }) }
+            if (table === 'users') return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { role: 'CLINIC_ADMIN', clinic_id: 'test-clinic' } }) }
             if (table === 'tiss_guides') return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { id: 'guide-id', guide_number: '123', procedure_code: '10101012' }}) }
             if (table === 'clinics') return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { } }) }
             return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({}), insert: jest.fn(), delete: jest.fn().mockReturnThis() }
