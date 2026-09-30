@@ -384,10 +384,11 @@ export async function middleware(request: NextRequest) {
 
 
 
-    // Skip static assets
+    // Skip static assets and high-velocity public pages
     if (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/api/public') ||
+        pathname.startsWith('/pre-cadastro/') ||
         pathname.includes('.') ||
         pathname === '/favicon.ico'
     ) {

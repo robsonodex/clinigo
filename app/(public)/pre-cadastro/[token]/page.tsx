@@ -177,15 +177,6 @@ export default function PublicIntakePage() {
                         setHolderCpf(prev.insurance.holder_cpf ? formatCPF(prev.insurance.holder_cpf) : '')
                     }
                 }
-
-                // Load insurance options
-                if (data.clinic?.id) {
-                    try {
-                        const insRes = await fetch(`/api/public/intake/${token}`)
-                        // Insurance options would come from a separate endpoint in production
-                        // For now, they'll be loaded from the clinic's health_insurances
-                    } catch {}
-                }
             } catch (err: any) {
                 setError(err.message || 'Erro ao carregar formulário')
             } finally {

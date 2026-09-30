@@ -62,7 +62,14 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
     try {
         const limiter = rateLimiters[category]()
-        const { success, remaining, reset } = await limiter.limit(identifier)
+        // Strict 800ms timeout for Redis to prevent blocking public links on network hiccups
+        const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Rate limit timeout')), 800)
+        )
+        const { success, remaining, reset } = await Promise.race([
+            limiter.limit(identifier),
+            timeoutPromise,
+        ])
 
         if (!success) {
             const retryAfter = Math.ceil((reset - Date.now()) / 1000)
@@ -72,8 +79,7 @@ export async function checkRateLimit(
 
         return { success: true, remaining, reset }
     } catch (error: any) {
-        // If Redis fails, allow the request (fail-open)
-        // Only log a brief warning, not the full stack trace
+        // If Redis fails or times out, allow the request (fail-open)
         const msg = error?.cause?.code || error?.message || 'unknown'
         console.warn(`⚠️ Rate limit check skipped (${category}): ${msg}`)
         return { success: true, remaining: -1, reset: 0 }

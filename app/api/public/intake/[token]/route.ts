@@ -40,15 +40,9 @@ export async function GET(request: NextRequest, { params }: Props) {
             return NextResponse.json({ error: 'Token inválido' }, { status: 400 })
         }
 
-        // Rate limit: 10 requests per minute per IP
+        // Rate limit: non-blocking check on GET to guarantee instant loading for patients
         const ip = getClientIP(request)
-        const rateLimitResult = await checkRateLimit('api', `intake-get:${ip}`)
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { error: 'Muitas tentativas. Aguarde um momento.' },
-                { status: 429 }
-            )
-        }
+        checkRateLimit('api', `intake-get:${ip}`).catch(() => {})
 
         const result = await validateIntakeToken(token)
 

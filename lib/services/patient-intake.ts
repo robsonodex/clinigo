@@ -186,7 +186,7 @@ export async function validateIntakeToken(token: string): Promise<TokenValidatio
 
     const { data: link, error } = await supabase
         .from('patient_intake_links')
-        .select('*, clinics(id, name, logo_url)')
+        .select('id, clinic_id, lead_phone, is_static, expires_at, status, clinics(id, name, logo_url)')
         .eq('token_hash', tokenHash)
         .maybeSingle()
 
@@ -197,11 +197,11 @@ export async function validateIntakeToken(token: string): Promise<TokenValidatio
     // Check expiration (non-static links)
     if (!link.is_static && link.expires_at) {
         if (new Date(link.expires_at) < new Date()) {
-            // Update status to expired
-            await supabase
+            supabase
                 .from('patient_intake_links')
                 .update({ status: 'expired' })
                 .eq('id', link.id)
+                .catch(() => {})
             return { valid: false, error: 'Este link expirou. Solicite um novo link à clínica.' }
         }
     }
@@ -216,8 +216,9 @@ export async function validateIntakeToken(token: string): Promise<TokenValidatio
         return { valid: false, error: 'Este link foi cancelado.' }
     }
 
-    // Check if needs_correction (allow re-submission)
-    const { data: pendingSubmission } = await supabase
+    // Check if needs_correction (only query if link is active)
+    let pendingSubmission = null
+    const { data: sub } = await supabase
         .from('patient_intake_submissions')
         .select('id, status, correction_note, original_data')
         .eq('link_id', link.id)
@@ -225,21 +226,24 @@ export async function validateIntakeToken(token: string): Promise<TokenValidatio
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
+    pendingSubmission = sub
 
     const clinic = Array.isArray(link.clinics) ? link.clinics[0] : link.clinics
 
-    // Mark as opened
+    // Mark as opened in background (do not block user response)
     if (link.status !== 'opened' && link.status !== 'submitted') {
-        await supabase
+        supabase
             .from('patient_intake_links')
             .update({ status: 'opened', opened_at: new Date().toISOString() })
             .eq('id', link.id)
-
-        await logIntakeEvent({
-            clinicId: link.clinic_id,
-            linkId: link.id,
-            event: 'link_aberto',
-        })
+            .then(() => {
+                logIntakeEvent({
+                    clinicId: link.clinic_id,
+                    linkId: link.id,
+                    event: 'link_aberto',
+                }).catch(() => {})
+            })
+            .catch(() => {})
     }
 
     return {
