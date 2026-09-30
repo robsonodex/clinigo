@@ -1,5 +1,5 @@
 # Matriz Real de Permissoes RBAC - Execucao Direta de Handlers (B2.0)
-**Data de Geracao:** 2026-09-30T23:25:31.053Z  
+**Data de Geracao:** 2026-09-30T23:40:32.481Z  
 **Metodologia:** Execucao real de cada handler exportado com sessao simulada para os 5 perfis de usuario (DOCTOR, READONLY, RECEPTIONIST, FINANCIAL, CLINIC_ADMIN).  
 **Fonte da Verdade:** Retorno HTTP real da execucao do handler (2xx/4xx vs 403 Forbidden).
 

@@ -380,7 +380,7 @@ BEGIN
             cancellation_reason,
             cancelled_at
         ) VALUES (
-            v_clinic_a_id,
+            c_clinic_a,
             '2026999999',
             'CONSULTA',
             'CANCELLED',
@@ -391,7 +391,7 @@ BEGIN
         -- 2. Validar que query de relatório de perdas/glosas ignora CANCELLED
         SELECT COUNT(*) INTO v_report_count
         FROM tiss_guides
-        WHERE clinic_id = v_clinic_a_id
+        WHERE clinic_id = c_clinic_a
           AND id = v_cancelled_id
           AND status IN ('DENIED', 'GLOSADA')
           AND status != 'CANCELLED'
@@ -414,9 +414,7 @@ BEGIN
     -- =========================================================================
     DECLARE
         v_appeal_id UUID;
-        v_glosa_dummy_id UUID;
         v_constraint_violated BOOLEAN := false;
-        v_rls_isolated BOOLEAN := false;
         v_count_other_clinic INT := 0;
     BEGIN
         -- 1. Testar constraint chk_contested_le_glosa
@@ -428,9 +426,9 @@ BEGIN
                 original_glosa_value,
                 contested_value
             ) VALUES (
-                v_clinic_a_id,
-                uuid_generate_v4(),
-                uuid_generate_v4(),
+                c_clinic_a,
+                gen_random_uuid(),
+                gen_random_uuid(),
                 100.00,
                 150.00 -- Violando: 150 > 100
             );
@@ -442,13 +440,13 @@ BEGIN
         INSERT INTO tiss_appeals (
             clinic_id,
             health_insurance_id,
-            appeal_number,
+            protocol_number,
             status,
             total_glosa_value,
-            total_contested_value
+            contested_value
         ) VALUES (
-            v_clinic_a_id,
-            v_insurance_id,
+            c_clinic_a,
+            c_oper_a,
             'REC-TEST-001',
             'IN_PREPARATION',
             200.00,
@@ -458,7 +456,7 @@ BEGIN
         -- 3. Validar contagem simulando clínica B
         SELECT COUNT(*) INTO v_count_other_clinic
         FROM tiss_appeals
-        WHERE id = v_appeal_id AND clinic_id = v_clinic_b_id;
+        WHERE id = v_appeal_id AND clinic_id = c_clinic_b;
 
         IF v_constraint_violated AND v_count_other_clinic = 0 THEN
             INSERT INTO test_results (teste, status, detalhe) VALUES

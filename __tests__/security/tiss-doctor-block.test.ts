@@ -136,9 +136,13 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
     const isReceptionistForbidden = (relPath: string, method: string) => {
         const p = relPath.replace(/\\/g, '/');
 
-        // Lotes: Criar, Editar, Deletar, Assinar, Transmitir
+        // Lotes: Criar, Editar, Deletar, Assinar, Transmitir, Fechar, Guias
         if (p === 'app/api/tiss/batches/route.ts' && method === 'POST') return true;
         if (p === 'app/api/tiss/batches/[id]/route.ts' && ['PUT', 'DELETE'].includes(method)) return true;
+        if (p.includes('batches/[id]/close')) return true;
+        if (p.includes('batches/[id]/guides') && method === 'POST') return true;
+        if (p.includes('batches/[id]/manual-dispatch')) return true;
+        if (p.includes('batches/[id]/pre-close')) return true;
         if (p.includes('batches/[id]/generate-xml')) return true;
         if (p.includes('batches/[id]/submit')) return true;
         if (p.includes('batches/[id]/sign')) return true;
@@ -152,19 +156,24 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         // Importação em massa: Recepção não pode (C3)
         if (p.includes('import') && method === 'POST') return true;
 
-        // Retornos: Upload, Parse, URL, Notificar, Undo
+        // Retornos: Upload, Parse, URL, Notificar, Undo, Dry-run, Confirm
         if (p.includes('returns/upload')) return true;
+        if (p.includes('returns/dry-run')) return true;
+        if (p.includes('returns/confirm')) return true;
         if (p.includes('returns/generate-upload-url')) return true;
         if (p.includes('returns/notify-upload-complete')) return true;
         if (p.includes('returns/[id]/parse')) return true;
         if (p.includes('returns/[id]/undo')) return true;
 
-        // Glosas: Contestar, Análise de risco de glosa
+        // Glosas: Contestar, Manual, Desfazer, Recursos
         if (p.includes('glosas/[id]/contest') && ['POST', 'PUT'].includes(method)) return true;
+        if (p.includes('glosas/manual')) return true;
+        if (p.includes('glosas/[id]') && method === 'DELETE') return true;
         if (p.includes('analyze-glosa-risk')) return true;
+        if (p.includes('appeals') && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
 
-        // Pricing, TUSS e Configurações: Recepção não gerencia tabelas contratuais
-        if (p.includes('pricing')) return true;
+        // Pricing, TUSS e Configurações: Recepção não gerencia tabelas contratuais (mas pode consultar pricing/lookup)
+        if (p.includes('pricing') && !p.includes('pricing/lookup')) return true;
         if (p.includes('tuss') && method === 'POST') return true;
         if (p.includes('operators') && method === 'POST') return true;
         if (p.includes('settings')) return true;
@@ -185,6 +194,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
         if (p.includes('batches/[id]/generate-xml')) return true;
         if (p.includes('batches/[id]/sign')) return true;
+        if (p.includes('batches/[id]/pre-close')) return true;
         if ((p.includes('pricing') && !p.includes('pricing/lookup')) || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
         return false;
     };
@@ -192,6 +202,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
     /**
      * Operações exclusivas de Administrador (CLINIC_ADMIN / SUPER_ADMIN):
      * - Desfazer retorno financeiro (POST /api/tiss/returns/[id]/undo)
+     * - Desfazer glosa manual (DELETE /api/tiss/glosas/[id])
      * - Configuração/cadastro de operadora no CNES (POST /api/tiss/operators)
      * - Exclusão de regra de preço (DELETE /api/tiss/pricing)
      * - Importação de catálogo TUSS (POST /api/tiss/tuss)
@@ -200,6 +211,7 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
     const isAdminOnlyRoute = (relPath: string, method: string) => {
         const p = relPath.replace(/\\/g, '/');
         if (p.includes('returns/[id]/undo')) return true;
+        if (p.includes('glosas/[id]') && method === 'DELETE') return true;
         if (p.includes('operators') && method === 'POST') return true;
         // C3: escrita em pricing e tuss restrita a ADMIN (FINANCIAL só leitura)
         if (p.includes('pricing') && ['POST', 'DELETE'].includes(method)) return true;
