@@ -119,16 +119,15 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const guard = await requireTissAction(request, 'lote.vincular_guias');
+    if (!guard.authorized) {
+        return guard.response;
+    }
+
     try {
         const { id: batchId } = await params;
         const body = await request.json();
         const validated = guideActionSchema.parse(body);
-
-        const requiredAction = validated.action === 'link' ? 'lote.vincular_guias' : 'lote.remover_guias';
-        const guard = await requireTissAction(request, requiredAction);
-        if (!guard.authorized) {
-            return guard.response;
-        }
 
         const supabase = await createClient();
 
