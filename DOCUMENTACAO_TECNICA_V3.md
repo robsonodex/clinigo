@@ -2,6 +2,46 @@
 
 ## Módulos
 
+### Faturamento TISS Premium - Parte 2 (B3, B4, B5 Reais - Etapa P0)
+- **Módulos**:
+  - Banco de Dados / Migrations → `supabase/migrations/20260930110000_tiss_premium_p0_extensions.sql` → Criação das tabelas `tiss_appeals` (processos de recurso de glosa por operadora), `tiss_appeal_items` (itens recursados com constraint `chk_contested_le_glosa`), `tiss_appeal_attachments` (armazenamento com link assinado e isolamento por pasta), colunas `appeal_id` em `tiss_glosa_contests`, `dry_run_token` em `tiss_return_imports`, e colunas de comprovante em `tiss_batches`. RLS multitenant estrito com políticas de isolamento e rollback formal idempotente.
+  - Faturamento / Lotes TISS (L2, L3, L7) →
+    - `app/api/tiss/batches/[id]/guides/route.ts` → `GET()` (busca guias vinculadas, elegíveis e totais ao vivo), `POST()` (vincular/desvincular com recálculo atômico e bloqueio de lote fechado).
+    - `app/api/tiss/batches/[id]/pre-close/route.ts` → `GET()` (verificação prévia de impeditivos por guia: paciente, carteirinha, procedimento, valor, assinatura).
+    - `app/api/tiss/batches/[id]/close/route.ts` → `POST()` (fechamento formal bloqueando se houver impeditivos pendentes HTTP 422, gravando `closed_at`, `closed_by` e `checksum` SHA-256).
+    - `app/api/tiss/batches/[id]/manual-dispatch/route.ts` → `POST()` (upload de comprovante em bucket privado `documents`, registro de canal, data, protocolo, URL assinada 60s e transição para `SENT`).
+    - `components/tiss/link-guides-dialog.tsx` → `LinkGuidesDialog` (modal de seleção ao vivo com contadores e totalizador de valor).
+    - `components/tiss/close-batch-dialog.tsx` → `CloseBatchDialog` (modal de pré-verificação com exibição de impeditivos por guia e fechamento seguro).
+    - `components/tiss/manual-dispatch-dialog.tsx` → `ManualDispatchDialog` (modal de upload privado e protocolo de transmissão).
+    - `components/tiss/batch-list-table.tsx` → Conexão de todos os diálogos operacionais L2, L3, L7 e gaveta de histórico F2.
+  - Faturamento / Retornos e Conciliação (R2, R3) →
+    - `app/api/tiss/returns/dry-run/route.ts` → `POST()` (simulação dry-run categorizando reconhecidas, pagas, glosadas, não reconhecidas e divergências sem gravação no banco, prevenção de hash duplicado).
+    - `app/api/tiss/returns/confirm/route.ts` → `POST()` (confirmação atômica pós-revisão com suporte a vínculos manuais de guias não reconhecidas).
+    - `app/api/tiss/glosas/manual/route.ts` → `POST()` (lançamento manual de glosa com catálogo ANS, trava de teto `glosa_value <= apresentado - glosas_existentes`, registro em `financial_entries` e auditoria).
+    - `app/api/tiss/glosas/[id]/route.ts` → `DELETE()` (estorno de glosa manual com trava inviolável bloqueando se houver recurso ativo vinculado).
+    - `components/tiss/return-dry-run-dialog.tsx` → `ReturnDryRunDialog` (modal de pré-visualização categorizada e confirmação atômica).
+    - `components/tiss/manual-glosa-dialog.tsx` → `ManualGlosaDialog` (modal de lançamento com catálogo ANS e validações de saldo).
+  - Faturamento / Recursos de Glosa (C1 a C8) →
+    - `app/api/tiss/appeals/route.ts` → `GET()` (listagem com contadores por status F1), `POST()` (criação de recurso agrupando glosas da mesma operadora com trava `contested_value <= glosa_value` e prazo dinâmico `appeal_deadline_days`).
+    - `app/api/tiss/appeals/[id]/attachments/route.ts` → `POST()` (upload de anexo comprobatório no bucket privado `documents` com link assinado e auditoria).
+    - `app/api/tiss/appeals/[id]/release/route.ts` → `POST()` (liberação para envio com trava de prazo de recurso C5).
+    - `app/api/tiss/appeals/[id]/submit/route.ts` → `POST()` (registro formal de protocolo e canal de envio).
+    - `app/api/tiss/appeals/[id]/loss/route.ts` → `POST()` (registro formal de perda com justificativa, marcando itens como `DEFINITIVE_LOSS`).
+    - `app/api/tiss/appeals/[id]/result/route.ts` → `POST()` (registro de parecer da operadora por item, acatado/parcial/negado, liquidação contábil e cálculo de repasse conforme políticas `CLINICA_ABSORVE`, `DESCONTA_PROFISSIONAL` e `DESCONTA_SE_MANTIDA`).
+    - `components/tiss/appeal-management-dialogs.tsx` → `LossAppealDialog`, `SubmitAppealDialog`, `ResultAppealDialog`, `AttachmentsAppealDialog`.
+  - Faturamento / Filtros e Histórico (F1, F2) →
+    - `components/tiss/status-filter-tabs.tsx` → `StatusFilterTabs` (componente reutilizável de filtros com contadores em tempo real, badges neutros e sincronização com URL search params).
+    - `components/tiss/HistoryDrawer.tsx` → `HistoryDrawer` (gaveta lateral integrada em guias, lotes, glosas e recursos, consumindo `/api/tiss/audit`).
+    - `app/dashboard/(clinic)/tiss/page.tsx` → Integração de F1 (filtros com contadores) e F2 (botão Histórico por guia).
+    - `app/dashboard/(clinic)/tiss/batches/page.tsx` → Integração de F1 (filtros de lote com contadores) e F2 (gaveta em `batch-list-table.tsx`).
+    - `app/dashboard/(clinic)/tiss/glosas/page.tsx` → Reformulação completa com abas "Glosas Registradas" e "Recursos de Glosa (C1 - C8)", contadores F1, gaveta F2 e integração de todos os botões operacionais C1-C8, R3 e estornos.
+  - Segurança / RBAC Real →
+    - `__tests__/security/matriz-permissoes-real.test.ts` → Auditoria com 78 métodos reais executados, gerando `docs/evidencias/matriz-permissoes-real.md`.
+    - `__tests__/security/tiss-doctor-block.test.ts` → Bloqueio estrito de DOCTOR e READONLY em 390 testes.
+- **Descrição**:
+  - **Demanda Operacional**: Implementar os botões e fluxos reais da Etapa P0 da Parte 2 (B3 Lotes, B4 Retornos e B5 Recursos de Glosa) sem simulação fora de clínicas demo e com menor privilégio estrito.
+  - **Resultados**: 59 suítes de teste (842 testes) passando 100%, build de produção compilado com sucesso, sintaxe SQL verificada via libpg-query e zero testes em navegador executados pela IA.
+
 ### Pré-cadastros: Ficha Cadastral por Link Externo, Aprovação da Recepção e Criação Automática de Pacientes (Multitenant)
 - **Módulos**:
   - Banco de Dados / Migrations → `supabase/migrations/20260930100000_create_patient_intake_module.sql` → Criação das tabelas `patient_intake_links`, `patient_intake_submissions` e `patient_intake_files`, com chaves estrangeiras, índices de performance (`clinic_id`, `token_hash`, `cpf`, `status`), RLS multitenant estrito, trigger automática de expiração de links e configuração de storage bucket seguro `intake-files`.
