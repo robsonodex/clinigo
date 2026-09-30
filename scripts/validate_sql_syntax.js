@@ -7,6 +7,8 @@ const filesToValidate = [
     'supabase/migrations/20260929130000_tiss_undo_rpc_and_reimport.sql',
     'supabase/migrations/20260929140000_tiss_batch_hash_tracking.sql',
     'supabase/migrations/20260929150000_tiss_premium_foundation.sql',
+    'supabase/migrations/20260929160000_tiss_premium_hardening.sql',
+    'supabase/migrations/20260929170000_tiss_guide_cancelled_status.sql',
     'scripts/staging/verify-tiss-migrations.sql',
     'scripts/staging/verify-tiss-premium.sql',
 ];
