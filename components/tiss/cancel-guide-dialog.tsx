@@ -65,7 +65,8 @@ export function CancelGuideDialog({
 
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'Falha ao excluir/cancelar guia');
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Falha ao excluir/cancelar guia';
+                throw new Error(errorMsg);
             }
 
             toast.success(data.message || (isDraft ? 'Guia excluída com sucesso!' : 'Guia cancelada com sucesso!'));

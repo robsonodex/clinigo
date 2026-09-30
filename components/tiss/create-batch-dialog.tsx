@@ -107,7 +107,8 @@ export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatch
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Erro ao criar lote');
+                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao criar lote';
+                throw new Error(errorMsg);
             }
 
             const result = await response.json();

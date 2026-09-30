@@ -125,7 +125,8 @@ export function UploadReturnDialog({
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Erro ao fazer upload');
+                    const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao fazer upload';
+                    throw new Error(errorMsg);
                 }
 
                 const result = await response.json();
@@ -140,7 +141,8 @@ export function UploadReturnDialog({
 
                 if (!parseResponse.ok) {
                     const error = await parseResponse.json();
-                    throw new Error(error.error || 'Erro ao processar retorno');
+                    const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao processar retorno';
+                    throw new Error(errorMsg);
                 }
 
                 setUploadProgress(100);

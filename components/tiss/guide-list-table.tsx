@@ -127,7 +127,10 @@ function PremiumGuideListTable({
                 method: 'POST',
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Erro ao duplicar guia');
+            if (!res.ok) {
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro ao duplicar guia';
+                throw new Error(errorMsg);
+            }
 
             toast.success(data.message || 'Guia duplicada com sucesso!');
             if (onRefresh) onRefresh();

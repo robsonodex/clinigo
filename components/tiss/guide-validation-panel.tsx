@@ -62,7 +62,8 @@ export function GuideValidationPanel({
 
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'Erro ao validar guia');
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro ao validar guia';
+                throw new Error(errorMsg);
             }
 
             const rawErrors = data.data?.errors || [];

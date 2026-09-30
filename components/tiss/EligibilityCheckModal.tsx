@@ -90,7 +90,8 @@ export function EligibilityCheckModal({
       const json = await res.json()
       
       if (!res.ok) {
-        setResult({ success: false, error: json.error || 'Erro desconhecido ao verificar elegibilidade.' })
+        const errorMsg = typeof json.error === 'string' ? json.error : json.error?.message || json.message || 'Erro desconhecido ao verificar elegibilidade.';
+        setResult({ success: false, error: errorMsg })
       } else {
         setResult(json)
       }

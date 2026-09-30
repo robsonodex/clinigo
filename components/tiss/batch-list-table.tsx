@@ -172,7 +172,8 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
             });
             const data = await res.json();
             if (!res.ok || !data.success) {
-                throw new Error(data.error || 'Falha ao desfazer retorno');
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Falha ao desfazer retorno';
+                throw new Error(errorMsg);
             }
             toast.success(data.message || 'Retorno desfeito com sucesso');
             setUndoBatch(null);
@@ -208,7 +209,8 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
             });
             const data = await res.json();
             if (!res.ok || !data.success) {
-                throw new Error(data.error || 'Falha ao registrar envio do lote');
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Falha ao registrar envio do lote';
+                throw new Error(errorMsg);
             }
             toast.success('Envio do lote registrado com sucesso');
             setSubmitBatch(null);
@@ -248,8 +250,10 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                         : `Validação estrutural simplificada (não substitui a validação oficial da operadora). Schema ${result.schemaVersion}`,
                 });
             } else {
-                toast.error(`Pendências na estrutura: ${result.errors.length}`, {
-                    description: result.errors[0]?.message || 'Verifique o XML',
+                const firstErr = result.errors?.[0];
+                const desc = typeof firstErr === 'string' ? firstErr : firstErr?.message || 'Verifique o XML';
+                toast.error(`Pendências na estrutura: ${result.errors?.length || 0}`, {
+                    description: desc,
                 });
             }
         } catch (error: any) {
@@ -329,7 +333,8 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Erro ao deletar lote');
+                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao deletar lote';
+                throw new Error(errorMsg);
             }
 
             toast.success('Lote deletado com sucesso');

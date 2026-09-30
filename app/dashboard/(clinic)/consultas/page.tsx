@@ -131,7 +131,8 @@ export default function ConsultasPage() {
             })
             const data = await res.json()
             if (!res.ok) {
-                throw new Error(data.error || 'Erro ao gerar guia TISS')
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro ao gerar guia TISS';
+                throw new Error(errorMsg);
             }
             if (data.anti_glosa_warnings && data.anti_glosa_warnings.length > 0) {
                 toast.warning(`Guia TISS nº ${data.data.guide_number} gerada com avisos: ${data.anti_glosa_warnings.join('; ')}`)
@@ -164,7 +165,8 @@ export default function ConsultasPage() {
             })
             const data = await res.json()
             if (!res.ok) {
-                throw new Error(data.error || 'Erro na geração em massa')
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro na geração em massa';
+                throw new Error(errorMsg);
             }
             toast.success(`${data.data.created_count} guia(s) TISS gerada(s) com sucesso!`)
             if (data.data.errors && data.data.errors.length > 0) {

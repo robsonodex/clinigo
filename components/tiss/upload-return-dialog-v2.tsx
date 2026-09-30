@@ -152,7 +152,8 @@ export function UploadReturnDialogV2({
 
             if (!urlResponse.ok) {
                 const errorData = await urlResponse.json();
-                throw new Error(errorData.error || 'Erro ao gerar URL de upload');
+                const errorMsg = typeof errorData.error === 'string' ? errorData.error : errorData.error?.message || errorData.message || 'Erro ao gerar URL de upload';
+                throw new Error(errorMsg);
             }
 
             const { data: urlData } = await urlResponse.json();
@@ -189,7 +190,8 @@ export function UploadReturnDialogV2({
 
             if (!notifyResponse.ok) {
                 const errorData = await notifyResponse.json();
-                throw new Error(errorData.error || 'Erro ao notificar conclusão');
+                const errorMsg = typeof errorData.error === 'string' ? errorData.error : errorData.error?.message || errorData.message || 'Erro ao notificar conclusão';
+                throw new Error(errorMsg);
             }
 
             setUploadProgress(100);

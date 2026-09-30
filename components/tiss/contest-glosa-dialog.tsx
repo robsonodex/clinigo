@@ -63,7 +63,8 @@ export function ContestGlosaDialog({
                 onOpenChange(false);
                 setReason('');
             } else {
-                toast.error(data.error || 'Erro ao criar recurso');
+                const errorMsg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro ao criar recurso';
+                toast.error(errorMsg);
             }
         } catch (error) {
             toast.error('Erro de conexão ao criar recurso');

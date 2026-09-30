@@ -75,7 +75,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error);
+                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao validar lote';
+                throw new Error(errorMsg);
             }
 
             return response.json();
@@ -104,7 +105,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error);
+                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao gerar XML';
+                throw new Error(errorMsg);
             }
 
             const result = await response.json();
@@ -138,7 +140,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error);
+                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao enviar lote';
+                throw new Error(errorMsg);
             }
 
             toast.success('Lote marcado como enviado!');
@@ -228,7 +231,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
                 <div className="flex items-center gap-2">
                     {batch.xml_file_url && (
-                        <Button variant="outline" onClick={() => window.open(batch.xml_file_url, '_blank')}>
+                        <Button variant="outline" onClick={() => window.open(`/api/tiss/batches/${params.id}/generate-xml`, '_blank')}>
                             <Download className="mr-2 h-4 w-4" />
                             Baixar XML
                         </Button>

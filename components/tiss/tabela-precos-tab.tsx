@@ -167,8 +167,9 @@ export function TabelaPrecosTab() {
             })
 
             if (!res.ok) {
-                const err = await res.json()
-                throw new Error(err.error || 'Erro ao cadastrar regra de preço')
+                const err = await res.json();
+                const errorMsg = typeof err.error === 'string' ? err.error : err.error?.message || err.message || 'Erro ao cadastrar regra de preço';
+                throw new Error(errorMsg);
             }
             return res.json()
         },
@@ -188,8 +189,9 @@ export function TabelaPrecosTab() {
         mutationFn: async (id: string) => {
             const res = await fetch(`/api/tiss/pricing?id=${id}`, { method: 'DELETE' })
             if (!res.ok) {
-                const err = await res.json()
-                throw new Error(err.error || 'Erro ao excluir regra')
+                const err = await res.json();
+                const errorMsg = typeof err.error === 'string' ? err.error : err.error?.message || err.message || 'Erro ao excluir regra';
+                throw new Error(errorMsg);
             }
             return res.json()
         },
@@ -238,8 +240,9 @@ export function TabelaPrecosTab() {
             })
 
             if (!res.ok) {
-                const err = await res.json()
-                throw new Error(err.error || 'Erro ao importar procedimentos')
+                const err = await res.json();
+                const errorMsg = typeof err.error === 'string' ? err.error : err.error?.message || err.message || 'Erro ao importar procedimentos';
+                throw new Error(errorMsg);
             }
 
             toast.success(`${procedures.length} procedimento(s) TUSS importados com sucesso`)

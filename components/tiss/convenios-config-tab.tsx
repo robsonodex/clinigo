@@ -133,8 +133,9 @@ export function ConveniosConfigTab() {
             })
 
             if (!res.ok) {
-                const err = await res.json()
-                throw new Error(err.error?.message || err.error || 'Erro ao atualizar configurações')
+                const err = await res.json();
+                const errorMsg = typeof err.error === 'string' ? err.error : err.error?.message || err.message || 'Erro ao atualizar configurações';
+                throw new Error(errorMsg);
             }
             return res.json()
         },
