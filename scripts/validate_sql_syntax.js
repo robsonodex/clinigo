@@ -9,6 +9,7 @@ const filesToValidate = [
     'supabase/migrations/20260929150000_tiss_premium_foundation.sql',
     'supabase/migrations/20260929160000_tiss_premium_hardening.sql',
     'supabase/migrations/20260929170000_tiss_guide_cancelled_status.sql',
+    'supabase/migrations/20260930110000_tiss_premium_p0_extensions.sql',
     'scripts/staging/verify-tiss-migrations.sql',
     'scripts/staging/verify-tiss-premium.sql',
 ];

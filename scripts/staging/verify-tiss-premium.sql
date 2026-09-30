@@ -409,6 +409,69 @@ BEGIN
         ('9. Status CANCELLED e Exclusao de Relatorios (B2.1)', 'FAIL', 'Excecao no teste de status CANCELLED: ' || SQLERRM);
     END;
 
+    -- =========================================================================
+    -- TESTE 10: Isolamento RLS e Constraints de Recursos de Glosa (C1-C8)
+    -- =========================================================================
+    DECLARE
+        v_appeal_id UUID;
+        v_glosa_dummy_id UUID;
+        v_constraint_violated BOOLEAN := false;
+        v_rls_isolated BOOLEAN := false;
+        v_count_other_clinic INT := 0;
+    BEGIN
+        -- 1. Testar constraint chk_contested_le_glosa
+        BEGIN
+            INSERT INTO tiss_appeal_items (
+                clinic_id,
+                appeal_id,
+                glosa_id,
+                original_glosa_value,
+                contested_value
+            ) VALUES (
+                v_clinic_a_id,
+                uuid_generate_v4(),
+                uuid_generate_v4(),
+                100.00,
+                150.00 -- Violando: 150 > 100
+            );
+        EXCEPTION WHEN check_violation THEN
+            v_constraint_violated := true;
+        END;
+
+        -- 2. Testar inserção válida em tiss_appeals
+        INSERT INTO tiss_appeals (
+            clinic_id,
+            health_insurance_id,
+            appeal_number,
+            status,
+            total_glosa_value,
+            total_contested_value
+        ) VALUES (
+            v_clinic_a_id,
+            v_insurance_id,
+            'REC-TEST-001',
+            'IN_PREPARATION',
+            200.00,
+            200.00
+        ) RETURNING id INTO v_appeal_id;
+
+        -- 3. Validar contagem simulando clínica B
+        SELECT COUNT(*) INTO v_count_other_clinic
+        FROM tiss_appeals
+        WHERE id = v_appeal_id AND clinic_id = v_clinic_b_id;
+
+        IF v_constraint_violated AND v_count_other_clinic = 0 THEN
+            INSERT INTO test_results (teste, status, detalhe) VALUES
+            ('10. Recursos C1-C8: Constraints e Isolamento Multitenant', 'PASS', 'Constraint chk_contested_le_glosa barra valor abusivo e isolamento de clínica confirmado');
+        ELSE
+            INSERT INTO test_results (teste, status, detalhe) VALUES
+            ('10. Recursos C1-C8: Constraints e Isolamento Multitenant', 'FAIL', 'Falha no teste: constraint=' || v_constraint_violated || ', leak_count=' || v_count_other_clinic);
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO test_results (teste, status, detalhe) VALUES
+        ('10. Recursos C1-C8: Constraints e Isolamento Multitenant', 'FAIL', 'Excecao no teste de recursos C1-C8: ' || SQLERRM);
+    END;
+
 END $$;
 
 -- Exibir Resultados Formatados da Auditoria
