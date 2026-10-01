@@ -41,8 +41,10 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
+import { useFaturamentoPremium } from '@/lib/tiss/use-faturamento-premium';
 
 export default function GlosasPage() {
+    const { isPremium } = useFaturamentoPremium();
     const defaultEnd = new Date().toISOString().split('T')[0];
     const defaultStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0];
 
@@ -287,13 +289,16 @@ export default function GlosasPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                        onClick={() => setIsManualGlosaOpen(true)}
-                        className="bg-primary"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Lançar Glosa Manual (R3)
-                    </Button>
+                    {/* Botão R3: Lançar Glosa Manual (Exclusivo Faturamento Premium) */}
+                    {isPremium && (
+                        <Button
+                            onClick={() => setIsManualGlosaOpen(true)}
+                            className="bg-primary"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Lançar Glosa Manual (R3)
+                        </Button>
+                    )}
                     <Button
                         variant="outline"
                         onClick={() => {
@@ -335,13 +340,16 @@ export default function GlosasPage() {
                             {glosas?.length || 0}
                         </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="recursos" className="gap-2">
-                        <Scale className="w-4 h-4" />
-                        Recursos de Glosa (C1 - C8)
-                        <Badge variant="secondary" className="ml-1 font-mono text-[11px]">
-                            {appealsList?.length || 0}
-                        </Badge>
-                    </TabsTrigger>
+                    {/* Aba Recursos (Exclusiva Faturamento Premium) */}
+                    {isPremium && (
+                        <TabsTrigger value="recursos" className="gap-2">
+                            <Scale className="w-4 h-4" />
+                            Recursos de Glosa (C1 - C8)
+                            <Badge variant="secondary" className="ml-1 font-mono text-[11px]">
+                                {appealsList?.length || 0}
+                            </Badge>
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
                 {/* Filtro de Período Geral */}
@@ -442,15 +450,17 @@ export default function GlosasPage() {
                         </div>
                     ) : null}
 
-                    {/* Filtros por Status F1 Glosas */}
-                    <div className="flex items-center justify-between">
-                        <StatusFilterTabs
-                            value={glosaStatusFilter}
-                            onValueChange={setGlosaStatusFilter}
-                            options={glosaStatusOptions}
-                            urlParamKey="glosa_status"
-                        />
-                    </div>
+                    {/* Filtros por Status F1 Glosas (Exclusivo Faturamento Premium) */}
+                    {isPremium && (
+                        <div className="flex items-center justify-between">
+                            <StatusFilterTabs
+                                value={glosaStatusFilter}
+                                onValueChange={setGlosaStatusFilter}
+                                options={glosaStatusOptions}
+                                urlParamKey="glosa_status"
+                            />
+                        </div>
+                    )}
 
                     {/* Tabela de Glosas */}
                     <Card>
@@ -508,20 +518,23 @@ export default function GlosasPage() {
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-1.5">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setHistoryEntity({
-                                                                type: 'tiss_glosa',
-                                                                id: glosa.id,
-                                                                title: `Histórico da Glosa ${glosa.glosa_code || ''}`,
-                                                            })}
-                                                            className="h-8 text-xs gap-1"
-                                                            title="Ver histórico e auditoria F2"
-                                                        >
-                                                            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                                            Histórico
-                                                        </Button>
+                                                        {/* Histórico F2 (Exclusivo Faturamento Premium) */}
+                                                        {isPremium && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => setHistoryEntity({
+                                                                    type: 'tiss_glosa',
+                                                                    id: glosa.id,
+                                                                    title: `Histórico da Glosa ${glosa.glosa_code || ''}`,
+                                                                })}
+                                                                className="h-8 text-xs gap-1"
+                                                                title="Ver histórico e auditoria F2"
+                                                            >
+                                                                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                                                Histórico
+                                                            </Button>
+                                                        )}
 
                                                         {glosa.can_appeal && (!glosa.contest_status || glosa.contest_status === 'NONE') && (
                                                             <Button
@@ -539,7 +552,8 @@ export default function GlosasPage() {
                                                             </Button>
                                                         )}
 
-                                                        {(!glosa.contest_status || glosa.contest_status === 'NONE') && (
+                                                        {/* Exclusão de Glosa Manual R3 (Exclusivo Faturamento Premium) */}
+                                                        {isPremium && (!glosa.contest_status || glosa.contest_status === 'NONE') && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
@@ -569,21 +583,22 @@ export default function GlosasPage() {
                     </Card>
                 </TabsContent>
 
-                {/* ABA 2: RECURSOS DE GLOSA (C1 - C8) */}
-                <TabsContent value="recursos" className="space-y-6">
-                    {/* Filtros por Status F1 Recursos */}
-                    <div className="flex items-center justify-between">
-                        <StatusFilterTabs
-                            value={appealStatusFilter}
-                            onValueChange={setAppealStatusFilter}
-                            options={appealStatusOptions}
-                            urlParamKey="appeal_status"
-                        />
-                    </div>
+                {/* ABA 2: RECURSOS DE GLOSA (C1 - C8) (Exclusiva Faturamento Premium) */}
+                {isPremium && (
+                    <TabsContent value="recursos" className="space-y-6">
+                        {/* Filtros por Status F1 Recursos */}
+                        <div className="flex items-center justify-between">
+                            <StatusFilterTabs
+                                value={appealStatusFilter}
+                                onValueChange={setAppealStatusFilter}
+                                options={appealStatusOptions}
+                                urlParamKey="appeal_status"
+                            />
+                        </div>
 
-                    {/* Tabela de Recursos de Glosa */}
-                    <Card>
-                        <CardHeader>
+                        {/* Tabela de Recursos de Glosa */}
+                        <Card>
+                            <CardHeader>
                             <CardTitle>Recursos de Glosa (C1 - C8)</CardTitle>
                             <CardDescription>
                                 Processos de contestação agrupados por operadora, controle de prazos SLA e liquidação financeira
@@ -768,9 +783,10 @@ export default function GlosasPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+                )}
             </Tabs>
 
-            {/* Modal de Abrir Recurso C1 */}
+            {/* Modal de Abrir Recurso C1 (Contestação) */}
             <ContestGlosaDialog
                 open={selectedGlosa !== null}
                 onOpenChange={(open) => !open && setSelectedGlosa(null)}
@@ -783,63 +799,68 @@ export default function GlosasPage() {
                 }}
             />
 
-            {/* Modal de Lançar Glosa Manual R3 */}
-            <ManualGlosaDialog
-                open={isManualGlosaOpen}
-                onOpenChange={setIsManualGlosaOpen}
-                guide={null}
-                onSuccess={() => refetchGlosas()}
-            />
+            {/* Modais Exclusivos de Faturamento Premium (R3, C4-C8, F2) */}
+            {isPremium && (
+                <>
+                    {/* Modal de Lançar Glosa Manual R3 */}
+                    <ManualGlosaDialog
+                        open={isManualGlosaOpen}
+                        onOpenChange={setIsManualGlosaOpen}
+                        guide={null}
+                        onSuccess={() => refetchGlosas()}
+                    />
 
-            {/* Modal C5: Registrar Perda */}
-            <LossAppealDialog
-                open={lossAppeal !== null}
-                onOpenChange={(open) => !open && setLossAppeal(null)}
-                appealId={lossAppeal?.id || null}
-                protocolNumber={lossAppeal?.protocol}
-                onSuccess={() => {
-                    refetchGlosas();
-                    refetchAppeals();
-                }}
-            />
+                    {/* Modal C5: Registrar Perda */}
+                    <LossAppealDialog
+                        open={lossAppeal !== null}
+                        onOpenChange={(open) => !open && setLossAppeal(null)}
+                        appealId={lossAppeal?.id || null}
+                        protocolNumber={lossAppeal?.protocol}
+                        onSuccess={() => {
+                            refetchGlosas();
+                            refetchAppeals();
+                        }}
+                    />
 
-            {/* Modal C7: Registrar Envio */}
-            <SubmitAppealDialog
-                open={submitAppeal !== null}
-                onOpenChange={(open) => !open && setSubmitAppeal(null)}
-                appealId={submitAppeal?.id || null}
-                protocolNumber={submitAppeal?.protocol}
-                onSuccess={() => refetchAppeals()}
-            />
+                    {/* Modal C7: Registrar Envio */}
+                    <SubmitAppealDialog
+                        open={submitAppeal !== null}
+                        onOpenChange={(open) => !open && setSubmitAppeal(null)}
+                        appealId={submitAppeal?.id || null}
+                        protocolNumber={submitAppeal?.protocol}
+                        onSuccess={() => refetchAppeals()}
+                    />
 
-            {/* Modal C8: Registrar Parecer e Liquidação Financeira */}
-            <ResultAppealDialog
-                open={resultAppeal !== null}
-                onOpenChange={(open) => !open && setResultAppeal(null)}
-                appeal={resultAppeal}
-                onSuccess={() => {
-                    refetchGlosas();
-                    refetchAppeals();
-                }}
-            />
+                    {/* Modal C8: Registrar Parecer e Liquidação Financeira */}
+                    <ResultAppealDialog
+                        open={resultAppeal !== null}
+                        onOpenChange={(open) => !open && setResultAppeal(null)}
+                        appeal={resultAppeal}
+                        onSuccess={() => {
+                            refetchGlosas();
+                            refetchAppeals();
+                        }}
+                    />
 
-            {/* Modal C4: Anexos do Recurso */}
-            <AttachmentsAppealDialog
-                open={attachmentsAppeal !== null}
-                onOpenChange={(open) => !open && setAttachmentsAppeal(null)}
-                appeal={attachmentsAppeal}
-                onSuccess={() => refetchAppeals()}
-            />
+                    {/* Modal C4: Anexos do Recurso */}
+                    <AttachmentsAppealDialog
+                        open={attachmentsAppeal !== null}
+                        onOpenChange={(open) => !open && setAttachmentsAppeal(null)}
+                        appeal={attachmentsAppeal}
+                        onSuccess={() => refetchAppeals()}
+                    />
 
-            {/* Gaveta de Histórico F2 */}
-            {historyEntity && (
-                <HistoryDrawer
-                    open={Boolean(historyEntity)}
-                    onOpenChange={(open) => !open && setHistoryEntity(null)}
-                    entityType={historyEntity.type}
-                    entityId={historyEntity.id}
-                    title={historyEntity.title}
-                />
+                    {/* Gaveta de Histórico F2 */}
+                    {historyEntity && (
+                        <HistoryDrawer
+                            open={Boolean(historyEntity)}
+                            onOpenChange={(open) => !open && setHistoryEntity(null)}
+                            entityType={historyEntity.type}
+                            entityId={historyEntity.id}
+                            title={historyEntity.title}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

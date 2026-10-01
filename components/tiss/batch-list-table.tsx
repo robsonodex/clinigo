@@ -24,6 +24,7 @@ import { LinkGuidesDialog } from '@/components/tiss/link-guides-dialog';
 import { CloseBatchDialog } from '@/components/tiss/close-batch-dialog';
 import { ManualDispatchDialog } from '@/components/tiss/manual-dispatch-dialog';
 import { HistoryDrawer } from '@/components/tiss/HistoryDrawer';
+import { useFaturamentoPremium } from '@/lib/tiss/use-faturamento-premium';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -146,14 +147,18 @@ interface BatchListTableProps {
     batches: TissBatch[];
     isLoading: boolean;
     onRefresh: () => void;
+    overridePremium?: boolean;
 }
 
 // ============================================
 // COMPONENTE
 // ============================================
 
-export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTableProps) {
+export function BatchListTable({ batches, isLoading, onRefresh, overridePremium }: BatchListTableProps) {
     const router = useRouter();
+    const { isPremium: hookPremium } = useFaturamentoPremium();
+    const isPremium = overridePremium !== undefined ? overridePremium : hookPremium;
+
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [validatingId, setValidatingId] = useState<string | null>(null);
     const [signingId, setSigningId] = useState<string | null>(null);
@@ -477,7 +482,7 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm">
+                                            <Button variant="ghost" size="sm" aria-label="Ações do lote">
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -510,38 +515,51 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                                                 {validatingId === batch.id ? 'Validando...' : 'Validação Estrutural'}
                                             </DropdownMenuItem>
 
-                                            {/* Vincular / Desvincular Guias (L2) */}
-                                            {['DRAFT', 'OPEN'].includes(batch.status) && (
-                                                <DropdownMenuItem onClick={() => setLinkBatch(batch)}>
-                                                    <Link className="mr-2 h-4 w-4" />
-                                                    Vincular Guias
-                                                </DropdownMenuItem>
-                                            )}
-
-                                            {/* Fechar Lote com Verificação Prévia (L3) */}
-                                            {['DRAFT', 'OPEN'].includes(batch.status) && (
-                                                <DropdownMenuItem onClick={() => setCloseBatch(batch)}>
-                                                    <Lock className="mr-2 h-4 w-4" />
-                                                    Fechar Lote
-                                                </DropdownMenuItem>
-                                            )}
-
-                                            {/* Registrar Envio à Operadora (L7) */}
-                                            {['DRAFT', 'VALID', 'CLOSED'].includes(batch.status) && (
-                                                <DropdownMenuItem
-                                                    onClick={() => setManualDispatchBatch(batch)}
-                                                    className="text-emerald-700 dark:text-emerald-400 font-medium cursor-pointer"
-                                                >
+                                            {/* SEÇÃO LEGADA: Ações quando faturamento_premium = false */}
+                                            {!isPremium && ['DRAFT', 'VALID'].includes(batch.status) && (
+                                                <DropdownMenuItem onClick={() => setSubmitBatch(batch)}>
                                                     <Send className="mr-2 h-4 w-4" />
-                                                    Registrar Envio Manual
+                                                    Registrar Envio do Lote
                                                 </DropdownMenuItem>
                                             )}
 
-                                            {/* Histórico e Auditoria (F2) */}
-                                            <DropdownMenuItem onClick={() => setHistoryBatch(batch)}>
-                                                <Clock className="mr-2 h-4 w-4" />
-                                                Histórico do Lote
-                                            </DropdownMenuItem>
+                                            {/* SEÇÃO PREMIUM: Ações quando faturamento_premium = true */}
+                                            {isPremium && (
+                                                <>
+                                                    {/* Vincular / Desvincular Guias (L2) */}
+                                                    {['DRAFT', 'OPEN'].includes(batch.status) && (
+                                                        <DropdownMenuItem onClick={() => setLinkBatch(batch)}>
+                                                            <Link className="mr-2 h-4 w-4" />
+                                                            Vincular Guias
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {/* Fechar Lote com Verificação Prévia (L3) */}
+                                                    {['DRAFT', 'OPEN'].includes(batch.status) && (
+                                                        <DropdownMenuItem onClick={() => setCloseBatch(batch)}>
+                                                            <Lock className="mr-2 h-4 w-4" />
+                                                            Fechar Lote
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {/* Registrar Envio à Operadora (L7) - Estritamente VALID/CLOSED, nunca DRAFT/OPEN */}
+                                                    {['VALID', 'CLOSED'].includes(batch.status) && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => setManualDispatchBatch(batch)}
+                                                            className="text-emerald-700 dark:text-emerald-400 font-medium cursor-pointer"
+                                                        >
+                                                            <Send className="mr-2 h-4 w-4" />
+                                                            Registrar Envio Manual
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {/* Histórico e Auditoria (F2) */}
+                                                    <DropdownMenuItem onClick={() => setHistoryBatch(batch)}>
+                                                        <Clock className="mr-2 h-4 w-4" />
+                                                        Histórico do Lote
+                                                    </DropdownMenuItem>
+                                                </>
+                                            )}
 
                                             {/* Assinatura Digital */}
                                             <DropdownMenuItem
@@ -717,48 +735,53 @@ export function BatchListTable({ batches, isLoading, onRefresh }: BatchListTable
                 </DialogContent>
             </Dialog>
 
-            {/* Modal L2: Vincular Guias */}
-            {linkBatch && (
-                <LinkGuidesDialog
-                    open={!!linkBatch}
-                    onOpenChange={(open) => !open && setLinkBatch(null)}
-                    batchId={linkBatch.id}
-                    batchNumber={linkBatch.batch_number}
-                    onSuccess={onRefresh}
-                />
-            )}
+            {/* Modais Exclusivos de Faturamento Premium (L2, L3, L7, F2) */}
+            {isPremium && (
+                <>
+                    {/* Modal L2: Vincular Guias */}
+                    {linkBatch && (
+                        <LinkGuidesDialog
+                            open={!!linkBatch}
+                            onOpenChange={(open) => !open && setLinkBatch(null)}
+                            batchId={linkBatch.id}
+                            batchNumber={linkBatch.batch_number}
+                            onSuccess={onRefresh}
+                        />
+                    )}
 
-            {/* Modal L3: Fechar Lote */}
-            {closeBatch && (
-                <CloseBatchDialog
-                    open={!!closeBatch}
-                    onOpenChange={(open) => !open && setCloseBatch(null)}
-                    batchId={closeBatch.id}
-                    batchNumber={closeBatch.batch_number}
-                    onSuccess={onRefresh}
-                />
-            )}
+                    {/* Modal L3: Fechar Lote */}
+                    {closeBatch && (
+                        <CloseBatchDialog
+                            open={!!closeBatch}
+                            onOpenChange={(open) => !open && setCloseBatch(null)}
+                            batchId={closeBatch.id}
+                            batchNumber={closeBatch.batch_number}
+                            onSuccess={onRefresh}
+                        />
+                    )}
 
-            {/* Modal L7: Registrar Envio Manual */}
-            {manualDispatchBatch && (
-                <ManualDispatchDialog
-                    open={!!manualDispatchBatch}
-                    onOpenChange={(open) => !open && setManualDispatchBatch(null)}
-                    batchId={manualDispatchBatch.id}
-                    batchNumber={manualDispatchBatch.batch_number}
-                    onSuccess={onRefresh}
-                />
-            )}
+                    {/* Modal L7: Registrar Envio Manual */}
+                    {manualDispatchBatch && (
+                        <ManualDispatchDialog
+                            open={!!manualDispatchBatch}
+                            onOpenChange={(open) => !open && setManualDispatchBatch(null)}
+                            batchId={manualDispatchBatch.id}
+                            batchNumber={manualDispatchBatch.batch_number}
+                            onSuccess={onRefresh}
+                        />
+                    )}
 
-            {/* Gaveta F2: Histórico e Auditoria */}
-            {historyBatch && (
-                <HistoryDrawer
-                    open={!!historyBatch}
-                    onOpenChange={(open) => !open && setHistoryBatch(null)}
-                    entityType="tiss_batch"
-                    entityId={historyBatch.id}
-                    title={`Histórico do Lote ${historyBatch.batch_number}`}
-                />
+                    {/* Gaveta F2: Histórico e Auditoria */}
+                    {historyBatch && (
+                        <HistoryDrawer
+                            open={!!historyBatch}
+                            onOpenChange={(open) => !open && setHistoryBatch(null)}
+                            entityType="tiss_batch"
+                            entityId={historyBatch.id}
+                            title={`Histórico do Lote ${historyBatch.batch_number}`}
+                        />
+                    )}
+                </>
             )}
         </Card>
     );

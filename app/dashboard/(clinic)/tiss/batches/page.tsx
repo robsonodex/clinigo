@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateBatchDialog } from '@/components/tiss/create-batch-dialog';
 import { BatchListTable } from '@/components/tiss/batch-list-table';
 import { StatusFilterTabs, type StatusFilterOption } from '@/components/tiss/status-filter-tabs';
+import { useFaturamentoPremium } from '@/lib/tiss/use-faturamento-premium';
 import type { TissBatch, TissBatchStatus } from '@/types/tiss';
 
 // ============================================
@@ -26,6 +27,7 @@ import type { TissBatch, TissBatchStatus } from '@/types/tiss';
 // ============================================
 
 export default function TissBatchesPage() {
+    const { isPremium } = useFaturamentoPremium();
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
     // Filtros
@@ -253,15 +255,17 @@ export default function TissBatchesPage() {
                 </CardContent>
             </Card>
 
-            {/* Filtro por Status com Contadores F1 */}
-            <div className="flex items-center justify-between">
-                <StatusFilterTabs
-                    value={statusFilter}
-                    onValueChange={(v) => setStatusFilter(v as any)}
-                    options={batchStatusOptions}
-                    urlParamKey="status"
-                />
-            </div>
+            {/* Filtro por Status com Contadores F1 (Exclusivo Faturamento Premium) */}
+            {isPremium && (
+                <div className="flex items-center justify-between">
+                    <StatusFilterTabs
+                        value={statusFilter}
+                        onValueChange={(v) => setStatusFilter(v as any)}
+                        options={batchStatusOptions}
+                        urlParamKey="status"
+                    />
+                </div>
+            )}
 
             {/* Tabela de Lotes */}
             <BatchListTable
