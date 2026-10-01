@@ -261,7 +261,7 @@ export async function GET(request: NextRequest) {
                 guideTotalValue: Number(guide.total_value) || grossAmount,
                 guidePaidValue: Number(guide.paid_value) || 0,
                 glosaValue: Number(guide.glosa_value) || 0,
-                glosaMaintained: guide.appeal_status === 'REJECTED' || guide.appeal_status === 'CLOSED',
+                glosaMaintained: guide.appeal_status === 'REJECTED' || guide.appeal_status === 'CLOSED' || guide.appeal_status === 'PARTIAL',
             } : null;
 
             const repasseCalc = computeAdvancedRepasse({
