@@ -56,12 +56,12 @@ export async function POST(
             return NextResponse.json({ success: false, error: 'Lote não encontrado' }, { status: 404 });
         }
 
-        // Lote deve estar fechado (ou pronto para envio)
+        // L7 (envio manual): só para lote VALID/CLOSED, nunca DRAFT/OPEN, pela state-machine (409)
         const batchStatus = normalizeBatchStatus(batch.status);
-        if (batchStatus !== 'CLOSED' && batchStatus !== 'OPEN') {
+        if (batchStatus !== 'CLOSED' && batch.status !== 'VALID') {
             return NextResponse.json({
                 success: false,
-                error: `O lote está com status "${batch.status}" e não pode ser despachado manualmente.`,
+                error: `O lote está com status "${batch.status}" e não pode ser despachado manualmente. O lote precisa estar fechado (VALID/CLOSED) antes do envio manual.`,
                 code: 'INVALID_STATUS'
             }, { status: 409 });
         }

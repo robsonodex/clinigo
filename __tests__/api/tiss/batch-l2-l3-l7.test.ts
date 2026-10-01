@@ -530,5 +530,97 @@ describe('Suíte Nominal de Testes L2, L3 e L7 - Ciclo de Vida de Lotes TISS', (
             expect(res.status).toBe(400);
             expect(body.error).toBe('Número do protocolo deve ter ao menos 3 caracteres');
         });
+
+        test('L7-03: manual-dispatch deve retornar 409 quando o lote estiver com status DRAFT ou OPEN (só aceita VALID ou CLOSED pela state-machine)', async () => {
+            const batchDraft = { id: 'batch-draft', batch_number: 'LOTE-DRAFT', status: 'DRAFT' };
+
+            mockSupabase.from.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: mockProfile }) }) }) };
+                }
+                if (table === 'tiss_batches') {
+                    return { select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: batchDraft }) }) }) }) };
+                }
+                return {};
+            });
+
+            const req = new NextRequest('http://localhost:3000/api/tiss/batches/batch-draft/manual-dispatch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    protocol_number: 'PROT-VALIDO-123',
+                    submission_date: '2026-09-30',
+                    dispatch_channel: 'PORTAL'
+                })
+            });
+
+            const res = await postManualDispatch(req, { params: Promise.resolve({ id: 'batch-draft' }) });
+            const body = await res.json();
+
+            expect(res.status).toBe(409);
+            expect(body.success).toBe(false);
+            expect(body.code).toBe('INVALID_STATUS');
+            expect(body.error).toContain('não pode ser despachado manualmente');
+        });
+
+        test('L7-04: manual-dispatch deve aceitar envio de lote com status CLOSED', async () => {
+            const batchClosed = { id: 'batch-closed', batch_number: 'LOTE-CLOSED', status: 'CLOSED' };
+
+            let batchUpdatePayload: any = null;
+
+            mockSupabase.from.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: mockProfile }) }) }) };
+                }
+                if (table === 'tiss_batches') {
+                    return {
+                        select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({ data: batchClosed }) }) }) }),
+                        update: (payload: any) => {
+                            batchUpdatePayload = payload;
+                            return {
+                                eq: () => ({
+                                    eq: () => ({
+                                        select: () => ({
+                                            single: () => Promise.resolve({ data: { ...batchClosed, ...payload }, error: null })
+                                        })
+                                    })
+                                })
+                            };
+                        }
+                    };
+                }
+                if (table === 'tiss_guides') {
+                    return {
+                        update: () => ({ eq: () => ({ eq: () => ({ in: () => Promise.resolve({ error: null }) }) }) })
+                    };
+                }
+                return {};
+            });
+
+            mockSupabase.storage.from.mockReturnValue({
+                createSignedUrl: jest.fn().mockResolvedValue({
+                    data: { signedUrl: 'https://storage.supabase.co/documents/proof.pdf' },
+                    error: null
+                })
+            });
+
+            const req = new NextRequest('http://localhost:3000/api/tiss/batches/batch-closed/manual-dispatch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    protocol_number: 'PROT-CLOSED-888',
+                    submission_date: '2026-09-30',
+                    dispatch_channel: 'EMAIL'
+                })
+            });
+
+            const res = await postManualDispatch(req, { params: Promise.resolve({ id: 'batch-closed' }) });
+            const body = await res.json();
+
+            expect(res.status).toBe(200);
+            expect(body.success).toBe(true);
+            expect(batchUpdatePayload.status).toBe('SENT');
+            expect(batchUpdatePayload.dispatch_channel).toBe('EMAIL');
+        });
     });
 });
