@@ -1,39 +1,75 @@
-# Manual de Release e Deploy em Produção — Módulo TISS CliniGo
+# Manual de Produção: Pacote de Release — Módulo TISS CliniGo
 
-Este documento estabelece o procedimento operacional padrão para implantação em produção das extensões de faturamento TISS, mantendo compatibilidade retroativa e zero downtime.
-
----
-
-## 1. Passo Zero: Backup Preventivo
-Antes de aplicar qualquer alteração no banco de dados:
-1. Acesse o Dashboard do Supabase da clínica ou instância de produção.
-2. Navegue até **Project Settings** > **Database** > **Backups**.
-3. Realize um backup sob demanda (Point-in-Time Recovery ou Snapshot manual).
+Este documento foi elaborado para o dono da clínica ou administrador do sistema. Contém instruções simples, curtas e exatas para colocar em produção as novas melhorias do Faturamento TISS sem interromper o funcionamento das clínicas atuais.
 
 ---
 
-## 2. Ordem Estrita de Execução das Migrations
-Execute as migrations uma por uma no **SQL Editor** do Supabase, na ordem rigorosa abaixo.
+## 1. Passo Zero: Segurança e Backup Preventivo
 
-> Regra de segurança: Se qualquer migration apresentar erro, **PARE imediatamente e copie a mensagem de erro completa**. Não execute as migrations subsequentes. O código em produção continuará funcionando normalmente porque o deploy da aplicação só é realizado após o banco de dados estar íntegro.
-
-| Ordem | Arquivo de Migration | O que conferir após execução |
-|---|---|---|
-| 1 | `20260929120000_tiss_guides_structure.sql` | Executar: `SELECT column_name FROM information_schema.columns WHERE table_name = 'tiss_guides' AND column_name = 'validation_status';` (deve retornar 1 linha). |
-| 2 | `20260929130000_tiss_batches_extensions.sql` | Executar: `SELECT column_name FROM information_schema.columns WHERE table_name = 'tiss_batches' AND column_name = 'hash_algorithm';` (deve retornar 1 linha). |
-| 3 | `20260929140000_tiss_glosas_system.sql` | Executar: `SELECT count(*) FROM information_schema.tables WHERE table_name = 'tiss_glosas';` (deve retornar 1). |
-| 4 | `20260929150000_tiss_audit_log.sql` | Executar: `SELECT count(*) FROM information_schema.tables WHERE table_name = 'tiss_audit_logs';` (deve retornar 1). |
-| 5 | `20260929160000_tiss_faturamento_premium_flag.sql` | Executar: `SELECT faturamento_premium FROM clinics LIMIT 1;` (deve retornar `false` para as clínicas). |
-| 6 | `20260929170000_tiss_guide_cancelled_status.sql` | Executar: `SELECT enumlabel FROM pg_enum WHERE enumlabel = 'CANCELLED';` (deve confirmar o label do enum). |
-| 7 | `20260930110000_tiss_premium_p0_extensions.sql` | Executar: `SELECT count(*) FROM information_schema.tables WHERE table_name IN ('tiss_appeals', 'tiss_appeal_items', 'tiss_appeal_attachments');` (deve retornar 3). |
+Antes de rodar qualquer comando no banco de dados:
+1. Acesse o painel do Supabase do projeto de produção.
+2. No menu lateral esquerdo, clique em **Project Settings** (ícone de engrenagem) e depois em **Database**.
+3. Desça até a seção **Backups** e clique em **Create Backup** (ou solicite um snapshot sob demanda).
+4. Abra o **SQL Editor** do Supabase.
 
 ---
 
-## 3. Deploy da Aplicação (Master na Vercel)
-O deploy deve ser realizado com a feature flag `faturamento_premium` **DESLIGADA** para todas as clínicas.
-Como o padrão da migration `20260929160000` define `DEFAULT false`, todas as clínicas permanecem no modo legado por padrão.
+## 2. Pré-checagem de Duplicatas (Obrigatório antes das Migrations)
 
-Procedimento de deploy via linha de comando ou integração Vercel:
+Antes de aplicar qualquer migração, execute o script de pré-checagem abaixo no SQL Editor do Supabase. Ele é **somente leitura** e não altera nenhum dado:
+
+Arquivo de referência: `docs/release/00_pre_checagem_duplicatas.sql`
+
+```sql
+SELECT 
+    clinic_id,
+    guide_number,
+    COUNT(*) AS total_duplicatas,
+    ARRAY_AGG(id) AS ids_guias,
+    ARRAY_AGG(status) AS status_guias,
+    MIN(created_at) AS primeira_criacao,
+    MAX(created_at) AS ultima_criacao
+FROM tiss_guides
+WHERE guide_number IS NOT NULL AND TRIM(guide_number) != ''
+GROUP BY clinic_id, guide_number
+HAVING COUNT(*) > 1
+ORDER BY total_duplicatas DESC, clinic_id;
+```
+
+- **Se retornar 0 linhas:** Tudo certo. Pode prosseguir com as migrações no passo 3.
+- **Se retornar linhas:** Existem guias com o mesmo número cadastradas na mesma clínica. Pare e entre em contato com o suporte técnico para unificar ou cancelar os registros duplicados antes de aplicar o índice único da migration 5.
+
+---
+
+## 3. Ordem Exata de Execução das Migrations
+
+Abra a pasta `supabase/migrations/` e execute os arquivos um a um, **exatamente na ordem abaixo**, no SQL Editor do Supabase.
+
+> Regra de ouro: Se alguma migration apresentar mensagem de erro, pare imediatamente e copie a mensagem. O sistema atual continuará funcionando normalmente porque o código novo só será publicado após o banco estar pronto.
+
+| Ordem | Arquivo Real da Migration | O que ela faz em uma linha | O que conferir logo após rodar |
+|---|---|---|---|
+| 1 | `20260929120000_tiss_convenios_glosas_repasse.sql` | Cria catálogos TUSS e ANS, tabela de preços, controle de glosas e colunas de repasse em clínicas. | `SELECT count(*) FROM information_schema.tables WHERE table_name = 'tuss_procedures';` (deve retornar 1) |
+| 2 | `20260929130000_tiss_undo_rpc_and_reimport.sql` | Cria função segura para desfazimento de retorno importado e permite reimportação do mesmo arquivo. | `SELECT count(*) FROM pg_proc WHERE proname = 'tiss_undo_return_import';` (deve retornar 1) |
+| 3 | `20260929140000_tiss_batch_hash_tracking.sql` | Adiciona colunas para guardar o código Hash e data de geração do XML dos lotes. | `SELECT count(*) FROM information_schema.columns WHERE table_name = 'tiss_batches' AND column_name = 'hash_value';` (deve retornar 1) |
+| 4 | `20260929150000_tiss_premium_foundation.sql` | Cria contadores automáticos de numeração de guias e histórico de versões de XML. | `SELECT count(*) FROM information_schema.tables WHERE table_name = 'tiss_guide_counters';` (deve retornar 1) |
+| 5 | `20260929160000_tiss_premium_hardening.sql` | Preenche os números anteriores e ativa trava para impedir número de guia repetido. | `SELECT count(*) FROM pg_class WHERE relname = 'uq_tiss_guides_clinic_number';` (deve retornar 1) |
+| 6 | `20260929170000_tiss_guide_cancelled_status.sql` | Adiciona suporte a guias canceladas sem distorcer o cálculo de perdas da clínica. | `SELECT count(*) FROM information_schema.columns WHERE table_name = 'tiss_guides' AND column_name = 'cancellation_reason';` (deve retornar 1) |
+| 7 | `20260930100000_create_patient_intake_module.sql` | Cria a estrutura do pré-cadastro online de pacientes com fotos de documentos. | `SELECT count(*) FROM information_schema.tables WHERE table_name = 'patient_intake_links';` (deve retornar 1) |
+| 8 | `20260930110000_tiss_premium_p0_extensions.sql` | Cria as tabelas de recursos de glosa, anexos em pasta privada e envio manual de lote. | `SELECT count(*) FROM information_schema.tables WHERE table_name = 'tiss_appeals';` (deve retornar 1) |
+
+### Conferência Geral Pós-Migrações
+Após rodar as 8 migrations, execute o script de verificação final (`docs/release/99_verificar_apos_migrations.sql`) no SQL Editor. Ele imprimirá uma lista completa confirmando que cada tabela, coluna e índice está presente (todos com status SIM).
+
+---
+
+## 4. Publicação do Código (Deploy na Vercel)
+
+Com o banco de dados atualizado, faça a publicação da versão no servidor.
+
+Todas as novas telas e botões ficam **desligados por padrão** para todas as clínicas via feature flag (`faturamento_premium = false`). Nenhuma clínica em produção terá sua rotina alterada após este comando.
+
+Execute no terminal:
 ```bash
 git push origin master
 npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1
@@ -41,55 +77,96 @@ npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1
 
 ---
 
-## 4. Habilitação Gradual e Roteiro de 10 Minutos de Validação
-Após o deploy da master, selecione uma **única clínica de teste** para ativação pioneira.
+## 5. Roteiro de Teste de 10 Minutos por Perfil
 
-### 4.1 Como Ligar a Flag na Clínica de Teste
-1. Acesse o sistema como Administrador da Clínica (`CLINIC_ADMIN` ou `SUPER_ADMIN`).
-2. Acesse: **Menu** > **Configurações** > **Faturamento / TISS** (ou execute via SQL direto se preferir):
-   ```sql
-   UPDATE clinics SET faturamento_premium = true WHERE id = 'ID_DA_CLINICA_DE_TESTE';
-   ```
-
-### 4.2 Roteiro de 10 Minutos por Perfil
-
-#### 1. Perfil RECEPÇÃO (2 minutos):
-- Acesse **Faturamento TISS** (`/dashboard/tiss`).
-- Clique em **Nova Guia**: verifique a abertura do assistente de emissão em 3 passos com busca de paciente e conferência de convênio.
-- Confirme que a recepção não possui acesso a fechamento de lote ou recursos de glosa (bloqueio por menor privilégio).
-
-#### 2. Perfil FINANCEIRO (3 minutos):
-- Acesse **Lotes TISS** (`/dashboard/tiss/batches`).
-- Visualize a barra de filtros por status (F1) com contadores em tempo real.
-- Em um lote em digitação (`DRAFT`), abra o menu e execute **Vincular Guias** (L2) e **Fechar Lote** (L3) com pré-verificação de impeditivos.
-- Em um lote fechado (`VALID`/`CLOSED`), verifique a presença da opção **Registrar Envio Manual** (L7) e teste o upload do comprovante.
-- Acesse a **Gaveta de Histórico** (F2) do lote para validar o log de auditoria.
-
-#### 3. Perfil ADMINISTRADOR (3 minutos):
-- Acesse **Glosas e Recursos** (`/dashboard/tiss/glosas`).
-- Lance uma glosa manual (R3) com código ANS e comprove a validação de teto financeiro (`valor <= apresentado - glosas_existentes`).
-- Na aba **Recursos de Glosa (C1 - C8)**, agrupe a glosa em um novo recurso formal, verifique o cálculo do prazo legal SLA e anexe documento comprobatório no bucket privado.
-- Simule a liquidação financeira (C8) como acatada e valide a baixa contábil.
-
-#### 4. Perfil PROFISSIONAL / MÉDICO (2 minutos):
-- Acesse **Meu Financeiro** > **Produção** (`/dashboard/meu-financeiro/producao`).
-- Verifique se a produção individual exibe estritamente os atendimentos do próprio profissional (sigilo médico).
-- Confirme que o repasse reflete a política da clínica (`CLINICA_ABSORVE`, `DESCONTA_PROFISSIONAL` ou `DESCONTA_SE_MANTIDA`) sem vazamento de dados de outros terapeutas.
+### Etapa Prévia Obrigatória (ANTES de ligar a flag na clínica teste):
+Abra o sistema em uma clínica real já existente e acesse:
+- **Menu** > **Meu Financeiro** > **Produção** (`/dashboard/meu-financeiro/producao`).
+- Confirme que os valores de produção e repasse dos profissionais estão idênticos aos de antes.
+- *Motivo:* O cálculo de produção foi aprimorado para respeitar recursos de glosa; nas clínicas com a flag desligada, o cálculo permanece exatamente igual ao anterior.
 
 ---
 
-## 5. Procedimentos de Contingência e Rollback
+### Como Ligar a Feature Flag na Clínica de Teste
+A ativação da flag é realizada **exclusivamente via comando SQL** (não há botão ou menu visível na interface para isso, garantindo que nenhum usuário altere por engano).
 
-### 5.1 Como Desligar a Feature Flag Instantaneamente
-Se qualquer instabilidade for observada na interface ou na operação, desligue a flag imediatamente. A UI reverte instantaneamente para a versão legada sem necessidade de novo deploy:
+Arquivo de referência: `docs/release/ligar_flag.sql`
+
+Copie e execute no SQL Editor do Supabase (substituindo `'ID_DA_CLINICA'` pelo ID da sua clínica piloto):
 ```sql
-UPDATE clinics SET faturamento_premium = false WHERE id = 'ID_DA_CLINICA';
+UPDATE clinics 
+SET addons = COALESCE(addons, '{}'::jsonb) || '{"faturamento_premium": true}'::jsonb 
+WHERE id = 'ID_DA_CLINICA';
 ```
-*(Para desligar em todas as clínicas: `UPDATE clinics SET faturamento_premium = false;`)*
 
-### 5.2 Como Reverter o Deploy da Aplicação
-1. Acesse o Dashboard da Vercel (`nodexs-projects-8a6ee1f1`).
-2. Selecione o projeto `clinigo-frontend`.
-3. Na aba **Deployments**, localize o deploy anterior imediatamente estável.
-4. Clique no menu de três pontos do deployment anterior e selecione **Instant Rollback** (ou **Promote to Production**).
-5. O tráfego será redirecionado em menos de 10 segundos.
+Para consultar se a flag foi ativada:
+```sql
+SELECT id, name, addons->>'faturamento_premium' AS faturamento_premium 
+FROM clinics 
+WHERE (addons->>'faturamento_premium')::boolean = true;
+```
+
+---
+
+### Roteiro de Verificação (10 Minutos)
+
+#### 1. Perfil RECEPÇÃO (2 minutos)
+- Acesse **Faturamento TISS** (`/dashboard/tiss`).
+- Clique no botão **Nova Guia**: verifique o formulário de emissão em 3 passos com busca de paciente e preenchimento de procedimento.
+- **O que a Recepção NÃO pode ver ou fazer:**
+  - Não pode fechar lotes (bloqueado por permissão).
+  - Não pode excluir guias fechadas ou transmitidas (apenas cancelar com justificativa).
+  - Não tem acesso à aba de Recursos de Glosa.
+
+#### 2. Perfil FINANCEIRO (3 minutos)
+- Acesse **Lotes TISS** (`/dashboard/tiss/batches`).
+- Note os filtros no topo com contadores de lotes (Rascunho, Fechados, Enviados).
+- Abra o menu de 3 pontos de um lote em rascunho:
+  - Clique em **Vincular Guias**: selecione guias e veja a soma de valor e quantidade atualizando ao vivo.
+  - Clique em **Fechar Lote**: o sistema verifica se há impeditivos (carteirinha ou valor pendente) e só fecha se estiver 100% correto.
+- Em um lote já fechado (`VALID` ou `CLOSED`), abra o menu e clique em **Registrar Envio Manual**: anexe um comprovante em PDF e informe o protocolo. O lote avança para Enviado.
+- Clique em **Histórico do Lote**: a gaveta lateral se abre mostrando quem fechou e quem enviou.
+
+#### 3. Perfil ADMINISTRADOR DA CLÍNICA (3 minutos)
+- Acesse **Glosas e Recursos** (`/dashboard/tiss/glosas`).
+- Clique no botão **Lançar Glosa Manual**: informe um código ANS de glosa e o valor. O sistema não permite lançar valor maior do que o da guia.
+- Clique na aba **Recursos de Glosa (C1 - C8)**:
+  - Crie um recurso agrupando as glosas da mesma operadora.
+  - Anexe um documento comprobatório.
+  - Registre o parecer (Acatado ou Negado) e confirme a liquidação.
+
+#### 4. Perfil PROFISSIONAL / TERAPEUTA (2 minutos)
+- Acesse com o login de um profissional médico ou terapeuta.
+- Vá em **Meu Financeiro** > **Produção** (`/dashboard/meu-financeiro/producao`).
+- **O que o Profissional NÃO pode ver:**
+  - Vê estritamente os seus próprios atendimentos (sigilo total entre profissionais).
+  - Não vê faturamento global da clínica, dados contábeis de outros médicos nem telas de envio de lotes TISS.
+
+---
+
+## 6. Procedimentos de Contingência e Rollback
+
+Caso encontre qualquer comportamento fora do esperado, siga os passos abaixo para normalizar o sistema imediatamente.
+
+### 6.1 Como Desligar a Flag Instantaneamente (Menos de 5 segundos)
+Se desejar voltar a clínica de teste para a versão anterior, execute no SQL Editor do Supabase:
+
+Arquivo de referência: `docs/release/desligar_flag.sql`
+
+```sql
+UPDATE clinics 
+SET addons = COALESCE(addons, '{}'::jsonb) || '{"faturamento_premium": false}'::jsonb 
+WHERE id = 'ID_DA_CLINICA';
+```
+
+*(Para desligar em todas as clínicas de uma só vez caso tenha ativado em mais de uma: `UPDATE clinics SET addons = COALESCE(addons, '{}'::jsonb) || '{"faturamento_premium": false}'::jsonb;`)*
+
+Assim que rodar esse comando e atualizar a página no navegador (F5), a tela volta imediatamente ao modelo tradicional legado, sem necessidade de novo deploy.
+
+### 6.2 Como Fazer Rollback do Código na Vercel (Menos de 10 segundos)
+Se precisar reverter a versão do código na nuvem:
+1. Acesse o painel da Vercel no projeto `clinigo-frontend` (time `nodexs-projects-8a6ee1f1`).
+2. Clique na aba **Deployments**.
+3. Localize o deployment anterior ao que você acabou de subir.
+4. Clique no botão de três pontos à direita dele e selecione **Instant Rollback** (ou **Promote to Production**).
+5. O tráfego do sistema voltará imediatamente para a versão anterior.

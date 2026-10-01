@@ -2,6 +2,17 @@
 
 ## Módulos
 
+### Pacote de Release para Produção — Módulo TISS CliniGo
+- **Módulos**:
+  - Auditoria & Governança de Release →
+    - `docs/RELEASE.md` → Reformulação com mapeamento das 8 migrations reais (20260929 e 20260930), ativação da feature flag exclusivamente via JSONB (`clinics.addons`), remoção de caminhos fictícios de menu, roteiro de 10 minutos por perfil e procedimentos de rollback e contingência.
+    - `docs/release/00_pre_checagem_duplicatas.sql` → Script somente leitura para detecção de números de guia duplicados por clínica antes de aplicar migrations, sem dependência de colunas novas.
+    - `docs/release/99_verificar_apos_migrations.sql` → Script somente leitura que retorna tabela consolidada `objeto | existe (SIM/NAO)` para todas as tabelas, colunas, funções e índices criados.
+    - `docs/release/ligar_flag.sql` e `docs/release/desligar_flag.sql` → Scripts de ativação e desativação granular por clínica com consulta de confirmação.
+    - `scripts/validate_sql_syntax.js` → Atualização do validador de sintaxe SQL offline via `libpg-query` com 100% de aprovação em 14 arquivos.
+- **Descrição**:
+  - Pacote de implantação em produção finalizado e testado via código (sem acesso a banco real ou navegador). 60 suítes Jest (858 testes), build Turbopack de 466 rotas e lint TISS aprovados com sucesso.
+
 ### Faturamento TISS Premium - Fechamento Final P0 (B3 Lotes, B4 Retorno, B5 Recursos, Isolamento Flag-Off e Repasse C8)
 - **Módulos**:
   - Faturamento / Feature Flag & UI Isolamento →
