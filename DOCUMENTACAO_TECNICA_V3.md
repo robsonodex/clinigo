@@ -2,6 +2,24 @@
 
 ## Módulos
 
+### Faturamento TISS Premium - Fechamento Final P0 (B3 Lotes, B4 Retorno, B5 Recursos, Isolamento Flag-Off e Repasse C8)
+- **Módulos**:
+  - Faturamento / Feature Flag & UI Isolamento →
+    - `components/tiss/batch-list-table.tsx` → Menu de lote condicionado estritamente à feature flag `faturamento_premium`. Quando flag-off, reverte imediatamente para o item legado "Registrar Envio do Lote" (modal simples de protocolo); quando flag-on, expõe L2 (Vincular Guias), L3 (Fechar Lote), L7 (Registrar Envio Manual) e F2 (Histórico do Lote).
+    - `app/dashboard/(clinic)/tiss/batches/page.tsx` → Filtros F1 com contadores (`StatusFilterTabs`) condicionados à flag `faturamento_premium`.
+    - `app/dashboard/(clinic)/tiss/glosas/page.tsx` → Botão R3 (Lançar Glosa Manual), aba Recursos (C1-C8), filtros F1 (`StatusFilterTabs`), histórico F2 e modais C4-C8 condicionados à flag `faturamento_premium`.
+    - `__tests__/tiss/feature-flag-render.test.tsx` → 13 testes de renderização nominal em JSDOM provando que 100% das inovações de UI da P0 desaparecem com flag-off e reaparecem com flag-on.
+  - Faturamento / Lote e Envio Manual (L7) →
+    - `app/api/tiss/batches/[id]/manual-dispatch/route.ts` → Restrição de status estritamente para lotes `VALID` ou `CLOSED`. Tentativas de envio em lotes `DRAFT` ou `OPEN` são bloqueadas com HTTP 409 e código `INVALID_STATUS` pela state-machine.
+    - `__tests__/api/tiss/batch-l2-l3-l7.test.ts` → 10 testes nominais cobrindo L2, L3, L7 e as travas de status da máquina de estados.
+  - Faturamento / Repasse e Políticas de Glosa (C8) →
+    - `app/api/financial/production-summary/route.ts` → Integração direta da rota de produção com o parecer de recurso C8. Se recurso acatado (`ACCEPTED`), a glosa é expurgada e o repasse integral restaurado. Se negado (`REJECTED`) ou parcial (`PARTIAL`), a parcela mantida é descontada conforme `glosa_policy` (`CLINICA_ABSORVE`, `DESCONTA_PROFISSIONAL`, `DESCONTA_SE_MANTIDA`).
+    - `__tests__/api/financial/production-summary-glosa-policy.test.ts` → 5 testes nominais da rota HTTP validando as 3 políticas sob resultados acatados, parciais e negados.
+  - Auditoria e Release de Produção →
+    - `docs/RELEASE.md` → Procedimento operacional padrão contendo backup preventivo, ordem estrita das 7 migrations, deploy com flag desligada, roteiro de 10 minutos por perfil e reversão instantânea.
+- **Descrição**:
+  - Fechamento formal de 100% dos requisitos da Etapa P0. Build padrão (`npm run build`) validado com 466 rotas, `lint:tiss` 100% limpo e 60 suítes de teste (858 testes) aprovadas com zero falhas. Nenhuma abertura de navegador realizada pela IA.
+
 ### Faturamento TISS Premium - Parte 2 (B3, B4, B5 Reais - Etapa P0)
 - **Módulos**:
   - Banco de Dados / Migrations → `supabase/migrations/20260930110000_tiss_premium_p0_extensions.sql` → Criação das tabelas `tiss_appeals` (processos de recurso de glosa por operadora), `tiss_appeal_items` (itens recursados com constraint `chk_contested_le_glosa`), `tiss_appeal_attachments` (armazenamento com link assinado e isolamento por pasta), colunas `appeal_id` em `tiss_glosa_contests`, `dry_run_token` em `tiss_return_imports`, e colunas de comprovante em `tiss_batches`. RLS multitenant estrito com políticas de isolamento e rollback formal idempotente.

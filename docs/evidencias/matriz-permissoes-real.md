@@ -1,5 +1,5 @@
 # Matriz Real de Permissoes RBAC - Execucao Direta de Handlers (B2.0)
-**Data de Geracao:** 2026-09-30T23:40:32.481Z  
+**Data de Geracao:** 2026-10-01T00:02:42.898Z  
 **Metodologia:** Execucao real de cada handler exportado com sessao simulada para os 5 perfis de usuario (DOCTOR, READONLY, RECEPTIONIST, FINANCIAL, CLINIC_ADMIN).  
 **Fonte da Verdade:** Retorno HTTP real da execucao do handler (2xx/4xx vs 403 Forbidden).
 
@@ -32,7 +32,7 @@
 | 21 | `app/api/tiss/batches/[id]/generate-xml/route.ts` | `POST` | 403 (OK) | 403 | 403 | 200 | 200 | **CONFORME** | Nenhuma |
 | 22 | `app/api/tiss/batches/[id]/guides/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 | 23 | `app/api/tiss/batches/[id]/guides/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
-| 24 | `app/api/tiss/batches/[id]/manual-dispatch/route.ts` | `POST` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
+| 24 | `app/api/tiss/batches/[id]/manual-dispatch/route.ts` | `POST` | 403 (OK) | 403 | 403 | 409 | 409 | **CONFORME** | Nenhuma |
 | 25 | `app/api/tiss/batches/[id]/pre-close/route.ts` | `GET` | 403 (OK) | 403 | 403 | 200 | 200 | **DIVERGENTE** | `app/api/tiss/batches/[id]/pre-close/route.ts` | `GET` | READONLY | 200/OK | 403 | Handler bloqueou leitura de READONLY; `app/api/tiss/batches/[id]/pre-close/route.ts` | `GET` | RECEPTIONIST | 2xx/4xx | 403 | Handler bloqueou acao autorizada de RECEPTIONIST |
 | 26 | `app/api/tiss/batches/[id]/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 | 27 | `app/api/tiss/batches/[id]/route.ts` | `PUT` | 403 (OK) | 403 | 403 | 400 | 400 | **CONFORME** | Nenhuma |
