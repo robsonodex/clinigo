@@ -1,5 +1,5 @@
 # Matriz Real de Permissoes RBAC - Execucao Direta de Handlers (B2.0)
-**Data de Geracao:** 2026-10-01T11:19:18.455Z  
+**Data de Geracao:** 2026-10-02T21:52:06.838Z  
 **Metodologia:** Execucao real de cada handler exportado com sessao simulada para os 5 perfis de usuario (DOCTOR, READONLY, RECEPTIONIST, FINANCIAL, CLINIC_ADMIN).  
 **Fonte da Verdade:** Retorno HTTP real da execucao do handler (2xx/4xx vs 403 Forbidden).
 
@@ -80,8 +80,8 @@
 | 69 | `app/api/tiss/returns/[id]/parse/route.ts` | `POST` | 403 (OK) | 403 | 403 | 404 | 404 | **CONFORME** | Nenhuma |
 | 70 | `app/api/tiss/returns/[id]/status/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 | 71 | `app/api/tiss/returns/[id]/undo/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 400 | **CONFORME** | Nenhuma |
-| 72 | `app/api/tiss/settings/premium/route.ts` | `GET` | 403 (OK) | 403 | 403 | 200 | 200 | **CONFORME** | Nenhuma |
-| 73 | `app/api/tiss/settings/premium/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
+| 72 | `app/api/tiss/settings/premium/route.ts` | `GET` | 403 (OK) | 403 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
+| 73 | `app/api/tiss/settings/premium/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 403 (FALHA) | **DIVERGENTE** | `app/api/tiss/settings/premium/route.ts` | `POST` | CLINIC_ADMIN | 2xx/4xx | 403 | Handler bloqueou CLINIC_ADMIN |
 | 74 | `app/api/tiss/tuss/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
 | 75 | `app/api/tiss/tuss/route.ts` | `POST` | 403 (OK) | 403 | 403 | 403 | 200 | **CONFORME** | Nenhuma |
 | 76 | `app/api/tiss/validate-xsd/route.ts` | `GET` | 403 (OK) | 200 | 200 | 200 | 200 | **CONFORME** | Nenhuma |
@@ -95,7 +95,7 @@
 - **Total de Rotas Auditadas:** 55
 - **Total de Metodos HTTP Exportados:** 78
 - **Total de Execucoes Reais:** 390 (5 perfis por metodo)
-- **Total de Divergencias Encontradas:** 13
+- **Total de Divergencias Encontradas:** 14
 
 ## 3. Lista Detalhada de Divergencias (Secao 5 vs Real)
 
@@ -114,3 +114,4 @@
 | 11 | `app/api/tiss/glosas/[id]/route.ts` | `DELETE` | FINANCIAL | 2xx/4xx | 403 | Handler bloqueou faturamento a FINANCIAL |
 | 12 | `app/api/tiss/returns/confirm/route.ts` | `POST` | RECEPTIONIST | 2xx/4xx | 403 | Handler bloqueou acao autorizada de RECEPTIONIST |
 | 13 | `app/api/tiss/returns/dry-run/route.ts` | `POST` | RECEPTIONIST | 2xx/4xx | 403 | Handler bloqueou acao autorizada de RECEPTIONIST |
+| 14 | `app/api/tiss/settings/premium/route.ts` | `POST` | CLINIC_ADMIN | 2xx/4xx | 403 | Handler bloqueou CLINIC_ADMIN |

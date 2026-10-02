@@ -6,10 +6,11 @@ import { z } from 'zod';
 
 const toggleSchema = z.object({
     enabled: z.boolean(),
+    clinic_id: z.string().uuid().optional(),
 });
 
 export async function GET(request: NextRequest) {
-    const guard = await requireTissAction(request, 'config.premium.ver');
+    const guard = await requireTissAction(request, 'config.premium_flag.ver');
     if (!guard.authorized) {
         return guard.response;
     }
@@ -28,16 +29,22 @@ export async function GET(request: NextRequest) {
             .eq('id', user.id)
             .single();
 
-        if (!profile?.clinic_id) {
+        const searchParams = request.nextUrl.searchParams;
+        const requestedClinicId = searchParams.get('clinic_id');
+        const targetClinicId = (profile?.role === 'SUPER_ADMIN' && requestedClinicId)
+            ? requestedClinicId
+            : profile?.clinic_id;
+
+        if (!targetClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        const enabled = await isFaturamentoPremiumEnabled(profile.clinic_id);
+        const enabled = await isFaturamentoPremiumEnabled(targetClinicId);
 
         return NextResponse.json({
             success: true,
             data: {
-                clinic_id: profile.clinic_id,
+                clinic_id: targetClinicId,
                 faturamento_premium: enabled,
             },
         });
@@ -70,8 +77,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        // Permissão validada via requireTissAction('config.premium.editar')
-
         const body = await request.json();
         const parsed = toggleSchema.safeParse(body);
 
@@ -82,8 +87,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const targetClinicId = (profile?.role === 'SUPER_ADMIN' && parsed.data.clinic_id)
+            ? parsed.data.clinic_id
+            : profile?.clinic_id;
+
+        if (!targetClinicId) {
+            return NextResponse.json({ error: 'Clínica não informada ou não encontrada' }, { status: 400 });
+        }
+
         const result = await setFaturamentoPremiumStatus(
-            profile.clinic_id,
+            targetClinicId,
             parsed.data.enabled,
             user.id
         );
@@ -95,6 +108,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: {
+                clinic_id: targetClinicId,
                 faturamento_premium: parsed.data.enabled,
                 message: parsed.data.enabled
                     ? 'Módulo de Faturamento Premium ativado com sucesso.'

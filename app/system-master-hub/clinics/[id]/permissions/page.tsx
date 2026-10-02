@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, RefreshCw, History, Save, Loader2, AlertCircle, Check, X, Settings2 } from 'lucide-react'
+import { ArrowLeft, RefreshCw, History, Save, Loader2, AlertCircle, Check, X, Settings2, FileSpreadsheet } from 'lucide-react'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
@@ -80,6 +80,11 @@ export default function ClinicPermissionsPage() {
     const [priceReason, setPriceReason] = useState('')
     const [savingPrice, setSavingPrice] = useState(false)
 
+    // Faturamento TISS Premium
+    const [faturamentoPremium, setFaturamentoPremium] = useState<boolean>(false)
+    const [confirmPremiumModal, setConfirmPremiumModal] = useState<boolean>(false)
+    const [savingPremium, setSavingPremium] = useState<boolean>(false)
+
     // Load clinic info and permissions
     const loadData = useCallback(async () => {
         try {
@@ -89,7 +94,9 @@ export default function ClinicPermissionsPage() {
             const clinicRes = await fetch(`/api/clinics/${clinicId}`)
             if (!clinicRes.ok) throw new Error('Failed to fetch clinic')
             const clinicData = await clinicRes.json()
-            setClinic(clinicData.clinic || clinicData)
+            const clinicObj = clinicData.clinic || clinicData
+            setClinic(clinicObj)
+            setFaturamentoPremium(Boolean(clinicObj?.addons?.faturamento_premium))
 
             // Fetch permissions
             const permRes = await fetch(`/api/super-admin/clinics/${clinicId}/permissions`)
@@ -288,6 +295,47 @@ export default function ClinicPermissionsPage() {
         }
     }
 
+    // Toggle Faturamento TISS Premium
+    const handleToggleTissPremium = async () => {
+        setSavingPremium(true)
+        try {
+            const nextState = !faturamentoPremium
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'toggle_faturamento_premium',
+                    enabled: nextState,
+                }),
+            })
+            const result = await res.json()
+            if (res.ok && result.success) {
+                setFaturamentoPremium(nextState)
+                setConfirmPremiumModal(false)
+                toast({
+                    title: 'Sucesso',
+                    description: nextState
+                        ? 'Faturamento TISS Premium ativado para esta clínica.'
+                        : 'Faturamento TISS Premium desativado para esta clínica.',
+                })
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro',
+                    description: result.error || 'Não foi possível alterar a configuração do Faturamento TISS Premium.',
+                })
+            }
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Falha de comunicação ao atualizar o Faturamento TISS Premium.',
+            })
+        } finally {
+            setSavingPremium(false)
+        }
+    }
+
     // Filter features by search and clinic allowlist (Camada A)
     const isAllowlisted = isClinicInSessionPlansAllowlist(clinicId)
     const PROPRIETARY_KEYS: string[] = ['psicomotricidade', 'plano_fisioterapia', 'evolucao_world_sensory']
@@ -344,6 +392,125 @@ export default function ClinicPermissionsPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* Faturamento TISS Premium Card */}
+            <Card className="mb-6 border-slate-200 bg-white shadow-sm">
+                <CardHeader className="pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="space-y-1">
+                            <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <FileSpreadsheet className="h-5 w-5 text-slate-700" />
+                                <span>Faturamento TISS Premium</span>
+                            </CardTitle>
+                            <CardDescription className="text-sm text-slate-600">
+                                Controle de ativação do módulo avançado de faturamento TISS (assistente de 3 passos, conciliação e recursos de glosa C1-C8).
+                            </CardDescription>
+                        </div>
+                        <Badge
+                            variant={faturamentoPremium ? 'default' : 'outline'}
+                            className={
+                                faturamentoPremium
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-2.5 py-1'
+                                    : 'border-slate-300 text-slate-500 bg-slate-50 font-medium text-xs px-2.5 py-1'
+                            }
+                        >
+                            {faturamentoPremium ? 'Módulo Ativo' : 'Módulo Inativo'}
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="space-y-0.5">
+                            <p className="text-sm font-semibold text-slate-900">
+                                Status da Feature Flag na Clínica
+                            </p>
+                            <p className="text-xs text-slate-500">
+                                {faturamentoPremium
+                                    ? 'O faturamento premium está ativo para esta clínica. Todos os perfis autorizados acessam os recursos avançados.'
+                                    : 'O faturamento premium está desligado. A clínica opera estritamente no modelo tradicional legado.'}
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant={faturamentoPremium ? 'outline' : 'default'}
+                            onClick={() => setConfirmPremiumModal(true)}
+                            disabled={savingPremium}
+                            className={`min-h-[44px] min-w-[140px] px-4 font-semibold text-sm rounded-md transition-colors ${
+                                faturamentoPremium
+                                    ? 'border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-800'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                        >
+                            {savingPremium ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : faturamentoPremium ? (
+                                'Desativar Módulo'
+                            ) : (
+                                'Ativar Módulo'
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Modal de Confirmação do Faturamento TISS Premium */}
+            <Dialog open={confirmPremiumModal} onOpenChange={(open) => !savingPremium && setConfirmPremiumModal(open)}>
+                <DialogContent className="sm:max-w-[480px] bg-white border border-slate-200">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-900 text-lg font-bold flex items-center gap-2">
+                            <FileSpreadsheet className="h-5 w-5 text-slate-700" />
+                            <span>Confirmar Alteração de Módulo</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600 text-sm pt-2">
+                            {faturamentoPremium
+                                ? `Deseja desativar o Faturamento TISS Premium para ${clinic?.name}? A clínica retornará ao modelo operacional tradicional imediatamente.`
+                                : `Ativar o Faturamento TISS Premium para ${clinic?.name}?`}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        {faturamentoPremium
+                            ? 'Ao desativar, as novas telas de lotes fechados, recursos de glosa e assistente de 3 passos ficam ocultos para esta clínica.'
+                            : 'Esta ação habilita o assistente em 3 passos, conciliação e recursos de glosa C1-C8 para todos os perfis autorizados desta clínica.'}
+                    </div>
+
+                    <DialogFooter className="flex flex-row justify-end gap-2 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={savingPremium}
+                            onClick={() => setConfirmPremiumModal(false)}
+                            className="min-h-[44px] px-4 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={savingPremium}
+                            onClick={handleToggleTissPremium}
+                            className={`min-h-[44px] px-5 text-white ${
+                                faturamentoPremium
+                                    ? 'bg-rose-600 hover:bg-rose-700'
+                                    : 'bg-emerald-600 hover:bg-emerald-700'
+                            }`}
+                        >
+                            {savingPremium ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : faturamentoPremium ? (
+                                'Confirmar Desativação'
+                            ) : (
+                                'Confirmar Ativação'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Pricing Card */}
             <Card className="mb-6">

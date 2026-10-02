@@ -88,18 +88,24 @@ Abra o sistema em uma clínica real já existente e acesse:
 ---
 
 ### Como Ligar a Feature Flag na Clínica de Teste
-A ativação da flag é realizada **exclusivamente via comando SQL** (não há botão ou menu visível na interface para isso, garantindo que nenhum usuário altere por engano).
 
-Arquivo de referência: `docs/release/ligar_flag.sql`
+#### Método Principal: Interruptor no Painel do Dono (Super Admin)
+A ativação é controlada com exclusividade pelo Dono da Plataforma no Painel Super Admin (evitando ativação acidental por parte dos usuários comuns):
+1. Acesse o Painel do Dono: `https://clinigo.app/system-master-hub` (ou na tela de permissões `/system-master-hub/clinics/[id]/permissions`).
+2. Na aba **Todas as Clínicas**, localize a clínica piloto e observe a coluna **TISS Premium** (status inicial: `Inativo`).
+3. Clique no botão **Ativar**.
+4. O modal de confirmação será exibido: `"Ativar o Faturamento TISS Premium para [Nome da Clínica]?"`.
+5. Clique em **Confirmar Ativação**. O badge mudará imediatamente para `Ativo` e o estado será persistido com registro de auditoria.
 
-Copie e execute no SQL Editor do Supabase (substituindo `'ID_DA_CLINICA'` pelo ID da sua clínica piloto):
+#### Método Alternativo (Plano B — Via SQL de Contingência)
+Caso não esteja logado no painel web, copie e execute no SQL Editor do Supabase (arquivo `docs/release/ligar_flag.sql`):
 ```sql
 UPDATE clinics 
 SET addons = COALESCE(addons, '{}'::jsonb) || '{"faturamento_premium": true}'::jsonb 
 WHERE id = 'ID_DA_CLINICA';
 ```
 
-Para consultar se a flag foi ativada:
+Para consultar se a flag está ativada:
 ```sql
 SELECT id, name, addons->>'faturamento_premium' AS faturamento_premium 
 FROM clinics 
@@ -149,10 +155,15 @@ WHERE (addons->>'faturamento_premium')::boolean = true;
 Caso encontre qualquer comportamento fora do esperado, siga os passos abaixo para normalizar o sistema imediatamente.
 
 ### 6.1 Como Desligar a Flag Instantaneamente (Menos de 5 segundos)
-Se desejar voltar a clínica de teste para a versão anterior, execute no SQL Editor do Supabase:
 
-Arquivo de referência: `docs/release/desligar_flag.sql`
+#### Método Principal: Desligar pelo Painel do Dono (Super Admin)
+1. Acesse o Painel do Dono (`https://clinigo.app/system-master-hub` ou `/system-master-hub/clinics/[id]/permissions`).
+2. Localize a clínica e clique no botão **Desativar** na coluna **TISS Premium**.
+3. No modal de confirmação, clique em **Confirmar Desativação**.
+4. O status mudará imediatamente para `Inativo`. Todos os usuários da clínica voltarão ao modo tradicional no próximo carregamento de página, sem necessidade de novo deploy.
 
+#### Método Alternativo (Plano B — Via SQL de Contingência)
+Se desejar voltar a clínica de teste para a versão anterior diretamente pelo banco, execute no SQL Editor do Supabase (arquivo `docs/release/desligar_flag.sql`):
 ```sql
 UPDATE clinics 
 SET addons = COALESCE(addons, '{}'::jsonb) || '{"faturamento_premium": false}'::jsonb 
@@ -161,7 +172,7 @@ WHERE id = 'ID_DA_CLINICA';
 
 *(Para desligar em todas as clínicas de uma só vez caso tenha ativado em mais de uma: `UPDATE clinics SET addons = COALESCE(addons, '{}'::jsonb) || '{"faturamento_premium": false}'::jsonb;`)*
 
-Assim que rodar esse comando e atualizar a página no navegador (F5), a tela volta imediatamente ao modelo tradicional legado, sem necessidade de novo deploy.
+Assim que rodar esse comando e atualizar a página no navegador (F5), a tela volta imediatamente ao modelo tradicional legado.
 
 ### 6.2 Como Fazer Rollback do Código na Vercel (Menos de 10 segundos)
 Se precisar reverter a versão do código na nuvem:

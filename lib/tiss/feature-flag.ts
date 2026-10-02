@@ -52,7 +52,12 @@ export async function setFaturamentoPremiumStatus(
     }
 
     try {
-        const supabase = await createClient();
+        let supabase: any;
+        try {
+            supabase = createServiceRoleClient();
+        } catch {
+            supabase = await createClient();
+        }
         
         // Obter addons atuais
         const { data: clinic, error: fetchError } = await supabase

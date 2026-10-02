@@ -2,6 +2,24 @@
 
 ## Módulos
 
+### Interruptor Faturamento TISS Premium no Painel do Dono (Super Admin)
+- **Módulos**:
+  - Super Admin / Painel de Clínicas →
+    - `app/system-master-hub/page.tsx` → Nova coluna "TISS Premium" na tabela de clínicas com badge de status (`Ativo` / `Inativo`), botão de alternância de 44px e modal de confirmação institucional ("Ativar/Desativar o Faturamento TISS Premium para [clínica]?").
+    - `app/system-master-hub/clinics/[id]/permissions/page.tsx` → Card dedicado "Faturamento TISS Premium" com badge de status, descrição clara e modal de confirmação.
+    - `app/api/super-admin/dashboard/route.ts` → Retorno do campo `addons` e `faturamentoPremium` no payload das clínicas.
+    - `app/api/super-admin/clinics/[id]/route.ts` → Ação `toggle_faturamento_premium` no PATCH exclusiva para SUPER_ADMIN (403 para os demais perfis).
+  - Faturamento / RBAC & Segurança →
+    - `lib/tiss/permissions.ts` → `config.premium.ver` estendido para `['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST']` (permitindo leitura segura pela recepção e financeiro). `config.premium.editar` restrito estritamente a `['SUPER_ADMIN']` (CLINIC_ADMIN passa a ter somente leitura).
+    - `app/api/tiss/settings/premium/route.ts` → GET liberado para RECEPTIONIST, FINANCIAL e CLINIC_ADMIN estritamente para a própria clínica. POST restrito a SUPER_ADMIN com suporte a `clinic_id` no body.
+    - `lib/tiss/feature-flag.ts` → `setFaturamentoPremiumStatus` utiliza service role garantindo persistência sem apagar outras chaves de `addons` e inserção em `audit_logs`.
+  - Testes Automatizados & Matriz RBAC →
+    - `__tests__/security/faturamento-premium-rbac-isolation.test.ts` → 12 testes nominais cobrindo RBAC de escrita (SUPER_ADMIN 200; CLINIC_ADMIN, FINANCIAL, RECEPTIONIST, READONLY, DOCTOR 403), RBAC de leitura, isolamento estrito multi-clínica e ciclo completo de ativação/desativação.
+    - `__tests__/security/matriz-permissoes-real.test.ts` → Atualização dos 78 testes de rota com aprovação de 100%.
+    - `docs/RELEASE.md` → Atualização definindo o interruptor no Painel do Dono como método principal e os scripts SQL como plano B.
+- **Descrição**:
+  - Implementação cirúrgica do interruptor por clínica no Painel do Dono (Super Admin), com zero emojis, ícones Lucide, áreas de toque de 44px e correção do acesso de leitura para recepção.
+
 ### Pacote de Release para Produção — Módulo TISS CliniGo
 - **Módulos**:
   - Auditoria & Governança de Release →

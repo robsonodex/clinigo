@@ -145,8 +145,11 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
             return false;
         }
 
-        // CLINIC_ADMIN: Pleno acesso a todas as rotas
-        if (role === 'CLINIC_ADMIN') return false;
+        // CLINIC_ADMIN: Pleno acesso a todas as rotas, EXCETO config.premium.editar (exclusivo SUPER_ADMIN)
+        if (role === 'CLINIC_ADMIN') {
+            if (p.includes('settings/premium') && method === 'POST') return true;
+            return false;
+        }
 
         // FINANCIAL: Acesso ao faturamento, bloqueado apenas em ações exclusivas de admin
         if (role === 'FINANCIAL') {
@@ -186,7 +189,11 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
             if (p.includes('pricing') && !p.includes('pricing/lookup')) return true;
             if (p.includes('tuss') && method === 'POST') return true;
             if (p.includes('operators') && method === 'POST') return true;
-            if (p.includes('settings')) return true;
+            if (p.includes('settings/premium') && method === 'GET') {
+                // RECEPTIONIST tem permissão de leitura para verificar se faturamento premium está ativo na sua clínica
+            } else if (p.includes('settings')) {
+                return true;
+            }
             if (p.includes('audit')) return true;
             if (p.includes('reports/loss-analysis')) return true;
             if (p.includes('validate-xsd') && method === 'POST') return true;

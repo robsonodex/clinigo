@@ -60,6 +60,31 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         const serviceSupabase = createServiceRoleClient()
 
+        if (action === 'toggle_faturamento_premium') {
+            const { enabled } = body;
+            if (typeof enabled !== 'boolean') {
+                return NextResponse.json(
+                    { error: 'Parâmetro enabled obrigatório e deve ser booleano' },
+                    { status: 400 }
+                );
+            }
+
+            const { setFaturamentoPremiumStatus } = await import('@/lib/tiss/feature-flag');
+            const result = await setFaturamentoPremiumStatus(clinicId, enabled, user.id);
+
+            if (!result.success) {
+                return NextResponse.json({ error: result.error }, { status: 500 });
+            }
+
+            return NextResponse.json({
+                success: true,
+                data: { faturamento_premium: enabled },
+                message: enabled
+                    ? 'Faturamento TISS Premium ativado com sucesso.'
+                    : 'Faturamento TISS Premium desativado com sucesso.',
+            });
+        }
+
         if (action === 'activate_plan') {
             // Get current clinic data
             const { data: clinic } = await serviceSupabase

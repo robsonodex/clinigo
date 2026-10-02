@@ -172,11 +172,15 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         if (p.includes('analyze-glosa-risk')) return true;
         if (p.includes('appeals') && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
 
-        // Pricing, TUSS e Configurações: Recepção não gerencia tabelas contratuais (mas pode consultar pricing/lookup)
+        // Pricing, TUSS e Configurações: Recepção não gerencia tabelas contratuais (mas pode consultar pricing/lookup e flag premium da própria clínica)
         if (p.includes('pricing') && !p.includes('pricing/lookup')) return true;
         if (p.includes('tuss') && method === 'POST') return true;
         if (p.includes('operators') && method === 'POST') return true;
-        if (p.includes('settings')) return true;
+        if (p.includes('settings/premium') && method === 'GET') {
+            // Permitido para RECEPTIONIST ler a flag de faturamento premium da própria clínica
+        } else if (p.includes('settings')) {
+            return true;
+        }
         if (p.includes('audit')) return true;
         if (p.includes('reports/loss-analysis')) return true;
         if (p.includes('validate-xsd') && method === 'POST') return true;
@@ -502,17 +506,22 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
                         roleStats.FINANCIAL.passed++;
                     });
 
-                    // 5. CLINIC_ADMIN: Sempre Permitido
-                    it(`[${method}] CLINIC_ADMIN -> autorizado (status 2xx/4xx, nao 401/403/5xx)`, async () => {
+                    // 5. CLINIC_ADMIN: Permitido para ações gerais; rotas exclusivas de SUPER_ADMIN recebem 403
+                    const isSuperAdminOnly = relPath.includes('settings/premium') && method === 'POST';
+                    it(`[${method}] CLINIC_ADMIN -> ${isSuperAdminOnly ? '403 Forbidden (exclusivo SUPER_ADMIN)' : 'autorizado (status 2xx/4xx, nao 401/403/5xx)'}`, async () => {
                         roleStats.CLINIC_ADMIN.total++;
                         setupMockSupabase(PROFILES.CLINIC_ADMIN);
                         const req = createRequest(`http://localhost:3000/${relPath.replace('/route.ts', '')}`, method, 'CLINIC_ADMIN', PROFILES.CLINIC_ADMIN.id, relPath);
                         const context = { params: Promise.resolve({ id: 'dummy-id-123' }) };
 
                         const res = await handler(req, context);
-                        expect(res.status).not.toBe(401);
-                        expect(res.status).not.toBe(403);
-                        expect(res.status).toBeLessThan(500);
+                        if (isSuperAdminOnly) {
+                            expect(res.status).toBe(403);
+                        } else {
+                            expect(res.status).not.toBe(401);
+                            expect(res.status).not.toBe(403);
+                            expect(res.status).toBeLessThan(500);
+                        }
                         roleStats.CLINIC_ADMIN.passed++;
                     });
                 }

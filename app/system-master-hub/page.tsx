@@ -52,6 +52,7 @@ import {
     Check,
     ExternalLink,
     ShieldCheck,
+    FileSpreadsheet,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -101,6 +102,8 @@ interface DashboardData {
         approvalStatus: string | null
         trialEndsAt: string | null
         subscriptionDueDate: string | null
+        faturamentoPremium?: boolean
+        addons?: Record<string, any>
     }>
     users: Array<{
         id: string
@@ -154,6 +157,62 @@ export default function SuperAdminDashboard() {
     const [scheduleTimes, setScheduleTimes] = useState<string[]>([])
     const [scheduledBillings, setScheduledBillings] = useState<any[]>([])
     const [loadingScheduled, setLoadingScheduled] = useState(false)
+
+    // Faturamento TISS Premium State
+    const [tissPremiumModal, setTissPremiumModal] = useState<{
+        open: boolean
+        clinicId: string
+        clinicName: string
+        currentEnabled: boolean
+    }>({ open: false, clinicId: '', clinicName: '', currentEnabled: false })
+    const [togglingPremium, setTogglingPremium] = useState(false)
+
+    const openTissPremiumModal = (clinicId: string, clinicName: string, currentEnabled: boolean) => {
+        setTissPremiumModal({
+            open: true,
+            clinicId,
+            clinicName,
+            currentEnabled,
+        })
+    }
+
+    const handleConfirmTissPremium = async () => {
+        if (!tissPremiumModal.clinicId) return
+        setTogglingPremium(true)
+        try {
+            const nextState = !tissPremiumModal.currentEnabled
+            const res = await fetch(`/api/super-admin/clinics/${tissPremiumModal.clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'toggle_faturamento_premium',
+                    enabled: nextState,
+                }),
+            })
+            const result = await res.json()
+            if (res.ok && result.success) {
+                setData(prev => {
+                    if (!prev) return prev
+                    return {
+                        ...prev,
+                        clinics: prev.clinics.map(c =>
+                            c.id === tissPremiumModal.clinicId
+                                ? { ...c, faturamentoPremium: nextState }
+                                : c
+                        ),
+                    }
+                })
+                setTissPremiumModal(prev => ({ ...prev, open: false }))
+            } else {
+                alert(`Erro: ${result.error || 'Não foi possível alterar a flag'}`)
+            }
+        } catch (error: any) {
+            console.error('Erro ao alterar Faturamento TISS Premium:', error)
+            alert('Erro de comunicação ao atualizar o status')
+        } finally {
+            setTogglingPremium(false)
+        }
+    }
 
     // Feature Announcement State
     const [featureModal, setFeatureModal] = useState(false)
@@ -1232,6 +1291,7 @@ export default function SuperAdminDashboard() {
                                             <TableHead className="text-gray-600">Clínica</TableHead>
                                             <TableHead className="text-gray-600">Plano</TableHead>
                                             <TableHead className="text-gray-600">Status</TableHead>
+                                            <TableHead className="text-gray-600">TISS Premium</TableHead>
                                             <TableHead className="text-gray-600">Faturamento</TableHead>
                                             <TableHead className="text-gray-600">Renovação</TableHead>
                                             <TableHead className="text-gray-600">Ações</TableHead>
@@ -1279,6 +1339,30 @@ export default function SuperAdminDashboard() {
                                                                 Expirado
                                                             </Badge>
                                                         )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge
+                                                            variant={clinic.faturamentoPremium ? 'default' : 'outline'}
+                                                            className={
+                                                                clinic.faturamentoPremium
+                                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs'
+                                                                    : 'border-slate-300 text-slate-500 bg-slate-50 font-medium text-xs'
+                                                            }
+                                                        >
+                                                            {clinic.faturamentoPremium ? 'Ativo' : 'Inativo'}
+                                                        </Badge>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => openTissPremiumModal(clinic.id, clinic.name, Boolean(clinic.faturamentoPremium))}
+                                                            className="min-h-[44px] min-w-[44px] px-2.5 py-1.5 text-xs font-semibold rounded-md border-slate-300 hover:bg-slate-100 transition-colors"
+                                                            title={clinic.faturamentoPremium ? 'Desativar Faturamento TISS Premium' : 'Ativar Faturamento TISS Premium'}
+                                                        >
+                                                            {clinic.faturamentoPremium ? 'Desativar' : 'Ativar'}
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -2778,6 +2862,62 @@ export default function SuperAdminDashboard() {
                             </DialogFooter>
                         </>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Confirmação do Faturamento TISS Premium */}
+            <Dialog open={tissPremiumModal.open} onOpenChange={(open) => !togglingPremium && setTissPremiumModal(prev => ({ ...prev, open }))}>
+                <DialogContent className="sm:max-w-[480px] bg-white border border-slate-200">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-900 text-lg font-bold flex items-center gap-2">
+                            <FileSpreadsheet className="h-5 w-5 text-slate-700" />
+                            <span>Confirmar Alteração de Módulo</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600 text-sm pt-2">
+                            {tissPremiumModal.currentEnabled
+                                ? `Deseja desativar o Faturamento TISS Premium para ${tissPremiumModal.clinicName}? A clínica retornará ao modelo operacional tradicional imediatamente.`
+                                : `Ativar o Faturamento TISS Premium para ${tissPremiumModal.clinicName}?`}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        {tissPremiumModal.currentEnabled
+                            ? 'Ao desativar, as novas telas de lotes fechados, recursos de glosa e assistente de 3 passos ficam ocultos para esta clínica.'
+                            : 'Esta ação habilita o assistente em 3 passos, conciliação e recursos de glosa C1-C8 para todos os perfis autorizados desta clínica.'}
+                    </div>
+
+                    <DialogFooter className="flex flex-row justify-end gap-2 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={togglingPremium}
+                            onClick={() => setTissPremiumModal(prev => ({ ...prev, open: false }))}
+                            className="min-h-[44px] px-4 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={togglingPremium}
+                            onClick={handleConfirmTissPremium}
+                            className={`min-h-[44px] px-5 text-white ${
+                                tissPremiumModal.currentEnabled
+                                    ? 'bg-rose-600 hover:bg-rose-700'
+                                    : 'bg-emerald-600 hover:bg-emerald-700'
+                            }`}
+                        >
+                            {togglingPremium ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : tissPremiumModal.currentEnabled ? (
+                                'Confirmar Desativação'
+                            ) : (
+                                'Confirmar Ativação'
+                            )}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

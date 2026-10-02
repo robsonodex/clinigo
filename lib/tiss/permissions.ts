@@ -59,6 +59,7 @@ export type TissAction =
     | 'config.operadoras.editar'
     | 'config.demonstracao.ativar'
     | 'config.premium.ver'
+    | 'config.premium_flag.ver'
     | 'config.premium.editar'
     // Convênios de Pacientes e Autorizações
     | 'paciente_convenio.ver'
@@ -118,7 +119,8 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'config.operadoras.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     'config.demonstracao.ativar': ['SUPER_ADMIN'],
     'config.premium.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
-    'config.premium.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
+    'config.premium_flag.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
+    'config.premium.editar': ['SUPER_ADMIN'],
 
     // Convênios de Pacientes e Autorizações
     'paciente_convenio.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],

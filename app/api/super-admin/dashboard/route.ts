@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         // Get all clinics
         const { data: clinics } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price')
+            .select('id, name, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price, addons')
             .order('created_at', { ascending: false })
 
         const isDemoClinic = (c: any) => c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
@@ -132,6 +132,8 @@ export async function GET(request: NextRequest) {
                 approvalStatus: c.approval_status || null,
                 trialEndsAt: c.trial_ends_at || null,
                 subscriptionDueDate: c.subscription_due_date || null,
+                faturamentoPremium: Boolean((c.addons as any)?.faturamento_premium),
+                addons: c.addons || {},
             }
         }) || []
 
