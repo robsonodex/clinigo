@@ -2,6 +2,11 @@
 
 ## Módulos
 
+### Correção de Renderização no Painel de Permissões (ReferenceError: DialogFooter is not defined)
+- **Módulos**:
+  - Super Admin / Permissões de Clínicas →
+    - `app/system-master-hub/clinics/[id]/permissions/page.tsx` → Importação de `DialogFooter` de `@/components/ui/dialog`. Correção do erro de crash de montagem do modal de confirmação do TISS Premium.
+
 ### Correção de Permissões no Painel do Super Admin (ReferenceError: FEATURE_KEYS is not defined)
 - **Módulos**:
   - Super Admin / Permissões de Clínicas →
