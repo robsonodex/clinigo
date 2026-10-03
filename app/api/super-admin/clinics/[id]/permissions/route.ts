@@ -13,6 +13,7 @@ import {
 } from '@/lib/services/permissions-service'
 import {
     type FeatureKey,
+    FEATURE_KEYS,
     FEATURE_METADATA,
     ALL_FEATURE_KEYS,
     PROTECTED_FEATURES,

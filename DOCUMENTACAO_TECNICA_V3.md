@@ -2,6 +2,13 @@
 
 ## Módulos
 
+### Correção de Permissões no Painel do Super Admin (ReferenceError: FEATURE_KEYS is not defined)
+- **Módulos**:
+  - Super Admin / Permissões de Clínicas →
+    - `app/api/super-admin/clinics/[id]/permissions/route.ts` → Importação de `FEATURE_KEYS` de `@/lib/constants/features`. Correção do erro de runtime em `POST` ao atualizar qualquer permissão ou toggle (ex: Integrações).
+- **Descrição**:
+  - Resolução de erro `ReferenceError: FEATURE_KEYS is not defined` no endpoint de atualização de permissões do Super Admin. A constante era referenciada na checagem de módulos proprietários de terapia (`PSICOMOTRICIDADE`, `PLANO_FISIOTERAPIA`, `EVOLUCAO_WORLD_SENSORY`), mas não havia sido incluída na cláusula de importação.
+
 ### Interruptor Faturamento TISS Premium no Painel do Dono (Super Admin)
 - **Módulos**:
   - Super Admin / Painel de Clínicas →
