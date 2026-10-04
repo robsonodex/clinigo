@@ -2,6 +2,25 @@
 
 ## Módulos
 
+### Migração Completa de Storage de Pacientes (Supabase Storage → Cloudflare R2) e Desafogamento do Banco
+- **Data**: 04/10/2026
+- **Módulos**: Storage & Armazenamento Seguro, Prontuário Clínico, Infraestrutura & Saneamento
+- **Caminho Completo**:
+  - Infraestrutura de Storage → `lib/services/storage/r2-client.ts` e `lib/services/storage/adapters/r2-adapter.ts` (Cliente singleton compatível com AWS S3 / Cloudflare R2, geração de presigned URLs seguras de 600 segundos e zero custo de egress)
+  - Backend & Download Seguro → `app/api/documents/[id]/download/route.ts` → `GET()` (Resolução de chaves `r2://` com fallback transparente)
+  - Banco de Dados & Sanitização → Tabela `patient_documents` (Atualização de URLs legadas estáticas do Supabase para o protocolo `r2://`)
+  - Saneamento & Migração → `scripts/saneamento/2026-10-04_migrate_and_cleanup_patient_documents_storage.ts` (Auditoria, backup prévio em JSON de conformidade LGPD regra 5.2.3, transferência paralela com 8 workers de 473 arquivos para o Cloudflare R2 e expurgo de 426.17 MB do bucket `patient-documents` no Supabase Storage)
+- **Descrição Técnica**:
+  - **1. Causa Raiz e Diagnóstico**:
+    - O Supabase Storage acumulava 434.76 MB (0.44 GB), atingindo quase metade da cota do plano gratuito (1 GB).
+    - 98.02% desse espaço (426.17 MB em 473 arquivos) residia no bucket `patient-documents`, mantido como duplicata após integrações parciais anteriores com o Cloudflare R2.
+  - **2. Solução Implementada**:
+    - Varredura e indexação física dos 473 arquivos no Supabase Storage.
+    - Transferência atômica e paralelizada de 100% dos arquivos para o Cloudflare R2 com dupla chave de compatibilidade (com e sem prefixo de módulo).
+    - Atualização dos registros no PostgreSQL para o prefixo canônico `r2://`.
+    - Expurgo total e seguro em lotes de 50 dos 473 arquivos do bucket `patient-documents` no Supabase Storage, reduzindo o volume do bucket para 0 arquivos e liberando 426.17 MB.
+    - Confirmação de integridade por meio de geração de Presigned URLs no Cloudflare R2 via SDK.
+
 ### Correção de Renderização no Painel de Permissões (ReferenceError: DialogFooter is not defined)
 - **Módulos**:
   - Super Admin / Permissões de Clínicas →
