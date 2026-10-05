@@ -91,36 +91,43 @@ export async function POST(request: NextRequest) {
         const novoValorPago = Math.max(0, Number((guideTotalValue - novaGlosaTotal).toFixed(2)));
         const novoStatusGuia = novoValorPago > 0 ? 'PARTIALLY_GLOSED' : 'TOTALLY_GLOSED';
 
-        // 4. Inserir registro em tiss_glosas
+        // 4. Inserir registro em tiss_glosas respeitando o schema do banco
+        const glosaPayload = {
+            clinic_id: clinicId,
+            guide_id: validated.guide_id,
+            batch_id: guide.batch_id || null,
+            guide_number: guide.guide_number,
+            glosa_code: validated.glosa_code,
+            glosa_description: validated.glosa_description,
+            glosa_type: validated.glosa_type,
+            glosa_value: validated.glosa_value,
+            original_value: guideTotalValue,
+            approved_value: Math.max(0, Number((guideTotalValue - novaGlosaTotal).toFixed(2))),
+            contest_status: 'PENDENTE',
+            can_appeal: true,
+            received_at: now.split('T')[0],
+            created_at: now,
+            updated_at: now,
+        };
+
         const { data: glosa, error: glosaError } = await supabase
             .from('tiss_glosas')
-            .insert({
-                clinic_id: clinicId,
-                guide_id: validated.guide_id,
-                batch_id: guide.batch_id || null,
-                item_code: validated.item_code,
-                glosa_code: validated.glosa_code,
-                glosa_description: validated.glosa_description,
-                glosa_type: validated.glosa_type,
-                glosa_value: validated.glosa_value,
-                source: 'MANUAL',
-                status: 'GLOSADA',
-                created_at: now
-            })
+            .insert(glosaPayload)
             .select()
             .single();
 
         if (glosaError) {
             console.error('[TISS] Erro ao inserir glosa manual:', glosaError);
-            return NextResponse.json({ success: false, error: 'Erro ao registrar glosa no banco de dados' }, { status: 500 });
+            return NextResponse.json({ success: false, error: `Erro ao registrar glosa no banco de dados: ${glosaError.message}` }, { status: 500 });
         }
 
         // 5. Atualizar guia
-        const { data: updatedGuide } = await supabase
+        const { data: updatedGuide, error: guideUpErr } = await supabase
             .from('tiss_guides')
             .update({
                 glosa_value: novaGlosaTotal,
-                paid_value: novoValorPago,
+                glosa_code: validated.glosa_code,
+                glosa_description: validated.glosa_description,
                 status: novoStatusGuia,
                 updated_at: now
             })
@@ -129,19 +136,28 @@ export async function POST(request: NextRequest) {
             .select()
             .single();
 
+        if (guideUpErr) {
+            console.warn('[TISS] Aviso ao atualizar guia com novos dados de glosa:', guideUpErr);
+        }
+
         // 6. Registro financeiro / contábil da retenção de glosa
-        await supabase
-            .from('financial_entries')
-            .insert({
-                clinic_id: clinicId,
-                type: 'EXPENSE',
-                category: 'GLOSA_CONVENIO',
-                description: `Retenção de Glosa Manual - Guia nº ${guide.guide_number} (${validated.glosa_code})`,
-                amount: validated.glosa_value,
-                status: 'PENDING',
-                notes: `Motivo ANS: ${validated.glosa_description} - Procedimento ${validated.item_code}`,
-                created_at: now
-            });
+        const todayDate = now.split('T')[0];
+        try {
+            await supabase
+                .from('financial_entries')
+                .insert({
+                    clinic_id: clinicId,
+                    type: 'EXPENSE',
+                    category: 'GLOSA_CONVENIO',
+                    description: `Retenção de Glosa Manual - Guia nº ${guide.guide_number} (${validated.glosa_code})`,
+                    amount: validated.glosa_value,
+                    status: 'PENDING',
+                    due_date: todayDate,
+                    created_at: now
+                });
+        } catch (finErr) {
+            console.warn('[TISS] Aviso ao lançar registro financeiro de glosa:', finErr);
+        }
 
         // 7. Gravar auditoria oficial
         await writeTissAudit({

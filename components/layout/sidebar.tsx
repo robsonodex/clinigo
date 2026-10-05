@@ -926,7 +926,12 @@ function NavItemComponent({
                         isDark ? "border-emerald-900/40" : "border-slate-200"
                     )}>
                         {item.children?.map((child) => {
-                            const isChildActive = pathname === child.href || pathname.startsWith(`${child.href}/`)
+                            const hasMoreSpecificSiblingActive = Boolean(item.children?.some(
+                                sibling => sibling.href !== child.href &&
+                                           sibling.href.startsWith(`${child.href}/`) &&
+                                           (pathname === sibling.href || pathname.startsWith(`${sibling.href}/`))
+                            ))
+                            const isChildActive = !hasMoreSpecificSiblingActive && (pathname === child.href || pathname.startsWith(`${child.href}/`))
                             const isChildCustomUnlocked = Boolean(child.featureKey && permissions?.[child.featureKey]?.enabled === true)
                             const effectivePlan = isChildCustomUnlocked ? 'BASICO' : (child.minPlan || 'BASICO')
                             return (

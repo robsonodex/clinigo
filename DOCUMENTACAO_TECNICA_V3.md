@@ -2872,3 +2872,22 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - **6. Build, Lint e Auditoria de Botões (C6 e C7)**:
     - Build limpo com 221 rotas estáticas e dinâmicas geradas no App Router; lint TISS com 0 erros; Jest com 615 testes aprovados.
     - Auditoria dos 29 botões de faturamento registrada e item B0.3 rotulado como validado em staging.
+
+---
+
+### [05/10/2026] - Faturamento TISS · Resolução de Seleção Dupla na Sidebar e Ativação do Botão Glosa Manual (R3)
+- **Status**: Produção / Validado
+- **Mapeamento de Arquivos**:
+  - Sidebar → Menu Ativo → `components/layout/sidebar.tsx` → `isChildActive` (Prevenção de colisão de rota raiz `/dashboard/tiss` quando subrotas irmãs `/dashboard/tiss/glosas` estão ativas).
+  - Faturamento → Gestão de Glosas → `components/tiss/manual-glosa-dialog.tsx` → `ManualGlosaDialog` (Suporte a seleção interativa de guia com busca, remoção do bloqueio `guide === null` e cálculo ao vivo de saldo disponível para glosa).
+  - Faturamento → API Glosa Manual → `app/api/tiss/glosas/manual/route.ts` → `POST` (Compatibilização estrita com o schema real da tabela `tiss_glosas` no Supabase, campos obrigatórios de `financial_entries` e atualização de status da guia).
+  - Faturamento → API Guias Elegíveis → `app/api/tiss/guides/available-for-glosa/route.ts` → `GET` (Listagem com busca e saldo disponível para seleção no modal de glosa).
+- **Descrição Técnica**:
+  - **1. Resolução do Menu Duplo (Sidebar)**:
+    - Quando o usuário acessava `/dashboard/tiss/glosas`, tanto o item `Guias e Lotes` (`/dashboard/tiss`) quanto `Gestão de Glosas` (`/dashboard/tiss/glosas`) ficavam ativos simultaneamente porque `pathname.startsWith('/dashboard/tiss/')` retornava verdadeiro para ambos.
+    - Implementada checagem hierárquica `hasMoreSpecificSiblingActive`, garantindo que um item de rota raiz não seja marcado como ativo quando um submenu irmão mais específico for o alvo atual da navegação.
+  - **2. Ativação Funcional do Botão Lançar Glosa Manual (R3)**:
+    - O botão no cabeçalho de Glosas passava `guide={null}` para o diálogo `ManualGlosaDialog`, que possuía uma guarda precoce `if (!guide) return null;`, impedindo a renderização do modal.
+    - O componente agora inclui seletor integrado com busca por número de guia ou paciente, consumo de endpoint dedicado e validação em tempo real para impedir glosas superiores ao saldo da guia.
+    - A rota `app/api/tiss/glosas/manual/route.ts` foi sincronizada com as colunas reais do PostgreSQL, eliminando erros de schema cache do PostgREST.
+
