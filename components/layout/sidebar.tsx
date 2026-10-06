@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useRole } from '@/lib/hooks/use-auth'
+import { useRole, useAuth } from '@/lib/hooks/use-auth'
 import { usePlan } from '@/lib/hooks/use-plan'
 import {
     LayoutDashboard,
@@ -1081,6 +1081,7 @@ function NavItemComponent({
 export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
     const { role, isCoordinator, clinicId, isSuperAdmin } = useRole()
+    const { user, profile } = useAuth()
     const { planType, isLoading, permissions } = usePlan()
     const profLabel = useProfessionalLabel()
     const { clinic } = useClinic()
@@ -1152,6 +1153,13 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
                             return false
                         }
+                        return true
+                    }
+                    // Exclusivo World Sensory: Jéssica (Recepção) autorizada cirurgicamente a acessar Horários e Agenda da clínica
+                    const WORLDSENSORY_CLINIC_ID = '4c13e586-5390-4393-a180-2c9dd7ed81c7'
+                    const JESSICA_USER_ID = 'd9c6ac75-bc7c-431a-ba76-73ecb268fef8'
+                    const isJessicaWorldSensory = (user?.id === JESSICA_USER_ID || user?.email?.toLowerCase() === 'wsadm.jessica@gmail.com' || profile?.email?.toLowerCase() === 'wsadm.jessica@gmail.com') && effectiveClinicId === WORLDSENSORY_CLINIC_ID
+                    if (isJessicaWorldSensory && ['/dashboard/horarios', '/dashboard/agenda'].includes(item.href)) {
                         return true
                     }
                     return false

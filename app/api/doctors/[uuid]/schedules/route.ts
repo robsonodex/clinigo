@@ -86,6 +86,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Check authorization
+        const WORLDSENSORY_CLINIC_ID = '4c13e586-5390-4393-a180-2c9dd7ed81c7'
+        const JESSICA_USER_ID = 'd9c6ac75-bc7c-431a-ba76-73ecb268fef8'
+        const isJessicaWorldSensory = (userId === JESSICA_USER_ID || userProfile.email?.toLowerCase() === 'wsadm.jessica@gmail.com') &&
+            userProfile.clinic_id === WORLDSENSORY_CLINIC_ID && doctor.clinic_id === WORLDSENSORY_CLINIC_ID
+
         if (userRole === 'DOCTOR') {
             // Doctors can only update their own schedules
             if (doctor.user_id !== userId) {
@@ -96,6 +101,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             if (userProfile.clinic_id !== doctor.clinic_id) {
                 throw new ForbiddenError('Acesso negado')
             }
+        } else if (userRole === 'RECEPTIONIST' && isJessicaWorldSensory) {
+            // Exceção cirúrgica World Sensory: Jéssica autorizada pontualmente a gerenciar horários da sua clínica
         } else if (userRole !== 'SUPER_ADMIN') {
             throw new ForbiddenError('Acesso negado')
         }

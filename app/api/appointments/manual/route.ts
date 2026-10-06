@@ -394,7 +394,11 @@ export async function POST(request: NextRequest) {
         }
 
         // TRAVA DE HORÁRIO: Validate appointment time against doctor's configured schedule
-        if (!body.overrides?.ignore_schedule_constraints) {
+        const WORLDSENSORY_CLINIC_ID = '4c13e586-5390-4393-a180-2c9dd7ed81c7'
+        const JESSICA_USER_ID = 'd9c6ac75-bc7c-431a-ba76-73ecb268fef8'
+        const isJessicaWorldSensory = (user.id === JESSICA_USER_ID || profile.email?.toLowerCase() === 'wsadm.jessica@gmail.com') && profile.clinic_id === WORLDSENSORY_CLINIC_ID
+
+        if (!body.overrides?.ignore_schedule_constraints && !isJessicaWorldSensory) {
             const scheduleCheck = await isWithinSchedule(
                 supabase,
                 body.doctor_id,

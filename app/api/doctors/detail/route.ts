@@ -172,6 +172,12 @@ async function handlePostSchedules(request: NextRequest, doctorId: string) {
     const ESCOLAR_OU_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
     const isEspacoIncluir = (userProfile.clinic_id === ESCOLAR_OU_INCLUIR_CLINIC_ID || doctor.clinic_id === ESCOLAR_OU_INCLUIR_CLINIC_ID) && userProfile.clinic_id === doctor.clinic_id
 
+    // Exceção cirúrgica World Sensory: Jéssica (Recepção) autorizada a gerenciar horários de profissionais da sua própria clínica
+    const WORLDSENSORY_CLINIC_ID = '4c13e586-5390-4393-a180-2c9dd7ed81c7'
+    const JESSICA_USER_ID = 'd9c6ac75-bc7c-431a-ba76-73ecb268fef8'
+    const isJessicaWorldSensory = (userId === JESSICA_USER_ID || userProfile.email?.toLowerCase() === 'wsadm.jessica@gmail.com') &&
+        userProfile.clinic_id === WORLDSENSORY_CLINIC_ID && doctor.clinic_id === WORLDSENSORY_CLINIC_ID
+
     let isAuthorized = false
 
     if (userRole === 'SUPER_ADMIN') {
@@ -190,6 +196,9 @@ async function handlePostSchedules(request: NextRequest, doctorId: string) {
         }
     } else if (userRole === 'RECEPTIONIST' && isEspacoIncluir) {
         // Escopo isolado especificamente para a clínica Espaço Incluir (ex: Karina / Recepção)
+        isAuthorized = true
+    } else if (userRole === 'RECEPTIONIST' && isJessicaWorldSensory) {
+        // Exceção cirúrgica World Sensory: Jéssica autorizada pontualmente a gerenciar horários da sua clínica
         isAuthorized = true
     }
 
