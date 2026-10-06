@@ -50,7 +50,7 @@ interface ManualAppointmentRequest {
     appointment_time: string // HH:MM
     duration_minutes?: number
     type?: 'presencial' | 'telemedicina'
-    payment: ManualPaymentDetails
+    payment?: ManualPaymentDetails
     overrides?: ScheduleOverrides
     notifications?: NotificationSettings
     notes?: string
@@ -401,7 +401,7 @@ export async function POST(request: NextRequest) {
         if (!body.overrides?.ignore_schedule_constraints && !isJessicaWorldSensory) {
             const scheduleCheck = await isWithinSchedule(
                 supabase,
-                body.doctor_id,
+                primaryDoctorId,
                 body.appointment_date,
                 body.appointment_time,
                 body.duration_minutes || 30
@@ -424,7 +424,7 @@ export async function POST(request: NextRequest) {
             const { data: conflicts } = await supabase
                 .from('appointments')
                 .select('id')
-                .eq('doctor_id', body.doctor_id)
+                .eq('doctor_id', primaryDoctorId)
                 .eq('appointment_date', body.appointment_date)
                 .eq('appointment_time', body.appointment_time)
                 .not('status', 'in', '("CANCELLED","COMPLETED","NO_SHOW")')
@@ -465,19 +465,19 @@ export async function POST(request: NextRequest) {
         // Calculate price - check schedule_price_ranges first, fallback to doctor default
         const priceResult = await resolveAppointmentPrice(
             supabase,
-            body.doctor_id,
+            primaryDoctorId,
             body.appointment_date,
             body.appointment_time,
             doctor.consultation_price || 0
         )
         let price = priceResult.price
 
-        if (body.payment.type === 'health_insurance' && body.payment.health_insurance_id) {
+        if (body.payment?.type === 'health_insurance' && body.payment?.health_insurance_id) {
             // Get insurance price if different
             const { data: insurancePrice } = await supabase
                 .from('doctor_health_insurances')
                 .select('consultation_price')
-                .eq('doctor_id', body.doctor_id)
+                .eq('doctor_id', primaryDoctorId)
                 .eq('health_insurance_plan_id', body.payment.health_insurance_id)
                 .single()
 
@@ -486,7 +486,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        if (body.payment.type === 'courtesy') {
+        if (body.payment?.type === 'courtesy' || body.is_block) {
             price = 0
         }
 
@@ -549,7 +549,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Add optional insurance fields if using health insurance
-        if (body.payment.type === 'health_insurance' && body.payment.health_insurance_id) {
+        if (body.payment?.type === 'health_insurance' && body.payment?.health_insurance_id) {
             // Validate that the health insurance plan exists before setting FK
             const { data: planExists } = await supabase
                 .from('health_insurance_plans')
@@ -647,9 +647,9 @@ export async function POST(request: NextRequest) {
         // Create financial entry if payment was made at counter (skip for blocks, supervision and student mentoring)
         if (!body.is_block && !body.is_supervision && !body.is_student) {
             try {
-                const paidAtCounter = ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment?.type)
+                const paidAtCounter = body.payment?.type ? ['cash', 'debit_card', 'credit_card', 'pix_presencial'].includes(body.payment.type) : false
 
-                if (paidAtCounter && price > 0) {
+                if (paidAtCounter && price > 0 && body.payment) {
                     await supabase
                         .from('financial_entries')
                         .insert({
@@ -922,7 +922,7 @@ export async function POST(request: NextRequest) {
             appointment: {
                 id: appointmentId,
                 patient_id: (body.is_block || body.is_supervision) ? null : patientId,
-                doctor_id: body.doctor_id,
+                doctor_id: primaryDoctorId,
                 appointment_date: appointmentDate,
                 appointment_time: appointmentTime,
                 status: 'CONFIRMED',

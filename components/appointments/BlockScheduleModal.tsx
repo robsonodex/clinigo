@@ -135,6 +135,10 @@ export function BlockScheduleModal({
                 duration_minutes: durationMinutes,
                 is_block: true,
                 block_title: blockTitle.trim(),
+                payment: {
+                    type: 'courtesy',
+                    notes: 'Compromisso interno / Bloqueio de agenda'
+                },
                 overrides: {
                     ignore_schedule_constraints: true,
                     allow_double_booking: false,
@@ -157,7 +161,7 @@ export function BlockScheduleModal({
         },
         onSuccess: (data) => {
             const countMsg = selectedDoctorIds.length > 1 ? ` para ${selectedDoctorIds.length} profissionais` : ''
-            toast.success(`🔒 Compromisso salvo na agenda com sucesso${countMsg}!`)
+            toast.success(`Compromisso salvo na agenda com sucesso${countMsg}!`)
             queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
             onSuccess?.(appointmentDate)
             onOpenChange(false)
