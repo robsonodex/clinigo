@@ -91,6 +91,21 @@ export async function POST(
         marked_no_show_at: now,
         marked_no_show_by: user.id
       };
+    } else if (action === 'REVERT_STATUS') {
+      // Desfazer falta ou cancelamento clínico -> Retornar para CONFIRMED
+      updateData = {
+        ...updateData,
+        status: 'CONFIRMED',
+        session_status: null,
+        session_status_notes: null,
+        no_show: false,
+        no_show_reason: null,
+        marked_no_show_at: null,
+        marked_no_show_by: null,
+        cancellation_reason: null,
+        cancelled_at: null,
+        cancelled_by: null
+      };
     } else {
       return NextResponse.json({ success: false, error: 'Ação clínica inválida' }, { status: 400 });
     }

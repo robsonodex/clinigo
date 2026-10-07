@@ -37,6 +37,7 @@ import {
     CheckCircle2,
     Check,
     ArrowRight,
+    Undo2,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -745,6 +746,32 @@ export default function AgendaPage() {
             toast.error(error.message)
             setDeletingAppointmentId(null)
         },
+    })
+
+    // Desfazer falta ou ocorrência e restaurar atendimento para CONFIRMED
+    const revertStatusMutation = useMutation({
+        mutationFn: async (appointmentId: string) => {
+            const res = await fetch(`/api/appointments/${appointmentId}/clinical-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'REVERT_STATUS' })
+            })
+            const data = await res.json()
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Falha ao desfazer falta do agendamento')
+            }
+            return data
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['appointments'], exact: false })
+            toast.success(data?.message || 'Agendamento retornado para Confirmado com sucesso!')
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('appointment-updated'))
+            }
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Erro ao desfazer falta')
+        }
     })
 
     // Cancelados visíveis no período selecionado
@@ -1598,6 +1625,15 @@ export default function AgendaPage() {
                                                                                                 {appointment.status === 'IN_PROGRESS' || (appointment as any).doctor_checked_in_at || (appointment as any).checkin_confirmed_at || appointment.status === 'WAITING' ? 'Ver Atendimento / Prontuário' : 'Paciente Compareceu (Check-in)'}
                                                                                             </DropdownMenuItem>
                                                                                         )}
+                                                                                        {appointment.status === 'NO_SHOW' && (
+                                                                                            <DropdownMenuItem
+                                                                                                className="text-emerald-700 dark:text-emerald-400 font-semibold"
+                                                                                                onClick={() => revertStatusMutation.mutate(appointment.id)}
+                                                                                            >
+                                                                                                <Undo2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                                                Desfazer Falta (Retornar)
+                                                                                            </DropdownMenuItem>
+                                                                                        )}
                                                                                         {(appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (
                                                                                             <DropdownMenuItem
                                                                                                 className="text-amber-700 dark:text-amber-400 font-medium"
@@ -1900,6 +1936,15 @@ export default function AgendaPage() {
                                                                                                     >
                                                                                                         <X className="w-4 h-4 mr-2" />
                                                                                                         Cancelar
+                                                                                                    </DropdownMenuItem>
+                                                                                                )}
+                                                                                                {appointment.status === 'NO_SHOW' && (
+                                                                                                    <DropdownMenuItem
+                                                                                                        className="text-emerald-700 dark:text-emerald-400 font-semibold"
+                                                                                                        onClick={() => revertStatusMutation.mutate(appointment.id)}
+                                                                                                    >
+                                                                                                        <Undo2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                                                        Desfazer Falta (Retornar)
                                                                                                     </DropdownMenuItem>
                                                                                                 )}
                                                                                                 {(appointment as any).series_id && (appointment.status === 'CONFIRMED' || appointment.status === 'PENDING_PAYMENT') && (

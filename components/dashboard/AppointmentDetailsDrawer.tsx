@@ -37,7 +37,7 @@ import { Separator } from '@/components/ui/separator'
 import { 
     Share2, Printer, Copy, Download, Loader2, Check, Video, MessageCircle, 
     Send, DollarSign, Trash2, AlertTriangle, Users, GraduationCap, BookOpen, 
-    SlidersHorizontal, Lock, Unlock, CalendarX, UserX, XCircle, FileText, ChevronRight 
+    SlidersHorizontal, Lock, Unlock, CalendarX, UserX, XCircle, FileText, ChevronRight, Undo2 
 } from 'lucide-react'
 import { DoctorCheckinButton } from '@/components/appointments/DoctorCheckinButton'
 
@@ -179,7 +179,7 @@ export function AppointmentDetailsDrawer({
         }
     }
 
-    async function handleClinicalStatusAction(action: 'THERAPIST_CANCELLED' | 'JUSTIFIED_ABSENCE' | 'UNJUSTIFIED_ABSENCE', reason?: string) {
+    async function handleClinicalStatusAction(action: 'THERAPIST_CANCELLED' | 'JUSTIFIED_ABSENCE' | 'UNJUSTIFIED_ABSENCE' | 'REVERT_STATUS', reason?: string) {
         if (!appointment?.id) return
         setProcessingClinicalStatus(true)
         try {
@@ -868,6 +868,31 @@ export function AppointmentDetailsDrawer({
                                                 </div>
                                                 <ChevronRight className="w-4 h-4 text-rose-500/70 group-hover:text-rose-700 dark:text-rose-400/70 shrink-0 transition-transform group-hover:translate-x-0.5" />
                                             </button>
+
+                                            {/* Opção 4: Desfazer Falta / Ocorrência e Retornar Agendamento */}
+                                            {(appointment.status === 'NO_SHOW' || (appointment.status === 'CANCELLED' && appointment.session_status)) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleClinicalStatusAction('REVERT_STATUS')}
+                                                    disabled={processingClinicalStatus}
+                                                    className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:text-emerald-200 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className="w-7 h-7 rounded-md bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                                                            <Undo2 className="w-4 h-4" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-semibold leading-tight truncate text-emerald-950 dark:text-emerald-200">
+                                                                Desfazer Falta / Retornar Atendimento
+                                                            </p>
+                                                            <p className="text-[10px] text-emerald-800/80 dark:text-emerald-400/80 mt-0.5 truncate">
+                                                                Restaura o agendamento para Confirmado na grade
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className="w-4 h-4 text-emerald-600 group-hover:text-emerald-800 dark:text-emerald-400 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 

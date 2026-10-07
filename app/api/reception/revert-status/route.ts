@@ -91,6 +91,12 @@ export async function POST(request: NextRequest) {
                 // Não compareceu → volta para Confirmado
                 updateData.status = 'CONFIRMED'
                 updateData.waiting_room_notes = null
+                updateData.no_show = false
+                updateData.no_show_reason = null
+                updateData.session_status = null
+                updateData.session_status_notes = null
+                updateData.marked_no_show_at = null
+                updateData.marked_no_show_by = null
                 revertedTo = 'CONFIRMED'
                 break
 
