@@ -81,8 +81,6 @@ export default function AssinaturaPage() {
 
             const impersonationClinicId = cookies['impersonation_clinic_id']
 
-            let targetClinicId = impersonationClinicId
-
             // Obter clínica e role do usuário autenticado
             const { data: userData } = await supabase
                 .from('users')
@@ -97,7 +95,7 @@ export default function AssinaturaPage() {
                 return
             }
 
-            let targetClinicId = impersonationClinicId || userData?.clinic_id
+            const targetClinicId = impersonationClinicId || userData?.clinic_id
 
             if (!targetClinicId) {
                 toast.error('Clínica não encontrada')

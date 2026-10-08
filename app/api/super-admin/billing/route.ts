@@ -150,11 +150,24 @@ export async function POST(request: NextRequest) {
                     .from('clinics')
                     .update({
                         subscription_due_date: dueDateStr,
+                        payment_confirmed: true,
+                        payment_confirmed_at: new Date().toISOString(),
+                        payment_status: 'ACTIVE',
                         is_active: true,
+                        updated_at: new Date().toISOString(),
                     })
                     .eq('id', clinic_id)
 
                 if (updateError) throw new Error('Erro ao atualizar clínica')
+
+                // Limpar notificações financeiras pendentes para a clínica
+                try {
+                    await supabaseAdmin
+                        .from('billing_notifications')
+                        .update({ read_at: new Date().toISOString() })
+                        .eq('clinic_id', clinic_id)
+                        .is('read_at', null)
+                } catch { }
 
                 // Log
                 try {
