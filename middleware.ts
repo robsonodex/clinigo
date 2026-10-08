@@ -173,6 +173,7 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
 
     // Configurações críticas da clínica: Apenas administradores
     '/dashboard/configuracoes/usuarios': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/assinatura': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/plano': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/smtp': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/pagamento': ['CLINIC_ADMIN', 'SUPER_ADMIN'],

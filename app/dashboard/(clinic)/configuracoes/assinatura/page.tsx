@@ -83,19 +83,25 @@ export default function AssinaturaPage() {
 
             let targetClinicId = impersonationClinicId
 
-            if (!targetClinicId) {
-                // Obter clínica associada ao usuário autenticado
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('clinic_id')
-                    .eq('id', user.id)
-                    .single()
+            // Obter clínica e role do usuário autenticado
+            const { data: userData } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', user.id)
+                .single()
 
-                targetClinicId = userData?.clinic_id
+            // Trava de Segurança Estrita: Apenas Administrador da Clínica (ou Super Admin em suporte) pode acessar
+            if (userData?.role !== 'CLINIC_ADMIN' && userData?.role !== 'SUPER_ADMIN') {
+                toast.error('Acesso restrito: Apenas o Administrador da Clínica pode acessar a área de assinatura.')
+                router.replace('/dashboard')
+                return
             }
+
+            let targetClinicId = impersonationClinicId || userData?.clinic_id
 
             if (!targetClinicId) {
                 toast.error('Clínica não encontrada')
+                router.replace('/dashboard')
                 return
             }
 
