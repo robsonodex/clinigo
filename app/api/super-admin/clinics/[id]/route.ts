@@ -204,6 +204,57 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // ============================================
+        // UPDATE DUE DATE (manual by super admin)
+        // ============================================
+        if (action === 'update_due_date') {
+            const { due_date } = body
+            if (!due_date || typeof due_date !== 'string') {
+                return NextResponse.json({ error: 'Data de vencimento obrigatória (YYYY-MM-DD)' }, { status: 400 })
+            }
+
+            const { data: clinic } = await serviceSupabase
+                .from('clinics')
+                .select('name')
+                .eq('id', clinicId)
+                .single()
+
+            if (!clinic) {
+                return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            const { error: updateError } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    subscription_due_date: due_date,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', clinicId)
+
+            if (updateError) {
+                console.error('[PATCH clinics/[id]] Update Due Date error:', updateError)
+                return NextResponse.json({ error: 'Falha ao atualizar vencimento' }, { status: 500 })
+            }
+
+            await serviceSupabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'SUBSCRIPTION_DUE_DATE_UPDATED',
+                resource_type: 'CLINIC',
+                resource_id: clinicId,
+                metadata: {
+                    clinic_name: (clinic as any).name,
+                    new_due_date: due_date,
+                    updated_at: new Date().toISOString(),
+                },
+                created_at: new Date().toISOString(),
+            })
+
+            return NextResponse.json({
+                success: true,
+                message: `Vencimento da clínica "${(clinic as any).name}" atualizado para ${due_date}.`,
+            })
+        }
+
+        // ============================================
         // MARK PAID (manual by super admin)
         // ============================================
         if (action === 'mark_paid') {
@@ -218,15 +269,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             }
 
             const dueDateStr = (clinic as any).subscription_due_date;
-            const currentDueDate = dueDateStr ? new Date(dueDateStr) : new Date();
-            const newDueDate = new Date();
-            
-            // Se o vencimento for no futuro, incrementa a partir do vencimento.
-            // Se for no passado (atrasado), incrementa a partir de hoje.
-            if (currentDueDate > new Date()) {
-                newDueDate.setTime(currentDueDate.getTime());
+            let newDueDateStr: string;
+
+            if (dueDateStr && /^\d{4}-\d{2}-\d{2}/.test(dueDateStr)) {
+                // Manter o dia fixo do vencimento da clínica (ex: dia 07)
+                const [yearStr, monthStr, dayStr] = dueDateStr.slice(0, 10).split('-');
+                let year = parseInt(yearStr, 10);
+                let month = parseInt(monthStr, 10); // 1-12
+                const day = parseInt(dayStr, 10);
+
+                month += 1;
+                if (month > 12) {
+                    month = 1;
+                    year += 1;
+                }
+                const maxDaysInMonth = new Date(year, month, 0).getDate();
+                const safeDay = Math.min(day, maxDaysInMonth);
+                newDueDateStr = `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+            } else {
+                const fallbackDate = new Date();
+                fallbackDate.setMonth(fallbackDate.getMonth() + 1);
+                newDueDateStr = fallbackDate.toISOString().split('T')[0];
             }
-            newDueDate.setMonth(newDueDate.getMonth() + 1);
 
             const { error: updateError } = await serviceSupabase
                 .from('clinics')
@@ -237,7 +301,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                     is_active: true,
                     approval_status: 'active',
                     last_payment_date: new Date().toISOString(),
-                    subscription_due_date: newDueDate.toISOString(),
+                    subscription_due_date: newDueDateStr,
                     blocked_at: null,
                     blocked_reason: null,
                     blocked_by: null,
@@ -258,7 +322,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 resource_id: clinicId,
                 metadata: {
                     clinic_name: (clinic as any).name,
-                    new_due_date: newDueDate.toISOString(),
+                    new_due_date: newDueDateStr,
                     marked_at: new Date().toISOString(),
                 },
                 created_at: new Date().toISOString(),
@@ -280,9 +344,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 console.error('[PATCH clinics/[id]] Payment log error:', logError)
             }
 
+            const [y, m, d] = newDueDateStr.split('-');
+            const formattedDatePtBR = `${d}/${m}/${y}`;
+
             return NextResponse.json({
                 success: true,
-                message: `Pagamento da clínica "${(clinic as any).name}" confirmado. Renovada até ${newDueDate.toLocaleDateString('pt-BR')}.`,
+                message: `Pagamento da clínica "${(clinic as any).name}" confirmado. Renovada até ${formattedDatePtBR}.`,
             })
         }
 

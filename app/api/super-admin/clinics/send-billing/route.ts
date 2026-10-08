@@ -90,6 +90,33 @@ export async function POST(request: NextRequest) {
             })
         }
 
+        // 1. Inserir também em billing_notifications para aparecer no sino financeiro da clínica
+        try {
+            await supabaseAdmin.from('billing_notifications').insert({
+                clinic_id: clinicId,
+                type: 'OVERDUE',
+                title,
+                message,
+                priority: 'HIGH',
+            })
+        } catch (billingNotifErr) {
+            console.warn('[send-billing] Non-fatal: billing_notifications insert failed', billingNotifErr)
+        }
+
+        // 2. Marcar payment_confirmed = false na clínica para que o Banner Vermelho/Âmbar de Fatura Pendente
+        // apareça imediatamente no topo de todas as telas do dashboard de todos os usuários da clínica
+        try {
+            await supabaseAdmin
+                .from('clinics')
+                .update({ 
+                    payment_confirmed: false,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', clinicId)
+        } catch (clinicUpdateErr) {
+            console.warn('[send-billing] Non-fatal: clinic payment_confirmed update failed', clinicUpdateErr)
+        }
+
         // Log the action
         try {
             await supabaseAdmin.from('system_logs').insert({

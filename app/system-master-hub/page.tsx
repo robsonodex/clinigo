@@ -18,6 +18,7 @@ import {
     DollarSign,
     BarChart3,
     Clock,
+    Calendar,
     RefreshCw,
     LogOut,
     CheckCircle2,
@@ -242,6 +243,54 @@ export default function SuperAdminDashboard() {
         error?: string
     }> | null>(null)
     const [resettingClinicPwd, setResettingClinicPwd] = useState(false)
+
+    // Edit Due Date Modal State
+    const [editDueDateModal, setEditDueDateModal] = useState<{
+        open: boolean
+        clinicId: string
+        clinicName: string
+        currentDueDate: string
+    }>({ open: false, clinicId: '', clinicName: '', currentDueDate: '' })
+    const [newDueDateValue, setNewDueDateValue] = useState('')
+    const [savingDueDate, setSavingDueDate] = useState(false)
+
+    const openEditDueDateModal = (clinicId: string, clinicName: string, currentDueDate: string | null) => {
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+        const initialDate = currentDueDate ? currentDueDate.slice(0, 10) : todayStr
+        setEditDueDateModal({
+            open: true,
+            clinicId,
+            clinicName,
+            currentDueDate: initialDate,
+        })
+        setNewDueDateValue(initialDate)
+    }
+
+    const handleSaveDueDate = async () => {
+        if (!editDueDateModal.clinicId || !newDueDateValue) return
+        setSavingDueDate(true)
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${editDueDateModal.clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_due_date',
+                    due_date: newDueDateValue,
+                }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || 'Falha ao atualizar vencimento')
+
+            alert(`Vencimento atualizado para ${newDueDateValue}!`)
+            setEditDueDateModal(prev => ({ ...prev, open: false }))
+            loadDashboard()
+        } catch (error: any) {
+            console.error('Save due date error:', error)
+            alert(`Erro ao atualizar data de vencimento: ${error.message || 'Erro desconhecido'}`)
+        } finally {
+            setSavingDueDate(false)
+        }
+    }
 
     // Users Tab Filter and Grouping States
     const [userSearchTerm, setUserSearchTerm] = useState('')
@@ -785,6 +834,32 @@ export default function SuperAdminDashboard() {
         } catch (error) {
             console.error('Error deleting scheduled:', error)
             alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        }
+    }
+
+    const [triggeringMatured, setTriggeringMatured] = useState(false)
+    const handleTriggerMatured = async () => {
+        setTriggeringMatured(true)
+        try {
+            const res = await fetch('/api/super-admin/clinics/scheduled-billings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'execute_matured' }),
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Erro ao processar cobranças agendadas')
+            }
+
+            const result = await res.json()
+            alert(result.data?.message || 'Cobranças agendadas processadas com sucesso!')
+            loadScheduledBillings()
+        } catch (error) {
+            console.error('Error triggering matured scheduled billings:', error)
+            alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+        } finally {
+            setTriggeringMatured(false)
         }
     }
 
@@ -1375,7 +1450,15 @@ export default function SuperAdminDashboard() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {format(new Date(clinic.renewalDate), 'dd/MM/yyyy', { locale: ptBR })}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openEditDueDateModal(clinic.id, clinic.name, clinic.subscriptionDueDate || clinic.renewalDate)}
+                                                        className="group inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors font-medium text-slate-800"
+                                                        title="Clique para alterar a data de vencimento desta clínica"
+                                                    >
+                                                        <Calendar className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600" />
+                                                        <span>{format(new Date(clinic.renewalDate), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                                    </button>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1">
@@ -2212,6 +2295,16 @@ export default function SuperAdminDashboard() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={handleTriggerMatured}
+                                        disabled={triggeringMatured || loadingScheduled}
+                                        className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 font-semibold shadow-sm"
+                                    >
+                                        <Send className={`h-4 w-4 ${triggeringMatured ? 'animate-spin' : ''}`} />
+                                        <span>Processar Vencidas Agora</span>
+                                    </Button>
+                                    <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={loadScheduledBillings}
@@ -2279,15 +2372,26 @@ export default function SuperAdminDashboard() {
                                                         <TableCell className="text-right">
                                                             <div className="flex justify-end gap-1.5">
                                                                 {item.status === 'pending' && (
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => handleUpdateScheduledStatus(item.id, 'paused', 'pausar')}
-                                                                        className="h-10 px-3 border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400 font-semibold"
-                                                                        title="Pausar agendamento"
-                                                                    >
-                                                                        Pausar
-                                                                    </Button>
+                                                                    <>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleUpdateScheduledStatus(item.id, 'sent', 'disparar agora')}
+                                                                            className="h-10 px-3 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-400 font-semibold"
+                                                                            title="Disparar cobrança agora"
+                                                                        >
+                                                                            Disparar Agora
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleUpdateScheduledStatus(item.id, 'paused', 'pausar')}
+                                                                            className="h-10 px-3 border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400 font-semibold"
+                                                                            title="Pausar agendamento"
+                                                                        >
+                                                                            Pausar
+                                                                        </Button>
+                                                                    </>
                                                                 )}
                                                                 {item.status === 'paused' && (
                                                                     <Button
@@ -2409,7 +2513,7 @@ export default function SuperAdminDashboard() {
                                 className="resize-y"
                             />
                             <p className="text-xs text-gray-500">
-                                Esta mensagem aparecerá na notificação que os usuários da clínica receberão.
+                                Ao enviar, a clínica receberá a notificação no sino e o <strong>Banner de Alerta de Fatura Pendente</strong> será exibido no topo do painel de todos os usuários.
                             </p>
                         </div>
 

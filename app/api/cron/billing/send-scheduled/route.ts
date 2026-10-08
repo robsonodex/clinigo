@@ -107,6 +107,21 @@ export async function GET(request: Request) {
                     throw new Error(`Failed to insert notifications: ${insertError.message}`)
                 }
 
+                // Inserir em billing_notifications e marcar payment_confirmed = false para o banner de tela inteira
+                try {
+                    await supabase.from('billing_notifications').insert({
+                        clinic_id: item.clinic_id,
+                        type: 'OVERDUE',
+                        title: item.title,
+                        message: item.message,
+                        priority: 'HIGH',
+                    })
+                    await supabase
+                        .from('clinics')
+                        .update({ payment_confirmed: false, updated_at: new Date().toISOString() })
+                        .eq('id', item.clinic_id)
+                } catch { }
+
                 // Logar a ação no log de sistema
                 try {
                     await supabase.from('system_logs').insert({

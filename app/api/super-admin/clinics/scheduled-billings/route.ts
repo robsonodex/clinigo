@@ -124,14 +124,137 @@ export async function PATCH(request: NextRequest) {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
 
-        const { id, status } = await request.json()
+        const body = await request.json()
+
+        // Suporte a disparo manual direto de cobranças vencidas / maduras
+        if (body.action === 'execute_matured') {
+            const now = new Date().toISOString()
+            const { data: pendingBillings, error: fetchError } = await supabaseAdmin
+                .from('scheduled_billings')
+                .select('*')
+                .eq('status', 'pending')
+                .lte('scheduled_for', now)
+                .order('scheduled_for', { ascending: true })
+
+            if (fetchError) {
+                return new Response(JSON.stringify({ error: 'Erro ao buscar agendamentos' }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' },
+                })
+            }
+
+            let sentCount = 0
+            for (const item of (pendingBillings || [])) {
+                const { data: clinicUsers } = await supabaseAdmin
+                    .from('users')
+                    .select('id')
+                    .eq('clinic_id', item.clinic_id)
+
+                if (clinicUsers && clinicUsers.length > 0) {
+                    const notifications = clinicUsers.map((u: any) => ({
+                        user_id: u.id,
+                        clinic_id: item.clinic_id,
+                        title: item.title,
+                        message: item.message,
+                        type: 'billing_reminder',
+                        read: false,
+                        metadata: {
+                            sent_by: adminUser?.email || 'system_master_hub',
+                            clinic_name: item.clinic_name,
+                            scheduled_billing_id: item.id
+                        },
+                    }))
+
+                    await supabaseAdmin.from('notifications').insert(notifications)
+                }
+
+                // Inserir também em billing_notifications e marcar payment_confirmed = false para o banner de tela inteira
+                try {
+                    await supabaseAdmin.from('billing_notifications').insert({
+                        clinic_id: item.clinic_id,
+                        type: 'OVERDUE',
+                        title: item.title,
+                        message: item.message,
+                        priority: 'HIGH',
+                    })
+                    await supabaseAdmin
+                        .from('clinics')
+                        .update({ payment_confirmed: false, updated_at: new Date().toISOString() })
+                        .eq('id', item.clinic_id)
+                } catch { }
+
+                await supabaseAdmin
+                    .from('scheduled_billings')
+                    .update({ status: 'sent', updated_at: new Date().toISOString() })
+                    .eq('id', item.id)
+
+                sentCount++
+            }
+
+            return successResponse({
+                success: true,
+                processed: pendingBillings?.length || 0,
+                sent: sentCount,
+                message: `${sentCount} cobrança(s) agendada(s) disparada(s) com sucesso.`
+            })
+        }
+
+        const { id, status } = body
 
         if (!id || !status) {
             throw new BadRequestError('id e status são obrigatórios')
         }
 
-        if (!['pending', 'paused', 'cancelled'].includes(status)) {
-            throw new BadRequestError('Status inválido. Use pending, paused ou cancelled')
+        if (!['pending', 'paused', 'cancelled', 'sent'].includes(status)) {
+            throw new BadRequestError('Status inválido. Use pending, paused, cancelled ou sent')
+        }
+
+        // Se for forçar disparo de um agendamento individual
+        if (status === 'sent') {
+            const { data: item } = await supabaseAdmin
+                .from('scheduled_billings')
+                .select('*')
+                .eq('id', id)
+                .single()
+
+            if (item) {
+                const { data: clinicUsers } = await supabaseAdmin
+                    .from('users')
+                    .select('id')
+                    .eq('clinic_id', item.clinic_id)
+
+                if (clinicUsers && clinicUsers.length > 0) {
+                    const notifications = clinicUsers.map((u: any) => ({
+                        user_id: u.id,
+                        clinic_id: item.clinic_id,
+                        title: item.title,
+                        message: item.message,
+                        type: 'billing_reminder',
+                        read: false,
+                        metadata: {
+                            sent_by: adminUser?.email || 'system_master_hub',
+                            clinic_name: item.clinic_name,
+                            scheduled_billing_id: item.id
+                        },
+                    }))
+
+                    await supabaseAdmin.from('notifications').insert(notifications)
+                }
+
+                try {
+                    await supabaseAdmin.from('billing_notifications').insert({
+                        clinic_id: item.clinic_id,
+                        type: 'OVERDUE',
+                        title: item.title,
+                        message: item.message,
+                        priority: 'HIGH',
+                    })
+                    await supabaseAdmin
+                        .from('clinics')
+                        .update({ payment_confirmed: false, updated_at: new Date().toISOString() })
+                        .eq('id', item.clinic_id)
+                } catch { }
+            }
         }
 
         const { data, error } = await supabaseAdmin

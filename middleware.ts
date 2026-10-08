@@ -360,31 +360,18 @@ export async function middleware(request: NextRequest) {
         '/api/auth/session/validate'
     ]
 
-    if (AUTH_API_ROUTES.some(route => pathname.startsWith(route))) {
+    // Rotas de alta frequência e webhooks que realizam sua própria validação interna
+    const FAST_BYPASS_ROUTES = [
+        '/api/health',
+        '/api/payments/webhook',
+        '/api/billing/webhook',
+        '/api/webhooks',
+        '/api/chatbot',
+    ]
+
+    if (AUTH_API_ROUTES.some(route => pathname.startsWith(route)) || FAST_BYPASS_ROUTES.some(route => pathname.startsWith(route))) {
         return NextResponse.next()
     }
-
-    // DEBUG: Log all /api/clinics requests to diagnose 404 issue
-    if (pathname.startsWith('/api/clinics/') && !pathname.includes('by-slug')) {
-        console.log('[MIDDLEWARE DEBUG] /api/clinics request:', {
-            pathname,
-            method: request.method,
-            url: request.url,
-        })
-    }
-
-    // DEBUG: Log /api/appointments requests for 404 diagnosis
-    if (pathname.startsWith('/api/appointments')) {
-        console.log('[MIDDLEWARE DEBUG] /api/appointments request:', {
-            pathname,
-            method: request.method,
-            url: request.url,
-        })
-    }
-
-
-
-    // Skip static assets and high-velocity public pages
     if (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/api/public') ||
@@ -692,17 +679,7 @@ export async function middleware(request: NextRequest) {
         return response
     }
 
-    // DEBUG: Log /api/doctors schedules requests (Correct Location)
-    if (pathname.includes('/schedules') && pathname.startsWith('/api/doctors')) {
-        console.log('[MIDDLEWARE DEBUG] /api/doctors/.../schedules request:', {
-            pathname,
-            method: request.method,
-            userPresent: !!user,
-            isPublicRoute,
-            isPublicPage,
-            userRole: user?.user_metadata?.role,
-        })
-    }
+
 
     // Protected API without user = 401
     if (pathname.startsWith('/api') && !user) {
