@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
+
 export async function PATCH(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
