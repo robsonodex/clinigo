@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import io, { Socket } from 'socket.io-client'
+import { createClient } from '@/lib/supabase/client'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface UseVideoCallOptions {
     roomId: string
@@ -10,6 +11,32 @@ interface UseVideoCallOptions {
     onUserJoined?: (userId: string, role: string) => void
     onUserLeft?: (userId: string) => void
     onError?: (error: string) => void
+}
+
+const getIceConfiguration = (): RTCConfiguration => {
+    const iceServers: RTCIceServer[] = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.services.mozilla.com' },
+    ]
+
+    const turnUrl = process.env.NEXT_PUBLIC_TURN_SERVER_URL
+    if (turnUrl) {
+        const turnServer: RTCIceServer = { urls: turnUrl }
+        if (process.env.NEXT_PUBLIC_TURN_USERNAME) {
+            turnServer.username = process.env.NEXT_PUBLIC_TURN_USERNAME
+        }
+        if (process.env.NEXT_PUBLIC_TURN_CREDENTIAL) {
+            turnServer.credential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL
+        }
+        iceServers.push(turnServer)
+    }
+
+    return {
+        iceServers,
+        iceCandidatePoolSize: 10,
+    }
 }
 
 export function useVideoCall({
@@ -36,17 +63,12 @@ export function useVideoCall({
         timestamp: Date
     }>>([])
 
-    const socketRef = useRef<Socket | null>(null)
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
     const localStreamRef = useRef<MediaStream | null>(null)
-    const remoteSocketIdRef = useRef<string | null>(null)
-
-    const ICE_SERVERS = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-        ]
-    }
+    const channelRef = useRef<RealtimeChannel | null>(null)
+    const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
+    const hasOfferedRef = useRef(false)
+    const isCallActiveRef = useRef(true)
 
     // Initialize local media
     useEffect(() => {
@@ -68,8 +90,8 @@ export function useVideoCall({
                 localStreamRef.current = stream
                 setLocalStream(stream)
             } catch (error) {
-                console.error('Error accessing media:', error)
-                onError?.('Não foi possível acessar câmera/microfone. Verifique as permissões.')
+                console.error('[WebRTC] Error accessing media devices:', error)
+                onError?.('Não foi possível acessar câmera/microfone. Verifique as permissões do navegador.')
             }
         }
 
@@ -78,101 +100,68 @@ export function useVideoCall({
         return () => {
             localStreamRef.current?.getTracks().forEach(track => track.stop())
         }
-    }, [])
-
-    // Initialize socket
-    useEffect(() => {
-        if (!token) return
-
-        const socket = io(process.env.NEXT_PUBLIC_SIGNALING_URL!, {
-            auth: { token }
-        })
-
-        socketRef.current = socket
-
-        socket.on('connect', () => {
-            console.log('✅ Socket connected')
-            setIsConnecting(true)
-            socket.emit('join-room', { roomId, appointmentId, role })
-        })
-
-        socket.on('room-users', async (data: any) => {
-            console.log('👥 Room users:', data)
-            setIsConnecting(false)
-
-            const otherUser = data.users.find((u: any) => u.socketId !== data.mySocketId)
-            if (otherUser) {
-                remoteSocketIdRef.current = otherUser.socketId
-                await createOffer(otherUser.socketId)
-            }
-        })
-
-        socket.on('user-joined', async (data: any) => {
-            console.log('👋 User joined:', data)
-            remoteSocketIdRef.current = data.socketId
-            onUserJoined?.(data.userId, data.role)
-        })
-
-        socket.on('user-left', (data: any) => {
-            console.log('👋 User left:', data)
-            setRemoteStream(null)
-            setIsConnected(false)
-            peerConnectionRef.current?.close()
-            peerConnectionRef.current = null
-            onUserLeft?.(data.userId)
-        })
-
-        socket.on('webrtc-offer', handleReceiveOffer)
-        socket.on('webrtc-answer', handleReceiveAnswer)
-        socket.on('webrtc-ice-candidate', handleReceiveIceCandidate)
-
-        socket.on('chat-message', (data: any) => {
-            setChatMessages(prev => [...prev, data])
-        })
-
-        socket.on('error', (data: any) => {
-            console.error('Socket error:', data)
-            onError?.(data.message)
-        })
-
-        return () => {
-            socket.disconnect()
-        }
-    }, [token, roomId, appointmentId, role])
+    }, [onError])
 
     const createPeerConnection = useCallback(() => {
-        const pc = new RTCPeerConnection(ICE_SERVERS)
+        if (peerConnectionRef.current) {
+            return peerConnectionRef.current
+        }
 
-        localStreamRef.current?.getTracks().forEach(track => {
-            pc.addTrack(track, localStreamRef.current!)
-        })
+        const pc = new RTCPeerConnection(getIceConfiguration())
+
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach((track) => {
+                pc.addTrack(track, localStreamRef.current!)
+            })
+        }
 
         pc.ontrack = (event) => {
-            console.log('🎥 Received remote track')
+            console.log('[WebRTC] Received remote track:', event.track.kind)
             const [stream] = event.streams
-            setRemoteStream(stream)
-            onRemoteStream?.(stream)
-            setIsConnected(true)
-            setIsConnecting(false)
+            if (stream) {
+                setRemoteStream(stream)
+                onRemoteStream?.(stream)
+                setIsConnected(true)
+                setIsConnecting(false)
+            }
         }
 
         pc.onicecandidate = (event) => {
-            if (event.candidate && remoteSocketIdRef.current) {
-                socketRef.current?.emit('webrtc-ice-candidate', {
-                    targetSocketId: remoteSocketIdRef.current,
-                    candidate: event.candidate
+            if (event.candidate && channelRef.current) {
+                channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'webrtc-ice-candidate',
+                    payload: {
+                        candidate: event.candidate.toJSON(),
+                        senderRole: role
+                    }
                 })
             }
         }
 
-        pc.oniceconnectionstatechange = () => {
-            console.log('ICE state:', pc.iceConnectionState)
+        pc.onconnectionstatechange = () => {
+            console.log('[WebRTC] Connection state:', pc.connectionState)
+            if (pc.connectionState === 'connected') {
+                setIsConnected(true)
+                setIsConnecting(false)
+                setConnectionQuality('good')
+            } else if (pc.connectionState === 'disconnected') {
+                setConnectionQuality('poor')
+            } else if (pc.connectionState === 'failed') {
+                setIsConnected(false)
+                setIsConnecting(false)
+                setConnectionQuality('bad')
+            }
+        }
 
+        pc.oniceconnectionstatechange = () => {
+            console.log('[WebRTC] ICE state:', pc.iceConnectionState)
             switch (pc.iceConnectionState) {
                 case 'connected':
                 case 'completed':
                     setConnectionQuality('good')
                     setIsConnected(true)
+                    setIsConnecting(false)
                     break
                 case 'disconnected':
                     setConnectionQuality('poor')
@@ -189,64 +178,232 @@ export function useVideoCall({
 
         peerConnectionRef.current = pc
         return pc
-    }, [onRemoteStream])
+    }, [onRemoteStream, role])
 
-    const createOffer = async (targetSocketId: string) => {
+    const initiateOffer = useCallback(async () => {
+        if (!isCallActiveRef.current) return
         try {
+            setIsConnecting(true)
             const pc = createPeerConnection()
-
-            const offer = await pc.createOffer()
+            const offer = await pc.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            })
             await pc.setLocalDescription(offer)
+            hasOfferedRef.current = true
 
-            socketRef.current?.emit('webrtc-offer', {
-                targetSocketId,
-                offer
+            channelRef.current?.send({
+                type: 'broadcast',
+                event: 'webrtc-offer',
+                payload: {
+                    offer: {
+                        type: offer.type,
+                        sdp: offer.sdp
+                    },
+                    senderRole: role
+                }
             })
         } catch (error) {
-            console.error('Error creating offer:', error)
+            console.error('[WebRTC] Error creating offer:', error)
+            onError?.('Falha ao iniciar conexão de vídeo.')
         }
-    }
+    }, [createPeerConnection, onError, role])
 
-    const handleReceiveOffer = async (data: any) => {
+    const handleReceiveOffer = useCallback(async (data: { offer: RTCSessionDescriptionInit; senderRole: string }) => {
+        if (data.senderRole === role || !isCallActiveRef.current) return
         try {
-            remoteSocketIdRef.current = data.senderSocketId
+            setIsConnecting(true)
             const pc = createPeerConnection()
-
             await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
+
+            // Flush pending ICE candidates
+            while (pendingCandidatesRef.current.length > 0) {
+                const cand = pendingCandidatesRef.current.shift()
+                if (cand) {
+                    await pc.addIceCandidate(new RTCIceCandidate(cand))
+                }
+            }
 
             const answer = await pc.createAnswer()
             await pc.setLocalDescription(answer)
 
-            socketRef.current?.emit('webrtc-answer', {
-                targetSocketId: data.senderSocketId,
-                answer
+            channelRef.current?.send({
+                type: 'broadcast',
+                event: 'webrtc-answer',
+                payload: {
+                    answer: {
+                        type: answer.type,
+                        sdp: answer.sdp
+                    },
+                    senderRole: role
+                }
             })
         } catch (error) {
-            console.error('Error handling offer:', error)
+            console.error('[WebRTC] Error handling offer:', error)
+            onError?.('Erro ao negociar sala de vídeo.')
         }
-    }
+    }, [createPeerConnection, onError, role])
 
-    const handleReceiveAnswer = async (data: any) => {
+    const handleReceiveAnswer = useCallback(async (data: { answer: RTCSessionDescriptionInit; senderRole: string }) => {
+        if (data.senderRole === role || !isCallActiveRef.current) return
         try {
-            await peerConnectionRef.current?.setRemoteDescription(
-                new RTCSessionDescription(data.answer)
-            )
-        } catch (error) {
-            console.error('Error handling answer:', error)
-        }
-    }
+            const pc = peerConnectionRef.current
+            if (pc && pc.signalingState !== 'stable') {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer))
 
-    const handleReceiveIceCandidate = async (data: any) => {
-        try {
-            if (peerConnectionRef.current?.remoteDescription) {
-                await peerConnectionRef.current.addIceCandidate(
-                    new RTCIceCandidate(data.candidate)
-                )
+                while (pendingCandidatesRef.current.length > 0) {
+                    const cand = pendingCandidatesRef.current.shift()
+                    if (cand) {
+                        await pc.addIceCandidate(new RTCIceCandidate(cand))
+                    }
+                }
             }
         } catch (error) {
-            console.error('Error adding ICE candidate:', error)
+            console.error('[WebRTC] Error handling answer:', error)
         }
-    }
+    }, [role])
+
+    const handleReceiveIceCandidate = useCallback(async (data: { candidate: RTCIceCandidateInit; senderRole: string }) => {
+        if (data.senderRole === role || !isCallActiveRef.current) return
+        try {
+            const pc = peerConnectionRef.current
+            if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate))
+            } else {
+                pendingCandidatesRef.current.push(data.candidate)
+            }
+        } catch (error) {
+            console.error('[WebRTC] Error adding ICE candidate:', error)
+        }
+    }, [role])
+
+    // Supabase Realtime Signaling setup
+    useEffect(() => {
+        if (!token || !roomId) return
+        isCallActiveRef.current = true
+
+        const supabase = createClient()
+        const channelName = `teleconsulta_${roomId}`
+
+        const channel = supabase.channel(channelName, {
+            config: {
+                broadcast: { self: false },
+                presence: { key: role }
+            }
+        })
+
+        channelRef.current = channel
+
+        channel
+            .on('broadcast', { event: 'webrtc-offer' }, ({ payload }) => {
+                handleReceiveOffer(payload)
+            })
+            .on('broadcast', { event: 'webrtc-answer' }, ({ payload }) => {
+                handleReceiveAnswer(payload)
+            })
+            .on('broadcast', { event: 'webrtc-ice-candidate' }, ({ payload }) => {
+                handleReceiveIceCandidate(payload)
+            })
+            .on('broadcast', { event: 'peer-announce' }, ({ payload }) => {
+                if (payload?.senderRole && payload.senderRole !== role) {
+                    onUserJoined?.(payload.senderRole, payload.senderRole)
+                    if (role === 'doctor') {
+                        initiateOffer()
+                    }
+                }
+            })
+            .on('broadcast', { event: 'chat-message' }, ({ payload }) => {
+                setChatMessages((prev) => [
+                    ...prev,
+                    {
+                        userId: payload.userId === role ? 'me' : payload.userId,
+                        message: payload.message,
+                        timestamp: new Date(payload.timestamp)
+                    }
+                ])
+            })
+            .on('broadcast', { event: 'user-left' }, ({ payload }) => {
+                if (payload?.senderRole !== role) {
+                    setRemoteStream(null)
+                    setIsConnected(false)
+                    if (peerConnectionRef.current) {
+                        peerConnectionRef.current.close()
+                        peerConnectionRef.current = null
+                    }
+                    onUserLeft?.(payload?.senderRole)
+                }
+            })
+            .on('presence', { event: 'sync' }, () => {
+                const presenceState = channel.presenceState()
+                const otherRole = role === 'doctor' ? 'patient' : 'doctor'
+                const otherPresence = presenceState[otherRole]
+
+                if (otherPresence && otherPresence.length > 0) {
+                    onUserJoined?.(otherRole, otherRole)
+                    if (role === 'doctor' && !hasOfferedRef.current) {
+                        initiateOffer()
+                    }
+                }
+            })
+            .on('presence', { event: 'join' }, ({ key }) => {
+                if (key !== role) {
+                    onUserJoined?.(key, key)
+                    if (role === 'doctor') {
+                        initiateOffer()
+                    }
+                }
+            })
+            .on('presence', { event: 'leave' }, ({ key }) => {
+                if (key !== role) {
+                    setRemoteStream(null)
+                    setIsConnected(false)
+                    if (peerConnectionRef.current) {
+                        peerConnectionRef.current.close()
+                        peerConnectionRef.current = null
+                    }
+                    onUserLeft?.(key)
+                }
+            })
+
+        channel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                setIsConnecting(true)
+                await channel.track({
+                    role,
+                    token,
+                    online_at: new Date().toISOString()
+                })
+
+                channel.send({
+                    type: 'broadcast',
+                    event: 'peer-announce',
+                    payload: { senderRole: role, token }
+                })
+            }
+        })
+
+        return () => {
+            isCallActiveRef.current = false
+            channel.send({
+                type: 'broadcast',
+                event: 'user-left',
+                payload: { senderRole: role }
+            })
+            supabase.removeChannel(channel)
+            channelRef.current = null
+        }
+    }, [
+        roomId,
+        token,
+        role,
+        appointmentId,
+        handleReceiveOffer,
+        handleReceiveAnswer,
+        handleReceiveIceCandidate,
+        initiateOffer,
+        onUserJoined,
+        onUserLeft
+    ])
 
     const toggleAudio = useCallback(() => {
         if (localStreamRef.current) {
@@ -254,10 +411,14 @@ export function useVideoCall({
             if (audioTrack) {
                 audioTrack.enabled = !audioTrack.enabled
                 setIsAudioEnabled(audioTrack.enabled)
-                socketRef.current?.emit('toggle-audio', audioTrack.enabled)
+                channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'toggle-audio',
+                    payload: { enabled: audioTrack.enabled, senderRole: role }
+                })
             }
         }
-    }, [])
+    }, [role])
 
     const toggleVideo = useCallback(() => {
         if (localStreamRef.current) {
@@ -265,10 +426,14 @@ export function useVideoCall({
             if (videoTrack) {
                 videoTrack.enabled = !videoTrack.enabled
                 setIsVideoEnabled(videoTrack.enabled)
-                socketRef.current?.emit('toggle-video', videoTrack.enabled)
+                channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'toggle-video',
+                    payload: { enabled: videoTrack.enabled, senderRole: role }
+                })
             }
         }
-    }, [])
+    }, [role])
 
     const toggleScreenShare = useCallback(async () => {
         try {
@@ -291,7 +456,11 @@ export function useVideoCall({
                 }
 
                 setIsScreenSharing(true)
-                socketRef.current?.emit('share-screen', true)
+                channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'share-screen',
+                    payload: { active: true, senderRole: role }
+                })
             } else {
                 const videoTrack = localStreamRef.current?.getVideoTracks()[0]
                 const sender = peerConnectionRef.current?.getSenders().find(
@@ -303,28 +472,55 @@ export function useVideoCall({
                 }
 
                 setIsScreenSharing(false)
-                socketRef.current?.emit('share-screen', false)
+                channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'share-screen',
+                    payload: { active: false, senderRole: role }
+                })
             }
         } catch (error) {
-            console.error('Error toggling screen share:', error)
+            console.error('[WebRTC] Error toggling screen share:', error)
         }
-    }, [isScreenSharing])
+    }, [isScreenSharing, role])
 
     const sendChatMessage = useCallback((message: string) => {
-        socketRef.current?.emit('chat-message', message)
+        if (!message.trim() || !channelRef.current) return
+        channelRef.current.send({
+            type: 'broadcast',
+            event: 'chat-message',
+            payload: {
+                userId: role,
+                message,
+                timestamp: new Date().toISOString()
+            }
+        })
         setChatMessages(prev => [...prev, {
             userId: 'me',
             message,
             timestamp: new Date()
         }])
-    }, [])
+    }, [role])
 
     const endCall = useCallback(() => {
+        isCallActiveRef.current = false
         localStreamRef.current?.getTracks().forEach(track => track.stop())
-        peerConnectionRef.current?.close()
-        socketRef.current?.emit('leave-room')
-        socketRef.current?.disconnect()
-    }, [])
+        if (peerConnectionRef.current) {
+            peerConnectionRef.current.close()
+            peerConnectionRef.current = null
+        }
+        if (channelRef.current) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'user-left',
+                payload: { senderRole: role }
+            })
+            const supabase = createClient()
+            supabase.removeChannel(channelRef.current)
+            channelRef.current = null
+        }
+        setIsConnected(false)
+        setIsConnecting(false)
+    }, [role])
 
     return {
         localStream,

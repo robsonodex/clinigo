@@ -98,7 +98,7 @@ export function VideoCallRoom({
                     </span>
                     {isConnected && (
                         <Badge variant="outline" className="text-white border-white/20">
-                            {role === 'doctor' ? '👨‍⚕️ Médico' : '👤 Paciente'}
+                            {role === 'doctor' ? 'Médico' : 'Paciente'}
                         </Badge>
                     )}
                 </div>

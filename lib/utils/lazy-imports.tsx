@@ -66,7 +66,7 @@ export const LazyRichTextEditor = dynamic(
 
 // Video call (carrega apenas na sala)
 export const LazyVideoCallRoom = dynamic(
-    () => import('@/components/video/VideoCallRoom').then(mod => mod.VideoCallRoom),
+    () => import('@/components/video-call/VideoCallRoom').then(mod => mod.VideoCallRoom),
     {
         loading: () => <LoadingSpinner />,
         ssr: false
