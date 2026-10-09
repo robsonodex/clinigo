@@ -7,6 +7,7 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PLAN_PRICES } from '@/lib/constants/plans'
+import { computeMonthlyTotalCents, SEAT_COUNTED_ROLES } from '@/lib/services/seat-licensing'
 
 export async function GET(request: NextRequest) {
     try {
@@ -33,8 +34,24 @@ export async function GET(request: NextRequest) {
         // Get all clinics
         const { data: clinics } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price, addons')
+            .select('id, name, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price, addons, seat_price_override_cents, seat_overage_waived')
             .order('created_at', { ascending: false })
+
+        // Contar assentos ativos por clínica para faturamento derivado
+        const { data: countedUsers } = await supabaseAdmin
+            .from('users')
+            .select('clinic_id, role, is_active, email')
+            .eq('is_active', true)
+            .in('role', SEAT_COUNTED_ROLES)
+
+        const clinicActiveSeatsMap: Record<string, number> = {}
+        if (countedUsers) {
+            for (const u of countedUsers) {
+                if (u.email && u.email.toLowerCase().startsWith('inativo-')) continue
+                if (!u.clinic_id) continue
+                clinicActiveSeatsMap[u.clinic_id] = (clinicActiveSeatsMap[u.clinic_id] || 0) + 1
+            }
+        }
 
         const isDemoClinic = (c: any) => c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
 
@@ -42,11 +59,15 @@ export async function GET(request: NextRequest) {
         const totalClinics = clinics?.length || 0
         const activeClinics = clinics?.filter(c => c.is_active && !isDemoClinic(c)).length || 0
 
-        // MRR calculation - Demo clinics are ALWAYS zeroed out (R$ 0). Only real clinics (Espaço Incluir, WorldSensory, etc.) count.
+        // MRR calculation - Inclui adicionais de licença de assento pela mesma fórmula do sistema
         const mrr = clinics?.reduce((sum, c) => {
             if (!c.is_active || isDemoClinic(c)) return sum
-            const price = c.custom_price !== null && c.custom_price !== undefined ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
-            return sum + price
+            const activeSeats = clinicActiveSeatsMap[c.id] || 0
+            const { totalCents } = computeMonthlyTotalCents(c.plan_type, c.custom_price, activeSeats, {
+                seatPriceOverrideCents: c.seat_price_override_cents,
+                seatOverageWaived: c.seat_overage_waived,
+            })
+            return sum + (totalCents / 100)
         }, 0) || 0
 
         // Clinics by plan (real clinics only for enterprise/starter counts)

@@ -129,6 +129,20 @@ export async function POST(
         if (importType === 'patients') {
             result = await importPatients(csvContent, clinicId)
         } else {
+            // Verificar limite de assentos antes de importar profissionais em lote
+            const { getSeatStatus } = await import('@/lib/services/seat-licensing')
+            const seatStatus = await getSeatStatus(clinicId)
+            if (seatStatus.seat_billing_mode === 'enforce' && seatStatus.included_seats !== null) {
+                const lines = csvContent.trim().split('\n').filter(l => l.trim().length > 0)
+                const estimatedCount = Math.max(0, lines.length - 1)
+                if (seatStatus.active_seats + estimatedCount > seatStatus.included_seats) {
+                    return NextResponse.json({
+                        error: `A importação de ${estimatedCount} profissionais excederia o limite do plano (${seatStatus.active_seats} em uso de ${seatStatus.included_seats} incluídas). Para adicionar usuários adicionais, realize o cadastro individual com confirmação de licença ou faça upgrade de plano.`,
+                        code: 'SEAT_LIMIT_BULK_BLOCKED',
+                    }, { status: 409 })
+                }
+            }
+
             result = await importDoctors(csvContent, clinicId)
         }
 

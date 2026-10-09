@@ -31,6 +31,7 @@ import { Loader2, Eye, EyeOff, Clock, DollarSign, Star, Video, Shield, Dices, Co
 import type { Doctor } from '@/lib/api-client'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { useCouncilLabel } from '@/lib/hooks/use-council-label'
+import { SeatOverageDialog, type SeatQuote } from '@/components/billing/seat-overage-dialog'
 
 interface DoctorFormDialogProps {
     open: boolean
@@ -113,6 +114,12 @@ export function DoctorFormDialog({
 
     const [selectedCouncil, setSelectedCouncil] = useState<string>('CRM')
     const [customCouncil, setCustomCouncil] = useState<string>('')
+
+    // Seat Licensing Overage Confirmation State
+    const [overageDialogOpen, setOverageDialogOpen] = useState(false)
+    const [pendingQuote, setPendingQuote] = useState<SeatQuote | null>(null)
+    const [pendingPayload, setPendingPayload] = useState<any | null>(null)
+    const [overageError, setOverageError] = useState<string | null>(null)
 
     const extendedSchema = useMemo(() => {
         return extendedDoctorFormSchema.extend({
@@ -286,18 +293,53 @@ export function DoctorFormDialog({
                 }
             )
         } else {
-            createDoctor.mutate({
+            const payload = {
                 ...data,
                 council_name: finalCouncil,
                 specialties_additional: additionalSpecialties,
                 consultation_duration: data.consultation_duration as any,
                 display_settings: displaySettings as any,
-            } as any, {
+            }
+            createDoctor.mutate(payload as any, {
                 onSuccess: () => {
                     onOpenChange(false)
                     reset()
                 },
+                onError: (error: any) => {
+                    if (error?.status === 409 && (error?.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED' || error?.data?.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED')) {
+                        const quote = error.data?.quote || error.quote
+                        if (quote) {
+                            setPendingQuote(quote)
+                            setPendingPayload(payload)
+                            setOverageError(null)
+                            setOverageDialogOpen(true)
+                        }
+                    }
+                },
             })
+        }
+    }
+
+    const handleConfirmSeatOverage = async (quoteId: string) => {
+        if (!pendingPayload) return
+        try {
+            await createDoctor.mutateAsync({
+                ...pendingPayload,
+                quote_id: quoteId,
+            } as any)
+            setOverageDialogOpen(false)
+            onOpenChange(false)
+            reset()
+        } catch (error: any) {
+            if (error?.status === 409 && (error?.code === 'QUOTE_STALE' || error?.data?.code === 'QUOTE_STALE')) {
+                const newQuote = error.data?.quote || error.quote
+                if (newQuote) {
+                    setPendingQuote(newQuote)
+                }
+                setOverageError('A cotação foi atualizada devido a alterações recentes no número de usuários ativos. Por favor, confirme novamente.')
+                return
+            }
+            setOverageError(error.message || 'Erro ao confirmar adição de profissional com licença extra')
         }
     }
 
@@ -305,6 +347,7 @@ export function DoctorFormDialog({
     const isAccepting = watch('is_accepting_appointments')
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogTitle>
@@ -813,5 +856,15 @@ export function DoctorFormDialog({
                 </form>
             </DialogContent>
         </Dialog>
+
+        {/* Modal de Confirmação de Licença Adicional de Assento */}
+        <SeatOverageDialog
+            open={overageDialogOpen}
+            onOpenChange={setOverageDialogOpen}
+            quote={pendingQuote}
+            onConfirm={handleConfirmSeatOverage}
+            errorMessage={overageError}
+        />
+        </>
     )
 }

@@ -3,6 +3,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { cookies } from 'next/headers'
 import { addDays, format } from 'date-fns'
+import { getSeatStatus, computeMonthlyTotalCents } from '@/lib/services/seat-licensing'
 
 // =============================================================================
 // Tipos
@@ -201,9 +202,19 @@ export async function POST(req: NextRequest) {
                 }
             }
 
+            // Calcular valor total incluindo licenças de assento adicionais (fonte da verdade única)
+            const seatStatus = await getSeatStatus(clinic.id)
+            const finalPriceCents = (targetPlan && targetPlan !== clinic.plan_type)
+                ? computeMonthlyTotalCents(targetPlan, clinic.custom_price, seatStatus.activeSeats, {
+                    seatPriceOverrideCents: clinic.seat_price_override_cents,
+                    seatOverageWaived: clinic.seat_overage_waived,
+                }).totalCents
+                : seatStatus.monthlyTotalCents
+            const finalPriceReais = finalPriceCents / 100
+
             const boletoData = {
                 seuNumero: (clinic.id.replace(/-/g, '').substring(0, 8) + Date.now().toString().slice(-7)).substring(0, 15),
-                valorNominal: planDetails.price,
+                valorNominal: finalPriceReais,
                 dataVencimento: formattedDueDate,
                 numDiasAgenda: 0,
                 pagador: {
@@ -222,7 +233,7 @@ export async function POST(req: NextRequest) {
                 },
                 mensagem: {
                     linha1: `CliniGo - Plano ${planDetails.name}`,
-                    linha2: `Assinatura Mensal`
+                    linha2: seatStatus.extraSeats > 0 ? `Assinatura + ${seatStatus.extraSeats} licenca(s) adicional(is)` : `Assinatura Mensal`
                 }
             }
 
@@ -235,9 +246,11 @@ export async function POST(req: NextRequest) {
             // 7. Salvar solicitação no banco
             const { error: insertError } = await supabase.from('payment_requests').insert({
                 clinic_id: clinic.id,
-                amount: planDetails.price,
+                amount: finalPriceReais,
                 plan_type: targetPlan,
-                description: `Assinatura ${planDetails.name} - Mensal`,
+                description: seatStatus.extraSeats > 0
+                    ? `Assinatura ${planDetails.name} (+${seatStatus.extraSeats} lic. extras) - Mensal`
+                    : `Assinatura ${planDetails.name} - Mensal`,
                 mercadopago_preference_id: billingResult.nossoNumero, // Reusing column for Inter
                 mercadopago_init_point: billingResult.linhaDigitavel, // Storing linha digitavel here
                 status: 'PENDING',
@@ -253,8 +266,8 @@ export async function POST(req: NextRequest) {
                 await adminSupabase.from('billing_notifications').insert({
                     clinic_id: clinic.id,
                     type: 'PAYMENT_REQUEST',
-                    title: '💰 Nova cobrança recebida',
-                    message: `Foi gerada uma cobrança de R$ ${planDetails.price.toFixed(2)} referente ao plano ${planDetails.name}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
+                    title: 'Nova cobrança recebida',
+                    message: `Foi gerada uma cobrança de R$ ${finalPriceReais.toFixed(2)} referente ao plano ${planDetails.name}${seatStatus.extraSeats > 0 ? ` com ${seatStatus.extraSeats} licença(s) adicional(is)` : ''}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
                     priority: 'HIGH'
                 } as any)
             } catch (notifError) {

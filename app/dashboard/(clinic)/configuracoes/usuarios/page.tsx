@@ -63,6 +63,8 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { SeatMeter } from '@/components/billing/seat-meter'
+import { SeatOverageDialog, type SeatQuote } from '@/components/billing/seat-overage-dialog'
 
 interface User {
     id: string
@@ -155,6 +157,10 @@ export default function UsuariosPermissoesPage() {
         role: 'RECEPTIONIST' as User['role'],
         permissions: {} as Record<string, boolean>
     })
+    const [overageDialogOpen, setOverageDialogOpen] = useState(false)
+    const [pendingQuote, setPendingQuote] = useState<SeatQuote | null>(null)
+    const [pendingAction, setPendingAction] = useState<((quoteId: string) => Promise<void>) | null>(null)
+    const [overageError, setOverageError] = useState<string | null>(null)
 
     async function handleConfirmDeleteUser() {
         if (!userToDelete) return
@@ -256,14 +262,54 @@ export default function UsuariosPermissoesPage() {
                 })
             })
 
-            if (!response.ok) throw new Error('Erro ao convidar usuário')
+            const data = await response.json().catch(() => ({}))
+
+            if (!response.ok) {
+                if (response.status === 409 && data.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED' && data.quote) {
+                    setPendingQuote(data.quote)
+                    setOverageError(null)
+                    setPendingAction(() => async (quoteId: string) => {
+                        const retryRes = await fetch('/api/users/invite', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Idempotency-Key': `inv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                            },
+                            body: JSON.stringify({
+                                email: newUser.email,
+                                name: newUser.name,
+                                role: newUser.role,
+                                password: newUser.password || undefined,
+                                quote_id: quoteId,
+                            }),
+                        })
+                        const retryData = await retryRes.json().catch(() => ({}))
+                        if (!retryRes.ok) {
+                            if (retryRes.status === 409 && retryData.code === 'QUOTE_STALE') {
+                                setPendingQuote(retryData.quote)
+                                throw new Error('A cotação foi atualizada devido a alterações recentes no número de usuários ativos. Por favor, confirme novamente.')
+                            }
+                            throw new Error(retryData.error || 'Erro ao confirmar adição de usuário')
+                        }
+                        toast.success('Usuário convidado e licença adicional confirmada!')
+                        setOverageDialogOpen(false)
+                        setDialogOpen(false)
+                        setNewUser({ name: '', email: '', password: '', role: 'RECEPTIONIST', permissions: {} })
+                        loadUsers()
+                    })
+                    setOverageDialogOpen(true)
+                    return
+                }
+
+                throw new Error(data.error || 'Erro ao convidar usuário')
+            }
 
             toast.success('Convite enviado com sucesso!')
             setDialogOpen(false)
             setNewUser({ name: '', email: '', password: '', role: 'RECEPTIONIST', permissions: {} })
             loadUsers()
-        } catch (error) {
-            toast.error('Erro ao enviar convite')
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao enviar convite')
         }
     }
 
@@ -296,21 +342,49 @@ export default function UsuariosPermissoesPage() {
         }
     }
 
-    async function handleToggleUserStatus(userId: string, active: boolean) {
+    async function handleToggleUserStatus(userId: string, active: boolean, quoteId?: string) {
         try {
-            const supabase = createClient()
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+            if (quoteId) {
+                headers['Idempotency-Key'] = `status-${userId}-${Date.now()}`
+            }
 
-            const { error } = await (supabase
-                .from('users') as any)
-                .update({ is_active: active })
-                .eq('id', userId)
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({
+                    is_active: active,
+                    quote_id: quoteId,
+                })
+            })
 
-            if (error) throw error
+            const data = await response.json().catch(() => ({}))
 
-            toast.success(active ? 'Usuário ativado' : 'Usuário desativado')
+            if (!response.ok) {
+                if (response.status === 409 && data.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED' && data.quote) {
+                    setPendingQuote(data.quote)
+                    setOverageError(null)
+                    setPendingAction(() => async (confirmedQuoteId: string) => {
+                        await handleToggleUserStatus(userId, true, confirmedQuoteId)
+                        setOverageDialogOpen(false)
+                    })
+                    setOverageDialogOpen(true)
+                    return
+                }
+
+                if (response.status === 409 && data.code === 'QUOTE_STALE') {
+                    setPendingQuote(data.quote)
+                    throw new Error('A cotação foi atualizada. Por favor, confirme novamente.')
+                }
+
+                throw new Error(data.error || 'Erro ao alterar status do usuário')
+            }
+
+            toast.success(active ? 'Usuário ativado com sucesso' : 'Usuário desativado com sucesso')
             loadUsers()
-        } catch (error) {
-            toast.error('Erro ao atualizar usuário')
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao atualizar status do usuário')
+            throw error
         }
     }
 
@@ -520,6 +594,7 @@ export default function UsuariosPermissoesPage() {
 
                 {/* TAB: Usuários */}
                 <TabsContent value="usuarios">
+                    <SeatMeter className="mb-6" />
                     <Card>
                         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
@@ -885,7 +960,7 @@ export default function UsuariosPermissoesPage() {
                     </DialogHeader>
 
                     <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
-                        Esta ação é permanente e irreversível. O acesso do usuário será revogado, os registros serão desvinculados com segurança, o cadastro no Supabase Auth será removido e o e-mail será liberado.
+                        Esta ação é permanente e irreversível. O acesso do usuário será revogado, os registros serão desvinculados com segurança, o cadastro no Supabase Auth será removido e o e-mail será liberado. A cobrança de licença adicional será reduzida automaticamente.
                     </div>
 
                     <DialogFooter className="gap-2 sm:gap-0">
@@ -918,6 +993,19 @@ export default function UsuariosPermissoesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Confirmação de Licença de Assento Adicional */}
+            <SeatOverageDialog
+                open={overageDialogOpen}
+                onOpenChange={setOverageDialogOpen}
+                quote={pendingQuote}
+                onConfirm={async (quoteId) => {
+                    if (pendingAction) {
+                        await pendingAction(quoteId)
+                    }
+                }}
+                errorMessage={overageError}
+            />
         </div>
     )
 }

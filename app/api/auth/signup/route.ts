@@ -34,6 +34,36 @@ export async function POST(request: NextRequest) {
             throw new ForbiddenError('ID da clínica é obrigatório')
         }
 
+        let idempotencyKey = request.headers.get('Idempotency-Key') || ''
+        let seatCheckQuote: any = null
+
+        if (clinic_id) {
+            const { checkSeatAdditionAllowed } = await import('@/lib/services/seat-licensing')
+            if (!idempotencyKey) {
+                idempotencyKey = (body as any).quote?.quote_id
+                    ? `signup_${(body as any).quote.quote_id}`
+                    : `signup_${clinic_id}_${email.toLowerCase()}_${Date.now()}`
+            }
+
+            const seatCheck = await checkSeatAdditionAllowed(clinic_id, {
+                quote: (body as any).quote,
+                idempotencyKey,
+            })
+
+            if (!seatCheck.allowed) {
+                const { NextResponse } = await import('next/server')
+                return NextResponse.json({
+                    code: seatCheck.code || 'SEAT_LIMIT_CONFIRMATION_REQUIRED',
+                    error: seatCheck.error || 'Confirmação de licença adicional necessária.',
+                    quote: seatCheck.quote,
+                }, { status: 409 })
+            }
+
+            if (seatCheck.quote) {
+                seatCheckQuote = seatCheck.quote
+            }
+        }
+
         const supabase = createServiceRoleClient()
 
         // Create user in Supabase Auth
@@ -67,7 +97,31 @@ export async function POST(request: NextRequest) {
         if (profileError) {
             // Rollback: delete auth user
             await supabase.auth.admin.deleteUser(authData.user.id)
+            if (seatCheckQuote) {
+                const { voidSeatEvent } = await import('@/lib/services/seat-licensing')
+                await voidSeatEvent(idempotencyKey, 'Falha ao gravar perfil do usuário')
+            }
             throw new Error(profileError.message)
+        }
+
+        if (seatCheckQuote && clinic_id) {
+            try {
+                const { commitSeatConsent } = await import('@/lib/services/seat-licensing')
+                const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+                const ua = request.headers.get('user-agent')
+                const userId = request.headers.get('x-user-id') || authData.user.id
+                await commitSeatConsent({
+                    clinicId: clinic_id,
+                    actorUserId: userId,
+                    targetUserId: authData.user.id,
+                    quote: seatCheckQuote,
+                    idempotencyKey,
+                    ipAddress: ip,
+                    userAgent: ua,
+                })
+            } catch (consentErr) {
+                console.error('[POST /api/auth/signup] Erro ao gravar consentimento:', consentErr)
+            }
         }
 
         return successResponse(

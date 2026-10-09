@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, RefreshCw, History, Save, Loader2, AlertCircle, Check, X, Settings2, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, RefreshCw, History, Save, Loader2, AlertCircle, Check, X, Settings2, FileSpreadsheet, Users, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
@@ -32,6 +32,9 @@ interface ClinicInfo {
     id: string
     name: string
     plan_type: string
+    seat_price_override_cents?: number | null
+    seat_overage_waived?: boolean | null
+    addons?: Record<string, any>
 }
 
 interface PermissionState {
@@ -85,6 +88,13 @@ export default function ClinicPermissionsPage() {
     const [confirmPremiumModal, setConfirmPremiumModal] = useState<boolean>(false)
     const [savingPremium, setSavingPremium] = useState<boolean>(false)
 
+    // Negociação Comercial de Licenciamento de Assentos
+    const [seatPriceOverride, setSeatPriceOverride] = useState<string>('')
+    const [seatOverageWaived, setSeatOverageWaived] = useState<boolean>(false)
+    const [seatBillingMode, setSeatBillingMode] = useState<'off' | 'shadow' | 'enforce'>('shadow')
+    const [confirmSeatNegotiationModal, setConfirmSeatNegotiationModal] = useState<boolean>(false)
+    const [savingSeatNegotiation, setSavingSeatNegotiation] = useState<boolean>(false)
+
     // Load clinic info and permissions
     const loadData = useCallback(async () => {
         try {
@@ -97,6 +107,13 @@ export default function ClinicPermissionsPage() {
             const clinicObj = clinicData.clinic || clinicData
             setClinic(clinicObj)
             setFaturamentoPremium(Boolean(clinicObj?.addons?.faturamento_premium))
+            if (clinicObj?.seat_price_override_cents !== null && clinicObj?.seat_price_override_cents !== undefined) {
+                setSeatPriceOverride((clinicObj.seat_price_override_cents / 100).toFixed(2))
+            } else {
+                setSeatPriceOverride('')
+            }
+            setSeatOverageWaived(Boolean(clinicObj?.seat_overage_waived))
+            setSeatBillingMode(clinicObj?.addons?.seat_billing_mode || 'shadow')
 
             // Fetch permissions
             const permRes = await fetch(`/api/super-admin/clinics/${clinicId}/permissions`)
@@ -336,6 +353,50 @@ export default function ClinicPermissionsPage() {
         }
     }
 
+    // Salvar Negociação Comercial de Licenciamento de Assentos
+    const handleSaveSeatNegotiation = async () => {
+        setSavingSeatNegotiation(true)
+        try {
+            const overrideCents = seatPriceOverride.trim() !== ''
+                ? Math.round(parseFloat(seatPriceOverride.replace(',', '.')) * 100)
+                : null
+
+            const res = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_seat_negotiation',
+                    seat_price_override_cents: overrideCents,
+                    seat_overage_waived: seatOverageWaived,
+                    seat_billing_mode: seatBillingMode,
+                }),
+            })
+            const result = await res.json()
+            if (res.ok && result.success) {
+                setConfirmSeatNegotiationModal(false)
+                toast({
+                    title: 'Sucesso',
+                    description: 'Parâmetros de licenciamento de assentos atualizados com sucesso.',
+                })
+                loadData()
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro',
+                    description: result.error || 'Não foi possível atualizar os parâmetros de licenciamento.',
+                })
+            }
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Falha de comunicação ao salvar negociação de assentos.',
+            })
+        } finally {
+            setSavingSeatNegotiation(false)
+        }
+    }
+
     // Filter features by search and clinic allowlist (Camada A)
     const isAllowlisted = isClinicInSessionPlansAllowlist(clinicId)
     const PROPRIETARY_KEYS: string[] = ['psicomotricidade', 'plano_fisioterapia', 'evolucao_world_sensory']
@@ -506,6 +567,162 @@ export default function ClinicPermissionsPage() {
                                 'Confirmar Desativação'
                             ) : (
                                 'Confirmar Ativação'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Licenciamento de Assentos (Negociação Comercial) */}
+            <Card className="mb-6 border-slate-200">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <CardTitle className="flex items-center gap-2 text-slate-900">
+                                <Users className="h-5 w-5 text-slate-700" />
+                                Licenciamento por Assento (Negociação Comercial)
+                            </CardTitle>
+                            <CardDescription className="text-slate-500">
+                                Ajustes comerciais de preço por usuário adicional, cortesia e modo de faturamento
+                            </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-slate-300 text-slate-700">
+                                Modo: {seatBillingMode === 'enforce' ? 'Obrigatório (Enforce)' : seatBillingMode === 'shadow' ? 'Sombra (Shadow)' : 'Desativado (Off)'}
+                            </Badge>
+                            {seatOverageWaived && (
+                                <Badge className="bg-amber-100 text-amber-800 border-amber-300">
+                                    Cortesia Ativa
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="space-y-2">
+                            <Label htmlFor="seat-price-override" className="text-sm font-medium text-slate-700">
+                                Preço por Assento Extra (R$)
+                            </Label>
+                            <Input
+                                id="seat-price-override"
+                                type="number"
+                                placeholder="49.90 (Padrão)"
+                                value={seatPriceOverride}
+                                onChange={(e) => setSeatPriceOverride(e.target.value)}
+                                min="0"
+                                step="0.01"
+                                className="min-h-[40px]"
+                            />
+                            <p className="text-xs text-slate-500">
+                                Em branco utiliza a tarifa padrão de R$ 49,90/mês.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="seat-billing-mode" className="text-sm font-medium text-slate-700">
+                                Modo Operacional da Clínica
+                            </Label>
+                            <select
+                                id="seat-billing-mode"
+                                value={seatBillingMode}
+                                onChange={(e) => setSeatBillingMode(e.target.value as 'off' | 'shadow' | 'enforce')}
+                                className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                            >
+                                <option value="shadow">Shadow (Modo Sombra - Padrão)</option>
+                                <option value="enforce">Enforce (Cobrança Ativa e Bloqueio Sóbrio)</option>
+                                <option value="off">Off (Desativado)</option>
+                            </select>
+                            <p className="text-xs text-slate-500">
+                                Em Shadow o medidor avalia o uso sem exigir aceite financeiro.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2 flex flex-col justify-between">
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+                                <div className="space-y-0.5 pr-2">
+                                    <Label htmlFor="seat-waived-toggle" className="text-sm font-medium text-slate-900 cursor-pointer">
+                                        Cortesia Comercial
+                                    </Label>
+                                    <p className="text-xs text-slate-500">
+                                        Isenta cobrança de assentos excedentes
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="seat-waived-toggle"
+                                    checked={seatOverageWaived}
+                                    onCheckedChange={setSeatOverageWaived}
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500">
+                                O evento probatório continua sendo registrado para auditoria.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2 border-t border-slate-100">
+                        <Button
+                            type="button"
+                            onClick={() => setConfirmSeatNegotiationModal(true)}
+                            className="min-h-[44px] px-6 bg-slate-900 hover:bg-slate-800 text-white font-medium"
+                        >
+                            Salvar Parâmetros de Licenciamento
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Modal de Confirmação de Negociação Comercial de Assentos */}
+            <Dialog open={confirmSeatNegotiationModal} onOpenChange={(open) => !savingSeatNegotiation && setConfirmSeatNegotiationModal(open)}>
+                <DialogContent className="sm:max-w-[500px] bg-white border border-slate-200">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-900 text-lg font-bold flex items-center gap-2">
+                            <ShieldCheck className="h-5 w-5 text-slate-700" />
+                            <span>Confirmar Negociação de Assentos</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600 text-sm pt-2">
+                            Deseja aplicar as novas configurações de licenciamento para {clinic?.name}?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5">
+                        <div>
+                            <span className="font-semibold text-slate-800">Preço do assento:</span>{' '}
+                            {seatPriceOverride.trim() !== '' ? `R$ ${parseFloat(seatPriceOverride.replace(',', '.')).toFixed(2)}/mês` : 'R$ 49,90/mês (Padrão)'}
+                        </div>
+                        <div>
+                            <span className="font-semibold text-slate-800">Modo operacional:</span>{' '}
+                            {seatBillingMode === 'enforce' ? 'Enforce (Obrigatório)' : seatBillingMode === 'shadow' ? 'Shadow (Modo Sombra)' : 'Off (Desativado)'}
+                        </div>
+                        <div>
+                            <span className="font-semibold text-slate-800">Cortesia comercial:</span>{' '}
+                            {seatOverageWaived ? 'Ativada (Sem cobrança financeira de extras)' : 'Desativada (Cobrança financeira normal)'}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-row justify-end gap-2 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={savingSeatNegotiation}
+                            onClick={() => setConfirmSeatNegotiationModal(false)}
+                            className="min-h-[44px] px-4 text-slate-700 border-slate-300 hover:bg-slate-100"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={savingSeatNegotiation}
+                            onClick={handleSaveSeatNegotiation}
+                            className="min-h-[44px] px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                        >
+                            {savingSeatNegotiation ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                'Confirmar e Aplicar'
                             )}
                         </Button>
                     </DialogFooter>

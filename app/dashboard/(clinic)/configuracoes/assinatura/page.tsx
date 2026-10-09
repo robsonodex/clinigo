@@ -15,12 +15,14 @@ import {
     Building2,
     Activity,
     Layers,
-    FileText
+    FileText,
+    Users
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, type PlanType, migrateLegacyPlan } from '@/lib/constants/plans'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { SeatOverageDialog, type SeatQuote } from '@/components/billing/seat-overage-dialog'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -55,6 +57,13 @@ export default function AssinaturaPage() {
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
     const [processingCancel, setProcessingCancel] = useState(false)
     const [generatingPayment, setGeneratingPayment] = useState(false)
+
+    // Licenciamento por Assento e Regularização (P7)
+    const [seatUsage, setSeatUsage] = useState<any>(null)
+    const [regularizationQuote, setRegularizationQuote] = useState<SeatQuote | null>(null)
+    const [regularizationDialogOpen, setRegularizationDialogOpen] = useState(false)
+    const [loadingRegularization, setLoadingRegularization] = useState(false)
+    const [regularizationError, setRegularizationError] = useState<string | null>(null)
 
     useEffect(() => {
         loadData()
@@ -115,12 +124,70 @@ export default function AssinaturaPage() {
                 const rawPlanType = (clinicData as any).plan_type || 'PROFESSIONAL'
                 setCurrentPlan(migrateLegacyPlan(rawPlanType))
             }
+
+            // Carregar uso de licenças por assento
+            try {
+                const seatRes = await fetch('/api/billing/seat-usage')
+                if (seatRes.ok) {
+                    const seatJson = await seatRes.json()
+                    if (seatJson.success && seatJson.data) {
+                        setSeatUsage(seatJson.data)
+                    }
+                }
+            } catch (seatErr) {
+                console.error('Erro ao consultar assentos:', seatErr)
+            }
         } catch (error) {
             console.error('Error loading data:', error)
             toast.error('Erro ao carregar dados de assinatura')
         } finally {
             setLoading(false)
         }
+    }
+
+    async function handleRequestRegularization() {
+        setLoadingRegularization(true)
+        try {
+            const res = await fetch('/api/billing/seat-usage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_regularization_quote' }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao obter cotação de regularização')
+            setRegularizationQuote(data.data?.quote)
+            setRegularizationError(null)
+            setRegularizationDialogOpen(true)
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao iniciar regularização')
+        } finally {
+            setLoadingRegularization(false)
+        }
+    }
+
+    async function handleConfirmRegularization(quoteId: string) {
+        const res = await fetch('/api/billing/seat-usage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': `reg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            },
+            body: JSON.stringify({
+                action: 'accept_regularization',
+                quote_id: quoteId,
+            }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+            if (res.status === 409 && data.code === 'QUOTE_STALE') {
+                setRegularizationQuote(data.quote)
+                throw new Error('A cotação foi atualizada. Por favor, confirme novamente.')
+            }
+            throw new Error(data.error || 'Erro ao confirmar regularização')
+        }
+        toast.success('Licenças regularizadas com sucesso!')
+        setRegularizationDialogOpen(false)
+        loadData()
     }
 
     async function handleGeneratePayment(plan: PlanType) {
@@ -194,6 +261,10 @@ export default function AssinaturaPage() {
     }
 
     const isPaymentConfirmed = clinic?.payment_confirmed === true || clinic?.approval_status === 'active'
+    const isExceededWithoutConsent = seatUsage && seatUsage.extraSeats > 0 && (!seatUsage.recent_events || seatUsage.recent_events.length === 0)
+    const totalMonthlyPrice = seatUsage?.monthlyTotalCents ? seatUsage.monthlyTotalCents / 100 : (planConfig?.price || 449)
+    const baseMonthlyPrice = seatUsage?.monthlyBaseCents ? seatUsage.monthlyBaseCents / 100 : (planConfig?.price || 449)
+    const extraMonthlyPrice = seatUsage?.monthlyExtraCents ? seatUsage.monthlyExtraCents / 100 : 0
 
     return (
         <div className="container max-w-5xl py-8 space-y-8">
@@ -225,6 +296,37 @@ export default function AssinaturaPage() {
             </div>
 
             <div className="space-y-6">
+                {/* Banner de Regularização de Licenças (P7) */}
+                {isExceededWithoutConsent && (
+                    <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-start gap-3">
+                            <Users className="w-6 h-6 text-blue-700 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-semibold text-blue-900">Regularização de Licenças de Usuário</p>
+                                <p className="text-sm text-blue-800 mt-1">
+                                    Sua clínica possui {seatUsage.extraSeats} usuário(s) ativos além das {seatUsage.includedSeats} licenças inclusas no plano {planConfig?.name}. Conforme os termos contratuais, você pode formalizar as licenças adicionais ({seatUsage.extraSeats} x R$ {(seatUsage.unitPriceCents / 100).toFixed(2)} = R$ {extraMonthlyPrice.toFixed(2)}/mês) ou optar por migrar para um plano superior mais econômico. Sem aceite formal, nenhuma cobrança é gerada.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                                className="bg-blue-700 hover:bg-blue-800 text-white min-h-[44px] px-5 font-medium"
+                                onClick={handleRequestRegularization}
+                                disabled={loadingRegularization}
+                            >
+                                {loadingRegularization ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                        Processando...
+                                    </>
+                                ) : (
+                                    'Regularizar e Aceitar Cobrança'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Cartão do Plano Atual */}
                 <Card className={cn("border-2 shadow-sm", PLAN_COLORS[currentPlan])}>
                     <CardHeader className="pb-4">
@@ -246,12 +348,33 @@ export default function AssinaturaPage() {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Badge variant="secondary" className="text-base px-4 py-1 font-semibold">
-                                    R$ {planConfig?.price || 449}/mês
+                                    R$ {totalMonthlyPrice.toFixed(2)}/mês
                                 </Badge>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                        {/* Demonstrativo Financeiro em Linhas */}
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                                Demonstrativo da Mensalidade
+                            </p>
+                            <div className="flex justify-between text-sm text-slate-700">
+                                <span>Plano {planConfig?.name}</span>
+                                <span>R$ {baseMonthlyPrice.toFixed(2)}/mês</span>
+                            </div>
+                            {seatUsage && seatUsage.extraSeats > 0 && (
+                                <div className="flex justify-between text-sm text-slate-700">
+                                    <span>Licenças adicionais ({seatUsage.extraSeats} x R$ {(seatUsage.unitPriceCents / 100).toFixed(2)})</span>
+                                    <span className="text-blue-700 font-medium">+ R$ {extraMonthlyPrice.toFixed(2)}/mês</span>
+                                </div>
+                            )}
+                            <div className="h-px bg-slate-200 my-1" />
+                            <div className="flex justify-between text-base font-bold text-slate-900">
+                                <span>Total Mensal</span>
+                                <span>R$ {totalMonthlyPrice.toFixed(2)}/mês</span>
+                            </div>
+                        </div>
                         {/* Status de Confirmação de Assinatura */}
                         {isPaymentConfirmed ? (
                             <div className="p-4 bg-white/90 dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
@@ -384,6 +507,15 @@ export default function AssinaturaPage() {
                     </Card>
                 )}
             </div>
+
+            {/* Modal de Regularização de Licenças de Assento */}
+            <SeatOverageDialog
+                open={regularizationDialogOpen}
+                onOpenChange={setRegularizationDialogOpen}
+                quote={regularizationQuote}
+                onConfirm={handleConfirmRegularization}
+                errorMessage={regularizationError}
+            />
         </div>
     )
 }

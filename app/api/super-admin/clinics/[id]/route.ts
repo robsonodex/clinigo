@@ -85,6 +85,73 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             });
         }
 
+        // ============================================
+        // UPDATE SEAT NEGOTIATION (Super Admin exclusive)
+        // ============================================
+        if (action === 'update_seat_negotiation') {
+            const { seat_price_override_cents, seat_overage_waived, seat_billing_mode } = body
+
+            const { data: currentClinic, error: fetchErr } = await serviceSupabase
+                .from('clinics')
+                .select('name, addons, seat_price_override_cents, seat_overage_waived')
+                .eq('id', clinicId)
+                .single()
+
+            if (fetchErr || !currentClinic) {
+                return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+            }
+
+            const updateData: Record<string, any> = {}
+
+            if (seat_price_override_cents !== undefined) {
+                updateData.seat_price_override_cents =
+                    seat_price_override_cents === null || seat_price_override_cents === ''
+                        ? null
+                        : Math.max(0, Math.round(Number(seat_price_override_cents)))
+            }
+
+            if (seat_overage_waived !== undefined) {
+                updateData.seat_overage_waived = Boolean(seat_overage_waived)
+            }
+
+            if (seat_billing_mode !== undefined) {
+                const currentAddons = ((currentClinic as any).addons as Record<string, any>) || {}
+                updateData.addons = {
+                    ...currentAddons,
+                    seat_billing_mode: String(seat_billing_mode).toLowerCase(),
+                    seat_billing_mode_updated_at: new Date().toISOString(),
+                    seat_billing_mode_updated_by: user.id,
+                }
+            }
+
+            const { error: updateErr } = await serviceSupabase
+                .from('clinics')
+                .update(updateData)
+                .eq('id', clinicId)
+
+            if (updateErr) {
+                return NextResponse.json({ error: updateErr.message }, { status: 500 })
+            }
+
+            await serviceSupabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'SEAT_NEGOTIATION_UPDATED',
+                resource_type: 'CLINIC',
+                resource_id: clinicId,
+                details: JSON.stringify({
+                    clinic_name: (currentClinic as any).name,
+                    updates: updateData,
+                }),
+                created_at: new Date().toISOString(),
+            })
+
+            return NextResponse.json({
+                success: true,
+                message: 'Configurações de licenciamento por assento atualizadas com sucesso.',
+                data: updateData,
+            })
+        }
+
         if (action === 'activate_plan') {
             // Get current clinic data
             const { data: clinic } = await serviceSupabase

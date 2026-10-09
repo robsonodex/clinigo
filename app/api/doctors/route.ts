@@ -273,12 +273,38 @@ export async function POST(request: NextRequest) {
         const extraDoctors = ((clinic as any)?.addons as { extra_doctors?: number })?.extra_doctors || 0
         const totalMaxDoctors = baseMaxDoctors === -1 ? -1 : baseMaxDoctors + extraDoctors
 
-        // -1 significa ilimitado, não verificar limite
-        if (totalMaxDoctors !== -1 && (doctorCount || 0) >= totalMaxDoctors) {
-            const planName = planConfig.name
-            throw new BadRequestError(
-                `Limite de médicos atingido (${totalMaxDoctors === -1 ? 'ilimitado' : totalMaxDoctors} médicos no plano ${planName}). Faça upgrade ou adicione médicos extras.`
-            )
+        // ============================================
+        // VERIFICACAO DE LICENCIAMENTO POR ASSENTO (R1 LIMITE FLEXIVEL)
+        // ============================================
+        const { checkSeatAdditionAllowed, commitSeatConsent, voidSeatEvent } = await import('@/lib/services/seat-licensing')
+
+        let idempotencyKey = request.headers.get('Idempotency-Key') || ''
+        if (!idempotencyKey) {
+            idempotencyKey = (body as any).quote?.quote_id
+                ? `doc_${(body as any).quote.quote_id}`
+                : `doc_${clinicId}_${validatedData.email}_${Date.now()}`
+        }
+
+        const seatCheck = await checkSeatAdditionAllowed(clinicId, {
+            quote: (body as any).quote,
+            idempotencyKey,
+        })
+
+        if (!seatCheck.allowed) {
+            if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
+                const { NextResponse } = await import('next/server')
+                return NextResponse.json({
+                    error: 'Apenas administradores podem autorizar a inclusão de licenças adicionais. Por favor, solicite ao administrador da sua clínica.',
+                    code: 'SEAT_LIMIT_ADMIN_ONLY'
+                }, { status: 403 })
+            }
+
+            const { NextResponse } = await import('next/server')
+            return NextResponse.json({
+                code: seatCheck.code || 'SEAT_LIMIT_CONFIRMATION_REQUIRED',
+                message: seatCheck.error || 'Confirmação de licença adicional necessária.',
+                quote: seatCheck.quote,
+            }, { status: 409 })
         }
 
         // Check if email already exists (tabela users)
@@ -357,9 +383,31 @@ export async function POST(request: NextRequest) {
 
         if (doctorError) {
             // Rollback
+            if (seatCheck.quote) {
+                await voidSeatEvent(idempotencyKey, 'Falha ao criar perfil de médico')
+            }
             await (adminClient as any).from('users').delete().eq('id', authData.user.id)
             await adminClient.auth.admin.deleteUser(authData.user.id)
             throw new BadRequestError(doctorError.message)
+        }
+
+        // Se houve aceite formal de licenca adicional, registrar evento probatorio COMMITTED
+        if (seatCheck.quote) {
+            try {
+                const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+                const ua = request.headers.get('user-agent')
+                await commitSeatConsent({
+                    clinicId,
+                    actorUserId: userId || clinicId,
+                    targetUserId: authData.user.id,
+                    quote: seatCheck.quote,
+                    idempotencyKey,
+                    ipAddress: ip,
+                    userAgent: ua,
+                })
+            } catch (consentError: any) {
+                console.error('[POST /api/doctors] Erro ao gravar consentimento de assento:', consentError)
+            }
         }
 
         // Send welcome email to the new doctor

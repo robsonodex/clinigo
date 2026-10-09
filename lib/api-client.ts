@@ -58,7 +58,11 @@ class ApiClient {
 
         if (!response.ok || (data && data.success === false)) {
             const errMsg = data?.error?.message || (typeof data?.error === 'string' ? data.error : null) || response.statusText || 'Ocorreu um erro inesperado'
-            throw new Error(errMsg)
+            const error: any = new Error(errMsg)
+            error.status = response.status
+            error.data = data
+            error.code = data?.code || data?.error?.code
+            throw error
         }
 
         return data
@@ -84,24 +88,27 @@ class ApiClient {
         return response.data as T
     }
 
-    async post<T>(endpoint: string, body?: unknown): Promise<T> {
+    async post<T>(endpoint: string, body?: unknown, options?: RequestInit): Promise<T> {
         const response = await this.request<T>(endpoint, {
+            ...options,
             method: 'POST',
             body: body ? JSON.stringify(body) : undefined,
         })
         return response.data as T
     }
 
-    async patch<T>(endpoint: string, body?: unknown): Promise<T> {
+    async patch<T>(endpoint: string, body?: unknown, options?: RequestInit): Promise<T> {
         const response = await this.request<T>(endpoint, {
+            ...options,
             method: 'PATCH',
             body: body ? JSON.stringify(body) : undefined,
         })
         return response.data as T
     }
 
-    async delete<T>(endpoint: string, body?: unknown): Promise<T> {
+    async delete<T>(endpoint: string, body?: unknown, options?: RequestInit): Promise<T> {
         const response = await this.request<T>(endpoint, {
+            ...options,
             method: 'DELETE',
             body: body ? JSON.stringify(body) : undefined,
         })

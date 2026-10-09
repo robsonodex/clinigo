@@ -120,3 +120,98 @@ export async function notifyOwnerPaymentReceived(params: OwnerPaymentNotificatio
         logger.warn({ error: dbErr.message }, '[OWNER_NOTIF] Falha ao registrar notificação no banco de dados')
     }
 }
+
+export interface OwnerSeatAddedNotificationParams {
+    clinicId: string
+    actorUserId: string
+    quote: {
+        plan: string
+        active_seats: number
+        seats_after: number
+        delta_cents: number
+        monthly_after_cents: number
+        quote_id: string
+    }
+}
+
+/**
+ * Notifica o proprietário da plataforma CliniGo sobre expansão de assentos/licença adicional aceita por uma clínica.
+ */
+export async function notifyOwnerSeatAdded(params: OwnerSeatAddedNotificationParams): Promise<void> {
+    const { clinicId, actorUserId, quote } = params
+    const ownerEmail = process.env.OWNER_NOTIFICATION_EMAIL || process.env.SMTP_FROM_EMAIL || 'contato@clinigo.app'
+
+    try {
+        const supabase = createServiceRoleClient()
+        const { data: clinic } = await (supabase.from('clinics') as any).select('name').eq('id', clinicId).single()
+        const { data: actor } = await (supabase.from('users') as any).select('email, full_name').eq('id', actorUserId).single()
+
+        const clinicName = clinic?.name || 'Clínica'
+        const actorName = actor?.full_name || actor?.email || 'Administrador'
+        const formattedDelta = `R$ ${(quote.delta_cents / 100).toFixed(2).replace('.', ',')}`
+        const formattedTotal = `R$ ${(quote.monthly_after_cents / 100).toFixed(2).replace('.', ',')}`
+
+        logger.info({ clinicName, quoteId: quote.quote_id }, '[OWNER_NOTIF] Disparando alerta de contratação de licença adicional ao proprietário')
+
+        await sendEmailMultiTenant({
+            clinicId: 'system',
+            to: ownerEmail,
+            subject: `[CliniGo Assentos] Licença Adicional Contratada - ${clinicName} (+${formattedDelta}/mês)`,
+            html: `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                    <div style="background-color: #013727; padding: 24px; text-align: left;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">CliniGo Plataforma</h1>
+                        <p style="color: #a7f3d0; margin: 4px 0 0 0; font-size: 13px;">Notificação Executiva de Expansão de Licença</p>
+                    </div>
+                    <div style="padding: 24px;">
+                        <h2 style="color: #0f172a; font-size: 16px; margin-top: 0;">Nova Licença Adicional Contratada</h2>
+                        <p style="color: #475569; font-size: 14px; line-height: 1.5;">
+                            A clínica <strong>${clinicName}</strong> aceitou formalmente a inclusão de uma licença adicional de usuário.
+                        </p>
+                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #334155;">
+                                <tr>
+                                    <td style="padding: 6px 0; font-weight: 600;">Clínica:</td>
+                                    <td style="padding: 6px 0; text-align: right;">${clinicName}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; font-weight: 600;">Autorizado por:</td>
+                                    <td style="padding: 6px 0; text-align: right;">${actorName}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; font-weight: 600;">Plano:</td>
+                                    <td style="padding: 6px 0; text-align: right;">${quote.plan}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; font-weight: 600;">Assentos:</td>
+                                    <td style="padding: 6px 0; text-align: right;">${quote.active_seats} &rarr; ${quote.seats_after}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; font-weight: 600;">Adicional Mensal:</td>
+                                    <td style="padding: 6px 0; text-align: right; color: #047857; font-weight: 600;">+${formattedDelta}/mês</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; font-weight: 600;">Nova Mensalidade:</td>
+                                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">${formattedTotal}/mês</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `
+        })
+
+        await supabase.from('notifications').insert({
+            clinic_id: null,
+            type: 'OWNER_SEAT_OVERAGE_ALERT',
+            status: 'SENT',
+            recipient_email: ownerEmail,
+            subject: `Licença Adicional: ${clinicName} (+${formattedDelta}/mês)`,
+            body: `Clínica ${clinicName} contratou licença adicional (+${formattedDelta}/mês). Nova mensalidade: ${formattedTotal}. Autorizado por: ${actorName}.`,
+            sent_at: new Date().toISOString(),
+        })
+    } catch (err: any) {
+        logger.warn({ error: err.message }, '[OWNER_NOTIF] Falha não-bloqueante ao notificar dono sobre expansão de assento')
+    }
+}
+

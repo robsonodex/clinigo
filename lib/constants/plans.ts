@@ -246,3 +246,22 @@ export const PLAN_PRICES: Record<string, number> = {
     ENTERPRISE: PLANS.ENTERPRISE.price,  // 699
     NETWORK: PLANS.NETWORK.price,        // 999
 }
+
+export const SEAT_EXTRA_PRICE_CENTS = 4990
+
+/**
+ * Quantidade de licencas incluidas por plano.
+ * null indica licencas ilimitadas (ex: ENTERPRISE).
+ */
+export const PLAN_LICENSES: Record<string, number | null> = {
+    FREE: 1,
+    STARTER: 1,
+    BASIC: 1,
+    BASICO: 1,
+    AVANCADO: 5,
+    PROFESSIONAL: 30,
+    PRO: 30,
+    ENTERPRISE: null,
+    NETWORK: null,
+}
+

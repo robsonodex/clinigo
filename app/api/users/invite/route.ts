@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient, createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import crypto from 'crypto'
+import {
+    checkSeatAdditionAllowed,
+    commitSeatConsent,
+    voidSeatEvent,
+} from '@/lib/services/seat-licensing'
 
 const inviteUserSchema = z.object({
     email: z.string().email('Email inválido'),
     name: z.string().min(3, 'Nome é obrigatório'),
     role: z.enum(['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR', 'FINANCIAL', 'READONLY']),
     password: z.string().optional(),
+    quote: z.any().optional(),
 })
 
 export async function POST(request: NextRequest) {
+    let idempotencyKey = request.headers.get('Idempotency-Key') || ''
+    let seatQuoteCommitted = false
+
     try {
         const body = await request.json()
         const data = inviteUserSchema.parse(body)
@@ -28,7 +37,7 @@ export async function POST(request: NextRequest) {
         // Get clinic info
         const { data: currentUser } = await supabaseAdmin
             .from('users')
-            .select('clinic_id, clinics!users_clinic_id_fkey(name, approval_status)')
+            .select('clinic_id, role, clinics!users_clinic_id_fkey(name, approval_status)')
             .eq('id', user.id)
             .single()
 
@@ -36,6 +45,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: { message: 'Clínica não encontrada' } }, { status: 400 })
         }
 
+        const userRole = currentUser.role || request.headers.get('x-user-role') || ''
         const clinic = currentUser.clinics as any
 
         // Check if clinic is active
@@ -58,6 +68,38 @@ export async function POST(request: NextRequest) {
                 success: false,
                 error: { message: 'Este e-mail já está cadastrado no sistema' }
             }, { status: 400 })
+        }
+
+        // ============================================
+        // VERIFICACAO DE LICENCIAMENTO POR ASSENTO
+        // ============================================
+        if (!idempotencyKey) {
+            idempotencyKey = body.quote?.quote_id
+                ? `invite_${body.quote.quote_id}`
+                : `invite_${currentUser.clinic_id}_${data.email.toLowerCase()}_${Date.now()}`
+        }
+
+        const seatCheck = await checkSeatAdditionAllowed(currentUser.clinic_id, {
+            quote: body.quote,
+            idempotencyKey,
+        })
+
+        if (!seatCheck.allowed) {
+            // Apenas CLINIC_ADMIN e SUPER_ADMIN podem autorizar expansao de assentos (R8)
+            if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
+                return NextResponse.json({
+                    success: false,
+                    error: { message: 'Apenas administradores podem autorizar a inclusão de licenças adicionais. Por favor, solicite ao administrador da sua clínica.' },
+                    code: 'SEAT_LIMIT_ADMIN_ONLY'
+                }, { status: 403 })
+            }
+
+            return NextResponse.json({
+                success: false,
+                code: seatCheck.code || 'SEAT_LIMIT_CONFIRMATION_REQUIRED',
+                error: { message: seatCheck.error || 'Confirmação de licença adicional necessária.' },
+                quote: seatCheck.quote,
+            }, { status: 409 })
         }
 
         const hasPassword = Boolean(data.password && data.password.trim().length >= 6)
@@ -109,6 +151,27 @@ export async function POST(request: NextRequest) {
                 error: { message: 'Erro ao criar usuário: ' + userError.message }
             }, { status: 400 })
         }
+
+        // Se houve aceite formal de licenca adicional, registrar evento probatorio COMMITTED (P3)
+        if (seatCheck.quote) {
+            try {
+                const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+                const ua = request.headers.get('user-agent')
+                await commitSeatConsent({
+                    clinicId: currentUser.clinic_id,
+                    actorUserId: user.id,
+                    targetUserId: tempUserId,
+                    quote: seatCheck.quote,
+                    idempotencyKey,
+                    ipAddress: ip,
+                    userAgent: ua,
+                })
+                seatQuoteCommitted = true
+            } catch (consentError: any) {
+                console.error('[InviteUser] Erro ao gravar consentimento de assento:', consentError)
+            }
+        }
+
 
         // Se o perfil for DOCTOR / Terapeuta, assegurar registro inicial na tabela doctors
         if (data.role === 'DOCTOR') {
@@ -196,6 +259,9 @@ export async function POST(request: NextRequest) {
 
             if (tokenError) {
                 // Rollback user
+                if (seatQuoteCommitted) {
+                    await voidSeatEvent(idempotencyKey, 'Falha ao gerar token de ativação')
+                }
                 await supabaseAdmin.from('users').delete().eq('id', tempUserId)
                 await supabaseAdmin.auth.admin.deleteUser(tempUserId)
                 console.error('[InviteUser] Token creation error:', tokenError)
@@ -263,6 +329,9 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        if (seatQuoteCommitted) {
+            await voidSeatEvent(idempotencyKey, (error as any)?.message || 'Erro inesperado')
+        }
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: { message: error.errors[0].message } }, { status: 400 })
         }

@@ -79,6 +79,41 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
+        // ============================================
+        // VERIFICACAO DE LICENCIAMENTO POR ASSENTO
+        // ============================================
+        const { checkSeatAdditionAllowed, commitSeatConsent, voidSeatEvent } = await import('@/lib/services/seat-licensing')
+
+        let idempotencyKey = request.headers.get('Idempotency-Key') || ''
+        if (!idempotencyKey) {
+            idempotencyKey = (body as any).quote?.quote_id
+                ? `invite_doc_${(body as any).quote.quote_id}`
+                : `invite_doc_${currentUser.clinic_id}_${data.email.toLowerCase()}_${Date.now()}`
+        }
+
+        const seatCheck = await checkSeatAdditionAllowed(currentUser.clinic_id, {
+            quote: (body as any).quote,
+            idempotencyKey,
+        })
+
+        if (!seatCheck.allowed) {
+            const userRole = (currentUser as any).role || request.headers.get('x-user-role') || ''
+            if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
+                return NextResponse.json({
+                    success: false,
+                    error: { message: 'Apenas administradores podem autorizar a inclusão de licenças adicionais. Por favor, solicite ao administrador da sua clínica.' },
+                    code: 'SEAT_LIMIT_ADMIN_ONLY'
+                }, { status: 403 })
+            }
+
+            return NextResponse.json({
+                success: false,
+                code: seatCheck.code || 'SEAT_LIMIT_CONFIRMATION_REQUIRED',
+                error: { message: seatCheck.error || 'Confirmação de licença adicional necessária.' },
+                quote: seatCheck.quote,
+            }, { status: 409 })
+        }
+
         // Create temporary user record (without auth - will be created on activation)
         const tempUserId = crypto.randomUUID()
 
@@ -101,6 +136,25 @@ export async function POST(request: NextRequest) {
                 success: false,
                 error: { message: 'Erro ao criar usuário: ' + userError.message }
             }, { status: 400 })
+        }
+
+        // Se houve aceite formal de licenca adicional, registrar evento probatorio COMMITTED
+        if (seatCheck.quote) {
+            try {
+                const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+                const ua = request.headers.get('user-agent')
+                await commitSeatConsent({
+                    clinicId: currentUser.clinic_id,
+                    actorUserId: user.id,
+                    targetUserId: tempUserId,
+                    quote: seatCheck.quote,
+                    idempotencyKey,
+                    ipAddress: ip,
+                    userAgent: ua,
+                })
+            } catch (err) {
+                console.error('[InviteDoctor] Erro ao gravar consentimento:', err)
+            }
         }
 
         // Create doctor record

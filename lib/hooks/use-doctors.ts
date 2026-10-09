@@ -41,19 +41,29 @@ export interface CreateDoctorData {
     specialties_additional?: string[]
     consultation_price: number
     bio?: string
+    quote_id?: string
 }
 
 export function useCreateDoctor() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: (data: CreateDoctorData) => api.post<{ doctor_id: string }>('/doctors', data),
+        mutationFn: (data: CreateDoctorData) => {
+            const headers: Record<string, string> = {}
+            if (data.quote_id) {
+                headers['Idempotency-Key'] = `doc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+            }
+            return api.post<{ doctor_id: string }>('/doctors', data, { headers })
+        },
         onSuccess: () => {
             // Use partial match to invalidate ALL doctor queries regardless of params
             queryClient.invalidateQueries({ queryKey: ['doctors'], exact: false })
             toast.success('Profissional cadastrado com sucesso!')
         },
-        onError: (error: Error) => {
+        onError: (error: any) => {
+            if (error?.status === 409 && (error?.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED' || error?.data?.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED')) {
+                return
+            }
             toast.error(error.message || 'Erro ao cadastrar profissional')
         },
     })

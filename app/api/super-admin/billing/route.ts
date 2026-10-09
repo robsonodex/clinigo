@@ -9,6 +9,7 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError, BadRequestError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PLAN_PRICES } from '@/lib/constants/plans'
+import { computeMonthlyTotalCents, SEAT_COUNTED_ROLES } from '@/lib/services/seat-licensing'
 
 const SUPER_ADMIN_EMAILS = (
     process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
@@ -42,18 +43,43 @@ export async function GET(request: NextRequest) {
         // Buscar clínicas com subscriptions
         const { data: clinics, error: clinicsError } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, subscription_due_date, custom_price, phone, email')
+            .select('id, name, plan_type, is_active, subscription_due_date, custom_price, phone, email, seat_price_override_cents, seat_overage_waived')
             .order('name')
 
         if (clinicsError) throw new Error('Erro ao buscar clínicas')
 
+        // Contar assentos ativos por clínica
+        const { data: countedUsers } = await supabaseAdmin
+            .from('users')
+            .select('clinic_id, role, is_active, email')
+            .eq('is_active', true)
+            .in('role', SEAT_COUNTED_ROLES)
+
+        const clinicActiveSeatsMap: Record<string, number> = {}
+        if (countedUsers) {
+            for (const u of countedUsers) {
+                if (u.email && u.email.toLowerCase().startsWith('inativo-')) continue
+                if (!u.clinic_id) continue
+                clinicActiveSeatsMap[u.clinic_id] = (clinicActiveSeatsMap[u.clinic_id] || 0) + 1
+            }
+        }
 
         const now = new Date()
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-        // Processar inadimplentes
+        // Processar faturamento com cálculo derivado unificado de assentos extras
         const allClinics = (clinics || []).map(c => {
-            const price = c.custom_price ? Number(c.custom_price) : (PLAN_PRICES[c.plan_type] || 0)
+            const activeSeats = clinicActiveSeatsMap[c.id] || 0
+            const { totalCents, extraSeats, includedSeats, extraCents } = computeMonthlyTotalCents(
+                c.plan_type,
+                c.custom_price,
+                activeSeats,
+                {
+                    seatPriceOverrideCents: c.seat_price_override_cents,
+                    seatOverageWaived: c.seat_overage_waived,
+                }
+            )
+            const price = totalCents / 100
             const dueDate = c.subscription_due_date ? new Date(c.subscription_due_date + 'T00:00:00') : null
             const isOverdue = dueDate ? dueDate < now : false
             const daysOverdue = dueDate ? Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0
@@ -65,6 +91,10 @@ export async function GET(request: NextRequest) {
                 planType: c.plan_type,
                 isActive: c.is_active,
                 amount: price,
+                activeSeats,
+                includedSeats,
+                extraSeats,
+                extraAmount: extraCents / 100,
                 dueDate: c.subscription_due_date,
                 isOverdue,
                 daysOverdue,

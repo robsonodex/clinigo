@@ -32,6 +32,7 @@ interface OverdueClinic {
     id: string; name: string; planType: string; amount: number
     dueDate: string | null; daysOverdue: number; isOverdue: boolean
     lastContact: string | null; phone: string | null; email: string | null
+    extraSeats?: number
 }
 
 interface ContactLog {
@@ -271,13 +272,14 @@ export default function CobrancasPage() {
                         {filtered.length === 0 ? (
                             <Card><CardContent className="py-12 text-center">
                                 <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                                <p className="text-gray-500 font-medium">{searchTerm ? 'Nenhuma clínica encontrada' : 'Nenhuma clínica inadimplente! 🎉'}</p>
+                                <p className="text-gray-500 font-medium">{searchTerm ? 'Nenhuma clínica encontrada' : 'Nenhuma clínica inadimplente'}</p>
                             </CardContent></Card>
                         ) : (
                             <Card><CardContent className="p-0">
                                 <Table>
                                     <TableHeader><TableRow>
                                         <TableHead>Clínica</TableHead><TableHead>Plano</TableHead>
+                                        <TableHead>Licenças extras</TableHead>
                                         <TableHead>Valor</TableHead><TableHead>Vencimento</TableHead>
                                         <TableHead>Atraso</TableHead><TableHead>Último Contato</TableHead>
                                         <TableHead>Ações</TableHead>
@@ -288,6 +290,15 @@ export default function CobrancasPage() {
                                                 <TableRow key={clinic.id} className="hover:bg-gray-50">
                                                     <TableCell className="font-medium">{clinic.name}</TableCell>
                                                     <TableCell><Badge variant="outline">{clinic.planType}</Badge></TableCell>
+                                                    <TableCell className="text-sm text-gray-600">
+                                                        {clinic.extraSeats && clinic.extraSeats > 0 ? (
+                                                            <Badge variant="secondary" className="font-medium bg-blue-50 text-blue-700 border-blue-200">
+                                                                {clinic.extraSeats} extra{clinic.extraSeats > 1 ? 's' : ''}
+                                                            </Badge>
+                                                        ) : (
+                                                            '—'
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell className="font-semibold">R$ {clinic.amount.toFixed(2)}</TableCell>
                                                     <TableCell className="text-sm text-gray-500">
                                                         {clinic.dueDate ? format(new Date(clinic.dueDate + 'T00:00:00'), 'dd/MM/yyyy') : '—'}
@@ -365,6 +376,7 @@ export default function CobrancasPage() {
                                     <TableHeader><TableRow>
                                         <TableHead>Clínica</TableHead>
                                         <TableHead>Plano</TableHead>
+                                        <TableHead>Licenças extras</TableHead>
                                         <TableHead>Valor</TableHead>
                                         <TableHead>Vencimento</TableHead>
                                         <TableHead>Status</TableHead>
@@ -375,6 +387,15 @@ export default function CobrancasPage() {
                                             <TableRow key={clinic.id} className="hover:bg-gray-50">
                                                 <TableCell className="font-medium">{clinic.name}</TableCell>
                                                 <TableCell><Badge variant="outline">{clinic.planType}</Badge></TableCell>
+                                                <TableCell className="text-sm text-gray-600">
+                                                    {clinic.extraSeats && clinic.extraSeats > 0 ? (
+                                                        <Badge variant="secondary" className="font-medium bg-blue-50 text-blue-700 border-blue-200">
+                                                            {clinic.extraSeats} extra{clinic.extraSeats > 1 ? 's' : ''}
+                                                        </Badge>
+                                                    ) : (
+                                                        '—'
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="font-semibold">R$ {clinic.amount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-sm text-gray-500">
                                                     {clinic.dueDate ? format(new Date(clinic.dueDate + 'T00:00:00'), 'dd/MM/yyyy') : '—'}
@@ -411,7 +432,7 @@ export default function CobrancasPage() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-gray-500 py-8 text-center">
-                                ⚙️ A régua automática será configurada via <strong>platform_settings</strong> no ITEM 5.
+                                A régua automática será configurada via <strong>platform_settings</strong> no ITEM 5.
                                 <br />Templates e toggles serão editáveis na aba Configurações Globais.
                             </p>
                         </CardContent></Card>
