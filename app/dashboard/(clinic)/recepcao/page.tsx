@@ -972,7 +972,7 @@ export default function RecepcaoPage() {
                                                             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                                                                 <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
                                                                 <span className="truncate">
-                                                                    {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                                    {item.doctor?.user?.name || item.doctor?.user?.full_name || (item.doctor as any)?.full_name || 'Profissional'}
                                                                 </span>
                                                             </p>
                                                             {roomDisplayName && (
@@ -1149,7 +1149,7 @@ export default function RecepcaoPage() {
                                                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                                                     <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
                                                     <span className="truncate">
-                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                        {item.doctor?.user?.name || item.doctor?.user?.full_name || (item.doctor as any)?.full_name || 'Profissional'}
                                                     </span>
                                                 </p>
                                             )}
@@ -1233,7 +1233,7 @@ export default function RecepcaoPage() {
                                                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                                                     <User className="w-3 h-3 text-muted-foreground/70 shrink-0" />
                                                     <span className="truncate">
-                                                        {item.doctor.user?.name || item.doctor.user?.full_name || 'Profissional'}
+                                                        {item.doctor?.user?.name || item.doctor?.user?.full_name || (item.doctor as any)?.full_name || 'Profissional'}
                                                     </span>
                                                 </p>
                                             )}

@@ -510,7 +510,7 @@ export default function PainelTVPage() {
             (activePatient.consulting_room_id && r.id === activePatient.consulting_room_id) ||
             (activePatient.doctor?.id && (r.doctor_id === activePatient.doctor.id || r.doctor?.id === activePatient.doctor.id)) ||
             (activePatient.doctor?.user?.full_name && r.doctor?.user?.full_name && 
-             r.doctor.user.full_name.toLowerCase().trim() === activePatient.doctor.user.full_name.toLowerCase().trim())
+             r.doctor?.user?.full_name?.toLowerCase().trim() === activePatient.doctor?.user?.full_name?.toLowerCase().trim())
           ) || null
         : null
 
@@ -561,7 +561,7 @@ export default function PainelTVPage() {
                             {/* Doctor Name */}
                             {activePatient.doctor?.user?.full_name && (
                                 <p className="text-2xl md:text-3xl text-white/60 font-medium">
-                                    Atendimento com: <strong className="text-white">Dr(a). {activePatient.doctor.user.full_name}</strong>
+                                    Atendimento com: <strong className="text-white">Dr(a). {activePatient.doctor?.user?.full_name || (activePatient.doctor as any)?.full_name || 'Profissional'}</strong>
                                 </p>
                             )}
 

@@ -240,7 +240,7 @@ export default function ReschedulePage({ params }: ReschedulePageProps) {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Stethoscope className="w-4 h-4 text-muted-foreground" />
-                                    <span>{appointment.doctor.user.full_name} - {appointment.doctor.specialty}</span>
+                                    <span>{appointment.doctor?.user?.full_name || (appointment.doctor as any)?.full_name || 'Profissional'}{appointment.doctor?.specialty ? ` - ${appointment.doctor.specialty}` : ''}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Calendar className="w-4 h-4 text-muted-foreground" />

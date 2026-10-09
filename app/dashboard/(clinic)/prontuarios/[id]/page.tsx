@@ -192,10 +192,10 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
             // 2. Fetch Patient, Clinic, Doctor e Biometria Facial Cadastrada
             const [patientRes, clinicRes, doctorRes, faceBioRes] = await Promise.all([
-                supabase.from('patients').select('*').eq('id', appt.patient_id).maybeSingle(),
-                supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).maybeSingle(),
-                supabase.from('doctors').select('id, user:users(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).maybeSingle(),
-                supabase.from('patient_face_biometrics').select('id').eq('patient_id', appt.patient_id).eq('clinic_id', appt.clinic_id).limit(1).maybeSingle()
+                appt.patient_id ? supabase.from('patients').select('*').eq('id', appt.patient_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+                appt.clinic_id ? supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+                appt.doctor_id ? supabase.from('doctors').select('id, user:users(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+                appt.patient_id && appt.clinic_id ? supabase.from('patient_face_biometrics').select('id').eq('patient_id', appt.patient_id).eq('clinic_id', appt.clinic_id).limit(1).maybeSingle() : Promise.resolve({ data: null, error: null })
             ])
 
             if (patientRes.data) setPatient(patientRes.data)
@@ -277,7 +277,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 .neq('appointment_id', appt.id) // excluding current
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single()
+                .maybeSingle()
                 
             if (previousRecord) setLastRecord(previousRecord)
 
@@ -286,7 +286,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 .from('medical_records')
                 .select('*')
                 .eq('appointment_id', appt.id)
-                .single()
+                .maybeSingle()
 
             if (record) {
                 setRecordId(record.id)

@@ -60,6 +60,15 @@ export default async function DashboardRootLayout({
 
     const isTrialActive = approvalStatus === 'trial' && (!trialEndsAt || new Date(trialEndsAt) > new Date())
 
+    // Só exibe banner de inadimplência se o pagamento não foi confirmado E a data de vencimento já expirou (passou)
+    const isSubscriptionOverdue = Boolean(
+        paymentConfirmed === false &&
+        !isDemo &&
+        !isTrialActive &&
+        subscriptionDueDate &&
+        new Date(`${subscriptionDueDate}T23:59:59`).getTime() < new Date().getTime()
+    )
+
     return (
         <>
             <StaffSignatureGate>
@@ -68,7 +77,7 @@ export default async function DashboardRootLayout({
                 <DashboardLayout>
                     <ImpersonationBanner />
                     <DemoBanner isDemo={isDemo} />
-                    {paymentConfirmed === false && !isDemo && !isTrialActive && (
+                    {isSubscriptionOverdue && (
                         <BillingOverdueBanner dueDate={subscriptionDueDate} />
                     )}
                     <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />

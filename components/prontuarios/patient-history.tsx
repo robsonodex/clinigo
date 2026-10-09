@@ -144,7 +144,7 @@ export default function PatientHistory({ patientId }: PatientHistoryProps) {
                                                 <div className="flex items-center gap-2">
                                                     <User className="h-3 w-3 text-muted-foreground" />
                                                     <span className="text-sm text-muted-foreground">
-                                                        {record.doctor.user.name}
+                                                        {record.doctor.user?.full_name || record.doctor.user?.name || 'Profissional'}
                                                     </span>
                                                 </div>
                                             )}

@@ -167,7 +167,7 @@ export default function AutorizacaoPage() {
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <span className="text-muted-foreground">Médico:</span>
-                                            <p className="font-medium">{request.doctor.user.full_name}</p>
+                                            <p className="font-medium">{request.doctor?.user?.full_name || (request.doctor as any)?.full_name || 'Profissional'}</p>
                                         </div>
                                         <div>
                                             <span className="text-muted-foreground">Data:</span>

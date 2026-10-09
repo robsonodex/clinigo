@@ -210,7 +210,7 @@ export function PatientQuickView({ patientId, open, onClose }: PatientQuickViewP
                                                         {format(new Date(apt.appointment_date), 'dd/MM/yyyy')}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Dr(a). {apt.doctor.user.full_name}
+                                                        Dr(a). {apt.doctor?.user?.full_name || apt.doctor?.full_name || 'Profissional'}
                                                     </p>
                                                 </div>
                                                 <Badge

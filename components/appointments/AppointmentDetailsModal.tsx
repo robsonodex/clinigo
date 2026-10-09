@@ -159,10 +159,10 @@ export function AppointmentDetailsModal({
                                 <Stethoscope className="h-3 w-3" /> {profLabel.singular}
                             </span>
                             <p className="font-medium">
-                                {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user.full_name} <span className="text-muted-foreground font-normal">
-                                    - {appointment.reception_notes?.startsWith('[ESP:')
-                                        ? appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]
-                                        : appointment.doctor.specialty}
+                                {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor?.user?.full_name || (appointment.doctor as any)?.full_name || 'Profissional'} <span className="text-muted-foreground font-normal">
+                                    {appointment.reception_notes?.startsWith('[ESP:')
+                                        ? ` - ${appointment.reception_notes.match(/^\[ESP:([^\]]+)\]/)?.[1]}`
+                                        : appointment.doctor?.specialty ? ` - ${appointment.doctor.specialty}` : ''}
                                 </span>
                             </p>
                         </div>

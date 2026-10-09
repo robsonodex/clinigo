@@ -1524,10 +1524,10 @@ export default function AgendaPage() {
 
                                                                             {/* Doctor Name */}
                                                                             <div className="text-[10px] font-medium mt-0.5 truncate opacity-80">
-                                                                                {profLabel.singular === 'Médico' ? 'Dr. ' : ''}{appointment.doctor?.user?.full_name?.split(' ')[0] || 'Profissional'}
+                                                                                {profLabel.singular === 'Médico' ? 'Dr. ' : ''}{appointment.doctor?.user?.full_name?.split(' ')[0] || (appointment.doctor as any)?.full_name || 'Profissional'}
                                                                                 {(appointment as any).co_doctor?.user?.full_name && (
                                                                                     <span className="text-[9px] font-semibold text-teal-800 dark:text-teal-300 ml-1">
-                                                                                        + {(appointment as any).co_doctor.user.full_name.split(' ')[0]}
+                                                                                        + {((appointment as any).co_doctor?.user?.full_name || '').split(' ')[0]}
                                                                                     </span>
                                                                                 )}
                                                                             </div>
@@ -1689,9 +1689,9 @@ export default function AgendaPage() {
                                                                                 </p>
                                                                             </div>
                                                                             <div className="text-xs space-y-1">
-                                                                                <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor?.user?.full_name || (appointment.doctor as any)?.full_name || 'Profissional'}</p>
                                                                                 {(appointment as any).co_doctor && (
-                                                                                    <p><strong>Co-Terapeuta:</strong> {(appointment as any).co_doctor.user?.full_name || (appointment as any).co_doctor.full_name || 'N/A'}</p>
+                                                                                    <p><strong>Co-Terapeuta:</strong> {(appointment as any).co_doctor?.user?.full_name || (appointment as any).co_doctor?.full_name || 'Profissional'}</p>
                                                                                 )}
                                                                                 <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                 <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
@@ -1993,9 +1993,9 @@ export default function AgendaPage() {
                                                                                         </p>
                                                                                     </div>
                                                                                     <div className="text-xs space-y-1">
-                                                                                        <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor.user?.full_name || (appointment.doctor as any).full_name || 'N/A'}</p>
+                                                                                        <p><strong>{profLabel.singular}:</strong> {profLabel.singular === 'Médico' ? 'Dr(a). ' : ''}{appointment.doctor?.user?.full_name || (appointment.doctor as any)?.full_name || 'Profissional'}</p>
                                                                                         {(appointment as any).co_doctor && (
-                                                                                            <p><strong>Co-Terapeuta:</strong> {(appointment as any).co_doctor.user?.full_name || (appointment as any).co_doctor.full_name || 'N/A'}</p>
+                                                                                            <p><strong>Co-Terapeuta:</strong> {(appointment as any).co_doctor?.user?.full_name || (appointment as any).co_doctor?.full_name || 'Profissional'}</p>
                                                                                         )}
                                                                                         <p><strong>Horário:</strong> {appointment.appointment_time.substring(0, 5)} - {endTime}</p>
                                                                                         <p><strong>Status:</strong> <span className="capitalize">{appointment.status.replace('_', ' ').toLowerCase()}</span></p>
