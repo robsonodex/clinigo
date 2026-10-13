@@ -620,7 +620,7 @@ export default function SuperAdminDashboard() {
                 throw new Error(error.error || 'Failed to block clinic')
             }
 
-            alert(`🔒 Clínica "${clinicName}" bloqueada com sucesso!`)
+            alert(`Clínica "${clinicName}" bloqueada com sucesso!`)
             loadDashboard()
         } catch (error) {
             console.error('Block error:', error)
@@ -648,7 +648,7 @@ export default function SuperAdminDashboard() {
                 throw new Error(error.error || 'Failed to unblock clinic')
             }
 
-            alert(`🔓 Clínica "${clinicName}" desbloqueada com sucesso!`)
+            alert(`Clínica "${clinicName}" desbloqueada com sucesso!`)
             loadDashboard()
         } catch (error) {
             console.error('Unblock error:', error)
@@ -678,7 +678,7 @@ export default function SuperAdminDashboard() {
             }
 
             const result = await res.json()
-            alert(`✅ ${result.message || 'Pagamento confirmado!'}`)
+            alert(`${result.message || 'Pagamento confirmado!'}`)
             loadDashboard()
         } catch (error) {
             console.error('Mark paid error:', error)
@@ -731,7 +731,7 @@ export default function SuperAdminDashboard() {
             }
 
             const result = await res.json()
-            alert(`✅ ${result.data?.message || 'Notificação de cobrança enviada com sucesso!'}`)
+            alert(`${result.data?.message || 'Notificação de cobrança enviada com sucesso!'}`)
             closeBillingModal()
         } catch (error) {
             console.error('Billing notification error:', error)
@@ -777,7 +777,7 @@ export default function SuperAdminDashboard() {
                     throw new Error(error.error || 'Falha ao salvar agendamento')
                 }
 
-                alert('✅ Cobrança agendada com sucesso!')
+                alert('Cobrança agendada com sucesso!')
                 closeBillingModal()
                 loadScheduledBillings()
             } catch (error) {
@@ -816,7 +816,7 @@ export default function SuperAdminDashboard() {
     }
 
     const handleDeleteScheduled = async (id: string) => {
-        const confirmed = confirm('⚠️ ATENÇÃO: Tem certeza que deseja excluir permanentemente este agendamento? Esta ação não pode ser desfeita.')
+        const confirmed = confirm('ATENÇÃO: Tem certeza que deseja excluir permanentemente este agendamento? Esta ação não pode ser desfeita.')
         if (!confirmed) return
 
         try {
@@ -887,7 +887,7 @@ export default function SuperAdminDashboard() {
         const clinicCount = data?.clinics?.filter(c => c.isActive)?.length || 0
         const planLabel = featureTargetPlans.length > 0 ? featureTargetPlans.join(', ') : 'TODOS'
         const confirmed = confirm(
-            `📢 Enviar notificação de nova feature?\n\n` +
+            `Enviar notificação de nova feature?\n\n` +
             `Título: ${featureTitle.trim()}\n` +
             `Planos alvo: ${planLabel}\n` +
             `Clínicas ativas: ~${clinicCount}\n\n` +
@@ -913,7 +913,7 @@ export default function SuperAdminDashboard() {
             }
 
             const result = await res.json()
-            alert(`✅ ${result.data?.message || 'Notificação enviada com sucesso!'}`)
+            alert(`${result.data?.message || 'Notificação enviada com sucesso!'}`)
             closeFeatureModal()
         } catch (error) {
             console.error('Feature notification error:', error)
@@ -979,7 +979,7 @@ export default function SuperAdminDashboard() {
                 throw new Error(err.error || 'Erro ao redefinir senha')
             }
 
-            alert(`✅ Senha de "${resetPwdUser.displayName}" (${resetPwdUser.email}) redefinida com sucesso!`)
+            alert(`Senha de "${resetPwdUser.displayName}" (${resetPwdUser.email}) redefinida com sucesso!`)
             closeResetPwdModal()
         } catch (error) {
             console.error('Reset password error:', error)
@@ -1041,7 +1041,7 @@ export default function SuperAdminDashboard() {
     }
 
     const handleExtendTrial = async (clinicId: string, clinicName: string) => {
-        const confirmed = confirm(`⚠️ CONFIRMAÇÃO: Deseja liberar mais 7 dias de testes gratuitos para a clínica "${clinicName}"?\n\nEsta ação reativará a clínica no sistema e prorrogará o período de testes por 7 dias a partir de hoje (payment_confirmed será ativo temporariamente).`)
+        const confirmed = confirm(`CONFIRMAÇÃO: Deseja liberar mais 7 dias de testes gratuitos para a clínica "${clinicName}"?\n\nEsta ação reativará a clínica no sistema e prorrogará o período de testes por 7 dias a partir de hoje (payment_confirmed será ativo temporariamente).`)
         if (!confirmed) return
 
         try {
@@ -1057,7 +1057,7 @@ export default function SuperAdminDashboard() {
                 throw new Error(result.error || 'Erro ao estender período de testes')
             }
 
-            alert(`✅ ${result.message}`)
+            alert(`${result.message}`)
             loadDashboard()
         } catch (error) {
             console.error('Extend trial error:', error)
@@ -1083,7 +1083,7 @@ export default function SuperAdminDashboard() {
                 throw new Error(result.details || result.error || 'Falha ao gerar boleto')
             }
 
-            alert(`✅ Boleto gerado com sucesso!\n\nLinha Digitável: ${result.boleto?.linha_digitavel}\n\n-> O PDF do boleto vai abrir em uma nova aba agora!`)
+            alert(`Boleto gerado com sucesso!\n\nLinha Digitável: ${result.boleto?.linha_digitavel}\n\n-> O PDF do boleto vai abrir em uma nova aba agora!`)
             
             if (result.boleto?.nosso_numero) {
                 window.open(`/api/billing/boleto-pdf?nossoNumero=${result.boleto.nosso_numero}`, '_blank')
@@ -1228,7 +1228,7 @@ export default function SuperAdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                         <Button size="sm" onClick={openFeatureModal} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                             <Megaphone className="h-4 w-4 mr-2" />
-                            📢 Notificar
+                            Notificar
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => router.push('/system-master-hub/chat')}>
                             <MessageCircle className="h-4 w-4 mr-2" />
@@ -1352,7 +1352,7 @@ export default function SuperAdminDashboard() {
                                 </div>
                                 <div className="w-full sm:w-72">
                                     <Input
-                                        placeholder="🔍 Localizar clínica pelo nome..."
+                                        placeholder="Localizar clínica pelo nome..."
                                         value={searchClinic}
                                         onChange={(e) => setSearchClinic(e.target.value)}
                                         className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
@@ -1470,7 +1470,7 @@ export default function SuperAdminDashboard() {
                                                             title="Entrar impersonado na clínica"
                                                         >
                                                             <UserCog className="h-4 w-4 mr-1" />
-                                                            🔑 Entrar
+                                                            Entrar
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -1480,7 +1480,7 @@ export default function SuperAdminDashboard() {
                                                             title="Redefinir as senhas de todos os usuários desta clínica"
                                                         >
                                                             <KeyRound className="h-4 w-4 mr-1" />
-                                                            🔑 Resetar Senhas
+                                                            Resetar Senhas
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -1773,8 +1773,8 @@ export default function SuperAdminDashboard() {
                                             aria-label="Filtrar por clínica"
                                             className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
                                         >
-                                            <option value="ALL">🏢 Todas as Clínicas</option>
-                                            <option value="NO_CLINIC">🛡️ Admins Globais / Sem Clínica</option>
+                                            <option value="ALL">Todas as Clínicas</option>
+                                            <option value="NO_CLINIC">Admins Globais / Sem Clínica</option>
                                             {data?.clinics.map((c) => (
                                                 <option key={c.id} value={c.id}>
                                                     {c.name}
@@ -1789,7 +1789,7 @@ export default function SuperAdminDashboard() {
                                             aria-label="Filtrar por cargo"
                                             className="h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
                                         >
-                                            <option value="ALL">👔 Todos os Cargos</option>
+                                            <option value="ALL">Todos os Cargos</option>
                                             <option value="SUPER_ADMIN">Super Admin</option>
                                             <option value="ADMIN">Administrador</option>
                                             <option value="DOCTOR">Profissional / Médico</option>
@@ -1904,7 +1904,7 @@ export default function SuperAdminDashboard() {
                                                         {/* Status counters */}
                                                         <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
                                                             <span className="text-gray-500 font-medium">
-                                                                👥 {group.users.length} {group.users.length === 1 ? 'colaborador' : 'colaboradores'}
+                                                                {group.users.length} {group.users.length === 1 ? 'colaborador' : 'colaboradores'}
                                                             </span>
                                                             <span className="text-gray-300">•</span>
                                                             {group.onlineCount > 0 ? (
@@ -1917,7 +1917,7 @@ export default function SuperAdminDashboard() {
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-gray-500 font-medium">
-                                                                    ⚪ 0 Online
+                                                                    0 Online
                                                                 </span>
                                                             )}
                                                         </div>
@@ -2667,7 +2667,7 @@ export default function SuperAdminDashboard() {
                                 value={featureTitle}
                                 onChange={(e) => setFeatureTitle(e.target.value)}
                                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                placeholder="Ex: 🚀 Nova funcionalidade: Assinatura Digital"
+                                placeholder="Ex: Nova funcionalidade: Assinatura Digital"
                             />
                         </div>
 
@@ -2825,7 +2825,7 @@ export default function SuperAdminDashboard() {
                             />
                             <p className="text-xs text-gray-500">
                                 {impersonateReason.trim().length}/10 caracteres mínimos
-                                {impersonateReason.trim().length >= 10 && ' ✅'}
+                                {impersonateReason.trim().length >= 10 && ' (Confirmado)'}
                             </p>
                         </div>
                     </div>
@@ -2867,7 +2867,7 @@ export default function SuperAdminDashboard() {
                                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                                     <p className="text-sm text-red-800 flex items-start gap-2 font-medium">
                                         <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-red-600" />
-                                        <span>⚠️ AVISO CRÍTICO E DE EXTREMA IMPORTÂNCIA:</span>
+                                        <span>AVISO CRÍTICO E DE SEGURANÇA:</span>
                                     </p>
                                     <p className="text-sm text-red-700 mt-2 pl-7 leading-relaxed font-bold">
                                         Esta ação redefinirá a senha de TODOS os colaboradores vinculados à clínica {resetClinicModal.clinicName} de maneira instantânea e permanente no Supabase.

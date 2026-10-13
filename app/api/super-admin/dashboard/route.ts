@@ -20,22 +20,32 @@ export async function GET(request: NextRequest) {
             throw new ForbiddenError('Not authenticated')
         }
 
-        // Verificar se é super admin
-        const { data: userData } = await supabase
+        // Verificar se é super admin (por role ou whitelist de email)
+        const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app')
+            .split(',')
+            .map(e => e.trim().toLowerCase())
+        const isSuperAdminEmail = user.email && superAdminEmails.includes(user.email.toLowerCase())
+
+        const { data: userData } = await supabaseAdmin
             .from('users')
             .select('role, email')
             .eq('id', user.id)
             .single()
 
-        if (userData?.role !== 'SUPER_ADMIN') {
+        if (userData?.role !== 'SUPER_ADMIN' && !isSuperAdminEmail) {
             throw new ForbiddenError('Super admin only')
         }
 
         // Get all clinics
-        const { data: clinics } = await supabaseAdmin
+        const { data: clinics, error: clinicsError } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price, addons, seat_price_override_cents, seat_overage_waived')
+            .select('id, name, slug, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price, addons')
             .order('created_at', { ascending: false })
+
+        if (clinicsError) {
+            console.error('[SUPER_ADMIN_DASHBOARD] Erro ao carregar clínicas:', clinicsError)
+            throw new Error(`Falha ao consultar clínicas: ${clinicsError.message}`)
+        }
 
         // Contar assentos ativos por clínica para faturamento derivado
         const { data: countedUsers } = await supabaseAdmin
@@ -53,7 +63,11 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        const isDemoClinic = (c: any) => c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
+        const isDemoClinic = (c: any) =>
+            c.is_demo === true ||
+            c.id === 'de000000-0000-0000-0000-000000000001' ||
+            (c.slug && (c.slug === 'demo-teste' || c.slug.includes('demo'))) ||
+            (c.name && c.name.toLowerCase().includes('demo'))
 
         // Count metrics (excluding demo from active count if desired, or keeping totalClinics)
         const totalClinics = clinics?.length || 0
@@ -63,11 +77,14 @@ export async function GET(request: NextRequest) {
         const mrr = clinics?.reduce((sum, c) => {
             if (!c.is_active || isDemoClinic(c)) return sum
             const activeSeats = clinicActiveSeatsMap[c.id] || 0
-            const { totalCents } = computeMonthlyTotalCents(c.plan_type, c.custom_price, activeSeats, {
-                seatPriceOverrideCents: c.seat_price_override_cents,
-                seatOverageWaived: c.seat_overage_waived,
-            })
-            return sum + (totalCents / 100)
+            const customPriceCents = c.custom_price !== null && c.custom_price !== undefined ? Math.round(Number(c.custom_price) * 100) : null
+            const overrides = {
+                seatPriceOverrideCents: (c as any).seat_price_override_cents ?? (c.addons as any)?.seat_price_override_cents,
+                seatOverageWaived: (c as any).seat_overage_waived ?? (c.addons as any)?.seat_overage_waived,
+            }
+            const totals = computeMonthlyTotalCents(c.plan_type, customPriceCents, activeSeats, overrides)
+            const monthlyVal = (totals.totalMonthlyCents ?? (totals as any).totalCents ?? 0) / 100
+            return sum + (isNaN(monthlyVal) ? 0 : monthlyVal)
         }, 0) || 0
 
         // Clinics by plan (real clinics only for enterprise/starter counts)
@@ -144,6 +161,7 @@ export async function GET(request: NextRequest) {
             return {
                 id: c.id,
                 name: c.name,
+                slug: c.slug,
                 planType: isDemo ? 'DEMO' : c.plan_type,
                 isActive: c.is_active,
                 isDemo: isDemo,

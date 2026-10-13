@@ -107,12 +107,13 @@ export default function ClinicPermissionsPage() {
             const clinicObj = clinicData.clinic || clinicData
             setClinic(clinicObj)
             setFaturamentoPremium(Boolean(clinicObj?.addons?.faturamento_premium))
-            if (clinicObj?.seat_price_override_cents !== null && clinicObj?.seat_price_override_cents !== undefined) {
-                setSeatPriceOverride((clinicObj.seat_price_override_cents / 100).toFixed(2))
+            const overrideCents = clinicObj?.seat_price_override_cents ?? clinicObj?.addons?.seat_price_override_cents
+            if (overrideCents !== null && overrideCents !== undefined && overrideCents !== '') {
+                setSeatPriceOverride((Number(overrideCents) / 100).toFixed(2))
             } else {
                 setSeatPriceOverride('')
             }
-            setSeatOverageWaived(Boolean(clinicObj?.seat_overage_waived))
+            setSeatOverageWaived(Boolean(clinicObj?.seat_overage_waived ?? clinicObj?.addons?.seat_overage_waived))
             setSeatBillingMode(clinicObj?.addons?.seat_billing_mode || 'shadow')
 
             // Fetch permissions

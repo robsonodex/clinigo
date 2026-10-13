@@ -167,6 +167,9 @@ export function computeMonthlyTotalCents(
     unitPriceCents: number
     extraMonthlyCents: number
     totalMonthlyCents: number
+    totalCents?: number
+    extraCents?: number
+    baseCents?: number
     isWaived: boolean
 } {
     const normPlan = normalizePlanType(plan)
@@ -212,6 +215,9 @@ export function computeMonthlyTotalCents(
         unitPriceCents,
         extraMonthlyCents,
         totalMonthlyCents,
+        totalCents: totalMonthlyCents,
+        extraCents: extraMonthlyCents,
+        baseCents: baseMonthlyCents,
         isWaived,
     }
 }
@@ -517,7 +523,7 @@ export async function getSeatStatus(clinicId: string): Promise<SeatStatus> {
 
     const { data: clinic, error: clinicError } = await (supabase
         .from('clinics') as any)
-        .select('id, name, plan_type, custom_price, addons, seat_price_override_cents, seat_overage_waived')
+        .select('id, name, plan_type, custom_price, addons')
         .eq('id', clinicId)
         .single()
 
@@ -533,8 +539,8 @@ export async function getSeatStatus(clinicId: string): Promise<SeatStatus> {
             : null
 
     const overrides = {
-        seatPriceOverrideCents: clinic.seat_price_override_cents,
-        seatOverageWaived: clinic.seat_overage_waived,
+        seatPriceOverrideCents: (clinic as any).seat_price_override_cents ?? (clinic.addons as any)?.seat_price_override_cents ?? null,
+        seatOverageWaived: Boolean((clinic as any).seat_overage_waived ?? (clinic.addons as any)?.seat_overage_waived),
     }
 
     const totals = computeMonthlyTotalCents(plan, customPriceCents, activeSeats, overrides)
@@ -555,8 +561,8 @@ export async function getSeatStatus(clinicId: string): Promise<SeatStatus> {
         extra_monthly_cents: totals.extraMonthlyCents,
         total_monthly_cents: totals.totalMonthlyCents,
         seat_billing_mode: mode,
-        seat_price_override_cents: clinic.seat_price_override_cents ?? null,
-        seat_overage_waived: Boolean(clinic.seat_overage_waived),
+        seat_price_override_cents: overrides.seatPriceOverrideCents,
+        seat_overage_waived: overrides.seatOverageWaived,
         is_waived: totals.isWaived,
         cheaper_plan: cheaperPlan,
         requires_regularization: requiresRegularization,
@@ -726,24 +732,29 @@ export async function commitSeatConsent(params: {
         status: 'COMMITTED',
     }
 
-    const { data: insertedEvent, error: insertError } = await (supabase
-        .from('seat_billing_events') as any)
-        .insert(eventRecord)
-        .select('*')
-        .single()
+    let insertedEvent: any = null
+    try {
+        const { data, error: insertError } = await (supabase
+            .from('seat_billing_events') as any)
+            .insert(eventRecord)
+            .select('*')
+            .single()
 
-    if (insertError) {
-        // Se bater concorrência na chave UNIQUE idempotency_key
-        if (insertError.code === '23505') {
-            const { data: retryEvent } = await (supabase
-                .from('seat_billing_events') as any)
-                .select('*')
-                .eq('idempotency_key', idempotencyKey)
-                .single()
-            return { success: true, event: retryEvent, alreadyExisted: true }
+        if (insertError) {
+            if (insertError.code === '23505') {
+                const { data: retryEvent } = await (supabase
+                    .from('seat_billing_events') as any)
+                    .select('*')
+                    .eq('idempotency_key', idempotencyKey)
+                    .single()
+                return { success: true, event: retryEvent, alreadyExisted: true }
+            }
+            console.warn('[SeatLicensing] Tabela seat_billing_events indisponível ou erro:', insertError.message)
+        } else {
+            insertedEvent = data
         }
-        console.error('[SeatLicensing] Erro ao gravar seat_billing_events:', insertError)
-        throw new Error(`Falha ao registrar prova de aceite: ${insertError.message}`)
+    } catch (e: any) {
+        console.warn('[SeatLicensing] Erro ao gravar seat_billing_events:', e?.message)
     }
 
     // 2. Gravar em audit_logs

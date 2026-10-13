@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
             const { data: currentClinic, error: fetchErr } = await serviceSupabase
                 .from('clinics')
-                .select('name, addons, seat_price_override_cents, seat_overage_waived')
+                .select('name, addons')
                 .eq('id', clinicId)
                 .single()
 
@@ -101,28 +101,27 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
             }
 
-            const updateData: Record<string, any> = {}
+            const currentAddons = ((currentClinic as any).addons as Record<string, any>) || {}
+            const nextAddons = { ...currentAddons }
 
             if (seat_price_override_cents !== undefined) {
-                updateData.seat_price_override_cents =
+                nextAddons.seat_price_override_cents =
                     seat_price_override_cents === null || seat_price_override_cents === ''
                         ? null
                         : Math.max(0, Math.round(Number(seat_price_override_cents)))
             }
 
             if (seat_overage_waived !== undefined) {
-                updateData.seat_overage_waived = Boolean(seat_overage_waived)
+                nextAddons.seat_overage_waived = Boolean(seat_overage_waived)
             }
 
             if (seat_billing_mode !== undefined) {
-                const currentAddons = ((currentClinic as any).addons as Record<string, any>) || {}
-                updateData.addons = {
-                    ...currentAddons,
-                    seat_billing_mode: String(seat_billing_mode).toLowerCase(),
-                    seat_billing_mode_updated_at: new Date().toISOString(),
-                    seat_billing_mode_updated_by: user.id,
-                }
+                nextAddons.seat_billing_mode = String(seat_billing_mode).toLowerCase()
+                nextAddons.seat_billing_mode_updated_at = new Date().toISOString()
+                nextAddons.seat_billing_mode_updated_by = user.id
             }
+
+            const updateData: Record<string, any> = { addons: nextAddons }
 
             const { error: updateErr } = await serviceSupabase
                 .from('clinics')

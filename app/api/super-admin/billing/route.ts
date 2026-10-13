@@ -43,10 +43,13 @@ export async function GET(request: NextRequest) {
         // Buscar clínicas com subscriptions
         const { data: clinics, error: clinicsError } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, plan_type, is_active, subscription_due_date, custom_price, phone, email, seat_price_override_cents, seat_overage_waived')
+            .select('id, name, plan_type, is_active, subscription_due_date, custom_price, phone, email, addons')
             .order('name')
 
-        if (clinicsError) throw new Error('Erro ao buscar clínicas')
+        if (clinicsError) {
+            console.error('[SUPER_ADMIN_BILLING] Erro ao buscar clínicas:', clinicsError)
+            throw new Error(`Erro ao buscar clínicas: ${clinicsError.message}`)
+        }
 
         // Contar assentos ativos por clínica
         const { data: countedUsers } = await supabaseAdmin
@@ -70,16 +73,18 @@ export async function GET(request: NextRequest) {
         // Processar faturamento com cálculo derivado unificado de assentos extras
         const allClinics = (clinics || []).map(c => {
             const activeSeats = clinicActiveSeatsMap[c.id] || 0
-            const { totalCents, extraSeats, includedSeats, extraCents } = computeMonthlyTotalCents(
+            const customPriceCents = c.custom_price !== null && c.custom_price !== undefined ? Math.round(Number(c.custom_price) * 100) : null
+            const overrides = {
+                seatPriceOverrideCents: (c as any).seat_price_override_cents ?? (c.addons as any)?.seat_price_override_cents,
+                seatOverageWaived: (c as any).seat_overage_waived ?? (c.addons as any)?.seat_overage_waived,
+            }
+            const totals = computeMonthlyTotalCents(
                 c.plan_type,
-                c.custom_price,
+                customPriceCents,
                 activeSeats,
-                {
-                    seatPriceOverrideCents: c.seat_price_override_cents,
-                    seatOverageWaived: c.seat_overage_waived,
-                }
+                overrides
             )
-            const price = totalCents / 100
+            const price = (totals.totalMonthlyCents ?? (totals as any).totalCents ?? 0) / 100
             const dueDate = c.subscription_due_date ? new Date(c.subscription_due_date + 'T00:00:00') : null
             const isOverdue = dueDate ? dueDate < now : false
             const daysOverdue = dueDate ? Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0
