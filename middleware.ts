@@ -160,6 +160,7 @@ const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
     '/api/health-insurances': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     '/api/insurance': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     '/api/intake': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'], // Pré-cadastros: apenas admin e recepção
+    '/api/tasks': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'], // Módulo de tarefas e projetos
 }
 
 // Role-protected Dashboard Pages (Hard Gate no Servidor para URLs diretas coladas no navegador)
@@ -217,6 +218,9 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
 
     // Notificações administrativas
     '/dashboard/notificacoes': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+
+    // Tarefas e Projetos: Administradores, Médicos/Terapeutas, Recepção e Equipe
+    '/dashboard/tarefas': ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
 }
 
 // ============================================

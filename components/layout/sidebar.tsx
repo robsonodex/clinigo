@@ -60,6 +60,7 @@ import {
     Tablet,
     FileSignature,
     ClipboardPen,
+    CheckSquare,
 } from 'lucide-react'
 import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
@@ -103,6 +104,12 @@ const navigationSections: NavSection[] = [
                 href: '/dashboard',
                 icon: LayoutDashboard,
                 featureKey: FEATURE_KEYS.DASHBOARD,
+            },
+            {
+                title: 'Tarefas',
+                href: '/dashboard/tarefas',
+                icon: CheckSquare,
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
             },
             {
                 title: 'Checklist Inicial',

@@ -60,19 +60,24 @@ export default function ClinicaLoginPage() {
 
             clearTimeout(timeoutId)
 
-            const data = await response.json()
+            let data: any = null
+            try {
+                data = await response.json()
+            } catch {
+                throw new Error('Falha de resposta do servidor de autenticação. Verifique sua conexão e tente novamente.')
+            }
 
             if (!response.ok) {
-                if (data.error?.code === 'CLINIC_INACTIVE') {
+                if (data?.error?.code === 'CLINIC_INACTIVE') {
                     window.location.href = '/conta-bloqueada'
                     return
                 }
                 // Log debug info if available
-                if (data.error?.debug) {
+                if (data?.error?.debug) {
                     console.error('[LOGIN] Supabase error:', data.error.debug.supabaseError)
                     console.error('[LOGIN] Supabase code:', data.error.debug.supabaseCode)
                 }
-                throw new Error(data.error?.message || 'Email ou senha incorretos')
+                throw new Error(data?.error?.message || 'Email ou senha incorretos')
             }
 
             if (formData.rememberMe) {
