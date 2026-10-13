@@ -98,38 +98,99 @@ export function calculateTrafficLight(dueDate?: string | null, status: TaskStatu
     return { status: 'GREEN', label: `No prazo (${diffDays}d)`, days_diff: diffDays }
 }
 
-// Fallback Store (usado temporariamente se a tabela ainda não tiver sido criada no Supabase SQL Editor)
-const FALLBACK_DIR = path.join(process.cwd(), '.cache')
-const FALLBACK_FILE = path.join(FALLBACK_DIR, 'tasks_store.json')
-
-interface FallbackStore {
-    projects: Record<string, TaskProject[]>
-    tasks: Record<string, ClinicTask[]>
+// Store persistente baseado em clinics.addons no Supabase (resiliente ao ambiente Serverless da Vercel)
+interface ClinicTasksData {
+    projects: TaskProject[]
+    tasks: ClinicTask[]
+    updated_at?: string
 }
 
-function getFallbackStore(): FallbackStore {
+async function getClinicTasksStore(clinicId: string): Promise<ClinicTasksData> {
+    const supabase = createServiceRoleClient()
     try {
-        if (!fs.existsSync(FALLBACK_DIR)) {
-            fs.mkdirSync(FALLBACK_DIR, { recursive: true })
+        const { data: clinic, error } = await supabase
+            .from('clinics')
+            .select('addons')
+            .eq('id', clinicId)
+            .single()
+
+        if (!error && clinic?.addons) {
+            const tasksData = (clinic.addons as any)?.tasks_data
+            if (tasksData && (Array.isArray(tasksData.projects) || Array.isArray(tasksData.tasks))) {
+                return {
+                    projects: Array.isArray(tasksData.projects) && tasksData.projects.length > 0
+                        ? tasksData.projects
+                        : DEFAULT_CLINIC_PROJECTS.map((p, idx) => ({
+                            id: `proj-${idx + 1}-${clinicId.slice(0, 6)}`,
+                            clinic_id: clinicId,
+                            name: p.name,
+                            color: p.color,
+                            description: p.description,
+                            is_archived: false,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
+                        })),
+                    tasks: Array.isArray(tasksData.tasks) ? tasksData.tasks : [],
+                    updated_at: tasksData.updated_at,
+                }
+            }
         }
-        if (fs.existsSync(FALLBACK_FILE)) {
-            const data = fs.readFileSync(FALLBACK_FILE, 'utf-8')
-            return JSON.parse(data)
-        }
-    } catch {
-        // ignora erro de leitura
+    } catch (err) {
+        console.error('[TasksService] Erro ao obter tasks_data de clinics.addons:', err)
     }
-    return { projects: {}, tasks: {} }
+
+    // Inicialização na primeira utilização da clínica
+    const now = new Date().toISOString()
+    const initialProjects: TaskProject[] = DEFAULT_CLINIC_PROJECTS.map((p, idx) => ({
+        id: `proj-${idx + 1}-${clinicId.slice(0, 6)}`,
+        clinic_id: clinicId,
+        name: p.name,
+        color: p.color,
+        description: p.description,
+        is_archived: false,
+        created_at: now,
+        updated_at: now,
+    }))
+
+    const initialStore: ClinicTasksData = {
+        projects: initialProjects,
+        tasks: [],
+        updated_at: now,
+    }
+
+    await saveClinicTasksStore(clinicId, initialStore)
+    return initialStore
 }
 
-function saveFallbackStore(store: FallbackStore) {
+async function saveClinicTasksStore(clinicId: string, store: ClinicTasksData): Promise<void> {
+    const supabase = createServiceRoleClient()
     try {
-        if (!fs.existsSync(FALLBACK_DIR)) {
-            fs.mkdirSync(FALLBACK_DIR, { recursive: true })
+        const { data: clinic } = await supabase
+            .from('clinics')
+            .select('addons')
+            .eq('id', clinicId)
+            .single()
+
+        const currentAddons = (clinic?.addons as Record<string, any>) || {}
+        const updatedAddons = {
+            ...currentAddons,
+            tasks_data: {
+                projects: store.projects,
+                tasks: store.tasks,
+                updated_at: new Date().toISOString(),
+            },
         }
-        fs.writeFileSync(FALLBACK_FILE, JSON.stringify(store, null, 2), 'utf-8')
-    } catch {
-        // ignora erro de escrita
+
+        const { error: updateError } = await supabase
+            .from('clinics')
+            .update({ addons: updatedAddons })
+            .eq('id', clinicId)
+
+        if (updateError) {
+            console.error('[TasksService] Falha ao gravar no Supabase clinics.addons:', updateError)
+        }
+    } catch (err) {
+        console.error('[TasksService] Exceção ao gravar no Supabase:', err)
     }
 }
 
@@ -158,7 +219,6 @@ export class TasksService {
                 return data as TaskProject[]
             }
 
-            // Se tabela existir mas estiver vazia, cria os projetos padrão
             if (!error && data && data.length === 0) {
                 const toInsert = DEFAULT_CLINIC_PROJECTS.map(p => ({
                     clinic_id: clinicId,
@@ -176,26 +236,11 @@ export class TasksService {
                 }
             }
         } catch {
-            // Tabela não existe no banco; usa fallback local
+            // Tabela não existe no banco; usa fallback Supabase clinics.addons
         }
 
-        // Fallback resiliente
-        const store = getFallbackStore()
-        if (!store.projects[clinicId] || store.projects[clinicId].length === 0) {
-            const now = new Date().toISOString()
-            store.projects[clinicId] = DEFAULT_CLINIC_PROJECTS.map((p, idx) => ({
-                id: `proj-${idx + 1}-${clinicId.slice(0, 6)}`,
-                clinic_id: clinicId,
-                name: p.name,
-                color: p.color,
-                description: p.description,
-                is_archived: false,
-                created_at: now,
-                updated_at: now,
-            }))
-            saveFallbackStore(store)
-        }
-        return store.projects[clinicId]
+        const store = await getClinicTasksStore(clinicId)
+        return store.projects.filter(p => !p.is_archived)
     }
 
     // 2. Criar novo projeto
@@ -222,8 +267,7 @@ export class TasksService {
             // fallback
         }
 
-        const store = getFallbackStore()
-        if (!store.projects[clinicId]) store.projects[clinicId] = []
+        const store = await getClinicTasksStore(clinicId)
         const now = new Date().toISOString()
         const newProj: TaskProject = {
             id: `proj-${Date.now()}`,
@@ -236,12 +280,12 @@ export class TasksService {
             created_at: now,
             updated_at: now,
         }
-        store.projects[clinicId].push(newProj)
-        saveFallbackStore(store)
+        store.projects.push(newProj)
+        await saveClinicTasksStore(clinicId, store)
         return newProj
     }
 
-    // 3. Buscar tarefas da clínica com filtros e controle estrito de visibilidade
+    // 3. Buscar tarefas da clínica com filtros e controle de visibilidade
     static async getTasks(params: {
         clinicId: string
         userId: string
@@ -271,8 +315,6 @@ export class TasksService {
                 `)
                 .eq('clinic_id', clinicId)
 
-            // Regra de Visibilidade Restrita por Perfil:
-            // Se NÃO for Admin, ou se o usuário escolheu 'my_tasks':
             if (!isClinicAdmin || viewMode === 'my_tasks') {
                 query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
             } else if (assignedTo) {
@@ -310,95 +352,38 @@ export class TasksService {
             // fallback
         }
 
-        // Fallback resiliente
-        const store = getFallbackStore()
-        let clinicTasks = store.tasks[clinicId] || []
+        // Persistência em clinics.addons
+        const store = await getClinicTasksStore(clinicId)
+        let clinicTasks = store.tasks || []
 
-        // Se não houver tarefas, criar algumas amostras reais para homologação da equipe
-        if (clinicTasks.length === 0) {
-            const projects = await this.getProjects(clinicId)
-            const projRec = projects[0]?.id
-            const projTer = projects[1]?.id
-            const todayStr = new Date().toISOString().split('T')[0]
-            const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-            const overdueDate = new Date(Date.now() - 172800000).toISOString().split('T')[0]
+        // Enriquecer dados dos usuários e pacientes para exibição no Kanban / Lista
+        try {
+            const [usersRes, patientsRes] = await Promise.all([
+                supabase.from('users').select('id, full_name, email, role, avatar_url').eq('clinic_id', clinicId),
+                supabase.from('patients').select('id, full_name').eq('clinic_id', clinicId).limit(300)
+            ])
+            const usersMap = new Map((usersRes.data || []).map(u => [u.id, u]))
+            const patientsMap = new Map((patientsRes.data || []).map(p => [p.id, p]))
+            const projectsMap = new Map(store.projects.map(pr => [pr.id, pr]))
 
-            clinicTasks = [
-                {
-                    id: `task-sample-1-${clinicId.slice(0, 4)}`,
-                    clinic_id: clinicId,
-                    project_id: projRec,
-                    title: 'Cobrar autorização de guia TISS do convênio Unimed',
-                    description: 'Paciente realizou 8 de 10 sessões. Solicitar novo lote de guias para o próximo mês.',
-                    status: 'TODO',
-                    priority: 'HIGH',
-                    due_date: todayStr,
-                    due_time: '17:00',
-                    assigned_to: userId,
-                    created_by: userId,
-                    recurrence: 'NONE',
-                    position: 0,
-                    tags: ['TISS', 'Convênio'],
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    project: projects[0],
-                    checklists: [
-                        { id: 'c1', task_id: 'task-sample-1', title: 'Verificar carteirinha no portal', is_completed: true, position: 0, created_at: new Date().toISOString() },
-                        { id: 'c2', task_id: 'task-sample-1', title: 'Emitir anexo de solicitação', is_completed: false, position: 1, created_at: new Date().toISOString() },
-                    ],
-                    traffic_light: calculateTrafficLight(todayStr, 'TODO'),
-                },
-                {
-                    id: `task-sample-2-${clinicId.slice(0, 4)}`,
-                    clinic_id: clinicId,
-                    project_id: projTer,
-                    title: 'Finalizar relatório de reavaliação neuropsicomotora',
-                    description: 'Entrega obrigatória para a neuropediatra e escola antes da consulta de sexta-feira.',
-                    status: 'IN_PROGRESS',
-                    priority: 'URGENT',
-                    due_date: tomorrow,
-                    due_time: '18:00',
-                    assigned_to: userId,
-                    created_by: userId,
-                    recurrence: 'NONE',
-                    position: 1,
-                    tags: ['Laudo', 'Psicomotricidade'],
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    project: projects[1],
-                    checklists: [
-                        { id: 'c3', task_id: 'task-sample-2', title: 'Revisar testes motores e equilíbrio', is_completed: true, position: 0, created_at: new Date().toISOString() },
-                        { id: 'c4', task_id: 'task-sample-2', title: 'Assinar digitalmente o PDF', is_completed: false, position: 1, created_at: new Date().toISOString() },
-                    ],
-                    traffic_light: calculateTrafficLight(tomorrow, 'IN_PROGRESS'),
-                },
-                {
-                    id: `task-sample-3-${clinicId.slice(0, 4)}`,
-                    clinic_id: clinicId,
-                    project_id: projTer,
-                    title: 'Auditoria de evoluções diárias pendentes da semana',
-                    description: 'Verificar se todas as fichas de atendimento foram devidamente computadas e assinadas.',
-                    status: 'TODO',
-                    priority: 'HIGH',
-                    due_date: overdueDate,
-                    due_time: '12:00',
-                    assigned_to: userId,
-                    created_by: userId,
-                    recurrence: 'WEEKLY',
-                    position: 2,
-                    tags: ['Conformidade', 'Prontuário'],
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    project: projects[1],
-                    checklists: [],
-                    traffic_light: calculateTrafficLight(overdueDate, 'TODO'),
-                },
-            ]
-            store.tasks[clinicId] = clinicTasks
-            saveFallbackStore(store)
+            clinicTasks = clinicTasks.map(t => {
+                const project = t.project_id ? projectsMap.get(t.project_id) : t.project
+                const assigned_user = t.assigned_to ? usersMap.get(t.assigned_to) : t.assigned_user
+                const creator_user = t.created_by ? usersMap.get(t.created_by) : t.creator_user
+                const patient = t.patient_id ? patientsMap.get(t.patient_id) : t.patient
+                return {
+                    ...t,
+                    project: project || t.project || null,
+                    assigned_user: assigned_user || t.assigned_user || null,
+                    creator_user: creator_user || t.creator_user || null,
+                    patient: patient || t.patient || null,
+                }
+            })
+        } catch {
+            // ignora erro no enriquecimento
         }
 
-        // Aplica filtros no fallback
+        // Aplica filtros no store
         let filtered = clinicTasks
 
         if (!isClinicAdmin || viewMode === 'my_tasks') {
@@ -423,7 +408,8 @@ export class TasksService {
             const term = search.toLowerCase().trim()
             filtered = filtered.filter(t =>
                 t.title.toLowerCase().includes(term) ||
-                (t.description && t.description.toLowerCase().includes(term))
+                (t.description && t.description.toLowerCase().includes(term)) ||
+                (t.patient?.full_name && t.patient.full_name.toLowerCase().includes(term))
             )
         }
 
@@ -495,9 +481,8 @@ export class TasksService {
             // fallback
         }
 
-        // Fallback local
-        const store = getFallbackStore()
-        if (!store.tasks[data.clinic_id]) store.tasks[data.clinic_id] = []
+        // Persistência em clinics.addons
+        const store = await getClinicTasksStore(data.clinic_id)
         const now = new Date().toISOString()
         const taskId = `task-${Date.now()}`
 
@@ -510,8 +495,28 @@ export class TasksService {
             created_at: now,
         }))
 
-        const projects = await this.getProjects(data.clinic_id)
-        const project = projects.find(p => p.id === data.project_id) || null
+        const project = store.projects.find(p => p.id === data.project_id) || null
+
+        // Enriquecer usuário atribuído e paciente
+        let assigned_user = null
+        let creator_user = null
+        let patient = null
+        try {
+            if (data.assigned_to) {
+                const { data: u } = await supabase.from('users').select('id, full_name, email, role, avatar_url').eq('id', data.assigned_to).single()
+                if (u) assigned_user = u
+            }
+            if (data.created_by) {
+                const { data: c } = await supabase.from('users').select('id, full_name').eq('id', data.created_by).single()
+                if (c) creator_user = c
+            }
+            if (data.patient_id) {
+                const { data: pt } = await supabase.from('patients').select('id, full_name').eq('id', data.patient_id).single()
+                if (pt) patient = pt
+            }
+        } catch {
+            // ignora
+        }
 
         const newTask: ClinicTask = {
             id: taskId,
@@ -532,12 +537,15 @@ export class TasksService {
             created_at: now,
             updated_at: now,
             project,
+            assigned_user,
+            creator_user,
+            patient,
             checklists,
             traffic_light: calculateTrafficLight(data.due_date, 'TODO'),
         }
 
-        store.tasks[data.clinic_id].unshift(newTask)
-        saveFallbackStore(store)
+        store.tasks.unshift(newTask)
+        await saveClinicTasksStore(data.clinic_id, store)
         return newTask
     }
 
@@ -586,12 +594,11 @@ export class TasksService {
             // fallback
         }
 
-        // Fallback local
-        const store = getFallbackStore()
-        const list = store.tasks[clinicId] || []
-        const idx = list.findIndex(t => t.id === taskId)
+        // Persistência em clinics.addons
+        const store = await getClinicTasksStore(clinicId)
+        const idx = store.tasks.findIndex(t => t.id === taskId)
         if (idx > -1) {
-            const current = list[idx]
+            const current = store.tasks[idx]
             const updated: ClinicTask = {
                 ...current,
                 ...updates,
@@ -599,14 +606,40 @@ export class TasksService {
                 completed_at: updates.status === 'DONE' ? new Date().toISOString() : (updates.status ? null : current.completed_at),
                 traffic_light: calculateTrafficLight(updates.due_date || current.due_date, updates.status || current.status),
             }
-            list[idx] = updated
-            saveFallbackStore(store)
+            store.tasks[idx] = updated
+            await saveClinicTasksStore(clinicId, store)
             return updated
         }
         return null
     }
 
-    // 6. Resumo das métricas do Farol (KPIs)
+    // 6. Excluir tarefa
+    static async deleteTask(clinicId: string, taskId: string): Promise<boolean> {
+        const supabase = createServiceRoleClient()
+
+        try {
+            const { error } = await supabase
+                .from('clinic_tasks')
+                .delete()
+                .eq('id', taskId)
+                .eq('clinic_id', clinicId)
+
+            if (!error) return true
+        } catch {
+            // fallback
+        }
+
+        const store = await getClinicTasksStore(clinicId)
+        const prevCount = store.tasks.length
+        store.tasks = store.tasks.filter(t => t.id !== taskId)
+        if (store.tasks.length !== prevCount) {
+            await saveClinicTasksStore(clinicId, store)
+            return true
+        }
+        return false
+    }
+
+    // 7. Resumo das métricas do Farol (KPIs)
     static async getSummary(clinicId: string, userId: string, userRole: string, viewMode?: string) {
         const tasks = await this.getTasks({
             clinicId,

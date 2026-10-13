@@ -696,6 +696,79 @@ export function AppointmentDetailsDrawer({
                                     </div>
                                 )}
                             </div>
+                        ) : (appointment.appointment_type === 'BLOCK' || (!appointment.patient_id && !appointment.patient && !appointment.student_id && appointment.appointment_type !== 'SUPERVISION')) ? (
+                            <div className="space-y-4">
+                                <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-xl space-y-1">
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-amber-950 dark:text-amber-200">
+                                        <Lock className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                                        <span>Bloqueio de Agenda / Compromisso Interno</span>
+                                    </div>
+                                    <p className="text-xs text-amber-800/80 dark:text-amber-300">
+                                        Horário reservado para atividades internas, reuniões com pais/escola ou alinhamentos de equipe.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Título do Compromisso</Label>
+                                    <p className="font-bold text-slate-900 dark:text-slate-100 text-base mt-0.5">
+                                        {appointment.schedule_overrides?.block_title ||
+                                         (appointment.waiting_room_notes?.split(' • ')[0]?.split(' (Equipe')[0]) ||
+                                         'Compromisso Interno'}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Profissional / Terapeuta</Label>
+                                    <p className="font-semibold text-foreground mt-0.5">
+                                        Dr(a). {doctorName}
+                                        {appointment.co_doctor?.user?.full_name ? ` + ${appointment.co_doctor.user.full_name}` : ''}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Data e Horário</Label>
+                                    <p className="font-medium text-foreground mt-0.5">{formattedDate}</p>
+                                </div>
+
+                                {/* Campo de Observação e Motivo Detalhado */}
+                                <div>
+                                    <Label className="text-xs text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5">
+                                        <FileText className="h-3.5 w-3.5 text-amber-600" />
+                                        Observação / Motivo da Reunião
+                                    </Label>
+                                    <div className="mt-1.5 p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 whitespace-pre-wrap leading-relaxed shadow-xs">
+                                        {appointment.schedule_overrides?.block_notes ||
+                                         appointment.reception_notes ||
+                                         (appointment.waiting_room_notes?.includes(' • ')
+                                            ? appointment.waiting_room_notes.split(' • ').slice(1).join(' • ').split(' (Equipe')[0]
+                                            : null) ||
+                                         'Nenhuma observação informada no cadastro deste bloqueio.'}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Status</Label>
+                                    <div className="mt-1">
+                                        <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300 font-semibold">
+                                            {appointment.status === 'CANCELLED' ? 'Cancelado' : 'Horário Bloqueado'}
+                                        </Badge>
+                                    </div>
+                                </div>
+
+                                {canDelete && (
+                                    <div className="pt-3 border-t">
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setConfirmDeleteOpen(true)}
+                                            className="w-full gap-1.5 font-semibold min-h-[38px]"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span>Desbloquear Horário (Excluir da Grade)</span>
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <div className="space-y-3">
                                 <div>

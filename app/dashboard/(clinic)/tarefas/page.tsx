@@ -127,11 +127,18 @@ export default function TarefasProjetosPage() {
 
     // Filtros e controles
     const [viewLayout, setViewLayout] = useState<'kanban' | 'list'>('kanban')
-    const [viewMode, setViewMode] = useState<'my_tasks' | 'all_clinic'>('my_tasks')
+    const [viewMode, setViewMode] = useState<'my_tasks' | 'all_clinic'>('all_clinic')
     const [filterProject, setFilterProject] = useState<string>('all')
     const [filterTraffic, setFilterTraffic] = useState<string>('all')
     const [filterAssignee, setFilterAssignee] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
+
+    // Sincroniza viewMode inicial para gestores
+    useEffect(() => {
+        if (profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'COORDINATOR') {
+            setViewMode('all_clinic')
+        }
+    }, [profile?.role])
 
     // Modais
     const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
@@ -309,8 +316,12 @@ export default function TarefasProjetosPage() {
             })
 
             if (res.ok) {
+                const json = await res.json()
                 toast.success('Tarefa cadastrada com sucesso')
                 setNewTaskModalOpen(false)
+                if (json?.data) {
+                    setTasks(prev => [json.data, ...prev])
+                }
                 setTaskForm({
                     title: '',
                     description: '',
@@ -365,6 +376,26 @@ export default function TarefasProjetosPage() {
             toast.error('Falha de conexão')
         } finally {
             setSaving(false)
+        }
+    }
+
+    // Handler: Excluir Tarefa
+    const handleDeleteTask = async (taskId: string) => {
+        if (!confirm('Deseja realmente excluir esta tarefa?')) return
+        setTasks(prev => prev.filter(t => t.id !== taskId))
+        try {
+            const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
+            if (res.ok) {
+                toast.success('Tarefa excluída com sucesso')
+                if (editingTask?.id === taskId) setEditingTask(null)
+                fetchTasks()
+            } else {
+                toast.error('Erro ao excluir tarefa')
+                fetchTasks()
+            }
+        } catch {
+            toast.error('Falha de conexão')
+            fetchTasks()
         }
     }
 
@@ -743,6 +774,7 @@ export default function TarefasProjetosPage() {
                                         renderTrafficBadge={renderTrafficBadge}
                                         onEdit={() => setEditingTask(task)}
                                         onAdvance={() => handleMoveStatus(task.id, 'IN_PROGRESS')}
+                                        onDelete={() => handleDeleteTask(task.id)}
                                         advanceLabel="Iniciar"
                                     />
                                 ))
@@ -776,6 +808,7 @@ export default function TarefasProjetosPage() {
                                         onEdit={() => setEditingTask(task)}
                                         onBack={() => handleMoveStatus(task.id, 'TODO')}
                                         onAdvance={() => handleMoveStatus(task.id, 'DONE')}
+                                        onDelete={() => handleDeleteTask(task.id)}
                                         advanceLabel="Concluir"
                                     />
                                 ))
@@ -808,6 +841,7 @@ export default function TarefasProjetosPage() {
                                         renderTrafficBadge={renderTrafficBadge}
                                         onEdit={() => setEditingTask(task)}
                                         onBack={() => handleMoveStatus(task.id, 'IN_PROGRESS')}
+                                        onDelete={() => handleDeleteTask(task.id)}
                                     />
                                 ))
                             )}
@@ -892,14 +926,26 @@ export default function TarefasProjetosPage() {
                                                 </Select>
                                             </td>
                                             <td className="py-3 px-4 text-right whitespace-nowrap">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setEditingTask(task)}
-                                                    className="h-7 w-7 p-0"
-                                                >
-                                                    <Edit3 className="h-3.5 w-3.5" />
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setEditingTask(task)}
+                                                        className="h-7 w-7 p-0"
+                                                        title="Editar tarefa"
+                                                    >
+                                                        <Edit3 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteTask(task.id)}
+                                                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        title="Excluir tarefa"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -1230,24 +1276,38 @@ export default function TarefasProjetosPage() {
                             )}
                         </div>
 
-                        <DialogFooter className="gap-2">
+                        <DialogFooter className="flex items-center justify-between sm:justify-between w-full gap-2">
                             <Button
-                                variant="outline"
+                                variant="destructive"
                                 size="sm"
-                                onClick={() => setEditingTask(null)}
-                                className="text-xs"
+                                type="button"
+                                onClick={() => editingTask && handleDeleteTask(editingTask.id)}
+                                className="text-xs gap-1.5"
                             >
-                                Fechar
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Excluir
                             </Button>
-                            <Button
-                                size="sm"
-                                onClick={handleSaveEditTask}
-                                disabled={saving}
-                                className="text-xs bg-emerald-800 hover:bg-emerald-900 text-white"
-                            >
-                                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-                                Salvar Alterações
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() => setEditingTask(null)}
+                                    className="text-xs"
+                                >
+                                    Fechar
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    type="button"
+                                    onClick={handleSaveEditTask}
+                                    disabled={saving}
+                                    className="text-xs bg-emerald-800 hover:bg-emerald-900 text-white"
+                                >
+                                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                                    Salvar Alterações
+                                </Button>
+                            </div>
                         </DialogFooter>
                     </DialogContent>
                 )}
@@ -1337,6 +1397,7 @@ function TaskCard({
     onEdit,
     onAdvance,
     onBack,
+    onDelete,
     advanceLabel,
 }: {
     task: ClinicTask
@@ -1344,6 +1405,7 @@ function TaskCard({
     onEdit: () => void
     onAdvance?: () => void
     onBack?: () => void
+    onDelete?: () => void
     advanceLabel?: string
 }) {
     const totalChecklist = task.checklists?.length || 0
@@ -1374,6 +1436,11 @@ function TaskCard({
                             <DropdownMenuItem onClick={onEdit} className="gap-2 cursor-pointer">
                                 <Edit3 className="h-3 w-3" /> Ver detalhes
                             </DropdownMenuItem>
+                            {onDelete && (
+                                <DropdownMenuItem onClick={onDelete} className="gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                                    <Trash2 className="h-3 w-3" /> Excluir tarefa
+                                </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

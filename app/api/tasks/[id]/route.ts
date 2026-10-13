@@ -54,3 +54,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Erro interno ao atualizar tarefa' }, { status: 500 })
     }
 }
+
+export async function DELETE(
+    request: NextRequest,
+    context: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await context.params
+        const auth = await getAuthContext(request)
+        if ('error' in auth) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status })
+        }
+
+        const success = await TasksService.deleteTask(auth.clinicId, id)
+        if (!success) {
+            return NextResponse.json({ error: 'Tarefa não encontrada para exclusão' }, { status: 404 })
+        }
+
+        return NextResponse.json({ success: true, message: 'Tarefa excluída com sucesso' })
+    } catch (error: any) {
+        console.error('[API Tasks [id]] Erro ao excluir tarefa:', error)
+        return NextResponse.json({ error: 'Erro interno ao excluir tarefa' }, { status: 500 })
+    }
+}
+

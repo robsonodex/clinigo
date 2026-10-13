@@ -57,6 +57,7 @@ interface ManualAppointmentRequest {
     lock_id?: string // PREMIUM: Anti-overbooking lock ID
     is_block?: boolean // Compromisso/Bloqueio interno (sem paciente)
     block_title?: string // Título do bloqueio (ex: "Reunião de Equipe")
+    block_notes?: string // Observação / Motivo detalhado do bloqueio (ex: "Reunião com os pais")
     specialty?: string
     is_supervision?: boolean // Supervisão Técnica/Clínica (sem paciente)
     professional_supervised_id?: string // Profissional que receberá supervisão
@@ -510,7 +511,9 @@ export async function POST(request: NextRequest) {
         } else if (body.is_supervision) {
             finalNotes = body.supervision_notes ? `[Supervisão Técnica] ${body.supervision_notes}` : '[Supervisão Técnica]'
         } else if (body.is_block) {
-            finalNotes = body.block_title || 'Compromisso Interno'
+            const rawTitle = body.block_title || 'Compromisso Interno'
+            const rawNotes = body.block_notes ? ` • ${body.block_notes}` : ''
+            finalNotes = `${rawTitle}${rawNotes}`
             if (hasMultipleDoctors) {
                 finalNotes = `${finalNotes} (Equipe: ${allDoctorNames})`
             }
@@ -538,8 +541,13 @@ export async function POST(request: NextRequest) {
             professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
             supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
             mentoring_notes: body.is_student ? (body.mentoring_notes || null) : null,
+            schedule_overrides: {
+                ...(body.overrides || {}),
+                block_title: body.block_title || 'Compromisso Interno',
+                block_notes: body.block_notes || null,
+            },
             waiting_room_notes: finalNotes,
-            reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
+            reception_notes: body.is_block ? (body.block_notes || null) : (body.specialty ? `[ESP:${body.specialty}]` : null),
         }
 
         // Generate video link for telemedicine appointments
@@ -601,8 +609,13 @@ export async function POST(request: NextRequest) {
                 professional_supervised_id: body.is_supervision ? (body.professional_supervised_id || null) : null,
                 supervision_notes: body.is_supervision ? (body.supervision_notes || null) : null,
                 mentoring_notes: body.is_student ? (body.mentoring_notes || null) : null,
+                schedule_overrides: {
+                    ...(body.overrides || {}),
+                    block_title: body.block_title || 'Compromisso Interno',
+                    block_notes: body.block_notes || null,
+                },
                 waiting_room_notes: finalNotes,
-                reception_notes: body.specialty ? `[ESP:${body.specialty}]` : null,
+                reception_notes: body.is_block ? (body.block_notes || null) : (body.specialty ? `[ESP:${body.specialty}]` : null),
                 video_link: appointmentData.video_link || null
             }))
 

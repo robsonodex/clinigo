@@ -1507,8 +1507,17 @@ export default function AgendaPage() {
                                                                                     ? `Mentoria: ${(appointment as any).student?.full_name || (appointment as any).mentoring_notes || 'Mentoria / Formação'}`
                                                                                     : (appointment as any).appointment_type === 'SUPERVISION'
                                                                                         ? `Supervisão: ${(appointment as any).professional_supervised?.user?.full_name || (appointment as any).supervision_notes || 'Supervisão Técnica'}`
-                                                                                        : (appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso')}
+                                                                                        : ((appointment as any).appointment_type === 'BLOCK' || !appointment.patient || !(appointment as any).patient_id)
+                                                                                            ? `[Bloqueio] ${(appointment as any).schedule_overrides?.block_title || (appointment as any).waiting_room_notes?.split(' • ')[0]?.split(' (Equipe')[0] || 'Compromisso Interno'}`
+                                                                                            : (appointment.patient?.full_name || 'Paciente')}
                                                                             </div>
+
+                                                                            {/* Subtítulo com Observação / Motivo do Bloqueio */}
+                                                                            {((appointment as any).appointment_type === 'BLOCK' || !appointment.patient || !(appointment as any).patient_id) && ((appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.includes(' • ')) && (
+                                                                                <div className="text-[10px] text-amber-900/90 dark:text-amber-200 font-medium truncate mt-0.5">
+                                                                                    Obs: {(appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.split(' • ').slice(1).join(' • ').split(' (Equipe')[0]}
+                                                                                </div>
+                                                                            )}
 
                                                                             {/* Start Time - End Time */}
                                                                             <div className="flex items-center gap-1 mt-0.5 text-[11px] font-medium opacity-90">
@@ -1683,8 +1692,17 @@ export default function AgendaPage() {
                                                                     <TooltipContent side="right" className="max-w-xs">
                                                                         <div className="space-y-2">
                                                                             <div>
-                                                                                <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || 'Bloqueio / Compromisso'}</p>
-                                                                                <p className="text-xs text-muted-foreground">
+                                                                                <p className="font-semibold text-sm">
+                                                                                    {((appointment as any).appointment_type === 'BLOCK' || !appointment.patient || !(appointment as any).patient_id)
+                                                                                        ? `Bloqueio: ${(appointment as any).schedule_overrides?.block_title || (appointment as any).waiting_room_notes?.split(' • ')[0] || 'Compromisso Interno'}`
+                                                                                        : (appointment.patient?.full_name || 'Paciente')}
+                                                                                </p>
+                                                                                {((appointment as any).appointment_type === 'BLOCK' || !appointment.patient || !(appointment as any).patient_id) && ((appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.includes(' • ')) && (
+                                                                                    <p className="text-xs text-amber-800 dark:text-amber-300 font-medium mt-0.5">
+                                                                                        <strong>Motivo:</strong> {(appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.split(' • ').slice(1).join(' • ').split(' (Equipe')[0]}
+                                                                                    </p>
+                                                                                )}
+                                                                                <p className="text-xs text-muted-foreground mt-0.5">
                                                                                     {appointment.patient?.phone ? `Tel: ${appointment.patient.phone}` : 'Compromisso Interno'}
                                                                                 </p>
                                                                             </div>
@@ -1882,11 +1900,18 @@ export default function AgendaPage() {
                                                                                             ? `MENTORIA: ${((appointment as any).student?.full_name || (appointment as any).mentoring_notes || 'MENTORIA').toUpperCase()} (${doctorName.toUpperCase()})`
                                                                                             : (appointment as any).appointment_type === 'SUPERVISION'
                                                                                                 ? `SUPERVISÃO: ${((appointment as any).professional_supervised?.user?.full_name || (appointment as any).supervision_notes || 'TÉCNICA').toUpperCase()} (${doctorName.toUpperCase()})`
-                                                                                                : `${(appointment.patient?.full_name || (appointment as any).notes || '[BLOQUEIO]').toUpperCase()} (${doctorName.toUpperCase()}${coDoctorName ? ` + ${coDoctorName.toUpperCase()}` : ''}${specShort ? `-${specShort}` : ''})`}
+                                                                                                : ((appointment as any).appointment_type === 'BLOCK' || !appointment.patient_id)
+                                                                                                    ? `BLOQUEIO: ${((appointment as any).schedule_overrides?.block_title || (appointment as any).waiting_room_notes?.split(' • ')[0] || 'COMPROMISSO INTERNO').toUpperCase()} (${doctorName.toUpperCase()})`
+                                                                                                    : `${(appointment.patient?.full_name || 'PACIENTE').toUpperCase()} (${doctorName.toUpperCase()}${coDoctorName ? ` + ${coDoctorName.toUpperCase()}` : ''}${specShort ? `-${specShort}` : ''})`}
                                                                                     </div>
                                                                                     <div className="text-[11px] opacity-90 leading-tight">
                                                                                         {appointment.appointment_time.substring(0, 5)} – {endTime}
                                                                                     </div>
+                                                                                    {((appointment as any).appointment_type === 'BLOCK' || !appointment.patient_id) && ((appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.includes(' • ')) && (
+                                                                                        <div className="text-[10px] opacity-95 truncate max-w-[200px] font-medium text-amber-200">
+                                                                                            Obs: {(appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.split(' • ').slice(1).join(' • ').split(' (Equipe')[0]}
+                                                                                        </div>
+                                                                                    )}
                                                                                     {/* Menu de ações */}
                                                                                     <div className="absolute top-0 right-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center">
                                                                                         {canDeleteAppointment && isCancelled && (
@@ -1987,8 +2012,17 @@ export default function AgendaPage() {
                                                                             <TooltipContent side="top" className="max-w-xs">
                                                                                 <div className="space-y-2">
                                                                                     <div>
-                                                                                        <p className="font-semibold text-sm">{appointment.patient?.full_name || (appointment as any).notes || '[Bloqueio / Compromisso]'}</p>
-                                                                                        <p className="text-xs text-muted-foreground">
+                                                                                        <p className="font-semibold text-sm">
+                                                                                            {((appointment as any).appointment_type === 'BLOCK' || !appointment.patient_id)
+                                                                                                ? `Bloqueio: ${(appointment as any).schedule_overrides?.block_title || (appointment as any).waiting_room_notes?.split(' • ')[0] || 'Compromisso Interno'}`
+                                                                                                : (appointment.patient?.full_name || 'Paciente')}
+                                                                                        </p>
+                                                                                        {((appointment as any).appointment_type === 'BLOCK' || !appointment.patient_id) && ((appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.includes(' • ')) && (
+                                                                                            <p className="text-xs text-amber-300 font-medium mt-0.5">
+                                                                                                <strong>Motivo:</strong> {(appointment as any).schedule_overrides?.block_notes || (appointment as any).reception_notes || (appointment as any).waiting_room_notes?.split(' • ').slice(1).join(' • ').split(' (Equipe')[0]}
+                                                                                            </p>
+                                                                                        )}
+                                                                                        <p className="text-xs text-muted-foreground mt-0.5">
                                                                                             {appointment.patient?.phone ? `Tel: ${appointment.patient.phone}` : 'Compromisso Interno'}
                                                                                         </p>
                                                                                     </div>

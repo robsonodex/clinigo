@@ -61,6 +61,7 @@ export function BlockScheduleModal({
     const [appointmentTime, setAppointmentTime] = useState('')
     const [durationMinutes, setDurationMinutes] = useState(30)
     const [blockTitle, setBlockTitle] = useState('Reunião de Equipe')
+    const [blockNotes, setBlockNotes] = useState('')
 
     // Fetch doctors
     const { data: doctors, isLoading: doctorsLoading } = useQuery({
@@ -88,6 +89,7 @@ export function BlockScheduleModal({
         if (open) {
             if (preselectedDate) setAppointmentDate(preselectedDate)
             if (preselectedTime) setAppointmentTime(preselectedTime)
+            setBlockNotes('')
             
             if (preselectedDoctorId) {
                 setSelectedDoctorIds([preselectedDoctorId])
@@ -135,6 +137,7 @@ export function BlockScheduleModal({
                 duration_minutes: durationMinutes,
                 is_block: true,
                 block_title: blockTitle.trim(),
+                block_notes: blockNotes.trim() || undefined,
                 payment: {
                     type: 'courtesy',
                     notes: 'Compromisso interno / Bloqueio de agenda'
@@ -142,7 +145,7 @@ export function BlockScheduleModal({
                 overrides: {
                     ignore_schedule_constraints: true,
                     allow_double_booking: false,
-                    reason: `Bloqueio interno: ${blockTitle.trim()}`
+                    reason: `Bloqueio interno: ${blockTitle.trim()}${blockNotes.trim() ? ` - ${blockNotes.trim()}` : ''}`
                 }
             }
 
@@ -182,7 +185,7 @@ export function BlockScheduleModal({
                         Compromisso / Bloqueio Interno
                     </DialogTitle>
                     <DialogDescription className="text-xs sm:text-sm text-slate-500">
-                        Insira um compromisso (reunião, treinamento, ausência) na agenda de um ou múltiplos terapeutas da equipe sem vincular a um paciente.
+                        Insira um compromisso (reunião com pais, supervisão, ausência) na agenda de um ou múltiplos terapeutas da equipe sem vincular a um paciente.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -194,12 +197,12 @@ export function BlockScheduleModal({
                             id="block_title"
                             value={blockTitle}
                             onChange={(e) => setBlockTitle(e.target.value)}
-                            placeholder="Ex: Reunião de Equipe, Supervisão, Alinhamento..."
+                            placeholder="Ex: Reunião de Equipe, Reunião com Pais, Alinhamento..."
                             className="min-h-[44px]"
                             style={{ fontSize: '16px' }}
                         />
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                            {['Reunião de Equipe', 'Supervisão ABA', 'Treinamento', 'Alinhamento Clínico', 'Ausência Interna', 'Horário Administrativo'].map((preset) => (
+                            {['Reunião com Pais', 'Reunião de Equipe', 'Supervisão ABA', 'Treinamento', 'Alinhamento Clínico', 'Ausência Interna'].map((preset) => (
                                 <button
                                     key={preset}
                                     type="button"
@@ -207,6 +210,43 @@ export function BlockScheduleModal({
                                     className="text-xs px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors font-medium touch-manipulation"
                                 >
                                     {preset}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Observação / Motivo Detalhado do Bloqueio (Reunião com pais, alinhamento escolar, etc.) */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="block_notes" className="text-sm font-semibold">
+                                Observação / Motivo da Reunião
+                            </Label>
+                            <span className="text-[11px] text-muted-foreground font-medium">Visível em detalhes</span>
+                        </div>
+                        <Textarea
+                            id="block_notes"
+                            value={blockNotes}
+                            onChange={(e) => setBlockNotes(e.target.value)}
+                            placeholder="Ex: Reunião com os pais do paciente para alinhamento pedagógico, devolutiva de laudo, etc."
+                            rows={2}
+                            className="text-sm resize-none"
+                        />
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {[
+                                'Reunião com os Pais',
+                                'Alinhamento com Escola',
+                                'Devolutiva de Avaliação',
+                                'Supervisão Clínica',
+                                'Treinamento Interno',
+                                'Compromisso Particular'
+                            ].map((tag) => (
+                                <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => setBlockNotes(prev => prev ? `${prev} • ${tag}` : tag)}
+                                    className="text-[11px] px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 transition-colors font-medium touch-manipulation"
+                                >
+                                    + {tag}
                                 </button>
                             ))}
                         </div>
