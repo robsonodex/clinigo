@@ -104,7 +104,42 @@ export async function DELETE(request: NextRequest) {
             }
         }
 
-        // STEP 3: Delete clinic (CASCADE will handle related records)
+        // STEP 2.5: Pré-deletar registros filhos em ordem para evitar statement timeout (57014) no Postgres
+        const childTables = [
+            'tasks',
+            'task_projects',
+            'scheduled_billings',
+            'crm_deals',
+            'crm_pipelines',
+            'campaigns',
+            'contracts',
+            'patient_intakes',
+            'prescriptions',
+            'exams',
+            'medical_records',
+            'treatment_plans',
+            'schedules',
+            'appointments',
+            'financial_transactions',
+            'clinic_bulletins',
+            'clinic_services',
+            'patients',
+            'doctors',
+            'audit_logs',
+            'system_logs',
+            'notifications',
+            'users'
+        ]
+
+        for (const table of childTables) {
+            try {
+                await serviceSupabase.from(table).delete().eq('clinic_id', clinicId)
+            } catch (err) {
+                // Silencioso caso a tabela não possua a coluna ou esteja vazia
+            }
+        }
+
+        // STEP 3: Delete clinic (CASCADE will handle any remaining records)
         const { error: deleteError } = await serviceSupabase
             .from('clinics')
             .delete()
