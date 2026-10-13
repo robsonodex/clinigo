@@ -115,8 +115,8 @@ const PRIORITY_CONFIG = {
 }
 
 export default function TarefasProjetosPage() {
-    const { isClinicAdmin, isSuperAdmin } = useRole()
-    const isManager = isClinicAdmin || isSuperAdmin
+    const { role, isClinicAdmin, isSuperAdmin, isCoordinator } = useRole()
+    const isManager = isClinicAdmin || isSuperAdmin || isCoordinator
 
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const [tasks, setTasks] = useState<ClinicTask[]>([])
@@ -135,10 +135,14 @@ export default function TarefasProjetosPage() {
 
     // Sincroniza viewMode inicial para gestores
     useEffect(() => {
-        if (profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'COORDINATOR') {
-            setViewMode('all_clinic')
+        if (role) {
+            if (isManager || role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN' || role === 'COORDINATOR') {
+                setViewMode('all_clinic')
+            } else {
+                setViewMode('my_tasks')
+            }
         }
-    }, [profile?.role])
+    }, [isManager, role])
 
     // Modais
     const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
