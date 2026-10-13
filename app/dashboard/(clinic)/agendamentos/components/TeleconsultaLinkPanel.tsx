@@ -105,11 +105,11 @@ export function TeleconsultaLinkPanel({ appointment }: TeleconsultaLinkPanelProp
 
         const phoneNumber = appointment.patient.phone.replace(/\D/g, '')
         const message = encodeURIComponent(
-            `Olá ${appointment.patient.full_name}! 👋\n\n` +
+            `Olá ${appointment.patient.full_name}!\n\n` +
             `Seu link de teleconsulta está pronto:\n\n` +
-            `🔗 ${patientLink}\n\n` +
-            `📅 Data: ${formattedDateTime}\n` +
-            `👨‍⚕️ Médico(a): ${appointment.doctor.user.full_name}\n\n` +
+            `${patientLink}\n\n` +
+            `Data: ${formattedDateTime}\n` +
+            `Profissional: Dr(a). ${appointment.doctor.user.full_name}\n\n` +
             `Clique no link no horário da consulta para entrar na sala de vídeo.`
         )
 
@@ -201,7 +201,7 @@ export function TeleconsultaLinkPanel({ appointment }: TeleconsultaLinkPanelProp
                 {!appointment.patient.email && !appointment.patient.phone && (
                     <Alert variant="destructive">
                         <AlertDescription>
-                            ⚠️ Paciente sem e-mail ou telefone cadastrado. Copie o link e compartilhe manualmente.
+                            Paciente sem e-mail ou telefone cadastrado. Copie o link e compartilhe manualmente.
                         </AlertDescription>
                     </Alert>
                 )}

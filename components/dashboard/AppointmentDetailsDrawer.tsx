@@ -457,6 +457,30 @@ export function AppointmentDetailsDrawer({
         }
     }
 
+    const [generatingVideoRoom, setGeneratingVideoRoom] = useState(false)
+
+    async function handleGenerateTeleconsultaRoom() {
+        if (!appointmentId) return
+        setGeneratingVideoRoom(true)
+        try {
+            const res = await fetch(`/api/appointments/${appointmentId}/video-room`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao gerar sala virtual')
+            setVideoRoom(data.data.video_room)
+            toast.success('Sala de teleconsulta gerada com sucesso!')
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('appointment-updated'))
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao gerar sala de teleconsulta')
+        } finally {
+            setGeneratingVideoRoom(false)
+        }
+    }
+
     function handleTeleconsultaWhatsApp() {
         if (!appointment || !videoRoom) return
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
@@ -469,7 +493,22 @@ export function AppointmentDetailsDrawer({
             `Data: ${formattedDate}\n` +
             `Profissional: Dr(a). ${doctorName}\n\n` +
             `Clique no link no horário da consulta para entrar na sala de vídeo.`
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
+
+        const rawPhone = appointment.patient?.phone || ''
+        const cleanPhone = rawPhone.replace(/\D/g, '')
+        const phoneWithCountry = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`) : ''
+        const waUrl = phoneWithCountry
+            ? `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`
+            : `https://wa.me/?text=${encodeURIComponent(message)}`
+
+        window.open(waUrl, '_blank')
+    }
+
+    function handleEnterDoctorRoom() {
+        if (!videoRoom) return
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
+        const doctorLink = `${baseUrl}/video/${videoRoom.room_id}?role=doctor&token=${videoRoom.doctor_token}`
+        window.open(doctorLink, '_blank')
     }
 
     function handleDownloadQR() {
@@ -1043,29 +1082,55 @@ export function AppointmentDetailsDrawer({
                         )}
 
                         {/* TELECONSULTA LINK SECTION */}
-                        {(appointment.type === 'TELEMEDICINA' || appointment.type === 'online' || appointment.appointment_type === 'online') && videoRoom && (
+                        {(['telemedicina', 'online', 'teleconsulta'].includes(String(appointment.type || appointment.appointment_type || '').toLowerCase()) || Boolean(videoRoom)) && (
                             <>
                                 <Separator />
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <Video className="h-5 w-5 text-green-600" />
-                                        <Label className="text-base font-medium">Link da Teleconsulta</Label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Video className="h-5 w-5 text-emerald-600" />
+                                            <Label className="text-base font-semibold text-foreground">Link da Teleconsulta</Label>
+                                        </div>
+                                        <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-800 border-emerald-300">
+                                            {videoRoom ? 'Sala Ativa' : 'Pendente'}
+                                        </Badge>
                                     </div>
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-                                        <p className="text-sm text-green-800">
-                                            Compartilhe este link com o paciente para acessar a teleconsulta:
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Button onClick={handleCopyTeleconsultaLink} size="sm" variant="outline" className="w-full">
-                                                {teleconsultaCopied ? <Check className="h-3 w-3 mr-1 text-green-600" /> : <Copy className="h-3 w-3 mr-1" />}
-                                                {teleconsultaCopied ? 'Copiado!' : 'Copiar Link'}
-                                            </Button>
-                                            <Button onClick={handleTeleconsultaWhatsApp} size="sm" variant="outline" className="w-full">
-                                                <MessageCircle className="h-3 w-3 mr-1" />
-                                                WhatsApp
+
+                                    {videoRoom ? (
+                                        <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Link exclusivo de acesso para o paciente e sala da consulta:
+                                            </p>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                <Button onClick={handleCopyTeleconsultaLink} size="sm" variant="outline" className="w-full text-xs font-semibold gap-1.5 min-h-[40px]">
+                                                    {teleconsultaCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                                    {teleconsultaCopied ? 'Copiado' : 'Copiar Link'}
+                                                </Button>
+                                                <Button onClick={handleTeleconsultaWhatsApp} size="sm" variant="outline" className="w-full text-xs font-semibold gap-1.5 min-h-[40px] text-emerald-700 hover:text-emerald-800 border-emerald-300">
+                                                    <MessageCircle className="h-3.5 w-3.5" />
+                                                    WhatsApp
+                                                </Button>
+                                                <Button onClick={handleEnterDoctorRoom} size="sm" className="w-full col-span-2 sm:col-span-1 text-xs font-semibold gap-1.5 min-h-[40px] bg-emerald-700 hover:bg-emerald-800 text-white">
+                                                    <Video className="h-3.5 w-3.5" />
+                                                    Entrar na Sala
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                                            <p className="text-xs text-muted-foreground">
+                                                Este agendamento é online, mas o link exclusivo da sala ainda não foi emitido.
+                                            </p>
+                                            <Button
+                                                onClick={handleGenerateTeleconsultaRoom}
+                                                disabled={generatingVideoRoom}
+                                                className="w-full text-xs font-semibold gap-2 min-h-[42px] bg-emerald-700 hover:bg-emerald-800 text-white"
+                                            >
+                                                {generatingVideoRoom ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+                                                <span>{generatingVideoRoom ? 'Gerando sala virtual...' : 'Gerar Link de Teleconsulta Agora'}</span>
                                             </Button>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </>
                         )}

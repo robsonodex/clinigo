@@ -98,7 +98,8 @@ export async function GET(request: NextRequest) {
         ),
         student:students!appointments_student_id_fkey(id, full_name, contact_phone, contact_email, program),
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
-        payment:payments(id, status, amount, payment_method)
+        payment:payments(id, status, amount, payment_method),
+        video_rooms:video_rooms(room_id, patient_token, doctor_token)
       `, { count: 'exact' })
 
         // Strictly enforce clinic isolation
@@ -109,6 +110,13 @@ export async function GET(request: NextRequest) {
         // Apply query filters
         if (query.status) {
             queryBuilder = queryBuilder.eq('status', query.status)
+        }
+        if (query.appointment_type) {
+            if (['online', 'telemedicina', 'teleconsulta'].includes(query.appointment_type.toLowerCase())) {
+                queryBuilder = queryBuilder.in('appointment_type', ['online', 'telemedicina', 'TELEMEDICINA', 'teleconsulta', 'TELECONSULTA'])
+            } else {
+                queryBuilder = queryBuilder.eq('appointment_type', query.appointment_type)
+            }
         }
         const isCoordinator = !!currentUser?.is_coordinator
         if (query.doctor_id && (userRole !== 'DOCTOR' || isCoordinator)) {
@@ -143,8 +151,16 @@ export async function GET(request: NextRequest) {
 
         if (error) throw error
 
+        const formattedAppointments = (appointments || []).map((apt: any) => {
+            const vr = Array.isArray(apt.video_rooms) ? apt.video_rooms[0] : apt.video_rooms
+            return {
+                ...apt,
+                video_room: vr || null
+            }
+        })
+
         return paginatedResponse(
-            buildPaginatedData(appointments || [], count || 0, page, pageSize)
+            buildPaginatedData(formattedAppointments, count || 0, page, pageSize)
         )
     } catch (error) {
         return handleApiError(error)

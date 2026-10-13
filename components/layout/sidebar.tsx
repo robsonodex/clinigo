@@ -66,7 +66,7 @@ import { useClinic } from '@/lib/hooks/use-clinic'
 import { useState, useEffect } from 'react'
 import type { PlanType } from '@/lib/constants/plans'
 import { type FeatureKey, FEATURE_KEYS } from '@/lib/constants/features'
-import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowlist'
+import { isClinicAuthorizedForContracts, WORLD_SENSORY_CLINIC_ID } from '@/lib/constants/contracts-allowlist'
 import {
     Dialog,
     DialogContent,
@@ -143,6 +143,12 @@ const navigationSections: NavSection[] = [
                 icon: Video,
                 roles: ['CLINIC_ADMIN', 'DOCTOR'],
                 featureKey: FEATURE_KEYS.CONSULTAS,
+            },
+            {
+                title: 'Teleconsulta',
+                href: '/dashboard/teleconsulta',
+                icon: Video,
+                roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'],
             },
             {
                 title: 'Recepção',
@@ -1132,6 +1138,13 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     // Módulo de Contratos e Assinaturas: Restrição estrita para World Sensory
                     if (item.href.startsWith('/dashboard/contratos')) {
                         if (!isClinicAuthorizedForContracts(effectiveClinicId)) {
+                            return false
+                        }
+                    }
+
+                    // Módulo de Teleconsulta: Restrição estrita e exclusiva para a clínica World Sensory
+                    if (item.href.startsWith('/dashboard/teleconsulta')) {
+                        if (effectiveClinicId !== WORLD_SENSORY_CLINIC_ID) {
                             return false
                         }
                     }

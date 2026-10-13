@@ -310,7 +310,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     </div>
 
                     <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-3">
-                        <p className="font-semibold mb-2">🔹 1. Teleatendimento</p>
+                        <p className="font-semibold mb-2">1. Teleatendimento</p>
                         <p className="text-sm text-emerald-100 mb-3">Declaro que estou ciente de que o atendimento será realizado de forma online (videochamada), podendo haver limitações técnicas, e concordo com sua realização.</p>
                         <button onClick={() => setConsentTopics(t => ({ ...t, teleatendimento: !t.teleatendimento }))} className="flex items-center gap-2 text-sm font-medium hover:text-emerald-200 transition-colors">
                             {consentTopics.teleatendimento ? <CheckSquare className="w-5 h-5 text-emerald-300" /> : <Square className="w-5 h-5" />}
@@ -319,7 +319,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     </div>
 
                     <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-3">
-                        <p className="font-semibold mb-2">🔹 2. Uso de imagem, voz e dados</p>
+                        <p className="font-semibold mb-2">2. Uso de imagem, voz e dados</p>
                         <p className="text-sm text-emerald-100 mb-3">Autorizo o uso de imagem, voz e dados do paciente exclusivamente para fins assistenciais, garantindo o sigilo e ética profissional.</p>
                         <button onClick={() => setConsentTopics(t => ({ ...t, uso_dados: !t.uso_dados }))} className="flex items-center gap-2 text-sm font-medium hover:text-emerald-200 transition-colors">
                             {consentTopics.uso_dados ? <CheckSquare className="w-5 h-5 text-emerald-300" /> : <Square className="w-5 h-5" />}
@@ -328,7 +328,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     </div>
 
                     <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-3">
-                        <p className="font-semibold mb-2">🔹 3. Proteção de dados (LGPD)</p>
+                        <p className="font-semibold mb-2">3. Proteção de dados (LGPD)</p>
                         <p className="text-sm text-emerald-100 mb-3">Autorizo o tratamento de dados pessoais e dados sensíveis (dados de saúde), conforme a Lei nº 13.709/2018 (LGPD), para fins de atendimento, registro em prontuário e acompanhamento terapêutico.</p>
                         <button onClick={() => setConsentTopics(t => ({ ...t, lgpd: !t.lgpd }))} className="flex items-center gap-2 text-sm font-medium hover:text-emerald-200 transition-colors">
                             {consentTopics.lgpd ? <CheckSquare className="w-5 h-5 text-emerald-300" /> : <Square className="w-5 h-5" />}
@@ -337,7 +337,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     </div>
 
                     <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-4">
-                        <p className="font-semibold mb-2">🔹 Declaração final</p>
+                        <p className="font-semibold mb-2">Declaração final</p>
                         <p className="text-sm text-emerald-100 mb-3">Declaro que li, compreendi e concordo com os termos acima, fornecendo meu consentimento de forma livre, informada e inequívoca.</p>
                         <div className="space-y-2">
                             <div>
@@ -348,9 +348,9 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                                 <label className="text-xs text-emerald-300">Nome do paciente</label>
                                 <input value={patientName} onChange={(e) => setPatientName(e.target.value)} className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-emerald-300" placeholder="Nome completo do paciente" />
                             </div>
-                            <div className="flex gap-4 text-sm text-emerald-200">
-                                <span>📅 {format(new Date(), "dd/MM/yyyy", { locale: ptBR })}</span>
-                                <span>🕒 {format(new Date(), "HH:mm")}</span>
+                            <div className="flex gap-4 text-sm text-emerald-200 items-center pt-1">
+                                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-emerald-300" /> {format(new Date(), "dd/MM/yyyy", { locale: ptBR })}</span>
+                                <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-emerald-300" /> {format(new Date(), "HH:mm")}</span>
                             </div>
                         </div>
                     </div>

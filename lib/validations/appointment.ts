@@ -198,6 +198,9 @@ export const listAppointmentsQuerySchema = z.object({
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/)
         .optional(),
+    appointment_type: z
+        .string()
+        .optional(),
     page: z
         .string()
         .regex(/^\d+$/)

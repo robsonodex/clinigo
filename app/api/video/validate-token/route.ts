@@ -26,42 +26,56 @@ export async function POST(request: Request) {
         // The patient_token/doctor_token IS the authentication mechanism
         const supabase = createServiceRoleClient()
 
-        // Find video room by room_id and validate token
-        const { data: videoRoom, error: roomError } = await (supabase
-            .from('video_rooms') as any)
-            .select(`
+        // Find video room by room_id or appointment_id and validate token
+        const selectFields = `
+            id,
+            room_id,
+            appointment_id,
+            patient_token,
+            doctor_token,
+            appointment:appointments (
                 id,
-                room_id,
-                appointment_id,
-                patient_token,
-                doctor_token,
-                appointment:appointments (
+                appointment_date,
+                appointment_time,
+                status,
+                appointment_type,
+                patient:patients (
                     id,
-                    appointment_date,
-                    appointment_time,
-                    status,
-                    appointment_type,
-                    patient:patients (
-                        id,
-                        full_name,
-                        email
-                    ),
-                    doctor:doctors (
-                        id,
-                        specialty,
-                        user:users!doctors_user_id_fkey (
-                            full_name
-                        )
-                    ),
-                    clinic:clinics!appointments_clinic_id_fkey (
-                        id,
-                        name,
-                        slug
+                    full_name,
+                    email
+                ),
+                doctor:doctors!appointments_doctor_id_fkey (
+                    id,
+                    specialty,
+                    user:users!doctors_user_id_fkey (
+                        full_name
                     )
+                ),
+                clinic:clinics!appointments_clinic_id_fkey (
+                    id,
+                    name,
+                    slug
                 )
-            `)
+            )
+        `
+
+        let { data: videoRoom, error: roomError } = await (supabase
+            .from('video_rooms') as any)
+            .select(selectFields)
             .eq('room_id', roomId)
-            .single()
+            .maybeSingle()
+
+        if (!videoRoom) {
+            const { data: byApt } = await (supabase
+                .from('video_rooms') as any)
+                .select(selectFields)
+                .eq('appointment_id', roomId)
+                .maybeSingle()
+            if (byApt) {
+                videoRoom = byApt
+                roomError = null
+            }
+        }
 
         if (roomError || !videoRoom) {
             console.error('[VALIDATE-TOKEN] Room not found:', roomError)
