@@ -8,7 +8,7 @@ export class R2StorageAdapter implements StorageService {
     private bucketName: string
 
     constructor(bucketName?: string) {
-        this.bucketName = bucketName || process.env.R2_BUCKET_NAME || 'clinigo-patient-documents'
+        this.bucketName = bucketName || process.env.R2_BUCKET_NAME || 'clinigo'
     }
 
     async upload(params: UploadParams): Promise<UploadResult> {

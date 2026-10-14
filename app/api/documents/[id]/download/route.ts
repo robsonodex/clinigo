@@ -105,22 +105,26 @@ export async function GET(
             return NextResponse.redirect(storageFilePath, { status: 302 })
         }
 
-        // Detectar se está no padrão R2 ou prefixado com r2://
-        const isR2Key = storageFilePath.startsWith('r2://') || 
-            (storageFilePath.includes('/patient-documents/') && !storageFilePath.startsWith('http'))
+        // Detectar se está no padrão R2 ou se R2 está configurado
+        const isExplicitR2 = storageFilePath.startsWith('r2://')
+        const isHttp = storageFilePath.startsWith('http://') || storageFilePath.startsWith('https://')
+        const isR2Key = isExplicitR2 || (!isHttp && (
+            storageFilePath.includes('/patient-documents/') ||
+            /^[0-9a-fA-F-]{36}\/[0-9a-fA-F-]{36}\//.test(storageFilePath)
+        ))
 
-        if (isR2Key) {
+        // 1. Tentar obter Signed URL do Cloudflare R2
+        if (isR2Key || isExplicitR2) {
             try {
                 const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
                 const r2Adapter = new R2StorageAdapter()
                 signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
             } catch (r2Err: any) {
-                console.error('[R2_DOWNLOAD_ERROR]', r2Err)
-                // Fallback para Supabase se falhar no R2
+                console.warn('[R2_DOWNLOAD_FALLBACK_ATTEMPT]', r2Err?.message || r2Err)
             }
         }
 
-        // Se ainda não gerou signedUrl, tenta no Supabase Storage
+        // 2. Se ainda não gerou signedUrl ou falhou no R2, tenta no Supabase Storage
         if (!signedUrl) {
             let cleanPath = storageFilePath.replace(/^r2:\/\//, '').replace(/^supabase:\/\//, '')
             if (cleanPath.includes('patient-documents/')) {
@@ -134,6 +138,17 @@ export async function GET(
 
             if (!signError && signedData?.signedUrl) {
                 signedUrl = signedData.signedUrl
+            }
+        }
+
+        // 3. Fallback adicional: se não era explicitamente r2 mas falhou no Supabase, tenta R2 antes de desistir
+        if (!signedUrl && !isR2Key && !isHttp) {
+            try {
+                const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
+                const r2Adapter = new R2StorageAdapter()
+                signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
+            } catch (err) {
+                // ignorar
             }
         }
 

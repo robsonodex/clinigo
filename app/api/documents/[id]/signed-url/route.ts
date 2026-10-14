@@ -109,20 +109,25 @@ export async function GET(
             })
         }
 
-        const isR2Key = storageFilePath.startsWith('r2://') || 
-            (storageFilePath.includes('/patient-documents/') && !storageFilePath.startsWith('http'))
+        const isExplicitR2 = storageFilePath.startsWith('r2://')
+        const isHttp = storageFilePath.startsWith('http://') || storageFilePath.startsWith('https://')
+        const isR2Key = isExplicitR2 || (!isHttp && (
+            storageFilePath.includes('/patient-documents/') ||
+            /^[0-9a-fA-F-]{36}\/[0-9a-fA-F-]{36}\//.test(storageFilePath)
+        ))
 
-        if (isR2Key) {
+        // 1. Tentar obter Signed URL do Cloudflare R2
+        if (isR2Key || isExplicitR2) {
             try {
                 const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
                 const r2Adapter = new R2StorageAdapter()
                 signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
             } catch (r2Err: any) {
-                console.error('[R2_SIGNED_URL_ERROR]', r2Err)
+                console.warn('[R2_SIGNED_URL_FALLBACK_ATTEMPT]', r2Err?.message || r2Err)
             }
         }
 
-        // Fallback para Supabase Storage se não obteve signedUrl
+        // 2. Fallback para Supabase Storage se não obteve signedUrl
         if (!signedUrl) {
             let cleanPath = storageFilePath.replace(/^r2:\/\//, '').replace(/^supabase:\/\//, '')
             if (cleanPath.includes('patient-documents/')) {
@@ -134,11 +139,24 @@ export async function GET(
                 .from('patient-documents')
                 .createSignedUrl(cleanPath, expiresInSeconds)
 
-            if (signError || !signedData?.signedUrl) {
-                console.error('[SIGNED_URL_ERROR]', signError)
-                return NextResponse.json({ error: 'Falha ao gerar link seguro para o documento' }, { status: 404 })
+            if (!signError && signedData?.signedUrl) {
+                signedUrl = signedData.signedUrl
             }
-            signedUrl = signedData.signedUrl
+        }
+
+        // 3. Fallback adicional para R2 caso não tenha sido detectado inicialmente e tenha falhado no Supabase
+        if (!signedUrl && !isR2Key && !isHttp) {
+            try {
+                const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
+                const r2Adapter = new R2StorageAdapter()
+                signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
+            } catch (err) {
+                // ignorar
+            }
+        }
+
+        if (!signedUrl) {
+            return NextResponse.json({ error: 'Arquivo do documento não encontrado no armazenamento seguro.' }, { status: 404 })
         }
 
         return NextResponse.json({
