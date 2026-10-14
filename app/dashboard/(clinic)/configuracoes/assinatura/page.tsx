@@ -260,7 +260,7 @@ export default function AssinaturaPage() {
         )
     }
 
-    const isPaymentConfirmed = clinic?.payment_confirmed === true || clinic?.approval_status === 'active'
+    const isPaymentConfirmed = clinic?.payment_confirmed !== false && clinic?.approval_status === 'active'
     const isExceededWithoutConsent = seatUsage && seatUsage.extraSeats > 0 && (!seatUsage.recent_events || seatUsage.recent_events.length === 0)
     const totalMonthlyPrice = seatUsage?.monthlyTotalCents ? seatUsage.monthlyTotalCents / 100 : (planConfig?.price || 449)
     const baseMonthlyPrice = seatUsage?.monthlyBaseCents ? seatUsage.monthlyBaseCents / 100 : (planConfig?.price || 449)
