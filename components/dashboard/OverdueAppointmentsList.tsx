@@ -66,8 +66,11 @@ export function OverdueAppointmentsList({ clinicId }: OverdueAppointmentsListPro
     useEffect(() => {
         fetchOverdue()
 
-        // Auto-refresh every 2 minutes
-        const interval = setInterval(fetchOverdue, 120000)
+        // Auto-refresh a cada 5 minutos (com suspensao em segundo plano)
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            fetchOverdue()
+        }, 300000)
 
         return () => clearInterval(interval)
     }, [clinicId])

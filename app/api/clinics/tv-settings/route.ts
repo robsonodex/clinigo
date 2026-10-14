@@ -68,6 +68,10 @@ export async function GET(request: NextRequest) {
             tvVoiceGender,
             tvLayout,
             tvRecallMinutes
+        }, {
+            headers: {
+                'Cache-Control': 'private, max-age=180, stale-while-revalidate=300'
+            }
         })
     } catch (error: any) {
         console.error('[TV Settings GET Error]:', error)

@@ -121,14 +121,25 @@ export default function WhatsAppPage() {
 
       if (data.qr_code) {
         setQrData({ sector, qr: data.qr_code })
-        // Poll até conectar
+        // Poll com intervalo de 3s e limite maximo de 90s (30 tentativas)
         if (pollingRef.current) clearInterval(pollingRef.current)
+        let attempts = 0
         pollingRef.current = setInterval(async () => {
+          if (typeof document !== 'undefined' && document.hidden) return
+          attempts++
+          if (attempts > 30) {
+            if (pollingRef.current) clearInterval(pollingRef.current)
+            pollingRef.current = null
+            setQrData(null)
+            setConnectingSector(null)
+            toast.error('O tempo do QR Code expirou. Clique novamente para gerar um novo código.')
+            return
+          }
           const sRes = await fetch(`/api/whatsapp/status?sector=${sector}`)
           if (sRes.ok) {
             const sData = await sRes.json()
             if (sData.connected) {
-              clearInterval(pollingRef.current!)
+              if (pollingRef.current) clearInterval(pollingRef.current)
               pollingRef.current = null
               setQrData(null)
               setConnectingSector(null)

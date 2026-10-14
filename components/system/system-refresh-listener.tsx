@@ -28,28 +28,16 @@ export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) 
             window.location.reload()
         }
 
-        // Canal dedicado da clínica com suporte duplo: Broadcast instantâneo + Postgres Changes (fallback)
+        // Canal dedicado da clínica via Broadcast instantâneo
         const channel = supabase
             .channel(`clinic-cache-update-${clinicId}`)
             .on('broadcast', { event: 'hard-refresh' }, () => {
                 triggerHardRefresh()
             })
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'clinics',
-                    filter: `id=eq.${clinicId}`
-                },
-                () => {
-                    triggerHardRefresh()
-                }
-            )
             .subscribe()
 
         return () => {
-            channel.unsubscribe()
+            supabase.removeChannel(channel)
         }
     }, [clinicId])
 

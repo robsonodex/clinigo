@@ -27,6 +27,8 @@ export function useNotifications() {
             return data as Notification[]
         },
         enabled: !!user?.id,
+        staleTime: 15 * 60 * 1000, // 15 minutos (dados mantidos frescos via Realtime)
+        refetchOnWindowFocus: false,
     })
 
     // Unread count

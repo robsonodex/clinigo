@@ -40,10 +40,10 @@ export function useAuth() {
                 return
             }
 
-            // Fetch profile
+            // Fetch profile com colunas especificas (reduz egress e trafego)
             let { data: profile } = await supabase
                 .from('users')
-                .select('*')
+                .select('id, email, full_name, role, clinic_id, avatar_url, is_coordinator')
                 .eq('id', user.id)
                 .single()
 
@@ -62,7 +62,7 @@ export function useAuth() {
                     // Fetch the clinic admin profile for this clinic
                     const { data: clinicAdminProfile } = await supabase
                         .from('users')
-                        .select('*')
+                        .select('id, email, full_name, role, clinic_id, avatar_url, is_coordinator')
                         .eq('clinic_id', impersonationClinicId)
                         .eq('role', 'CLINIC_ADMIN')
                         .limit(1)

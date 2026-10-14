@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 
 import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 
-const POLLING_INTERVAL = 60_000 // 60 segundos (reduz consumo em 83% mantendo segurança)
+const POLLING_INTERVAL = 300_000 // 5 minutos (com visibilitychange na reabertura, reduz tráfego em 80%)
 
 export function useSessionGuard() {
     const router = useRouter()

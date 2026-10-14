@@ -313,25 +313,24 @@ async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
                     Authorization: `Bearer ${serviceKey}`,
                     'Content-Type': 'application/json',
                 },
-                // Edge-compatible: sem cache HTTP
-                cache: 'no-store',
+                next: { revalidate: 300 }, // Cache compartilhado da Vercel Edge por 5 minutos
             }
         )
 
         if (!res.ok) {
-            _maintenanceCache = { value: false, expiresAt: now + 60_000 }
+            _maintenanceCache = { value: false, expiresAt: now + 300_000 }
             return false
         }
 
         const rows: Array<{ value: string }> = await res.json()
         const isActive = rows.length > 0 ? JSON.parse(rows[0].value) === true : false
 
-        // Cachear por 60 segundos
-        _maintenanceCache = { value: isActive, expiresAt: now + 60_000 }
+        // Cachear por 5 minutos
+        _maintenanceCache = { value: isActive, expiresAt: now + 300_000 }
         return isActive
     } catch {
         // Em caso de erro, nunca bloqueia o sistema
-        _maintenanceCache = { value: false, expiresAt: now + 60_000 }
+        _maintenanceCache = { value: false, expiresAt: now + 300_000 }
         return false
     }
 }
@@ -377,6 +376,30 @@ export async function middleware(request: NextRequest) {
     if (AUTH_API_ROUTES.some(route => pathname.startsWith(route)) || FAST_BYPASS_ROUTES.some(route => pathname.startsWith(route))) {
         return NextResponse.next()
     }
+    const STATIC_PUBLIC_ROUTES = [
+        '/',
+        '/site',
+        '/sobre',
+        '/planos',
+        '/termos',
+        '/privacidade',
+        '/public-templates',
+        '/contato',
+        '/trial',
+        '/registro',
+        '/terminal',
+        '/clinica',
+        '/medico',
+    ]
+
+    if (
+        STATIC_PUBLIC_ROUTES.includes(pathname) ||
+        pathname.startsWith('/totem') ||
+        pathname.startsWith('/painel-tv')
+    ) {
+        return NextResponse.next()
+    }
+
     if (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/api/public') ||
@@ -405,18 +428,25 @@ export async function middleware(request: NextRequest) {
 
     let user = null
     const now = Date.now()
-    const cachedSession = supabaseCookiesKey ? _sessionCache.get(supabaseCookiesKey) : null
 
-    if (cachedSession && now < cachedSession.expiresAt) {
-        user = cachedSession.user
-        cachedSession.cookiesToSet.forEach((cookie) => {
-            response.cookies.set(cookie)
-        })
+    // OTIMIZAÇÃO CRÍTICA SUPABASE/VERCEL:
+    // Se a requisição não possui nenhum cookie de sessão do Supabase, o usuário é ANÔNIMO.
+    // Chamar supabase.auth.getUser() sem cookies gera chamada de rede inútil (401),
+    // consome cota de auth do Supabase e atrasa a resposta da Vercel.
+    if (!supabaseCookiesKey) {
+        user = null
     } else {
-        const { data } = await supabase.auth.getUser()
-        user = data.user
+        const cachedSession = _sessionCache.get(supabaseCookiesKey)
 
-        if (supabaseCookiesKey) {
+        if (cachedSession && now < cachedSession.expiresAt) {
+            user = cachedSession.user
+            cachedSession.cookiesToSet.forEach((cookie) => {
+                response.cookies.set(cookie)
+            })
+        } else {
+            const { data } = await supabase.auth.getUser()
+            user = data.user
+
             const cookiesToSet: Array<any> = []
             response.cookies.getAll().forEach((c: any) => {
                 cookiesToSet.push(c)
@@ -424,7 +454,7 @@ export async function middleware(request: NextRequest) {
 
             _sessionCache.set(supabaseCookiesKey, {
                 user,
-                expiresAt: now + 30000, // 30 seconds TTL (reduz drasticamente consultas repetitivas de sessão ao Supabase)
+                expiresAt: now + 60000, // 60s TTL (reduz drasticamente consultas repetitivas de sessão ao Supabase)
                 cookiesToSet
             })
 

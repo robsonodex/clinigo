@@ -205,8 +205,9 @@ export default function CRMPage() {
         if (!hasRunning) return
 
         const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
             fetchData(true)
-        }, 15000)
+        }, 30000)
 
         return () => clearInterval(interval)
     }, [campaigns, fetchData])

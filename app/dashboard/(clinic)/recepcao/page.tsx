@@ -132,7 +132,10 @@ export default function RecepcaoPage() {
 
     useEffect(() => {
         loadData()
-        const interval = setInterval(() => loadData(true), refreshInterval * 1000)
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            loadData(true)
+        }, Math.max(refreshInterval, 180) * 1000)
         return () => clearInterval(interval)
     }, [refreshInterval])
 
@@ -199,7 +202,10 @@ export default function RecepcaoPage() {
             })
         }
 
-        const escalationTimer = setInterval(checkEscalation, 15000)
+        const escalationTimer = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            checkEscalation()
+        }, 60000)
         return () => clearInterval(escalationTimer)
     }, [queue, tvRecallMinutes])
 
@@ -241,10 +247,10 @@ export default function RecepcaoPage() {
             .subscribe()
 
         return () => {
-            channel.unsubscribe()
-            checkinChannel.unsubscribe()
+            supabase.removeChannel(channel)
+            supabase.removeChannel(checkinChannel)
         }
-    }, [])
+    }, [supabase])
 
     async function loadData(isSilent = false) {
         if (!isSilent) {

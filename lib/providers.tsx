@@ -9,8 +9,11 @@ function makeQueryClient() {
     return new QueryClient({
         defaultOptions: {
             queries: {
-                staleTime: 60 * 1000, // 1 minute
-                refetchOnWindowFocus: false,
+                staleTime: 5 * 60 * 1000, // 5 minutos de dados frescos (elimina refetches em trocas de tela)
+                gcTime: 30 * 60 * 1000, // 30 minutos em memória
+                refetchOnWindowFocus: false, // Não refetch ao trocar de aba
+                refetchOnMount: false, // Reutiliza dados se estiverem no cache
+                refetchOnReconnect: false,
                 retry: 1,
             },
         },

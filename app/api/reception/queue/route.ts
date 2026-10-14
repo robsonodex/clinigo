@@ -92,9 +92,10 @@ export async function GET(request: Request) {
                 .eq('status', status)
                 .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
                 .order('arrival_time', { ascending: true })
+                .limit(50)
 
             if (walkInError) throw walkInError
-            // 🔒 SECURITY: Filter by patient's clinic in JS (walk_in_registrations has no clinic_id column)
+            // [SECURITY]: Filter by patient's clinic in JS (walk_in_registrations has no clinic_id column)
             walkIns = (data || []).filter((w: any) => w.patient?.clinic_id === clinicId)
         } catch (e) {
             console.error('[DEBUG] Error fetching queue walk-ins:', e)
@@ -188,7 +189,14 @@ export async function GET(request: Request) {
             return timeArrA - timeArrB
         })
 
-        return NextResponse.json({ queue, chamadaPainelTvHabilitada })
+        return NextResponse.json(
+            { queue, chamadaPainelTvHabilitada },
+            {
+                headers: {
+                    'Cache-Control': 'private, max-age=5, stale-while-revalidate=15'
+                }
+            }
+        )
     } catch (error) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }

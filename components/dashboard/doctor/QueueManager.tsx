@@ -169,9 +169,12 @@ export function QueueManager({ doctorId, clinicId, doctorName }: QueueManagerPro
         }
     }, [supabase, doctorId, fetchQueue, playNotificationSound])
 
-    // Auto-refresh every 30 seconds as backup
+    // Auto-refresh backup a cada 3 minutos (Realtime ja atualiza em tempo real)
     useEffect(() => {
-        const interval = setInterval(fetchQueue, 30000)
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            fetchQueue()
+        }, 180000)
         return () => clearInterval(interval)
     }, [fetchQueue])
 
